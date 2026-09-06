@@ -1,8 +1,6 @@
 package com.flyerpix.editor.ui.controller
 
 import android.app.Activity
-import android.view.View
-import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 
@@ -11,7 +9,6 @@ import com.flyerpix.editor.databinding.ActivityEditorBinding
  *
  * Bertanggung jawab untuk:
  * - Inisialisasi panel effects menu
- * - Mengatur category chips (Adjust, Effects, Blur)
  * - Mengelola adjustment sliders (Brightness, Contrast, Saturation)
  * - Mengelola effect chips (Vignette, Noise, Filter)
  * - Mengelola blur slider
@@ -27,42 +24,9 @@ class EffectsController(
      * Inisialisasi semua kontrol effects menu.
      */
     fun initialize() {
-        setupCategoryChips()
         setupAdjustmentSliders()
         setupEffectChips()
         setupBlurSlider()
-    }
-
-    // ────────────────────────────────────────────────────────────────────────
-    // SETUP CATEGORY CHIPS
-    // ────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Setup chips untuk memilih kategori efek (Adjust, Effects, Blur).
-     */
-    private fun setupCategoryChips() {
-        val contentMap = mapOf(
-            R.id.chipFxAdjust  to binding.effectContentAdjust,
-            R.id.chipFxEffects to binding.effectContentEffects,
-            R.id.chipFxBlur    to binding.effectContentBlur
-        )
-
-        // Tampilkan content Adjust sebagai default
-        showContent(contentMap, R.id.chipFxAdjust)
-
-        binding.cgEffectCategory.setOnCheckedStateChangeListener { _, checkedIds ->
-            if (checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
-            showContent(contentMap, checkedIds[0])
-        }
-    }
-
-    /**
-     * Menampilkan content sesuai dengan chip yang dipilih.
-     */
-    private fun showContent(contentMap: Map<Int, View>, chipId: Int) {
-        contentMap.forEach { (id, view) ->
-            view.visibility = if (id == chipId) View.VISIBLE else View.GONE
-        }
     }
 
     // ────────────────────────────────────────────────────────────────────────

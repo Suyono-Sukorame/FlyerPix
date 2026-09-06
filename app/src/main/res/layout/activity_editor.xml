@@ -477,7 +477,7 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-        <!-- LAPIS 2: Detail per kategori efek -->
+        <!-- Semua kontrol efek ditampilkan langsung tanpa baris kategori -->
 
         <!-- Konten: Adjust -->
         <LinearLayout
@@ -486,9 +486,16 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingHorizontal="12dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="4dp"
-                android:visibility="visible">
+                android:paddingTop="6dp"
+                android:paddingBottom="2dp">
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ADJUST"
+                    android:textColor="#00E5FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
 
             <TextView
                     android:layout_width="wrap_content"
@@ -504,7 +511,11 @@
                     android:valueFrom="-100"
                     android:valueTo="100"
                     android:value="0"
-                    android:stepSize="1" />
+                    android:stepSize="1"
+                    app:thumbColor="#00E5FF"
+                    app:trackColorActive="#00E5FF"
+                    app:trackColorInactive="#3A3A3A"
+                    app:haloColor="#2200E5FF" />
 
             <TextView
                     android:layout_width="wrap_content"
@@ -520,7 +531,11 @@
                     android:valueFrom="-100"
                     android:valueTo="100"
                     android:value="0"
-                    android:stepSize="1" />
+                    android:stepSize="1"
+                    app:thumbColor="#00E5FF"
+                    app:trackColorActive="#00E5FF"
+                    app:trackColorInactive="#3A3A3A"
+                    app:haloColor="#2200E5FF" />
 
             <TextView
                     android:layout_width="wrap_content"
@@ -536,7 +551,11 @@
                     android:valueFrom="-100"
                     android:valueTo="100"
                     android:value="0"
-                    android:stepSize="1" />
+                    android:stepSize="1"
+                    app:thumbColor="#00E5FF"
+                    app:trackColorActive="#00E5FF"
+                    app:trackColorInactive="#3A3A3A"
+                    app:haloColor="#2200E5FF" />
         </LinearLayout>
 
         <!-- Konten: Effects (Vignette / Noise / Filter) -->
@@ -546,8 +565,16 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingHorizontal="12dp"
-                android:paddingVertical="8dp"
-                android:visibility="gone">
+                android:paddingTop="6dp"
+                android:paddingBottom="2dp">
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="EFFECTS"
+                    android:textColor="#00E5FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
 
             <com.google.android.material.chip.ChipGroup
                     android:id="@+id/cgEffects"
@@ -560,21 +587,36 @@
                         style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Vignette" />
+                        android:text="Vignette"
+                        android:textColor="@color/effect_chip_text"
+                        app:checkedIconVisible="false"
+                        app:chipBackgroundColor="@color/effect_chip_bg"
+                        app:chipStrokeColor="@color/effect_chip_stroke"
+                        app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                         android:id="@+id/chipEffectNoise"
                         style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Noise" />
+                        android:text="Noise"
+                        android:textColor="@color/effect_chip_text"
+                        app:checkedIconVisible="false"
+                        app:chipBackgroundColor="@color/effect_chip_bg"
+                        app:chipStrokeColor="@color/effect_chip_stroke"
+                        app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                         android:id="@+id/chipEffectFilter"
                         style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Monokrom" />
+                        android:text="Monokrom"
+                        android:textColor="@color/effect_chip_text"
+                        app:checkedIconVisible="false"
+                        app:chipBackgroundColor="@color/effect_chip_bg"
+                        app:chipStrokeColor="@color/effect_chip_stroke"
+                        app:chipStrokeWidth="1dp" />
             </com.google.android.material.chip.ChipGroup>
         </LinearLayout>
 
@@ -585,9 +627,16 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingHorizontal="12dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="4dp"
-                android:visibility="gone">
+                android:paddingTop="6dp"
+                android:paddingBottom="4dp">
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="BLUR"
+                    android:textColor="#00E5FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
 
             <TextView
                     android:id="@+id/tvBlurRadius"
@@ -603,50 +652,12 @@
                     android:valueFrom="0"
                     android:valueTo="25"
                     android:value="0"
-                    android:stepSize="1" />
+                    android:stepSize="1"
+                    app:thumbColor="#00E5FF"
+                    app:trackColorActive="#00E5FF"
+                    app:trackColorInactive="#3A3A3A"
+                    app:haloColor="#2200E5FF" />
         </LinearLayout>
-
-        <!-- LAPIS 1: Kategori efek -->
-        <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:scrollbars="none"
-                android:background="#212121">
-
-            <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/cgEffectCategory"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="6dp"
-                    app:singleSelection="true"
-                    app:selectionRequired="true"
-                    xmlns:app="http://schemas.android.com/apk/res-auto">
-
-                <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFxAdjust"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🎚 Adjust"
-                        android:checked="true" />
-
-                <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFxEffects"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="✨ Effects" />
-
-                <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFxBlur"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="💧 Blur" />
-
-            </com.google.android.material.chip.ChipGroup>
-        </HorizontalScrollView>
     </LinearLayout>
 
     <!-- Crop Confirm/Cancel Toolbar (Prompt 46) -->
