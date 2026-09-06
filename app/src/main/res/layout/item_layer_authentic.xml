@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardLayerItem"
+    android:layout_width="match_parent"
+    android:layout_height="64dp"
+    android:layout_marginHorizontal="3dp"
+    android:layout_marginVertical="2dp"
+    app:cardBackgroundColor="@android:color/white"
+    app:cardCornerRadius="2dp"
+    app:cardElevation="2dp"
+    app:strokeColor="#C8C8C8"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- 1. Handle Drag Urutan Lapisan (Dot Matrix) -->
+        <ImageView
+            android:id="@+id/ivDragHandle"
+            android:layout_width="28dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:contentDescription="Geser urutan lapisan"
+            android:padding="5dp"
+            android:src="@drawable/ic_dots_drag_24px"
+            app:tint="#616161" />
+
+        <!-- 1b. Thumbnail Pratinjau Objek Lapisan -->
+        <ImageView
+            android:id="@+id/ivLayerPreview"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="4dp"
+            android:background="#EEEEEE"
+            android:padding="2dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="Pratinjau lapisan" />
+
+        <!-- 2. Teks Nama / Pratinjau Lapisan -->
+        <TextView
+            android:id="@+id/tvLayerTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="6dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#212121"
+            android:textSize="12sp"
+            android:textStyle="normal"
+            tools:text="New Text" />
+
+        <!-- Garis Pembatas Vertikal Utama antara Teks dan Grid 2x2 -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="#C8C8C8" />
+
+        <!-- 3. Kotak Grid 2x2 Tombol Aksi (Lock, Edit, Visibility, Delete) -->
+        <LinearLayout
+            android:id="@+id/layoutLayerActionsGrid"
+            android:layout_width="68dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/white"
+            android:orientation="vertical">
+
+            <!-- Baris Atas: Lock & Edit -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btnLayerLock"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackground"
+                    android:contentDescription="Kunci Lapisan"
+                    android:padding="6dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_lock_24px"
+                    app:tint="#546E7A" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="#C8C8C8" />
+
+                <ImageButton
+                    android:id="@+id/btnLayerEdit"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackground"
+                    android:contentDescription="Ubah Lapisan"
+                    android:padding="6dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_edit_box_24px"
+                    app:tint="#546E7A" />
+            </LinearLayout>
+
+            <!-- Pembatas Horizontal Grid 2x2 -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#C8C8C8" />
+
+            <!-- Baris Bawah: Visibility & Delete -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btnLayerVisibility"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackground"
+                    android:contentDescription="Sembunyikan Lapisan"
+                    android:padding="6dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_visibility_24px"
+                    app:tint="#546E7A" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="#C8C8C8" />
+
+                <ImageButton
+                    android:id="@+id/btnLayerDelete"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackground"
+                    android:contentDescription="Hapus Lapisan"
+                    android:padding="6dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_delete_24px"
+                    app:tint="#546E7A" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 4. Kotak Checkbox Seleksi Batch (Muncul saat Mode Batch SS 2) -->
+        <FrameLayout
+            android:id="@+id/layoutLayerBatchCheckbox"
+            android:layout_width="68dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/white"
+            android:visibility="gone">
+
+            <CheckBox
+                android:id="@+id/cbLayerBatch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:buttonTint="#2196F3"
+                android:clickable="false"
+                android:focusable="false" />
+        </FrameLayout>
+
+    </LinearLayout>
+
+    <!-- Garis Highlight Bawah Biru (Aktif pada Mode Batch / Seleksi) -->
+    <View
+        android:id="@+id/viewLayerBottomHighlight"
+        android:layout_width="match_parent"
+        android:layout_height="2.5dp"
+        android:layout_gravity="bottom"
+        android:background="#2196F3"
+        android:visibility="gone" />
+
+</com.google.android.material.card.MaterialCardView>

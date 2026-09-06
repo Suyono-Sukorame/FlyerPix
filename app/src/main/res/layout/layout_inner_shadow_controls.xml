@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Inner Shadow untuk TextLayer.
+  Struktur identik dengan layout_shadow_controls.xml (Drop Shadow)
+  agar pengalaman UI konsisten.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/innerShadowControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <!-- ── Toggle enable/disable ── -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchInnerShadowEnabled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Inner Shadow"
+        android:textAppearance="?attr/textAppearanceBody2"
+        android:checked="false" />
+
+    <!-- ── Slider group: collapsed by default ── -->
+    <LinearLayout
+        android:id="@+id/innerShadowSliderGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="4dp"
+        android:visibility="gone">
+
+        <!-- Blur Radius -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Blur Radius"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:layout_marginStart="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderInnerShadowRadius"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="0"
+            android:valueTo="40"
+            android:stepSize="0.5"
+            android:value="6"
+            app:labelBehavior="gone" />
+
+        <!-- Opacity -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Opacity"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:layout_marginStart="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderInnerShadowOpacity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="0"
+            android:valueTo="1"
+            android:stepSize="0.01"
+            android:value="0.8"
+            app:labelBehavior="gone" />
+
+        <!-- Offset X -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Offset X"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:layout_marginStart="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderInnerShadowDx"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="-30"
+            android:valueTo="30"
+            android:stepSize="0.5"
+            android:value="0"
+            app:labelBehavior="gone" />
+
+        <!-- Offset Y -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Offset Y"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:layout_marginStart="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderInnerShadowDy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="-30"
+            android:valueTo="30"
+            android:stepSize="0.5"
+            android:value="4"
+            app:labelBehavior="gone" />
+
+    </LinearLayout>
+</LinearLayout>

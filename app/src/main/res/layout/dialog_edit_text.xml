@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- Header dengan Tombol Cepat (ALL CAPS / lowercase) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:id="@+id/dialogTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/edit_text_title"
+            android:textAppearance="?attr/textAppearanceHeadline6"
+            android:textStyle="bold" />
+
+        <!-- Tombol Cepat Ubah Huruf Besar/Kecil (ALL CAPS / lowercase) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnToggleCase"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:paddingHorizontal="12dp"
+            android:text="TT"
+            android:textStyle="bold"
+            app:cornerRadius="8dp"
+            app:strokeColor="?attr/colorPrimary" />
+
+        <!-- Tombol Hapus Cepat -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClearText"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:minWidth="44dp"
+            android:paddingHorizontal="8dp"
+            android:text="Clear"
+            android:textColor="?attr/colorError" />
+
+    </LinearLayout>
+
+    <!-- Input Teks Multi-line -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayout"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:boxCornerRadiusBottomEnd="8dp"
+        app:boxCornerRadiusBottomStart="8dp"
+        app:boxCornerRadiusTopEnd="8dp"
+        app:boxCornerRadiusTopStart="8dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etTextInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top|start"
+            android:hint="@string/edit_text_hint"
+            android:inputType="textMultiLine|textCapSentences"
+            android:minLines="4"
+            android:maxLines="8"
+            android:scrollbars="vertical"
+            android:textAppearance="?attr/textAppearanceBody1" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+</LinearLayout>

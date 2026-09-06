@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol 3D Text Extrusion untuk TextLayer.
+  Membuat efek ketebalan/volume 3D dengan tumpukan layer depth (1 s/d 50).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/extrudeControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <!-- ── Toggle enable/disable ── -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchExtrudeEnabled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="3D Text (Extrude)"
+        android:textAppearance="?attr/textAppearanceBody2"
+        android:checked="false" />
+
+    <!-- ── Group Kontrol 3D Extrusion ── -->
+    <LinearLayout
+        android:id="@+id/extrudeControlsGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="4dp"
+        android:visibility="gone">
+
+        <!-- Selector Tipe Proyeksi: Oblique vs Isometric -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="3D View Type"
+            android:textAppearance="?attr/textAppearanceCaption" />
+
+        <RadioGroup
+            android:id="@+id/rgExtrudeViewType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <RadioButton
+                android:id="@+id/rbOblique"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Oblique"
+                android:checked="true"
+                android:textSize="12sp" />
+
+            <RadioButton
+                android:id="@+id/rbIsometric"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Isometric"
+                android:textSize="12sp" />
+        </RadioGroup>
+
+        <!-- Slider Depth (1 s/d 50) -->
+        <TextView
+            android:id="@+id/tvExtrudeDepthLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginStart="4dp"
+            android:text="Depth: 10"
+            android:textAppearance="?attr/textAppearanceCaption" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderExtrudeDepth"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="1"
+            android:valueTo="50"
+            android:stepSize="1"
+            android:value="10"
+            app:labelBehavior="gone" />
+
+        <!-- Slider Arah Sudut Oblique (0° s/d 360°) -->
+        <LinearLayout
+            android:id="@+id/extrudeAngleContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:id="@+id/tvExtrudeAngleLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Depth Angle (45°)"
+                android:textAppearance="?attr/textAppearanceCaption" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderExtrudeAngle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="0"
+                android:valueTo="360"
+                android:stepSize="1"
+                android:value="45"
+                app:labelBehavior="gone" />
+        </LinearLayout>
+
+        <!-- Pilihan Warna Sisi Kedalaman (Depth Color) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginStart="4dp"
+            android:text="Depth Color"
+            android:textAppearance="?attr/textAppearanceCaption" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/llDepthColorPalette"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingVertical="4dp">
+
+                <!-- Color chips diisi secara dinamis di EditorActivity -->
+            </LinearLayout>
+        </HorizontalScrollView>
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#111111">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="#1C1C1C">
+
+        <TextView
+            android:id="@+id/btnCancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:text="Batal"
+            android:textSize="16sp"
+            android:textColor="@android:color/white"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Sesuaikan Gambar"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white" />
+
+        <TextView
+            android:id="@+id/btnOk"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:text="OK"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#42A5F5"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground" />
+    </LinearLayout>
+
+    <com.flyerpix.editor.imageedit.ImagePreEditView
+        android:id="@+id/preEditView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#181818" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#333333" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:background="#1C1C1C">
+
+        <ImageButton
+            android:id="@+id/btnRotateLeft"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_margin="2dp"
+            android:contentDescription="Rotasi Kiri"
+            android:src="@drawable/ic_rotate_left_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@android:color/white"
+            android:scaleType="center" />
+
+        <ImageButton
+            android:id="@+id/btnRotateRight"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_margin="2dp"
+            android:contentDescription="Rotasi Kanan"
+            android:src="@drawable/ic_rotate_right_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@android:color/white"
+            android:scaleType="center" />
+
+        <ImageButton
+            android:id="@+id/btnZoomOut"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_margin="2dp"
+            android:contentDescription="Zoom Keluar"
+            android:src="@drawable/ic_zoom_out_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@android:color/white"
+            android:scaleType="center" />
+
+        <ImageButton
+            android:id="@+id/btnZoomIn"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_margin="2dp"
+            android:contentDescription="Zoom Masuk"
+            android:src="@drawable/ic_zoom_in_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@android:color/white"
+            android:scaleType="center" />
+
+        <ImageButton
+            android:id="@+id/btnFlipHorizontal"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_margin="2dp"
+            android:contentDescription="Cermin Kiri-Kanan"
+            android:src="@drawable/ic_flip_horizontal_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@android:color/white"
+            android:scaleType="center" />
+
+        <ImageButton
+            android:id="@+id/btnFlipVertical"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_margin="2dp"
+            android:contentDescription="Cermin Atas-Bawah"
+            android:src="@drawable/ic_flip_vertical_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@android:color/white"
+            android:scaleType="center" />
+
+        <ImageButton
+            android:id="@+id/btnLock"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_margin="2dp"
+            android:contentDescription="Kunci Rasio"
+            android:src="@drawable/ic_lock_open_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@android:color/white"
+            android:scaleType="center" />
+
+        <ImageButton
+            android:id="@+id/btnShape"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_margin="2dp"
+            android:contentDescription="Bentuk Potongan"
+            android:src="@drawable/ic_sharp_crop_free_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@android:color/white"
+            android:scaleType="center" />
+    </LinearLayout>
+</LinearLayout>

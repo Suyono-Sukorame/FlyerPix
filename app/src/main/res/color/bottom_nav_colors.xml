@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Softer cyan (Cyan 200) - less glaring, easier on eyes -->
+    <item android:color="#80DEEA" android:state_checked="true" />
+    <!-- Gray 500 - unchanged -->
+    <item android:color="#9E9E9E" />
+</selector>

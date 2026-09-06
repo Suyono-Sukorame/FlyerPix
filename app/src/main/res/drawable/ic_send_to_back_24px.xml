@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Layer Depan (transparan) -->
+  <path
+      android:fillColor="#88FFFFFF"
+      android:pathData="M6,2h8v8H6z"/>
+  <!-- Layer Belakang (solid) -->
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M2,6h8v8H2z"/>
+  <!-- Panah ke bawah/belakang -->
+  <path
+      android:fillColor="#00E5FF"
+      android:pathData="M18,7v10l-4,-4 1.41,-1.41L17,13.17V7h2zM18,21l-5,-5h10l-5,5z"/>
+</vector>

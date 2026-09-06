@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">FlyerPix</string>
+    <string name="package_text">com.flyerpix.editor</string>
+
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="lose_work">Perubahan yang belum disimpan akan hilang. Lanjutkan?</string>
+    <string name="yes">Ya</string>
+    <string name="no">Batal</string>
+    <string name="undo">Urungkan</string>
+    <string name="redo">Ulangi</string>
+    <string name="tools">Alat</string>
+    <string name="export">Simpan</string>
+    <string name="clean">Bersihkan</string>
+    <string name="edit_text_title">Edit Teks</string>
+    <string name="edit_text_hint">Masukkan teks...</string>
+    <string name="btn_cancel">Batal</string>
+    <string name="btn_ok">OK</string>
+</resources>

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp">
+
+        <!-- Preview & Hex input row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <View
+                android:id="@+id/viewColorPreview"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="#FFFFFF" />
+
+            <EditText
+                android:id="@+id/etHexInput"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:hint="#FFFFFF"
+                android:inputType="textCapCharacters"
+                android:maxLength="7"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:fontFamily="monospace"
+                android:singleLine="true"
+                android:paddingHorizontal="12dp"
+                android:background="@android:drawable/edit_text" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHexApply"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:text="Apply"
+                android:textSize="12sp"
+                android:layout_marginStart="4dp" />
+
+        </LinearLayout>
+
+        <!-- HSV Sliders -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hue"
+            android:textSize="11sp"
+            android:textColor="#888888" />
+
+        <SeekBar
+            android:id="@+id/seekHue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="360"
+            android:progress="0" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Saturation"
+            android:textSize="11sp"
+            android:textColor="#888888"
+            android:layout_marginTop="4dp" />
+
+        <SeekBar
+            android:id="@+id/seekSaturation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="0" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Brightness"
+            android:textSize="11sp"
+            android:textColor="#888888"
+            android:layout_marginTop="4dp" />
+
+        <SeekBar
+            android:id="@+id/seekValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="100" />
+
+        <!-- Preset color grid -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Presets"
+            android:textSize="11sp"
+            android:textColor="#888888"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="6dp" />
+
+        <GridLayout
+            android:id="@+id/gridPresets"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="7"
+            android:useDefaultMargins="true"
+            android:alignmentMode="alignBounds" />
+
+    </LinearLayout>
+
+</ScrollView>

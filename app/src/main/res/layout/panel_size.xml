@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/sizePanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Ukuran Teks"
+            android:textAppearance="?attr/textAppearanceSubtitle2"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSizeReset"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="?attr/colorSecondary"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvSizeLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:text="Ukuran Font: 64 px"
+        android:textAppearance="?attr/textAppearanceCaption" />
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/sliderFontSize"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="8"
+        android:valueTo="600"
+        android:stepSize="1"
+        android:value="64"
+        app:labelBehavior="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="6dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Skala"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:layout_marginEnd="8dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderScaleXY"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:valueFrom="0.1"
+            android:valueTo="8.0"
+            android:stepSize="0.05"
+            android:value="1.0"
+            app:labelBehavior="gone" />
+
+        <TextView
+            android:id="@+id/tvScaleLabel"
+            android:layout_width="44dp"
+            android:layout_height="wrap_content"
+            android:text="100%"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:gravity="end" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScaleFit"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Sesuaikan Kanvas"
+            android:textSize="11sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScaleReset"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="Skala 100%"
+            android:textSize="11sp" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/positionPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Posisi"
+        android:textAppearance="?attr/textAppearanceSubtitle2"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="32dp"
+            android:layout_height="wrap_content"
+            android:text="X"
+            android:textStyle="bold"
+            android:textColor="#3F51B5" />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editPosX"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_panel_input"
+            android:inputType="numberDecimal"
+            android:paddingHorizontal="10dp"
+            android:textSize="14sp" />
+
+        <ImageButton
+            android:id="@+id/btnPosXMinus"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_sharp_remove_circle_outline"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#616161"
+            android:contentDescription="Kurangi X" />
+
+        <ImageButton
+            android:id="@+id/btnPosXPlus"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_add_circle_outline"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#616161"
+            android:contentDescription="Tambah X" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="32dp"
+            android:layout_height="wrap_content"
+            android:text="Y"
+            android:textStyle="bold"
+            android:textColor="#3F51B5" />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editPosY"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_panel_input"
+            android:inputType="numberDecimal"
+            android:paddingHorizontal="10dp"
+            android:textSize="14sp" />
+
+        <ImageButton
+            android:id="@+id/btnPosYMinus"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_sharp_remove_circle_outline"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#616161"
+            android:contentDescription="Kurangi Y" />
+
+        <ImageButton
+            android:id="@+id/btnPosYPlus"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_add_circle_outline"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#616161"
+            android:contentDescription="Tambah Y" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPosCenterH"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Tengah K-H"
+            android:textSize="11sp"
+            app:icon="@drawable/ic_align_24px"
+            app:iconSize="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPosCenterV"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Tengah K-V"
+            android:textSize="11sp"
+            app:icon="@drawable/ic_align_24px"
+            app:iconSize="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPosReset"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="Reset"
+            android:textSize="11sp"
+            app:icon="@drawable/ic_rotate_left_24px"
+            app:iconSize="16dp" />
+    </LinearLayout>
+</LinearLayout>

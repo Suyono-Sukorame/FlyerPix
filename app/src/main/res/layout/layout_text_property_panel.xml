@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/textPropertyPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:elevation="6dp"
+    android:visibility="gone">
+
+    <!-- Header panel: pemindah (handle) kecil + judul tool aktif -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="2dp">
+
+        <View
+            android:layout_width="24dp"
+            android:layout_height="3dp"
+            android:layout_gravity="center_vertical"
+            android:background="#DDDDDD" />
+
+        <TextView
+            android:id="@+id/textPropertyPanelTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:text="Tool"
+            android:textColor="#666666"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/textPropertyPanelScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fillViewport="true"
+        android:scrollbars="none"
+        android:maxHeight="220dp"
+        android:fadeScrollbars="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- ── Tahap 1: Panel Baru ────────────────────────────────────── -->
+
+            <!-- Position -->
+            <include
+                layout="@layout/panel_position"
+            android:id="@+id/positionPanel" />
+
+            <!-- Relative Position -->
+            <include
+                layout="@layout/panel_relative_position"
+            android:id="@+id/relativePositionPanel" />
+
+            <!-- Size -->
+            <include
+                layout="@layout/panel_size"
+            android:id="@+id/sizePanel" />
+
+            <!-- Opacity -->
+            <include
+                layout="@layout/panel_opacity"
+            android:id="@+id/opacityPanel" />
+
+            <!-- Rotate -->
+            <include
+                layout="@layout/panel_rotate"
+            android:id="@+id/rotatePanel" />
+
+            <!-- Style -->
+            <include
+                layout="@layout/panel_style"
+            android:id="@+id/stylePanel" />
+
+            <!-- Align -->
+            <include
+                layout="@layout/panel_align"
+            android:id="@+id/alignPanel" />
+
+            <!-- Color -->
+            <include
+                layout="@layout/panel_color"
+            android:id="@+id/colorPanel" />
+
+            <!-- Stroke -->
+            <include
+                layout="@layout/panel_stroke"
+            android:id="@+id/strokePanel" />
+
+            <!-- Padding -->
+            <include
+                layout="@layout/panel_padding"
+            android:id="@+id/paddingPanel" />
+
+            <!-- Background -->
+            <include
+                layout="@layout/panel_background"
+            android:id="@+id/backgroundPanel" />
+
+            <!-- Reflection -->
+            <include
+                layout="@layout/panel_reflection"
+            android:id="@+id/reflectionPanel" />
+
+            <!-- Mask -->
+            <include
+                layout="@layout/panel_mask"
+            android:id="@+id/maskPanel" />
+
+            <!-- Styles -->
+            <include
+                layout="@layout/panel_styles"
+            android:id="@+id/stylesPanel" />
+
+            <!-- Font -->
+            <include
+                layout="@layout/panel_font"
+            android:id="@+id/fontPanel" />
+
+            <!-- ── Efek yang Berpindah dari Bottom Sheet Lama ─────────────── -->
+
+            <include
+                layout="@layout/layout_shadow_controls"
+                android:id="@+id/shadowControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <include
+                layout="@layout/layout_inner_shadow_controls"
+                android:id="@+id/innerShadowControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <include
+                layout="@layout/layout_emboss_controls"
+                android:id="@+id/embossControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <include
+                layout="@layout/layout_gradient_controls"
+                android:id="@+id/gradientControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <include
+                layout="@layout/layout_texture_controls"
+                android:id="@+id/textureControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <include
+                layout="@layout/layout_extrude_controls"
+                android:id="@+id/extrudeControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <include
+                layout="@layout/layout_3d_rotate_controls"
+                android:id="@+id/rotate3DControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <include
+                layout="@layout/layout_curve_controls"
+                android:id="@+id/curveControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <include
+                layout="@layout/layout_perspective_controls"
+                android:id="@+id/perspectiveControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <include
+                layout="@layout/layout_spacing_controls"
+                android:id="@+id/spacingControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <include
+                layout="@layout/layout_blend_controls"
+                android:id="@+id/blendControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

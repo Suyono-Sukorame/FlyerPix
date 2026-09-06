@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/alignPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Perataan Teks"
+        android:textAppearance="?attr/textAppearanceSubtitle2"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAlignLeft"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            app:icon="@drawable/ic_align_left_24"
+            app:iconSize="20dp"
+            android:contentDescription="Kiri" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAlignCenter"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            app:icon="@drawable/ic_align_center_24"
+            app:iconSize="20dp"
+            android:contentDescription="Tengah" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAlignRight"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            app:icon="@drawable/ic_align_right_24"
+            app:iconSize="20dp"
+            android:contentDescription="Kanan" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAlignJustify"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            app:icon="@drawable/ic_align_justify_24"
+            app:iconSize="20dp"
+            android:contentDescription="Rata" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="4dp"
+        android:text="Berlaku untuk teks multiline."
+        android:textAppearance="?attr/textAppearanceCaption"
+        android:textColor="#888888" />
+</LinearLayout>

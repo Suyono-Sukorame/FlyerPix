@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#242424"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- ── Header Dialog: Icon & Judul ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_aspect_ratio_24px"
+            app:tint="#00E5FF"
+            android:contentDescription="Icon Ukuran Gambar" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Ukuran Gambar (Image Size)"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Pilih preset resolusi standar atau tentukan ukuran kanvas secara kustom."
+        android:textColor="#9E9E9E"
+        android:textSize="12sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginVertical="14dp"
+        android:background="#3A3A3A" />
+
+    <!-- ── Pilihan Dropdown Preset Ukuran ── -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Preset Ukuran Standar"
+        android:textColor="#B0BEC5"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <Spinner
+        android:id="@+id/spinnerPresets"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_quick_toolbar"
+        android:paddingHorizontal="12dp"
+        android:spinnerMode="dropdown" />
+
+    <!-- ── Quick Chips Bar ── -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnChip1x1"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="1:1 Persegi"
+                android:textSize="11sp"
+                android:textColor="@android:color/white"
+                app:strokeColor="#555555"
+                app:cornerRadius="18dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnChip16x9"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:text="16:9 YouTube"
+                android:textSize="11sp"
+                android:textColor="@android:color/white"
+                app:strokeColor="#555555"
+                app:cornerRadius="18dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnChipBanner"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:text="YT Banner"
+                android:textSize="11sp"
+                android:textColor="@android:color/white"
+                app:strokeColor="#555555"
+                app:cornerRadius="18dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnChipFbCover"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:text="FB Cover"
+                android:textSize="11sp"
+                android:textColor="@android:color/white"
+                app:strokeColor="#555555"
+                app:cornerRadius="18dp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- ── Input Lebar (Width) & Tinggi (Height) ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Input Width -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilWidth"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Lebar (px)"
+            app:boxStrokeColor="#00E5FF"
+            app:hintTextColor="#00E5FF"
+            app:boxBackgroundColor="#2D2D2D">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etWidth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:maxLength="5"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="1080" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Perkalian / X separator -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp"
+            android:text="×"
+            android:textColor="#757575"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <!-- Input Height -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilHeight"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Tinggi (px)"
+            app:boxStrokeColor="#00E5FF"
+            app:hintTextColor="#00E5FF"
+            app:boxBackgroundColor="#2D2D2D">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etHeight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:maxLength="5"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="1080" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+
+    <!-- ── Baris Informasi Rasio & Kunci Rasio ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Badge Rasio Aspek -->
+        <TextView
+            android:id="@+id/tvAspectRatioBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#37474F"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:textColor="#00E5FF"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            tools:text="Rasio: 1:1 (1.00)" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- CheckBox Kunci Rasio Aspek -->
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/cbLockAspectRatio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kunci Rasio"
+            android:textColor="#CCCCCC"
+            android:textSize="12sp"
+            app:buttonTint="#00E5FF" />
+    </LinearLayout>
+
+    <!-- ── Tombol Batal & Terapkan ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancel"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="Batal"
+            android:textColor="#AAAAAA"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnApply"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginStart="8dp"
+            android:text="Terapkan"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:backgroundTint="#00E5FF"
+            app:cornerRadius="8dp" />
+    </LinearLayout>
+
+</LinearLayout>

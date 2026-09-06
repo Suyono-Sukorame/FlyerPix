@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/authenticTopBarContainer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#1E88E5"
+    android:elevation="6dp"
+    android:orientation="vertical">
+
+    <!-- Row 1: Action Header (Add, Save, Share, Quotes, Overflow) -->
+    <LinearLayout
+        android:id="@+id/topBarRow1"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="4dp">
+
+        <ImageButton
+            android:id="@+id/btnTopAdd"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Tambah Objek"
+            android:src="@drawable/ic_add_24px"
+            app:tint="@android:color/white" />
+
+        <ImageButton
+            android:id="@+id/btnTopSave"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Simpan"
+            android:src="@drawable/ic_sharp_save_24px"
+            app:tint="@android:color/white" />
+
+        <ImageButton
+            android:id="@+id/btnTopShare"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Bagikan"
+            android:src="@drawable/ic_outline_share_24px"
+            app:tint="@android:color/white" />
+
+        <ImageButton
+            android:id="@+id/btnTopQuotes"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Kutipan"
+            android:src="@drawable/ic_format_quote_24px"
+            app:tint="@android:color/white" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btnTopOverflow"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Menu Lainnya"
+            android:src="@drawable/ic_more_vert_24px"
+            app:tint="@android:color/white" />
+    </LinearLayout>
+
+    <!-- Row 2: Sub-tools Header (PixelLab Badge, Undo, Zoom, Grid, Layers) -->
+    <LinearLayout
+        android:id="@+id/topBarRow2"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="#1976D2"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="6dp">
+
+        <TextView
+            android:id="@+id/tvPixelLabBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/bg_pixellab_badge"
+            android:text="FlyerPix"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btnTopUndo"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Undo"
+            android:src="@drawable/ic_sharp_undo_24px"
+            app:tint="@android:color/white" />
+
+        <ImageButton
+            android:id="@+id/btnTopRedo"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Redo"
+            android:src="@drawable/ic_sharp_redo_24px"
+            app:tint="@android:color/white" />
+
+        <ImageButton
+            android:id="@+id/btnTopZoom"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Zoom"
+            android:src="@drawable/ic_zoom_in_24px"
+            app:tint="@android:color/white" />
+
+        <ImageButton
+            android:id="@+id/btnTopGrid"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Grid"
+            android:src="@drawable/ic_grid_on_24px"
+            app:tint="@android:color/white" />
+
+        <ImageButton
+            android:id="@+id/btnTopLayers"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Layers"
+            android:src="@drawable/ic_layers_24px"
+            app:tint="@android:color/white" />
+    </LinearLayout>
+
+</LinearLayout>

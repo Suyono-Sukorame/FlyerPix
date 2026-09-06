@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#212121"
+    android:paddingBottom="24dp">
+
+    <!-- Drag Handle -->
+    <View
+        android:id="@+id/dragHandle"
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_marginTop="10dp"
+        android:background="#666666"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Header Icon -->
+    <ImageView
+        android:id="@+id/ivHeaderIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="14dp"
+        android:contentDescription="Proyek Icon"
+        android:src="@drawable/ic_nav_presets_24px"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/dragHandle"
+        app:tint="#00E5FF" />
+
+    <!-- Header Title -->
+    <TextView
+        android:id="@+id/tvHeaderTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:text="Proyek Saya (.plp)"
+        android:textColor="@android:color/white"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@id/ivHeaderIcon"
+        app:layout_constraintStart_toEndOf="@id/ivHeaderIcon"
+        app:layout_constraintTop_toTopOf="@id/ivHeaderIcon" />
+
+    <!-- Count Badge -->
+    <TextView
+        android:id="@+id/tvProjectCountBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:background="#37474F"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:textColor="#00E5FF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@id/tvHeaderTitle"
+        app:layout_constraintStart_toEndOf="@id/tvHeaderTitle"
+        app:layout_constraintTop_toTopOf="@id/tvHeaderTitle"
+        tools:text="3 Proyek" />
+
+    <!-- Import Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnImportExternal"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:layout_marginEnd="16dp"
+        android:text="Impor .plp"
+        android:textColor="#00E5FF"
+        android:textSize="12sp"
+        app:icon="@drawable/ic_sharp_photo_camera_24px"
+        app:iconSize="16dp"
+        app:iconTint="#00E5FF"
+        app:layout_constraintBottom_toBottomOf="@id/ivHeaderIcon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/ivHeaderIcon" />
+
+    <View
+        android:id="@+id/headerDivider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="12dp"
+        android:background="#333333"
+        app:layout_constraintTop_toBottomOf="@id/ivHeaderIcon" />
+
+    <!-- RecyclerView Proyek -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvSavedProjects"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:maxHeight="380dp"
+        android:nestedScrollingEnabled="false"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintTop_toBottomOf="@id/headerDivider"
+        tools:itemCount="3"
+        tools:listitem="@layout/item_saved_project" />
+
+    <!-- Empty State -->
+    <LinearLayout
+        android:id="@+id/layoutEmptyState"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingVertical="36dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/headerDivider">
+
+        <ImageView
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:contentDescription="Empty Icon"
+            android:src="@drawable/ic_nav_presets_24px"
+            app:tint="#555555" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Belum Ada Proyek Tersimpan"
+            android:textColor="#CCCCCC"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:paddingHorizontal="32dp"
+            android:text="Simpan kanvas Anda melalui menu 'Simpan sebagai Proyek' agar muncul di sini."
+            android:textAlignment="center"
+            android:textColor="#888888"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

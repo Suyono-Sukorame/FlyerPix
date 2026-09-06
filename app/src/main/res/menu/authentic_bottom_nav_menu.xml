@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_presets"
+        android:icon="@drawable/ic_nav_presets_24px"
+        android:title="Presets" />
+
+    <item
+        android:id="@+id/nav_text"
+        android:icon="@drawable/ic_nav_text_24px"
+        android:title="Text" />
+
+    <item
+        android:id="@+id/nav_object"
+        android:icon="@drawable/ic_nav_shapes_24px"
+        android:title="Object" />
+
+    <item
+        android:id="@+id/nav_canvas"
+        android:icon="@drawable/ic_nav_canvas_24px"
+        android:title="Canvas" />
+
+    <item
+        android:id="@+id/nav_effects"
+        android:icon="@drawable/ic_nav_wand_24px"
+        android:title="Effects" />
+</menu>

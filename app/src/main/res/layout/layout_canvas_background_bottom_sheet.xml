@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#212121"
+    android:paddingBottom="24dp">
+
+    <!-- Top Drag Handle Bar -->
+    <View
+        android:id="@+id/bottomSheetDragHandle"
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_marginTop="10dp"
+        android:background="#666666"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Header: Icon & Judul Latar Belakang -->
+    <ImageView
+        android:id="@+id/ivHeaderIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="14dp"
+        android:src="@drawable/ic_sharp_palette_24px"
+        app:tint="#00E5FF"
+        android:contentDescription="Background Header Icon"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/bottomSheetDragHandle" />
+
+    <TextView
+        android:id="@+id/tvHeaderTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:text="Latar Belakang Kanvas"
+        android:textColor="@android:color/white"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@id/ivHeaderIcon"
+        app:layout_constraintTop_toTopOf="@id/ivHeaderIcon"
+        app:layout_constraintBottom_toBottomOf="@id/ivHeaderIcon" />
+
+    <!-- Tombol Tutup / Selesai -->
+    <ImageButton
+        android:id="@+id/btnCloseBottomSheet"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_sharp_clear_24px"
+        app:tint="#B0BEC5"
+        android:contentDescription="Close Bottom Sheet"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/ivHeaderIcon"
+        app:layout_constraintBottom_toBottomOf="@id/ivHeaderIcon" />
+
+    <!-- Garis Pemisah -->
+    <View
+        android:id="@+id/dividerHeader"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="12dp"
+        android:background="#37474F"
+        app:layout_constraintTop_toBottomOf="@id/ivHeaderIcon" />
+
+    <!-- Mode Selector Chips (Transparan, Solid, Gradasi) -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/cgBackgroundMode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="14dp"
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:layout_constraintTop_toBottomOf="@id/dividerHeader">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTransparent"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Transparan"
+            android:textColor="@android:color/white"
+            app:chipBackgroundColor="#2C3E50" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipSolidColor"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Warna Solid"
+            android:textColor="@android:color/white"
+            app:chipBackgroundColor="#2C3E50" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipGradient"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gradasi"
+            android:textColor="@android:color/white"
+            app:chipBackgroundColor="#2C3E50" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipImage"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gambar"
+            android:textColor="@android:color/white"
+            app:chipBackgroundColor="#2C3E50" />
+    </com.google.android.material.chip.ChipGroup>
+
+    <!-- SECTION: Background Transparan -->
+    <LinearLayout
+        android:id="@+id/containerTransparent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="14dp"
+        android:background="#263238"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/cgBackgroundMode">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🏁 Kanvas Transparan Aktif"
+            android:textColor="#00E5FF"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Latar belakang kanvas menjadi tembus pandang (checkerboard). Sangat cocok untuk membuat stiker, logo, atau gambar transparan dengan format ekspor PNG."
+            android:textColor="#CFD8DC"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- SECTION: Warna Solid -->
+    <LinearLayout
+        android:id="@+id/containerSolidColor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="14dp"
+        android:orientation="vertical"
+        android:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@id/cgBackgroundMode">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pilihan Warna Cepat:"
+            android:textColor="#B0BEC5"
+            android:textSize="13sp" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/layoutSolidColorPresets"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCustomSolidColor"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginTop="12dp"
+            android:text="+ Pilih Warna Kustom (HSV / Hex)"
+            android:textColor="#00E5FF"
+            android:textSize="12sp"
+            app:cornerRadius="8dp"
+            app:strokeColor="#00E5FF" />
+    </LinearLayout>
+
+    <!-- SECTION: Warna Gradasi -->
+    <LinearLayout
+        android:id="@+id/containerGradient"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="14dp"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/cgBackgroundMode">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Preset Gradasi Profesional:"
+            android:textColor="#B0BEC5"
+            android:textSize="13sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvBackgroundGradients"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+        <!-- Tipe Gradasi: Linear / Radial / Sweep -->
+        <RadioGroup
+            android:id="@+id/rgBackgroundGradientType"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/rbBgLinear"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="Linear"
+                android:textColor="@android:color/white"
+                android:textSize="13sp" />
+
+            <RadioButton
+                android:id="@+id/rbBgRadial"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="Radial"
+                android:textColor="@android:color/white"
+                android:textSize="13sp" />
+
+            <RadioButton
+                android:id="@+id/rbBgSweep"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="Sweep"
+                android:textColor="@android:color/white"
+                android:textSize="13sp" />
+        </RadioGroup>
+
+        <!-- Slider Sudut Rotasi Gradasi Linear -->
+        <LinearLayout
+            android:id="@+id/containerBgGradientAngle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvBgAngleLabel"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                android:text="Sudut (0°)"
+                android:textColor="#CFD8DC"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderBgGradientAngle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:valueFrom="0"
+                android:valueTo="360"
+                android:stepSize="5"
+                android:value="0"
+                app:thumbColor="#00E5FF"
+                app:trackColorActive="#00E5FF"
+                app:trackColorInactive="#37474F" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCustomGradient"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginTop="8dp"
+            android:text="+ Buat Gradasi Kustom"
+            android:textColor="#00E5FF"
+            android:textSize="12sp"
+            app:cornerRadius="8dp"
+            app:strokeColor="#00E5FF" />
+    </LinearLayout>
+
+    <!-- SECTION: Gambar Latar Belakang (Prompt 45) -->
+    <LinearLayout
+        android:id="@+id/containerImage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="14dp"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/cgBackgroundMode">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sumber Gambar:"
+            android:textColor="#B0BEC5"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFromGallery"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="Dari Galeri"
+                android:textColor="#00E5FF"
+                android:textSize="13sp"
+                app:cornerRadius="8dp"
+                app:strokeColor="#00E5FF"
+                app:icon="@drawable/ic_sharp_photo_24px"
+                app:iconTint="#00E5FF" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFromCamera"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:text="Dari Kamera"
+                android:textColor="#00E5FF"
+                android:textSize="13sp"
+                app:cornerRadius="8dp"
+                app:strokeColor="#00E5FF"
+                app:icon="@drawable/ic_sharp_photo_camera_24px"
+                app:iconTint="#00E5FF" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Gambar akan otomatis di-crop/fill menyesuaikan rasio aspek kanvas aktif."
+            android:textColor="#78909C"
+            android:textSize="12sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClearImageBackground"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginTop="6dp"
+            android:text="Hapus Gambar Latar"
+            android:textColor="#E53935"
+            android:textSize="12sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

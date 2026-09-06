@@ -1,0 +1,1094 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/parentLayout"
+        tools:context=".ui.EditorActivity">
+
+    <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/nameTextInputLayout"
+            android:visibility="gone"
+            android:layout_marginTop="16dp"
+            android:layout_gravity="top|center"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content">
+        <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/saveTextInputEdit"
+                android:hint="Nombre"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <androidx.constraintlayout.motion.widget.MotionLayout
+            app:layout_behavior="@string/appbar_scrolling_view_behavior"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:layoutDescription="@xml/scene_01"
+            android:id="@+id/motionLayout">
+
+        <!-- Background Card Kanvas: Berada di tengah layar dan terisolasi rapi dari kontrol bawah -->
+        <com.google.android.material.card.MaterialCardView
+                android:id="@+id/canvasCard"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:cardElevation="6dp"
+                app:cardCornerRadius="8dp"
+                app:strokeWidth="0dp"
+                app:strokeColor="#DDDDDD"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:layout_constraintDimensionRatio="1:1"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:layout_marginStart="0dp"
+                android:layout_marginEnd="0dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="186dp">
+
+            <com.flyerpix.editor.canvas.PixelCanvasView
+                    android:id="@+id/pixelCanvasView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+    </androidx.constraintlayout.motion.widget.MotionLayout>
+
+    <!-- Tab Presets: carousel template -->
+    <LinearLayout
+            android:id="@+id/bottomControlPanelContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="56dp"
+            android:background="#1E1E1E"
+            android:orientation="vertical"
+            android:elevation="8dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvTemplatePresets"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="8dp"
+                android:clipToPadding="false"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+    </LinearLayout>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottom_navigation"
+            android:layout_gravity="bottom"
+            app:menu="@menu/authentic_bottom_nav_menu"
+            android:background="#1A1A1A"
+            app:itemIconTint="@color/bottom_nav_colors"
+            app:itemTextColor="@color/bottom_nav_colors"
+            app:labelVisibilityMode="labeled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+    <!-- Text Page (UX ala Presets): tool strip + property panel kompak -->
+    <LinearLayout
+            android:id="@+id/textEditorBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="56dp"
+            android:maxHeight="200dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+        <!-- Panel properti kontekstual: satu panel aktif sesuai tool yang dipilih pada strip -->
+        <include
+                layout="@layout/layout_text_property_panel"
+                android:id="@+id/textPropertyPanelInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+        <!-- Tool strip horizontal: ikon + label, scroll horizontal -->
+        <include
+                layout="@layout/layout_text_tool_strip"
+                android:id="@+id/textToolStripInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <!-- Halaman Objek: tool strip ikon + konten detail -->
+    <LinearLayout
+            android:id="@+id/objectMenuPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="56dp"
+            android:background="#FFFFFF"
+            android:elevation="6dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+        <!-- Konten detail: satu konten aktif sesuai tool yang dipilih pada strip -->
+        <LinearLayout
+                android:id="@+id/objectContentPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#FFFFFF"
+                android:elevation="6dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+        <!-- Konten: Sticker -->
+        <androidx.fragment.app.FragmentContainerView
+                android:id="@+id/fragmentTabSticker"
+                android:name="com.flyerpix.editor.ui.TabSticker"
+                android:layout_width="match_parent"
+                android:layout_height="140dp" />
+
+        <!-- Konten: Import (Galeri / Kamera) -->
+        <LinearLayout
+                android:id="@+id/objectContentImage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="12dp"
+                android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnObjGallery"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="📷 Galeri"
+                    app:strokeColor="#444444" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnObjCamera"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📸 Kamera"
+                    app:strokeColor="#444444" />
+        </LinearLayout>
+
+        <!-- Konten: Shape -->
+        <LinearLayout
+                android:id="@+id/objectContentShape"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:visibility="gone">
+
+            <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none">
+
+                <LinearLayout
+                        android:id="@+id/llShapeRow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical" />
+            </HorizontalScrollView>
+        </LinearLayout>
+
+        <!-- Konten: Draw (Gambar Bebas) -->
+        <LinearLayout
+                android:id="@+id/objectContentDraw"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="12dp"
+                android:visibility="gone">
+
+            <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Geser jari di kanvas untuk menggambar bebas. Goresan tersimpan otomatis."
+                    android:textColor="#666666"
+                    android:textSize="12sp"
+                    android:paddingBottom="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnObjStartDraw"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="✏️ Mulai Gambar Bebas"
+                    app:strokeColor="#444444" />
+        </LinearLayout>
+
+        <!-- Konten: Bezier (Kurva Bézier) -->
+        <LinearLayout
+                android:id="@+id/objectContentBezier"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="12dp"
+                android:visibility="gone">
+
+            <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tambahkan kurva Bézier preset ke tengah kanvas. Geser/putar/ubah skala seperti layer lain."
+                    android:textColor="#666666"
+                    android:textSize="12sp"
+                    android:paddingBottom="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnObjAddBezier"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="➕ Tambah Kurva Bézier"
+                    app:strokeColor="#444444" />
+        </LinearLayout>
+
+        <!-- Konten: Arrow (Panah) -->
+        <LinearLayout
+                android:id="@+id/objectContentArrow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="12dp"
+                android:visibility="gone">
+
+            <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tambahkan panah lurus ke tengah kanvas. Geser/putar/ubah skala seperti layer lain."
+                    android:textColor="#666666"
+                    android:textSize="12sp"
+                    android:paddingBottom="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnObjAddArrow"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="➡️ Tambah Panah"
+                    app:strokeColor="#444444" />
+        </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Tool strip: ikon + label, scroll horizontal -->
+        <include
+                layout="@layout/layout_object_tool_strip"
+                android:id="@+id/objectToolStripInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <!-- Halaman Kanvas: mode latar + swatch + galeri/kamera -->
+    <LinearLayout
+            android:id="@+id/canvasMenuPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="56dp"
+            android:background="#FFFFFF"
+            android:elevation="6dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+        <!-- Chip mode latar -->
+        <com.google.android.material.chip.ChipGroup
+                android:id="@+id/cgCanvasBgMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="8dp"
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                xmlns:app="http://schemas.android.com/apk/res-auto">
+
+            <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBgTransparent"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Transparan" />
+
+            <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBgSolid"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Warna" />
+
+            <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBgGradient"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Gradasi" />
+
+            <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBgImage"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Gambar" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- Mode: Transparan -->
+        <LinearLayout
+                android:id="@+id/containerBgTransparent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:visibility="gone">
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Latar transparan (pola kotak-kotak)."
+                    android:textColor="#666666"
+                    android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Mode: Warna solid -->
+        <LinearLayout
+                android:id="@+id/containerBgSolid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp">
+
+            <HorizontalScrollView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:scrollbars="none">
+
+                <LinearLayout
+                        android:id="@+id/llBgSolidSwatches"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCustomSolidColor"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="8dp"
+                    android:text="Custom…"
+                    android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Mode: Gradasi -->
+        <LinearLayout
+                android:id="@+id/containerBgGradient"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+            <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvBgGradients"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:paddingHorizontal="6dp"
+                    android:clipToPadding="false"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCustomGradient"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="12dp"
+                    android:text="Custom gradasi…"
+                    android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Mode: Gambar -->
+        <LinearLayout
+                android:id="@+id/containerBgImage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBgGallery"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="8dp"
+                    android:text="Galeri"
+                    android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBgCamera"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="8dp"
+                    android:text="Kamera"
+                    android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBgClearImage"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="8dp"
+                    android:text="Bersihkan"
+                    android:textColor="#E53935"
+                    android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Halaman Efek: 2 lapis (Lapis 1: kategori, Lapis 2: slider detail) -->
+    <LinearLayout
+            android:id="@+id/effectsMenuPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="56dp"
+            android:background="#1E1E1E"
+            android:elevation="6dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+        <!-- LAPIS 2: Detail per kategori efek -->
+
+        <!-- Konten: Adjust -->
+        <LinearLayout
+                android:id="@+id/effectContentAdjust"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"
+                android:visibility="visible">
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustBrightness"
+                    android:text="Brightness: 0"
+                    android:textColor="#CCCCCC"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderBrightness"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1" />
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustContrast"
+                    android:text="Contrast: 0"
+                    android:textColor="#CCCCCC"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderContrast"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1" />
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustSaturation"
+                    android:text="Saturation: 0"
+                    android:textColor="#CCCCCC"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderSaturation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1" />
+        </LinearLayout>
+
+        <!-- Konten: Effects (Vignette / Noise / Filter) -->
+        <LinearLayout
+                android:id="@+id/effectContentEffects"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:visibility="gone">
+
+            <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/cgEffects"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+                <com.google.android.material.chip.Chip
+                        android:id="@+id/chipEffectVignette"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Vignette" />
+
+                <com.google.android.material.chip.Chip
+                        android:id="@+id/chipEffectNoise"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Noise" />
+
+                <com.google.android.material.chip.Chip
+                        android:id="@+id/chipEffectFilter"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Monokrom" />
+            </com.google.android.material.chip.ChipGroup>
+        </LinearLayout>
+
+        <!-- Konten: Blur -->
+        <LinearLayout
+                android:id="@+id/effectContentBlur"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"
+                android:visibility="gone">
+
+            <TextView
+                    android:id="@+id/tvBlurRadius"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Blur Radius: 0"
+                    android:textColor="#CCCCCC"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderBlurRadius"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="25"
+                    android:value="0"
+                    android:stepSize="1" />
+        </LinearLayout>
+
+        <!-- LAPIS 1: Kategori efek -->
+        <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:background="#212121">
+
+            <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/cgEffectCategory"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="6dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true"
+                    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+                <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFxAdjust"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🎚 Adjust"
+                        android:checked="true" />
+
+                <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFxEffects"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✨ Effects" />
+
+                <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFxBlur"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="💧 Blur" />
+
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+    </LinearLayout>
+
+    <!-- Crop Confirm/Cancel Toolbar (Prompt 46) -->
+    <LinearLayout
+            android:id="@+id/toolbarConfirmCancel"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="165dp"
+            android:background="@drawable/bg_quick_toolbar"
+            android:elevation="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp"
+            android:visibility="gone">
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCropCancel"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="Batal"
+                android:textColor="#E53935"
+                android:textSize="13sp" />
+
+        <View
+                android:layout_width="1dp"
+                android:layout_height="20dp"
+                android:layout_marginHorizontal="4dp"
+                android:background="#444444" />
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCropConfirm"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="Potong"
+                android:textColor="#00E676"
+                android:textSize="13sp" />
+    </LinearLayout>
+
+    <View
+            android:visibility="invisible"
+            android:id="@+id/scrim"
+            app:layout_behavior="@string/fab_transformation_scrim_behavior"
+            android:layout_height="match_parent"
+            android:layout_width="match_parent">
+
+    </View>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/paletteFab"
+            android:layout_gravity="bottom|end"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:enabled="false"
+            android:src="@drawable/ic_sharp_palette_24px"
+            android:layout_marginBottom="72dp"
+            app:fabSize="mini"
+            android:layout_marginEnd="16dp" app:layout_anchorGravity="top|end"
+            app:layout_anchor="@+id/bottom_navigation"/>
+
+    <com.flyerpix.editor.canvas.EyedropperOverlay
+            android:id="@+id/eyedropperOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            android:clickable="false"
+            android:focusable="false" />
+
+    <com.flyerpix.editor.canvas.CropCanvasOverlay
+            android:id="@+id/cropCanvasOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/eyedropperFab"
+            android:layout_gravity="bottom|end"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:enabled="false"
+            android:src="@drawable/ic_sharp_colorize_24px"
+            android:layout_marginBottom="72dp"
+            android:layout_marginEnd="64dp"
+            app:fabSize="mini"
+            app:layout_anchor="@+id/bottom_navigation"
+            app:layout_anchorGravity="top|end" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/cropFab"
+            android:layout_gravity="bottom|end"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:enabled="false"
+            android:src="@drawable/ic_sharp_crop_free_24px"
+            android:layout_marginBottom="72dp"
+            android:layout_marginEnd="112dp"
+            app:fabSize="mini"
+            app:layout_anchor="@+id/bottom_navigation"
+            app:layout_anchorGravity="top|end" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/saveFab"
+            android:layout_gravity="bottom|end"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:src="@drawable/ic_sharp_save_24px"
+            android:layout_marginBottom="36dp"
+            app:fabSize="auto"
+            android:layout_marginEnd="16dp"/>
+
+
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/toolsBottomSheet"
+            style="@style/Widget.MaterialComponents.BottomSheet.Modal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:elevation="16dp"
+            app:behavior_hideable="true"
+            app:backgroundTint="?attr/colorSecondary"
+            app:behavior_peekHeight="0dp"
+            app:layout_behavior="@string/bottom_sheet_behavior">
+
+        <com.google.android.material.tabs.TabLayout
+                app:tabMode="scrollable"
+                app:tabIndicatorFullWidth="false"
+                style="@style/Widget.MaterialComponents.TabLayout.Colored"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:id="@+id/toolsTabLayout">
+
+            <com.google.android.material.tabs.TabItem
+                    android:icon="@drawable/ic_sharp_brush_24px"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            <com.google.android.material.tabs.TabItem
+                    android:icon="@drawable/ic_sharp_crop_square_24px"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            <com.google.android.material.tabs.TabItem
+                    android:icon="@drawable/ic_sharp_crop_free_24px"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            <com.google.android.material.tabs.TabItem
+                    android:text="Font"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+        </com.google.android.material.tabs.TabLayout>
+
+        <androidx.viewpager.widget.ViewPager
+                android:id="@+id/toolsViewPager"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@+id/toolsTabLayout">
+        </androidx.viewpager.widget.ViewPager>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <com.google.android.material.appbar.AppBarLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:elevation="4dp"
+            app:liftOnScroll="true">
+
+        <include
+                android:id="@+id/topBarInclude"
+                layout="@layout/layout_authentic_top_bar" />
+
+        <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:visibility="gone"
+                app:title=""
+                android:layout_width="match_parent"
+                android:layout_height="0dp">
+        </androidx.appcompat.widget.Toolbar>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <com.google.android.material.transformation.TransformationChildCard
+            android:id="@+id/palette"
+            android:visibility="invisible"
+            app:layout_behavior="@string/fab_transformation_sheet_behavior"
+            android:layout_width="250dp"
+            android:layout_height="wrap_content" android:layout_gravity="center">
+
+        <com.thebluealliance.spectrum.SpectrumPalette
+                android:id="@+id/palettePaint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:spectrum_autoPadding="true"
+                app:spectrum_outlineWidth="2dp"
+                app:spectrum_colors="@array/palette"/>
+    </com.google.android.material.transformation.TransformationChildCard>
+
+    <!-- Authentic PixelLab Floating Layer Panel Overlay (Prompt Revisi 1) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutAuthenticLayerOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="88dp"
+        android:visibility="gone"
+        android:elevation="16dp">
+
+        <!-- Panel Kiri: 50% Lebar Layar, Latar Belakang Gelap Teredupkan (Dimmed Scrim) -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/layoutLayerSidePanel"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="#77000000"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="@+id/guidelineCenterVertical"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <!-- Daftar Lapisan Menumpuk dari Atas -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvAuthenticLayers"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:nestedScrollingEnabled="false"
+                android:overScrollMode="never"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toTopOf="@+id/layoutLayerFooter"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- Bilah Kontrol Bawah (Footer) Panel Layer (Prompt Revisi 4) -->
+            <FrameLayout
+                android:id="@+id/layoutLayerFooter"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="#424242"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <!-- Garis Pembatas Atas Footer -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_gravity="top"
+                    android:background="#616161" />
+
+                <!-- Mode Normal (SS 1): Tombol Toggle Mode Centang & Tombol Panah 4-Arah -->
+                <RelativeLayout
+                    android:id="@+id/layoutLayerFooterNormal"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="visible">
+
+                    <!-- Tombol Masuk Mode Centang / Seleksi Batch (Kiri) -->
+                    <ImageButton
+                        android:id="@+id/btnLayerToggleBatch"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="10dp"
+                        android:background="@drawable/bg_circle_footer_white"
+                        android:contentDescription="Mode Seleksi Lapisan"
+                        android:elevation="2dp"
+                        android:padding="7dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_layer_batch_select" />
+
+                    <!-- Tombol Panah 4-Arah / Move Pad (Kanan) -->
+                    <ImageButton
+                        android:id="@+id/btnLayerMoveNormal"
+                        android:layout_width="40dp"
+                        android:layout_height="36dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/bg_layer_footer_pill_green"
+                        android:contentDescription="Geser Lapisan"
+                        android:padding="6dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_move_pad_24px" />
+
+                    <!-- Tombol To Front & To Back (Reorder Cepat Z-Index) -->
+                    <ImageButton
+                        android:id="@+id/btnLayerToFront"
+                        android:layout_width="40dp"
+                        android:layout_height="36dp"
+                        android:layout_toStartOf="@id/btnLayerToBack"
+                        android:layout_marginEnd="8dp"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/bg_circle_footer_white"
+                        android:contentDescription="Pindahkan Lapisan ke Depan"
+                        android:elevation="2dp"
+                        android:enabled="false"
+                        android:padding="7dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_bring_to_front_24px"
+                        app:tint="#424242" />
+
+                    <ImageButton
+                        android:id="@+id/btnLayerToBack"
+                        android:layout_width="40dp"
+                        android:layout_height="36dp"
+                        android:layout_toStartOf="@id/btnLayerMoveNormal"
+                        android:layout_marginEnd="8dp"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/bg_circle_footer_white"
+                        android:contentDescription="Pindahkan Lapisan ke Belakang"
+                        android:elevation="2dp"
+                        android:enabled="false"
+                        android:padding="7dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_send_to_back_24px"
+                        app:tint="#424242" />
+
+                </RelativeLayout>
+
+                <!-- Mode Batch / Multi-Select (SS 2): 5 Tombol Aksi Melingkar -->
+                <LinearLayout
+                    android:id="@+id/layoutLayerFooterBatch"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="4dp"
+                    android:visibility="gone">
+
+                    <!-- 1. Hapus (Delete Selected) -->
+                    <ImageButton
+                        android:id="@+id/btnBatchDelete"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_circle_footer_white"
+                        android:contentDescription="Hapus Lapisan Terpilih"
+                        android:elevation="2dp"
+                        android:padding="6dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_delete_24px"
+                        app:tint="#424242" />
+
+                    <Space
+                        android:layout_width="4dp"
+                        android:layout_height="wrap_content" />
+
+                    <!-- 2. Edit / Atribut (Properties) -->
+                    <ImageButton
+                        android:id="@+id/btnBatchEdit"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_circle_footer_white"
+                        android:contentDescription="Atribut Lapisan"
+                        android:elevation="2dp"
+                        android:padding="6dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_layer_properties_24px" />
+
+                    <Space
+                        android:layout_width="4dp"
+                        android:layout_height="wrap_content" />
+
+                    <!-- 3. Gabungkan (Merge Layers) -->
+                    <ImageButton
+                        android:id="@+id/btnBatchMerge"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_circle_footer_white"
+                        android:contentDescription="Gabungkan Lapisan"
+                        android:elevation="2dp"
+                        android:padding="6dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_merge_layers_24px" />
+
+                    <Space
+                        android:layout_width="4dp"
+                        android:layout_height="wrap_content" />
+
+                    <!-- 4. Selesai (Done / Checkmark) -->
+                    <ImageButton
+                        android:id="@+id/btnBatchDone"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_circle_footer_white"
+                        android:contentDescription="Selesai Mode Seleksi"
+                        android:elevation="2dp"
+                        android:padding="6dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_check_24px" />
+
+                    <Space
+                        android:layout_width="4dp"
+                        android:layout_height="wrap_content" />
+
+                    <!-- 5. Geser Bersama (Move Pad) -->
+                    <ImageButton
+                        android:id="@+id/btnBatchMove"
+                        android:layout_width="36dp"
+                        android:layout_height="32dp"
+                        android:background="@drawable/bg_layer_footer_pill_green"
+                        android:contentDescription="Geser Lapisan Bersama"
+                        android:padding="5dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_move_pad_24px" />
+
+                </LinearLayout>
+
+            </FrameLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Garis Bantu Tengah Vertikal (50% Lebar Layar) -->
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guidelineCenterVertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.5" />
+
+        <!-- Area Luar (Sisi Kanan): Menangkap sentuhan untuk menutup panel secara mulus -->
+        <View
+            android:id="@+id/viewLayerOverlayOutside"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="@android:color/transparent"
+            app:layout_constraintStart_toEndOf="@+id/guidelineCenterVertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/strokePanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchStrokeEnabled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Outline / Stroke"
+        android:textAppearance="?attr/textAppearanceBody2"
+        android:checked="false" />
+
+    <LinearLayout
+        android:id="@+id/strokeSliderGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="4dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Warna"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:layout_marginEnd="10dp" />
+
+            <View
+                android:id="@+id/viewStrokeColorSwatch"
+                android:layout_width="36dp"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_color_swatch"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/tvStrokeOpacityLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="Opasitas: 100%"
+                android:textAppearance="?attr/textAppearanceCaption" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderStrokeOpacity"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:stepSize="1"
+                android:value="100"
+                app:labelBehavior="gone" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvStrokeWidthLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_marginStart="4dp"
+            android:text="Ketebalan: 0 px"
+            android:textAppearance="?attr/textAppearanceCaption" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderStrokeWidth"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="0"
+            android:valueTo="60"
+            android:stepSize="0.5"
+            android:value="0"
+            app:labelBehavior="gone" />
+    </LinearLayout>
+</LinearLayout>

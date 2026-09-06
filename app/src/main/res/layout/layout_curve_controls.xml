@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Curved / Arc Text untuk TextLayer.
+  Slider -100% (melengkung ke bawah) s/d +100% (melengkung ke atas).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/curveControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <!-- ── Header: Judul & Tombol Reset ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Curved Text"
+            android:textAppearance="?attr/textAppearanceSubtitle2"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetCurve"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="?attr/colorSecondary"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
+
+    <!-- ── Label nilai curve ── -->
+    <TextView
+        android:id="@+id/tvCurveLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="4dp"
+        android:text="Curve: 0% (Flat)"
+        android:textAppearance="?attr/textAppearanceCaption" />
+
+    <!-- ── Slider Curve -100 s/d +100 ── -->
+    <com.google.android.material.slider.Slider
+        android:id="@+id/sliderCurve"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="-100"
+        android:valueTo="100"
+        android:stepSize="1"
+        android:value="0"
+        app:labelBehavior="gone" />
+
+    <!-- ── Indikator visual posisi preset ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="4dp"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCurveDown100"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="▼ 100%"
+            android:textSize="10sp"
+            android:paddingHorizontal="4dp"
+            android:minWidth="0dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCurveDown50"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="▼ 50%"
+            android:textSize="10sp"
+            android:paddingHorizontal="4dp"
+            android:minWidth="0dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCurveFlat"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="─ 0%"
+            android:textSize="10sp"
+            android:paddingHorizontal="4dp"
+            android:minWidth="0dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCurveUp50"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="▲ 50%"
+            android:textSize="10sp"
+            android:paddingHorizontal="4dp"
+            android:minWidth="0dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCurveUp100"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:text="▲ 100%"
+            android:textSize="10sp"
+            android:paddingHorizontal="4dp"
+            android:minWidth="0dp" />
+    </LinearLayout>
+
+</LinearLayout>

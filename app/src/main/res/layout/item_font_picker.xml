@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardFont"
+    android:layout_width="100dp"
+    android:layout_height="72dp"
+    android:layout_marginHorizontal="4dp"
+    android:layout_marginVertical="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp"
+    app:strokeColor="#DDDDDD"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="4dp">
+
+        <!-- Preview visual langsung font -->
+        <TextView
+            android:id="@+id/tvFontPreview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:text="Abc"
+            android:textColor="@android:color/black"
+            android:textSize="20sp" />
+
+        <!-- Nama Font -->
+        <TextView
+            android:id="@+id/tvFontName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:text="Font Name"
+            android:textColor="#555555"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+
+        <!-- Kategori Font -->
+        <TextView
+            android:id="@+id/tvFontCategory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:text="Category"
+            android:textColor="#888888"
+            android:textSize="8sp" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

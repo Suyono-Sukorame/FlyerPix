@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Emboss / Bevel untuk TextLayer.
+  Muncul di bottom sheet hanya saat layer teks aktif dipilih.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/embossControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <!-- ── Toggle enable/disable ── -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchEmbossEnabled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Emboss / Bevel"
+        android:textAppearance="?attr/textAppearanceBody2"
+        android:checked="false" />
+
+    <!-- ── Slider group ── -->
+    <LinearLayout
+        android:id="@+id/embossSliderGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="4dp"
+        android:visibility="gone">
+
+        <!-- Light Angle (derajat arah cahaya, 0-360) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Light Angle"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:layout_marginStart="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderEmbossAngle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="0"
+            android:valueTo="360"
+            android:stepSize="1"
+            android:value="45"
+            app:labelBehavior="gone" />
+
+        <!-- Ambient (intensitas cahaya lingkungan) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ambient Light"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:layout_marginStart="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderEmbossAmbient"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="0"
+            android:valueTo="1"
+            android:stepSize="0.01"
+            android:value="0.2"
+            app:labelBehavior="gone" />
+
+        <!-- Specular (kilap bevel / highlight) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Specular (Bevel Shine)"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:layout_marginStart="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderEmbossSpecular"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="0.1"
+            android:valueTo="20"
+            android:stepSize="0.1"
+            android:value="8"
+            app:labelBehavior="gone" />
+
+        <!-- Blur Radius (kehalusan permukaan 3D) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Surface Smoothness"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:layout_marginStart="4dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderEmbossBlurRadius"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="0.5"
+            android:valueTo="10"
+            android:stepSize="0.1"
+            android:value="3"
+            app:labelBehavior="gone" />
+
+    </LinearLayout>
+</LinearLayout>

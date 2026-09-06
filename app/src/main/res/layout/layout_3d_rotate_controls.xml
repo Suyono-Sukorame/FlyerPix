@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol 3D Rotate (Rotasi Sumbu X dan Y) untuk TextLayer.
+  Memanfaatkan android.graphics.Camera untuk perspektif rotasi 3D dinamis.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rotate3DControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <!-- ── Header: Judul & Tombol Reset ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="3D Rotate"
+            android:textAppearance="?attr/textAppearanceSubtitle2"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnReset3DRotate"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="?attr/colorSecondary"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
+
+    <!-- ── Slider Rotasi Sumbu X (Kemiringan Atas-Bawah) ── -->
+    <TextView
+        android:id="@+id/tvRotateXLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="4dp"
+        android:text="X Axis (0°)"
+        android:textAppearance="?attr/textAppearanceCaption" />
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/sliderRotateX"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="-180"
+        android:valueTo="180"
+        android:stepSize="1"
+        android:value="0"
+        app:labelBehavior="gone" />
+
+    <!-- ── Slider Rotasi Sumbu Y (Kemiringan Kiri-Kanan) ── -->
+    <TextView
+        android:id="@+id/tvRotateYLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="4dp"
+        android:text="Y Axis (0°)"
+        android:textAppearance="?attr/textAppearanceCaption" />
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/sliderRotateY"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="-180"
+        android:valueTo="180"
+        android:stepSize="1"
+        android:value="0"
+        app:labelBehavior="gone" />
+
+    <!-- ── Slider Rotasi Sumbu Z (Opsional 3D Z-Axis) ── -->
+    <TextView
+        android:id="@+id/tvRotateZLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="4dp"
+        android:text="Z Axis (0°)"
+        android:textAppearance="?attr/textAppearanceCaption" />
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/sliderRotateZ"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="-180"
+        android:valueTo="180"
+        android:stepSize="1"
+        android:value="0"
+        app:labelBehavior="gone" />
+
+</LinearLayout>

@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardLayerItem"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="4dp"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="#3A3A3A"
+    app:cardBackgroundColor="#2D2D2D">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="8dp">
+
+        <!-- 1. Handle Drag (Mode Normal) / Checkbox Seleksi (Mode Merge - Prompt 36) -->
+        <FrameLayout
+            android:id="@+id/layoutStartControl"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <ImageView
+                android:id="@+id/ivDragHandle"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="6dp"
+                android:src="@drawable/ic_drag_handle_24px"
+                app:tint="#888888"
+                android:contentDescription="Drag reorder handle" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cbMergeSelect"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone"
+                app:buttonTint="#00E5FF"
+                android:contentDescription="Select layer to merge" />
+        </FrameLayout>
+
+        <!-- 2. Preview icon jenis layer (Teks / Gambar / Bentuk) dengan container bulat -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardLayerTypePreview"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="4dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#37474F"
+            app:strokeWidth="0dp"
+            app:layout_constraintStart_toEndOf="@id/layoutStartControl"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <ImageView
+                android:id="@+id/ivLayerTypeIcon"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="8dp"
+                android:src="@drawable/ic_text_fields_24px"
+                app:tint="#00E5FF"
+                android:contentDescription="Layer type preview icon" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 3. Label nama layer dan detail informasi (Ukuran / Tipe / Blending) -->
+        <LinearLayout
+            android:id="@+id/layoutLayerInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="8dp"
+            android:orientation="vertical"
+            app:layout_constraintStart_toEndOf="@id/cardLayerTypePreview"
+            app:layout_constraintEnd_toStartOf="@id/btnToggleVisibility"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <TextView
+                android:id="@+id/tvLayerName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                tools:text="Sample Text Layer" />
+
+            <TextView
+                android:id="@+id/tvLayerDetails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#9E9E9E"
+                android:textSize="11sp"
+                tools:text="Teks • 64sp • Normal" />
+
+        </LinearLayout>
+
+        <!-- 4. Tombol toggle Mata (Visibilitas) -->
+        <ImageButton
+            android:id="@+id/btnToggleVisibility"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="7dp"
+            android:src="@drawable/ic_visibility_24px"
+            app:tint="@android:color/white"
+            android:contentDescription="Toggle Visibility"
+            app:layout_constraintEnd_toStartOf="@id/btnToggleLock"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <!-- 5. Tombol toggle Gembok (Kunci) -->
+        <ImageButton
+            android:id="@+id/btnToggleLock"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="7dp"
+            android:src="@drawable/ic_lock_open_24px"
+            app:tint="@android:color/white"
+            android:contentDescription="Toggle Lock"
+            app:layout_constraintEnd_toStartOf="@id/btnDeleteLayer"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <!-- 6. Tombol Hapus Layer -->
+        <ImageButton
+            android:id="@+id/btnDeleteLayer"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="7dp"
+            android:src="@drawable/ic_delete_24px"
+            app:tint="#FF5252"
+            android:contentDescription="Delete Layer"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

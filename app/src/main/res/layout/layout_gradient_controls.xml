@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Gradient Fill untuk TextLayer.
+  Muncul di bottom sheet hanya saat layer teks aktif dipilih.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/gradientControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <!-- ── Toggle enable/disable ── -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchGradientEnabled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Gradient Fill"
+        android:textAppearance="?attr/textAppearanceBody2"
+        android:checked="false" />
+
+    <!-- ── Group Kontrol Gradasi ── -->
+    <LinearLayout
+        android:id="@+id/gradientControlsGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="4dp"
+        android:visibility="gone">
+
+        <!-- Selector Tipe Gradasi: Linear / Radial / Sweep -->
+        <RadioGroup
+            android:id="@+id/rgGradientType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <RadioButton
+                android:id="@+id/rbLinear"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Linear"
+                android:checked="true"
+                android:textSize="12sp" />
+
+            <RadioButton
+                android:id="@+id/rbRadial"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Radial"
+                android:textSize="12sp" />
+
+            <RadioButton
+                android:id="@+id/rbSweep"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Sweep"
+                android:textSize="12sp" />
+        </RadioGroup>
+
+        <!-- Presets Horisontal RecyclerView -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginStart="4dp"
+            android:text="Gradient Presets"
+            android:textAppearance="?attr/textAppearanceCaption" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvGradientPresets"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:clipToPadding="false"
+            android:layout_marginTop="4dp"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+        <!-- Linear Gradient Angle -->
+        <LinearLayout
+            android:id="@+id/gradientAngleContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="6dp">
+
+            <TextView
+                android:id="@+id/tvAngleLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Gradient Angle (0°)"
+                android:textAppearance="?attr/textAppearanceCaption" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderGradientAngle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="0"
+                android:valueTo="360"
+                android:stepSize="1"
+                android:value="0"
+                app:labelBehavior="gone" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
