@@ -68,6 +68,7 @@ class TextPanelController(
     // ── Effect Settings Page State ──────────────────────────────────────────────
     private var settingsSnapshot: com.flyerpix.editor.canvas.model.TextLayer? = null
     private var effectSettingsOpen = false
+    private var textToolTagBeforeEffect = ""
     private var toolIsTextPage = false
     private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_BLEND, TOOL_NEON)
     private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
@@ -1457,7 +1458,7 @@ class TextPanelController(
         val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
         val hasEditor = layer != null && !layer.isLocked
 
-        binding.textEditorBar.visibility = if (isPageOpen) View.VISIBLE else View.GONE
+        binding.textEditorBar.visibility = if (isPageOpen && !effectSettingsOpen) View.VISIBLE else View.GONE
         updateEffectSettingsVisibility()
         binding.textPropertyPanelInclude.root.visibility =
             if (isPageOpen && hasEditor && activeTextToolTag.isNotEmpty() && activeTextToolTag !in complexEffectTags) View.VISIBLE else View.GONE
@@ -1484,7 +1485,7 @@ class TextPanelController(
      * kompleks mendapat ruang yang lebih lega tanpa tumpukan menu.
      */
     private fun updateEffectSettingsVisibility() {
-        val show = isPageOpen && activeTextToolTag in complexEffectTags &&
+        val show = effectSettingsOpen && isPageOpen && activeTextToolTag in complexEffectTags &&
             (pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer)?.let { !it.isLocked } ?: false
         val wasOpen = binding.effectSettingsInclude.root.visibility == View.VISIBLE
         val changed = wasOpen != show
@@ -1507,9 +1508,16 @@ class TextPanelController(
             selectTextTool(tag)
             return
         }
+        if (effectSettingsOpen && activeTextToolTag == tag) return
+        textToolTagBeforeEffect = activeTextToolTag.takeUnless { it in complexEffectTags } ?: ""
         snapshotCurrentState()
+        activeTextToolTag = tag
+        effectSettingsOpen = true
         eventsGated = true
-        selectTextTool(tag)
+        binding.textEditorBar.visibility = View.GONE
+        for (v in textPanelViews.values) v.visibility = View.GONE
+        updateEffectSettingsVisibility()
+        syncEffectUI(tag, layer)
         eventsGated = false
     }
 
@@ -1537,20 +1545,20 @@ class TextPanelController(
      */
     private fun closeEffectSettings() {
         settingsSnapshot = null
-        activeTextToolTag = ""
         effectSettingsOpen = false
-        for (v in textPanelViews.values) v.visibility = View.GONE
+        activeTextToolTag = textToolTagBeforeEffect
+        textToolTagBeforeEffect = ""
         pixelCanvasView.invalidate()
         refreshTextPageUI()
     }
 
     /**
      * Simpan snapshot parameter efek-affectable sebelum pengguna mengedit.
-     * Snapshot lurus (referensi) antar-field dipakai kembali untuk ✕ (restore).
+    * Salin layer agar perubahan real-time tidak ikut mengubah snapshot.
      */
     private fun snapshotCurrentState() {
         val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
-        settingsSnapshot = layer
+        settingsSnapshot = layer?.copyLayer()
     }
 
     private fun restoreSnapshot(snapshot: com.flyerpix.editor.canvas.model.TextLayer) {
@@ -1779,14 +1787,7 @@ private fun registerTextPanels() {
 
         // Routing untuk efek kompleks → buka halaman Effect Settings
         if (tag in complexEffectTags) {
-            activeTextToolTag = tag
-            binding.textPropertyPanelInclude.root.visibility = View.GONE
-            binding.textToolStripInclude.textToolStripScroll.visibility = View.GONE
-            for (v in textPanelViews.values) v.visibility = View.GONE
-            updateEffectSettingsVisibility()
-            syncEffectUI(tag, pixelCanvasView.selectedLayer as? TextLayer)
-            pixelCanvasView.invalidate()
-            onCanvasChanged()
+            openEffectSettings(tag)
             return
         }
 
@@ -2910,6 +2911,7 @@ private fun registerTextPanels() {
         binding.effectSettingsInclude.root.visibility = View.GONE
         activeTextToolTag = ""
         effectSettingsOpen = false
+        textToolTagBeforeEffect = ""
         settingsSnapshot = null
         for (v in textPanelViews.values) v.visibility = View.GONE
         if (wasOpen) onEffectSettingsOpenChanged(false)

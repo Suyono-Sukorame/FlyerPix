@@ -291,6 +291,13 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                     listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
                         .filter { it != null }
                         .forEach { it.animateLayoutHeight((107 * density).toInt()) }
+                } else {
+                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+                        .filter { it != null }
+                        .forEach {
+                            it.animateLayoutHeight((107 * density).toInt())
+                            it.animateLayoutMarginBottom((56 * density).toInt())
+                        }
                 }
                 updateCanvasCardMargin()
             }
@@ -503,6 +510,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         // binding.paletteFab.visibility = View.GONE
         // binding.eyedropperFab.visibility = View.GONE
         // binding.cropFab.visibility = View.GONE
+
+        if (menuId != R.id.nav_text && textPanelController.isEffectSettingsOpen()) {
+            textPanelController.cancelEffectSettings()
+        }
         
         val pages = listOf(
             R.id.nav_presets to binding.bottomControlPanelContainer,

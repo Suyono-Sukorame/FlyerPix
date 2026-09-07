@@ -101,13 +101,6 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-        <!-- Effect Settings Page: mengambil alih strip + panel saat efek kompleks dibuka -->
-        <include
-                layout="@layout/layout_effect_settings_panel"
-                android:id="@+id/effectSettingsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
         <!-- Panel properti kontekstual: satu panel aktif sesuai tool yang dipilih pada strip -->
         <include
                 layout="@layout/layout_text_property_panel"
@@ -122,6 +115,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
     </LinearLayout>
+
+    <!-- Child editor efek: sibling agar Text menu benar-benar dapat disembunyikan -->
+    <include
+            layout="@layout/layout_effect_settings_panel"
+            android:id="@+id/effectSettingsInclude"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom" />
 
     <!-- Halaman Objek: tool strip ikon + konten detail -->
     <LinearLayout
