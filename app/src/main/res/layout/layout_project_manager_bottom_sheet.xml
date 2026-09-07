@@ -29,7 +29,7 @@
         android:src="@drawable/ic_nav_presets_24px"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/dragHandle"
-        app:tint="#18C8F5" />
+        app:tint="@color/brand_blue" />
 
     <!-- Header Title -->
     <TextView
