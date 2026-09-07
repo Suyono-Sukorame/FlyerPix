@@ -1,6 +1,8 @@
 package com.flyerpix.editor
 
 import com.flyerpix.editor.canvas.PixelCanvasView
+import com.flyerpix.editor.canvas.calc.SnapCalculator
+import com.flyerpix.editor.canvas.calc.ViewportCalculator
 import com.flyerpix.editor.canvas.model.CanvasSizePreset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -84,7 +86,7 @@ class CanvasSizeAndViewportTest {
         val canvasW = 1080
         val canvasH = 1080
 
-        val vp = PixelCanvasView.calculateViewportRect(viewW, viewH, canvasW, canvasH)
+        val vp = ViewportCalculator.calculate(viewW, viewH, canvasW, canvasH)
 
         assertEquals(0f, vp.left, 0.001f)
         assertEquals(0f, vp.top, 0.001f)
@@ -101,7 +103,7 @@ class CanvasSizeAndViewportTest {
         val canvasW = 1600
         val canvasH = 900 // Rasio 16:9
 
-        val vp = PixelCanvasView.calculateViewportRect(viewW, viewH, canvasW, canvasH)
+        val vp = ViewportCalculator.calculate(viewW, viewH, canvasW, canvasH)
 
         // Lebar penuh (1000), tinggi = 1000 / (16/9) = 562.5
         assertEquals(0f, vp.left, 0.001f)
@@ -121,7 +123,7 @@ class CanvasSizeAndViewportTest {
         val canvasW = 900
         val canvasH = 1600 // Rasio 9:16
 
-        val vp = PixelCanvasView.calculateViewportRect(viewW, viewH, canvasW, canvasH)
+        val vp = ViewportCalculator.calculate(viewW, viewH, canvasW, canvasH)
 
         // Tinggi penuh (1000), lebar = 1000 * (9/16) = 562.5
         assertEquals(0f, vp.top, 0.001f)
@@ -136,11 +138,11 @@ class CanvasSizeAndViewportTest {
 
     @Test
     fun `invalid or zero dimensions return empty viewport rect`() {
-        val vpZero = PixelCanvasView.calculateViewportRect(0, 1000, 1080, 1080)
+        val vpZero = ViewportCalculator.calculate(0, 1000, 1080, 1080)
         assertEquals(0f, vpZero.right - vpZero.left, 0.001f)
         assertEquals(0f, vpZero.bottom - vpZero.top, 0.001f)
 
-        val vpNegative = PixelCanvasView.calculateViewportRect(1000, -500, 1080, 1080)
+        val vpNegative = ViewportCalculator.calculate(1000, -500, 1080, 1080)
         assertEquals(0f, vpNegative.right - vpNegative.left, 0.001f)
         assertEquals(0f, vpNegative.bottom - vpNegative.top, 0.001f)
     }
@@ -158,7 +160,7 @@ class CanvasSizeAndViewportTest {
 
         // Layer ditempatkan di dekat pusat viewport: X = 452 (center = 502, delta = 2 <= 10)
         // Y = 251 (center = 301, delta = 1 <= 10)
-        val snapResult = PixelCanvasView.calculateSnapToCenter(
+        val snapResult = SnapCalculator.calculate(
             layerX = 452f,
             layerY = 251f,
             layerWidth = layerW,

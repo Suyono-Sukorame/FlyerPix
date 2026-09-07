@@ -97,9 +97,16 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
-            android:maxHeight="200dp"
+            android:maxHeight="560dp"
             android:orientation="vertical"
             android:visibility="gone">
+
+        <!-- Effect Settings Page: mengambil alih strip + panel saat efek kompleks dibuka -->
+        <include
+                layout="@layout/layout_effect_settings_panel"
+                android:id="@+id/effectSettingsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
 
         <!-- Panel properti kontekstual: satu panel aktif sesuai tool yang dipilih pada strip -->
         <include

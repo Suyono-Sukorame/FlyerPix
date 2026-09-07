@@ -130,50 +130,11 @@
                 layout="@layout/panel_font"
             android:id="@+id/fontPanel" />
 
-            <!-- ── Efek yang Berpindah dari Bottom Sheet Lama ─────────────── -->
+            <!-- ── Efek Kompleks dipindah ke Effect Settings Page ───────── -->
+            <!-- (Shadow, Inner, Emboss, Gradient, Texture, 3D Text, 3D Rotate,
+                 Perspective, Blend, Neon → layout_effect_settings_panel.xml) -->
 
-            <include
-                layout="@layout/layout_shadow_controls"
-                android:id="@+id/shadowControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <include
-                layout="@layout/layout_inner_shadow_controls"
-                android:id="@+id/innerShadowControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <include
-                layout="@layout/layout_emboss_controls"
-                android:id="@+id/embossControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <include
-                layout="@layout/layout_gradient_controls"
-                android:id="@+id/gradientControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <include
-                layout="@layout/layout_texture_controls"
-                android:id="@+id/textureControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <include
-                layout="@layout/layout_extrude_controls"
-                android:id="@+id/extrudeControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <include
-                layout="@layout/layout_3d_rotate_controls"
-                android:id="@+id/rotate3DControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
+            <!-- Curve & Spacing tetap inline -->
             <include
                 layout="@layout/layout_curve_controls"
                 android:id="@+id/curveControlsInclude"
@@ -181,20 +142,8 @@
                 android:layout_height="wrap_content" />
 
             <include
-                layout="@layout/layout_perspective_controls"
-                android:id="@+id/perspectiveControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <include
                 layout="@layout/layout_spacing_controls"
                 android:id="@+id/spacingControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <include
-                layout="@layout/layout_blend_controls"
-                android:id="@+id/blendControlsInclude"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
         </LinearLayout>

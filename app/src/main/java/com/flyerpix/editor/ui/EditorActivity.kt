@@ -282,7 +282,18 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             { showSnackbar(it) },
             onShowMenu = { showMenu(it) },
             onEditTextRequested = { showEditTextDialog(it) },
-            onCanvasChanged = { updateCanvasCardMargin() }
+            onCanvasChanged = { updateCanvasCardMargin() },
+            onEffectSettingsOpenChanged = { effectSettingsOpen ->
+                val density = resources.displayMetrics.density
+                val offset = (56 * density).toInt()
+                animateNavTranslation(if (effectSettingsOpen) offset else 0)
+                if (effectSettingsOpen) {
+                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+                        .filter { it != null }
+                        .forEach { it.animateLayoutHeight((107 * density).toInt()) }
+                }
+                updateCanvasCardMargin()
+            }
         )
         textPanelController.initialize()
         textPanelController.setTexturePickerLauncher(texturePickerLauncher)
@@ -438,6 +449,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     }
 
     override fun onBackPressed() {
+        if (textPanelController.isEffectSettingsOpen()) {
+            textPanelController.cancelEffectSettings()
+            return
+        }
         if (layerPanel.isOpen) {
             layerPanel.close()
             return

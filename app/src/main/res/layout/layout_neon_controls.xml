@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Neon / Glow untuk TextLayer.
+  Menyesuaikan layout kompak ala PixelLab: toggle + slider + palet warna.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/neonControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <!-- ── Toggle enable/disable ── -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchNeonEnabled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Neon / Glow"
+        android:textAppearance="?attr/textAppearanceBody2"
+        android:checked="false" />
+
+    <!-- ── Slider group ── -->
+    <LinearLayout
+        android:id="@+id/neonControlsGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="4dp"
+        android:visibility="gone">
+
+        <!-- Warna cahaya neon -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Glow Color"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:layout_marginStart="4dp" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/llNeonColorPalette"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingVertical="4dp">
+
+                <!-- Color chips diisi secara dinamis -->
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Radius / sebaran cahaya -->
+        <TextView
+            android:id="@+id/tvNeonRadiusLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_marginStart="4dp"
+            android:text="Glow Radius: 12"
+            android:textAppearance="?attr/textAppearanceCaption" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderNeonRadius"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="1"
+            android:valueTo="40"
+            android:stepSize="0.5"
+            android:value="12"
+            app:labelBehavior="gone" />
+
+        <!-- Intensitas cahaya -->
+        <TextView
+            android:id="@+id/tvNeonIntensityLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_marginStart="4dp"
+            android:text="Intensity: 1.0"
+            android:textAppearance="?attr/textAppearanceCaption" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderNeonIntensity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="0.1"
+            android:valueTo="2"
+            android:stepSize="0.05"
+            android:value="1"
+            app:labelBehavior="gone" />
+
+        <!-- Inti teks terang (on) / hollow (off) -->
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchNeonCore"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Inti Teks Terang (off = hollow)"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:textSize="13sp"
+            android:checked="true" />
+    </LinearLayout>
+</LinearLayout>

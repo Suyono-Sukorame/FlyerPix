@@ -78,4 +78,65 @@
         android:text="Berlaku untuk teks multiline."
         android:textAppearance="?attr/textAppearanceCaption"
         android:textColor="#888888" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="10dp"
+        android:background="#EEEEEE" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Pembungkusan Teks"
+            android:textAppearance="?attr/textAppearanceSubtitle2"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWrapText"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:minWidth="0dp"
+            android:text="Wrap"
+            android:textSize="13sp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:contentDescription="Aktifkan pembungkusan teks" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/wrapControlsGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderWrapWidth"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="60"
+            android:valueTo="1600"
+            android:stepSize="10"
+            android:value="600" />
+
+        <TextView
+            android:id="@+id/tvWrapWidth"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:text="Lebar: 600"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:textColor="#888888" />
+    </LinearLayout>
 </LinearLayout>

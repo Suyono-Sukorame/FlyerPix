@@ -24,6 +24,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
@@ -34,9 +35,10 @@ import kotlin.math.sin
  *  2. Drop Shadow          — via [Paint.setShadowLayer] ([shadowEnabled])
  *  3. Text Fill            — [textColor], [GradientColor], atau Texture Masking ([BitmapShader])
  *  4. Inner Shadow overlay — two-bitmap PorterDuff technique ([innerShadowEnabled])
- *  5. Emboss / Bevel       — [EmbossMaskFilter] via offscreen software bitmap ([embossEnabled])
+ *  5. Neon / Glow          — blur mask offscreen ([neonEnabled]) (menggantikan Fill)
+ *  6. Emboss / Bevel       — [EmbossMaskFilter] via offscreen software bitmap ([embossEnabled])
  *     (ketika aktif, Emboss **menggantikan** pass Fill; Drop Shadow & Inner Shadow tidak diterapkan)
- *  6. Curved / Arc Text    — [curvePercent] ≠ 0 → drawTextOnPath ([Path.addArc])
+ *  7. Curved / Arc Text    — [curvePercent] ≠ 0 → drawTextOnPath ([Path.addArc])
  */
 data class TextLayer(
     override var id: String = UUID.randomUUID().toString(),
@@ -62,6 +64,8 @@ data class TextLayer(
     var isUnderline: Boolean = false,
     var isStrikethrough: Boolean = false,
     var justifyEnabled: Boolean = false,
+    var wrapTextEnabled: Boolean = false,
+    var wrapWidth: Float = 0f,
     // ── Padding Bounding Box ──────────────────────────────────────────────
     var paddingTop: Float = 0f,
     var paddingBottom: Float = 0f,
@@ -100,7 +104,8 @@ data class TextLayer(
     var embossLightAngle: Float = 45f,   // derajat 0–360 (arah cahaya)
     var embossAmbient: Float = 0.2f,     // 0.0–1.0  (cahaya ambient)
     var embossSpecular: Float = 8f,      // 0–20     (kilap specular / bevel)
-    var embossBlurRadius: Float = 3f,    // 0.5–10   (radius blur permukaan)
+    var embossIntensity: Float = 1f,     // 0–2.5    (penguat kontras cahaya: highlight & bayangan)
+    var embossBevel: Float = 3f,         // 0.5–12   (ketebalan/lebar relief bevel)
     // ── Gradient Fill ────────────────────────────────────────────────────────
     var gradientEnabled: Boolean = false,
     var gradient: GradientColor? = null,
@@ -119,6 +124,12 @@ data class TextLayer(
     var rotate3DX: Float = 0f,                  // Kemiringan atas-bawah (-180° s/d 180°)
     var rotate3DY: Float = 0f,                  // Kemiringan kiri-kanan (-180° s/d 180°)
     var rotate3DZ: Float = 0f,                  // Rotasi 3D sumbu Z (-180° s/d 180°)
+    // ── Neon / Glow ────────────────────────────────────────────────────────
+    var neonEnabled: Boolean = false,
+    var neonColor: Int = 0xFF00E5FF.toInt(),    // Warna cahaya neon
+    var neonRadius: Float = 12f,                // 1–40     (sebaran/blur lingkaran cahaya)
+    var neonIntensity: Float = 1f,              // 0.1–2    (kekuatan/opacity cahaya)
+    var neonCoreEnabled: Boolean = true,        // true=isi teks terang; false=hollow neon
     // ── Curved / Arc Text ────────────────────────────────────────────────────
     var curvePercent: Int = 0,                  // -100 (bawah) s/d +100 (atas), 0 = lurus
     // ── Perspective Warping ──────────────────────────────────────────────────
@@ -243,18 +254,27 @@ data class TextLayer(
     private fun createLayout(paint: TextPaint): StaticLayout {
         val content = if (text.isEmpty()) " " else text
         val lines = content.split("\n")
-        var maxLineWidth = 0f
-        for (line in lines) {
-            val width = paint.measureText(line)
-            if (width > maxLineWidth) maxLineWidth = width
+        val useWrap = wrapTextEnabled && wrapWidth > 0f
+        val layoutWidth = if (useWrap) {
+            max(1, wrapWidth.roundToInt())
+        } else {
+            var maxLineWidth = 0f
+            for (line in lines) {
+                val width = paint.measureText(line)
+                if (width > maxLineWidth) maxLineWidth = width
+            }
+            max(1, ceil(maxLineWidth).toInt() + 4)
         }
-        val layoutWidth = max(1, ceil(maxLineWidth).toInt() + 4)
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val builder = StaticLayout.Builder.obtain(content, 0, content.length, paint, layoutWidth)
                 .setAlignment(alignment)
                 .setLineSpacing(lineSpacing, 1.0f)
                 .setIncludePad(true)
+            if (useWrap) {
+                builder.setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY)
+                builder.setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE)
+            }
             if (justifyEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 builder.setJustificationMode(android.text.Layout.JUSTIFICATION_MODE_INTER_WORD)
             }
@@ -263,6 +283,22 @@ data class TextLayer(
             @Suppress("DEPRECATION")
             StaticLayout(content, paint, layoutWidth, alignment, 1.0f, lineSpacing, true)
         }
+    }
+
+    /**
+     * Mengukur lebar alami teks (baris terpanjang) tanpa pembungkusan.
+     * Dipakai saat wrap baru diaktifkan supaya teks langsung membungkus
+     * pada lebar isinya saat ini.
+     */
+    fun measureNaturalWidth(): Float {
+        val paint = obtainTextPaint(Paint.Style.FILL, textColor)
+        val lines = text.split("\n")
+        var maxLineWidth = 0f
+        for (line in lines) {
+            val width = paint.measureText(line.trimEnd())
+            if (width > maxLineWidth) maxLineWidth = width
+        }
+        return maxLineWidth.coerceAtLeast(1f)
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -353,6 +389,7 @@ data class TextLayer(
             drawCurvedText(canvas, fillPaint, w)
         } else {
             when {
+                neonEnabled        -> drawNeonEffect(canvas, layout)
                 embossEnabled      -> drawEmbossEffect(canvas, layout)
                 innerShadowEnabled -> drawFillWithInnerShadow(canvas, layout)
                 else               -> layout.draw(canvas)
@@ -518,14 +555,17 @@ data class TextLayer(
      * ```
      * direction = [cos(θ), sin(θ), 0.5]
      * ```
-     * - [embossAmbient]    — intensitas cahaya ambient (0.0–1.0)
-     * - [embossSpecular]   — kilap specular / highlight bevel (0–20)
-     * - [embossBlurRadius] — kehalusan permukaan emboss (0.5–10)
+     * - [embossAmbient]      — intensitas cahaya ambient (0.0–1.0)
+     * - [embossSpecular]     — kilap specular / highlight bevel (0–20)
+     * - [embossIntensity]    — penguat kontras (0–2.5): menaikkan specular &
+     *                          menurunkan ambient → bayangan makin dalam,
+     *                          highlight makin terang.
+     * - [embossBevel]        — ketebalan/kehalusan relief (0.5–12)
      */
     private fun drawEmbossEffect(canvas: Canvas, layout: StaticLayout) {
         val lw  = layout.width
         val lh  = layout.height
-        val pad = (embossBlurRadius * 2 + 4).toInt()
+        val pad = (embossBevel * 2 + 4).toInt()
         val bw  = lw + pad * 2
         val bh  = lh + pad * 2
 
@@ -537,6 +577,11 @@ data class TextLayer(
         val rad = Math.toRadians(embossLightAngle.toDouble()).toFloat()
         val lightDir = floatArrayOf(cos(rad), sin(rad), 0.5f)
 
+        // Terapkan embossIntensity: naikkan specular, turunkan ambient agar kontras
+        val intensity = embossIntensity.coerceIn(0f, 2.5f)
+        val ambient   = (embossAmbient.coerceIn(0f, 1f) / (1f + intensity * 0.5f)).coerceIn(0f, 1f)
+        val specular  = embossSpecular.coerceAtLeast(0.1f) * (0.6f + intensity)
+
         val embossPaint = buildMaskPaint().apply {
             color      = textColor
             alpha      = opacity.coerceIn(0, 255)
@@ -547,9 +592,9 @@ data class TextLayer(
             }
             maskFilter = EmbossMaskFilter(
                 lightDir,
-                embossAmbient.coerceIn(0f, 1f),
-                embossSpecular.coerceAtLeast(0.1f),
-                embossBlurRadius.coerceIn(0.5f, 10f)
+                ambient,
+                specular,
+                embossBevel.coerceIn(0.5f, 12f)
             )
         }
 
@@ -557,6 +602,61 @@ data class TextLayer(
         createLayout(embossPaint).draw(bmpCanvas)
 
         // Blit offscreen bitmap ke canvas hardware utama
+        canvas.drawBitmap(bmp, -pad.toFloat(), -pad.toFloat(), Paint(Paint.ANTI_ALIAS_FLAG))
+        bmp.recycle()
+    }
+
+    /**
+     * Menggambar efek Neon / Glow menggunakan offscreen software bitmap:
+     *
+     *  1. Glow luar (blur lebar, alpha tipis) → kedalaman cahaya.
+     *  2. Glow inti (blur rapat, alpha [neonIntensity]) → lingkaran cahaya.
+     *  3. Bila [neonCoreEnabled], teks inti digambar dengan [textColor]
+     *     (versi neon "hidup"); bila mati → hollow (hanya tabung cahaya).
+     *
+     * [BlurMaskFilter] hanya bekerja di canvas software, jadi mask dibuat di
+     * bitmap terpisah lalu di-blit ke canvas hardware utama.
+     */
+    private fun drawNeonEffect(canvas: Canvas, layout: StaticLayout) {
+        val radius = neonRadius.coerceIn(1f, 40f)
+        val pad = (radius + 8).toInt()
+        val bw = layout.width + pad * 2
+        val bh = layout.height + pad * 2
+
+        val bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
+        val bc = Canvas(bmp)
+        bc.translate(pad.toFloat(), pad.toFloat())
+
+        val glowAlpha = (neonIntensity.coerceIn(0.1f, 2f) * 255).toInt().coerceIn(0, 255)
+
+        // Lapis luar: sebaran lebar untuk kedalaman cahaya
+        val outerAlpha = glowAlpha / 2
+        if (outerAlpha > 0) {
+            val outerPaint = buildMaskPaint().apply {
+                color = neonColor
+                alpha = outerAlpha
+                maskFilter = BlurMaskFilter(radius * 1.9f, BlurMaskFilter.Blur.NORMAL)
+            }
+            createLayout(outerPaint).draw(bc)
+        }
+
+        // Lapis inti: blur rapat dengan kekuatan neonIntensity
+        val glowPaint = buildMaskPaint().apply {
+            color = neonColor
+            alpha = glowAlpha
+            maskFilter = BlurMaskFilter(radius, BlurMaskFilter.Blur.NORMAL)
+        }
+        createLayout(glowPaint).draw(bc)
+
+        // Inti teks (opsional): teks terang di tengah cahaya
+        if (neonCoreEnabled) {
+            val corePaint = buildMaskPaint().apply {
+                color = textColor
+                alpha = opacity.coerceIn(0, 255)
+            }
+            createLayout(corePaint).draw(bc)
+        }
+
         canvas.drawBitmap(bmp, -pad.toFloat(), -pad.toFloat(), Paint(Paint.ANTI_ALIAS_FLAG))
         bmp.recycle()
     }

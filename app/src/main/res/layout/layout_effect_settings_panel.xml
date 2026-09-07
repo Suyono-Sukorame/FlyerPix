@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Effect Settings Page (UX ala PixelLab): halaman khusus yang mengambil alih
+  area tool strip + panel properti saat pengguna mengedit efek kompleks.
+  Header: judul efek + ikon ✓ (terapkan) dan ✕ (batal/kembali).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/effectSettingsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:elevation="6dp"
+    android:visibility="gone">
+
+    <!-- ── Header: judul + aksi ✓/✕ ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#F2F4F8"
+        android:paddingStart="16dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
+
+        <TextView
+            android:id="@+id/effectSettingsTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="Effect Settings"
+            android:textColor="#1A1A2E"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnEffectApply"
+            style="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_check_24px"
+            app:tint="#1769FF"
+            android:contentDescription="Terapkan pengaturan" />
+
+        <ImageButton
+            android:id="@+id/btnEffectCancel"
+            style="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_sharp_clear_24px"
+            app:tint="#E53935"
+            android:contentDescription="Batal / keluar" />
+    </LinearLayout>
+
+    <!-- ── Isi halaman: panel kontrol efek aktif ── -->
+    <ScrollView
+        android:id="@+id/effectSettingsScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="400dp"
+        android:fillViewport="true"
+        android:scrollbars="none"
+        android:fadeScrollbars="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Drop Shadow -->
+            <include
+                layout="@layout/layout_shadow_controls"
+                android:id="@+id/shadowControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- Inner Shadow -->
+            <include
+                layout="@layout/layout_inner_shadow_controls"
+                android:id="@+id/innerShadowControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- Emboss / Bevel -->
+            <include
+                layout="@layout/layout_emboss_controls"
+                android:id="@+id/embossControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- Gradient Fill -->
+            <include
+                layout="@layout/layout_gradient_controls"
+                android:id="@+id/gradientControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- Texture Masking -->
+            <include
+                layout="@layout/layout_texture_controls"
+                android:id="@+id/textureControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- 3D Text Extrusion -->
+            <include
+                layout="@layout/layout_extrude_controls"
+                android:id="@+id/extrudeControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- 3D Rotate -->
+            <include
+                layout="@layout/layout_3d_rotate_controls"
+                android:id="@+id/rotate3DControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- Perspective Warping -->
+            <include
+                layout="@layout/layout_perspective_controls"
+                android:id="@+id/perspectiveControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- Blending Mode -->
+            <include
+                layout="@layout/layout_blend_controls"
+                android:id="@+id/blendControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- Neon / Glow -->
+            <include
+                layout="@layout/layout_neon_controls"
+                android:id="@+id/neonControlsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

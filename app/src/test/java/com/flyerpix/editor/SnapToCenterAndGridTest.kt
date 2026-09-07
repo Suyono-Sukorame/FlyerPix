@@ -1,6 +1,7 @@
 package com.flyerpix.editor
 
-import com.flyerpix.editor.canvas.PixelCanvasView
+import com.flyerpix.editor.canvas.calc.SnapCalculator
+import com.flyerpix.editor.canvas.calc.SnapCalculator.SnapResult
 import com.flyerpix.editor.canvas.model.TextLayer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,6 +19,40 @@ import org.junit.Test
  */
 class SnapToCenterAndGridTest {
 
+    private fun snap(
+        layerX: Float,
+        layerY: Float,
+        layerW: Float,
+        layerH: Float,
+        canvasW: Float,
+        canvasH: Float,
+        tolerance: Float,
+        centerX: Float? = null,
+        centerY: Float? = null
+    ): SnapResult = if (centerX != null && centerY != null) {
+        SnapCalculator.calculate(
+            layerX = layerX,
+            layerY = layerY,
+            layerWidth = layerW,
+            layerHeight = layerH,
+            canvasWidth = canvasW,
+            canvasHeight = canvasH,
+            tolerance = tolerance,
+            canvasCenterX = centerX,
+            canvasCenterY = centerY
+        )
+    } else {
+        SnapCalculator.calculate(
+            layerX = layerX,
+            layerY = layerY,
+            layerWidth = layerW,
+            layerHeight = layerH,
+            canvasWidth = canvasW,
+            canvasHeight = canvasH,
+            tolerance = tolerance
+        )
+    }
+
     @Test
     fun `layer snaps to horizontal center when within tolerance`() {
         val canvasW = 1000f
@@ -30,13 +65,13 @@ class SnapToCenterAndGridTest {
         // Posisi target tepat di tengah: X = 500 - 100 = 400
         // Layer ditempatkan di X = 405 (layerCenter = 505, selisih 5px <= tolerance 15px)
         // Posisi Y = 200 (layerCenter = 250, selisih 250px > tolerance 15px)
-        val result = PixelCanvasView.calculateSnapToCenter(
+        val result = snap(
             layerX = 405f,
             layerY = 200f,
-            layerWidth = layerW,
-            layerHeight = layerH,
-            canvasWidth = canvasW,
-            canvasHeight = canvasH,
+            layerW = layerW,
+            layerH = layerH,
+            canvasW = canvasW,
+            canvasH = canvasH,
             tolerance = tolerance
         )
 
@@ -60,13 +95,13 @@ class SnapToCenterAndGridTest {
         // Canvas Center: (400, 600)
         // Posisi target tepat di tengah: Y = 600 - 40 = 560
         // Layer ditempatkan di X = 100 (jauh dari tengah), Y = 566 (selisih 6px <= 10px)
-        val result = PixelCanvasView.calculateSnapToCenter(
+        val result = snap(
             layerX = 100f,
             layerY = 566f,
-            layerWidth = layerW,
-            layerHeight = layerH,
-            canvasWidth = canvasW,
-            canvasHeight = canvasH,
+            layerW = layerW,
+            layerH = layerH,
+            canvasW = canvasW,
+            canvasH = canvasH,
             tolerance = tolerance
         )
 
@@ -88,13 +123,13 @@ class SnapToCenterAndGridTest {
         // Center: (300, 400)
         // Target snapped pos: X = 250, Y = 370
         // Posisi layer sedikit meleset: X = 253, Y = 368
-        val result = PixelCanvasView.calculateSnapToCenter(
+        val result = snap(
             layerX = 253f,
             layerY = 368f,
-            layerWidth = layerW,
-            layerHeight = layerH,
-            canvasWidth = canvasW,
-            canvasHeight = canvasH,
+            layerW = layerW,
+            layerH = layerH,
+            canvasW = canvasW,
+            canvasH = canvasH,
             tolerance = tolerance
         )
 
@@ -114,13 +149,13 @@ class SnapToCenterAndGridTest {
 
         // Posisi X = 350 (layerCenter = 450, selisih 50px > 10px)
         // Posisi Y = 300 (layerCenter = 350, selisih 150px > 10px)
-        val result = PixelCanvasView.calculateSnapToCenter(
+        val result = snap(
             layerX = 350f,
             layerY = 300f,
-            layerWidth = layerW,
-            layerHeight = layerH,
-            canvasWidth = canvasW,
-            canvasHeight = canvasH,
+            layerW = layerW,
+            layerH = layerH,
+            canvasW = canvasW,
+            canvasH = canvasH,
             tolerance = tolerance
         )
 
@@ -141,13 +176,13 @@ class SnapToCenterAndGridTest {
         layer.x = (canvasW / 2f - w / 2f) + 5f
         layer.y = (canvasH / 2f - h / 2f) - 4f
 
-        val result = PixelCanvasView.calculateSnapToCenter(
+        val result = snap(
             layerX = layer.x,
             layerY = layer.y,
-            layerWidth = w,
-            layerHeight = h,
-            canvasWidth = canvasW,
-            canvasHeight = canvasH,
+            layerW = w,
+            layerH = h,
+            canvasW = canvasW,
+            canvasH = canvasH,
             tolerance = 20f
         )
 

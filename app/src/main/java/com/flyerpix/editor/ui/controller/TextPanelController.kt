@@ -43,7 +43,8 @@ class TextPanelController(
     private val showSnackbar: (String) -> Unit,
     private val onShowMenu: (Int) -> Unit,
     private val onEditTextRequested: (TextLayer) -> Unit,
-    private val onCanvasChanged: () -> Unit
+    private val onCanvasChanged: () -> Unit,
+    private val onEffectSettingsOpenChanged: (Boolean) -> Unit
 ) {
 
     private lateinit var gradientPickerAdapter: GradientPickerAdapter
@@ -63,6 +64,15 @@ class TextPanelController(
     private var isInitializing = true
 
     private data class TextToolSpec(val tag: String, val label: String, val iconRes: Int)
+
+    // ── Effect Settings Page State ──────────────────────────────────────────────
+    private var settingsSnapshot: com.flyerpix.editor.canvas.model.TextLayer? = null
+    private var effectSettingsOpen = false
+    private var toolIsTextPage = false
+    private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_BLEND, TOOL_NEON)
+    private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var rebuildExtrudePaletteHook: ((com.flyerpix.editor.canvas.model.TextLayer?) -> Unit)? = null
+    private var syncBlendButtonsHook: ((android.graphics.PorterDuff.Mode) -> Unit)? = null
 
     companion object {
         const val TOOL_STYLES       = "styles"
@@ -97,6 +107,8 @@ class TextPanelController(
         const val TOOL_3D_TEXT      = "3dtext"
         const val TOOL_3D_SHADOW    = "3dshadow"
         const val TOOL_REFLECTION   = "reflection"
+        const val TOOL_BLEND        = "blend"
+        const val TOOL_NEON         = "neon"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY      = 0xFF616161.toInt()
@@ -164,6 +176,8 @@ class TextPanelController(
         initializePerspectiveControls()
         initializeSpacingControls()
         initializeBlendModeControls()
+        initializeNeonControls()
+        initializeEffectSettingsHeader()
         
         // Selesai inisialisasi panel. Catatan: flag isInitializing sengaja TIDAK
         // dimatikan di sini — harus diakhiri via finishInitialization() SETELAH
@@ -197,7 +211,7 @@ class TextPanelController(
      * Semua slider beroperasi secara real-time tanpa perlu tombol Terapkan.
      */
     private fun initializeShadowControls() {
-        val b = binding.textPropertyPanelInclude.shadowControlsInclude
+        val b = binding.effectSettingsInclude.shadowControlsInclude
         val panel = b.root
         val switch = b.switchShadowEnabled
         val group = b.shadowSliderGroup
@@ -255,7 +269,7 @@ class TextPanelController(
      * Semua slider beroperasi secara real-time.
      */
     private fun initializeInnerShadowControls() {
-        val b = binding.textPropertyPanelInclude.innerShadowControlsInclude
+        val b = binding.effectSettingsInclude.innerShadowControlsInclude
         val panel = b.root
         val switch = b.switchInnerShadowEnabled
         val group = b.innerShadowSliderGroup
@@ -301,14 +315,15 @@ class TextPanelController(
      * Slider beroperasi secara real-time.
      */
     private fun initializeEmbossControls() {
-        val b = binding.textPropertyPanelInclude.embossControlsInclude
+        val b = binding.effectSettingsInclude.embossControlsInclude
         val panel = b.root
         val switch = b.switchEmbossEnabled
         val group = b.embossSliderGroup
         val sAngle = b.sliderEmbossAngle
         val sAmbient = b.sliderEmbossAmbient
         val sSpecular = b.sliderEmbossSpecular
-        val sBlur = b.sliderEmbossBlurRadius
+        val sBevel = b.sliderEmbossBevel
+        val sIntensity = b.sliderEmbossIntensity
 
         // Perbarui state panel setiap kali layer teks baru dipilih
         val prevListener = pixelCanvasView.onLayerSelectedListener
@@ -321,7 +336,8 @@ class TextPanelController(
                 sAngle.value = layer.embossLightAngle.coerceIn(0f, 360f)
                 sAmbient.value = layer.embossAmbient.coerceIn(0f, 1f)
                 sSpecular.value = layer.embossSpecular.coerceIn(0.1f, 20f)
-                sBlur.value = layer.embossBlurRadius.coerceIn(0.5f, 10f)
+                sBevel.value = layer.embossBevel.coerceIn(0.5f, 12f)
+                sIntensity.value = layer.embossIntensity.coerceIn(0f, 2.5f)
             } else {
                 panel.visibility = View.GONE
             }
@@ -334,7 +350,8 @@ class TextPanelController(
         sAngle.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossLightAngle = v } }
         sAmbient.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossAmbient = v } }
         sSpecular.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossSpecular = v } }
-        sBlur.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossBlurRadius = v } }
+        sBevel.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossBevel = v } }
+        sIntensity.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossIntensity = v } }
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -347,7 +364,7 @@ class TextPanelController(
      * serta rotasi sudut (angle) untuk gradasi linier.
      */
     private fun initializeGradientControls() {
-        val b = binding.textPropertyPanelInclude.gradientControlsInclude
+        val b = binding.effectSettingsInclude.gradientControlsInclude
         val panel = b.root
         val switch = b.switchGradientEnabled
         val group = b.gradientControlsGroup
@@ -465,7 +482,7 @@ class TextPanelController(
      * dan rotasi sudut tekstur (0° - 360°).
      */
     private fun initializeTextureControls() {
-        val b = binding.textPropertyPanelInclude.textureControlsInclude
+        val b = binding.effectSettingsInclude.textureControlsInclude
         val panel = b.root
         val switch = b.switchTextureEnabled
         val group = b.textureControlsGroup
@@ -550,6 +567,8 @@ class TextPanelController(
                 layer.textureRotation = value
             }
         }
+
+        syncTextureUIHook = { layer -> syncUI(layer) }
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -562,7 +581,7 @@ class TextPanelController(
      * arah sudut oblique (0°..360°), dan pilihan warna depth sisi 3D.
      */
     private fun initializeExtrudeControls() {
-        val b = binding.textPropertyPanelInclude.extrudeControlsInclude
+        val b = binding.effectSettingsInclude.extrudeControlsInclude
         val panel = b.root
         val switch = b.switchExtrudeEnabled
         val group = b.extrudeControlsGroup
@@ -680,6 +699,8 @@ class TextPanelController(
             }
         }
 
+        rebuildExtrudePaletteHook = { layer -> if (layer != null) syncUI(layer) }
+
         setupColorPalette(null)
     }
 
@@ -692,7 +713,7 @@ class TextPanelController(
      * Menggunakan android.graphics.Camera untuk transformasi perspektif 3D dinamis.
      */
     private fun initializeRotate3DControls() {
-        val b = binding.textPropertyPanelInclude.rotate3DControlsInclude
+        val b = binding.effectSettingsInclude.rotate3DControlsInclude
         val panel = b.root
         val tvX = b.tvRotateXLabel
         val tvY = b.tvRotateYLabel
@@ -836,7 +857,7 @@ class TextPanelController(
      * TODO: Implement perspective controls jika ada di UI
      */
     private fun initializePerspectiveControls() {
-        val b = binding.textPropertyPanelInclude.perspectiveControlsInclude
+        val b = binding.effectSettingsInclude.perspectiveControlsInclude
         val panel = b.root
         val switch = b.switchPerspectiveEnabled
         val group = b.perspectiveControlsGroup
@@ -1028,7 +1049,7 @@ class TextPanelController(
      */
 
     private fun initializeBlendModeControls() {
-        val b = binding.textPropertyPanelInclude.blendControlsInclude
+        val b = binding.effectSettingsInclude.blendControlsInclude
         val panel = b.root
         val tvDesc = b.tvBlendDescription
         val btnReset = b.btnResetBlendMode
@@ -1110,6 +1131,244 @@ class TextPanelController(
     }
 
     /**
+     * Wire tombol header ✓ (terapkan) dan ✕ (batal) pada halaman Effect Settings.
+     */
+    private fun initializeEffectSettingsHeader() {
+        binding.effectSettingsInclude.btnEffectApply.setOnClickListener {
+            applyEffectSettings()
+        }
+        binding.effectSettingsInclude.btnEffectCancel.setOnClickListener {
+            cancelEffectSettings()
+        }
+    }
+
+    /**
+     * Inisialisasi panel kontrol Neon / Glow.
+     * Slider & switch operate real-time; warna dari palet chip di sisi kiri.
+     */
+    private fun initializeNeonControls() {
+        val b = binding.effectSettingsInclude.neonControlsInclude
+        val switch = b.switchNeonEnabled
+        val group = b.neonControlsGroup
+        val sRadius = b.sliderNeonRadius
+        val sIntensity = b.sliderNeonIntensity
+        val switchCore = b.switchNeonCore
+        val tvRadius = b.tvNeonRadiusLabel
+        val tvIntensity = b.tvNeonIntensityLabel
+
+        fun syncUI(layer: TextLayer?) {
+            if (layer == null) {
+                b.root.visibility = View.GONE
+                return
+            }
+            b.root.visibility = View.VISIBLE
+            eventsGated = true
+            switch.isChecked = layer.neonEnabled
+            group.visibility = if (layer.neonEnabled) View.VISIBLE else View.GONE
+            sRadius.value = layer.neonRadius.coerceIn(1f, 40f)
+            sIntensity.value = layer.neonIntensity.coerceIn(0.1f, 2f)
+            switchCore.isChecked = layer.neonCoreEnabled
+            tvRadius.text = "Glow Radius: ${(layer.neonRadius * 10).toInt() / 10f}"
+            tvIntensity.text = "Intensity: ${(layer.neonIntensity * 100).toInt() / 100f}"
+            eventsGated = false
+        }
+
+        switch.setOnCheckedChangeListener { _, isChecked ->
+            if (eventsGated) return@setOnCheckedChangeListener
+            group.visibility = if (isChecked) View.VISIBLE else View.GONE
+            applyToTextLayer {
+                it.neonEnabled = isChecked
+                if (isChecked) onCanvasChanged()
+            }
+        }
+
+        sRadius.addOnChangeListener { _, value, _ ->
+            if (eventsGated) return@addOnChangeListener
+            tvRadius.text = "Glow Radius: ${(value * 10).toInt() / 10f}"
+            applyToTextLayer { it.neonRadius = value }
+        }
+        sIntensity.addOnChangeListener { _, value, _ ->
+            if (eventsGated) return@addOnChangeListener
+            tvIntensity.text = "Intensity: ${(value * 100).toInt() / 100f}"
+            applyToTextLayer { it.neonIntensity = value }
+        }
+        switchCore.setOnCheckedChangeListener { _, isChecked ->
+            if (eventsGated) return@setOnCheckedChangeListener
+            applyToTextLayer {
+                it.neonCoreEnabled = isChecked
+                onCanvasChanged()
+            }
+        }
+
+        // Palet warna chip (dibangun sekali saat init).
+        val palette = intArrayOf(
+            0xFF00E5FF.toInt(), 0xFF00FF88.toInt(), 0xFFFF00FF.toInt(), 0xFFFFFF00.toInt(),
+            0xFFFF4500.toInt(), 0xFF00BFFF.toInt(), 0xFF3AFF3A.toInt(), 0xFFFF1493.toInt(),
+            0xFFFFFAFA.toInt(), 0xFF000000.toInt()
+        )
+        val density = activity.resources.displayMetrics.density
+        val row = b.llNeonColorPalette
+        row.removeAllViews()
+        for (c in palette) {
+            val chip = android.view.View(activity).apply {
+                val s = (32 * density).toInt()
+                layoutParams = LinearLayout.LayoutParams(s, s).apply { marginEnd = (8 * density).toInt() }
+                setBackgroundResource(R.drawable.bg_color_swatch)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(c)
+                isClickable = true
+                isFocusable = true
+            }
+            chip.setTag(c)
+            chip.setOnClickListener {
+                applyToTextLayer {
+                    it.neonColor = c
+                    it.neonEnabled = true
+                    eventsGated = true
+                    switch.isChecked = true
+                    group.visibility = View.VISIBLE
+                    eventsGated = false
+                    onCanvasChanged()
+                }
+            }
+            row.addView(chip)
+        }
+
+        syncBlendButtonsHook = { mode -> updateBlendButtonStates(mode) }
+
+        val prevListener = pixelCanvasView.onLayerSelectedListener
+        pixelCanvasView.onLayerSelectedListener = { layer ->
+            prevListener?.invoke(layer)
+            syncUI(layer as? TextLayer)
+        }
+    }
+
+    private fun updateBlendButtonStates(currentMode: android.graphics.PorterDuff.Mode) {
+        val b = binding.effectSettingsInclude.blendControlsInclude
+        val tvDesc = b.tvBlendDescription
+        tvDesc.text = when (currentMode) {
+            android.graphics.PorterDuff.Mode.MULTIPLY -> "Multiply: Mengalikan warna (membuat teks lebih gelap dan menyatu)."
+            android.graphics.PorterDuff.Mode.SCREEN   -> "Screen: Membalikkan dan mengalikan (efek teks bersinar terang)."
+            android.graphics.PorterDuff.Mode.OVERLAY  -> "Overlay: Kombinasi Multiply dan Screen berdasarkan background."
+            android.graphics.PorterDuff.Mode.DARKEN   -> "Darken: Memilih piksel yang lebih gelap antara teks dan background."
+            android.graphics.PorterDuff.Mode.LIGHTEN  -> "Lighten: Memilih piksel yang lebih terang antara teks dan background."
+            android.graphics.PorterDuff.Mode.ADD      -> "Add: Menjumlahkan warna teks dan background (efek cahaya kuat)."
+            else                                      -> "Normal: Menampilkan warna layer standar menutupi background."
+        }
+        val activeColor = 0xFF1769FF.toInt()
+        val buttons = listOf(
+            b.btnBlendNormal to android.graphics.PorterDuff.Mode.SRC_OVER,
+            b.btnBlendMultiply to android.graphics.PorterDuff.Mode.MULTIPLY,
+            b.btnBlendScreen to android.graphics.PorterDuff.Mode.SCREEN,
+            b.btnBlendOverlay to android.graphics.PorterDuff.Mode.OVERLAY,
+            b.btnBlendDarken to android.graphics.PorterDuff.Mode.DARKEN,
+            b.btnBlendLighten to android.graphics.PorterDuff.Mode.LIGHTEN,
+            b.btnBlendAdd to android.graphics.PorterDuff.Mode.ADD
+        )
+        for ((btn, mode) in buttons) {
+            if (mode == currentMode) {
+                btn.setBackgroundColor(activeColor)
+                btn.setTextColor(android.graphics.Color.WHITE)
+                btn.strokeWidth = 3
+            } else {
+                btn.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                btn.setTextColor(android.graphics.Color.LTGRAY)
+                btn.strokeWidth = 1
+            }
+        }
+    }
+
+    /**
+     * Sinkronkan kontrol Gradient dengan nilai layer.
+     */
+    private fun syncGradientUI(layer: TextLayer) {
+        val c = binding.effectSettingsInclude.gradientControlsInclude
+        c.switchGradientEnabled.isChecked = layer.gradientEnabled
+        c.gradientControlsGroup.visibility = if (layer.gradientEnabled) View.VISIBLE else View.GONE
+        val grad = layer.gradient
+        if (grad != null) {
+            when (grad.type) {
+                GradientType.LINEAR -> c.rbLinear.isChecked = true
+                GradientType.RADIAL -> c.rbRadial.isChecked = true
+                GradientType.SWEEP  -> c.rbSweep.isChecked = true
+            }
+            c.gradientAngleContainer.visibility = if (grad.type == GradientType.LINEAR) View.VISIBLE else View.GONE
+            c.sliderGradientAngle.value = grad.angle.coerceIn(0f, 360f)
+            c.tvAngleLabel.text = "Gradient Angle (${grad.angle.toInt()}°)"
+            gradientPickerAdapter?.setSelectedPreset(grad)
+        } else {
+            c.rbLinear.isChecked = true
+            c.gradientAngleContainer.visibility = View.VISIBLE
+            c.sliderGradientAngle.value = 0f
+            c.tvAngleLabel.text = "Gradient Angle (0°)"
+            gradientPickerAdapter?.setSelectedPreset(null)
+        }
+    }
+
+    /**
+     * Sinkronkan UI kontrol efek aktif dengan nilai layer saat halaman dibuka.
+     */
+    private fun syncEffectUI(tag: String, layer: TextLayer?) {        if (layer == null) return
+        val fs = binding.effectSettingsInclude
+        when (tag) {
+            TOOL_SHADOW -> {
+                val c = fs.shadowControlsInclude
+                c.switchShadowEnabled.isChecked = layer.shadowEnabled
+                c.shadowSliderGroup.visibility = if (layer.shadowEnabled) View.VISIBLE else View.GONE
+                c.sliderShadowRadius.value = layer.shadowRadius.coerceIn(0f, 40f)
+                c.sliderShadowOpacity.value = layer.shadowOpacity.coerceIn(0f, 1f)
+                c.sliderShadowDx.value = layer.shadowDx.coerceIn(-30f, 30f)
+                c.sliderShadowDy.value = layer.shadowDy.coerceIn(-30f, 30f)
+            }
+            TOOL_INNER -> {
+                val c = fs.innerShadowControlsInclude
+                c.switchInnerShadowEnabled.isChecked = layer.innerShadowEnabled
+                c.innerShadowSliderGroup.visibility = if (layer.innerShadowEnabled) View.VISIBLE else View.GONE
+                c.sliderInnerShadowRadius.value = layer.innerShadowRadius.coerceIn(0f, 40f)
+                c.sliderInnerShadowOpacity.value = layer.innerShadowOpacity.coerceIn(0f, 1f)
+                c.sliderInnerShadowDx.value = layer.innerShadowDx.coerceIn(-30f, 30f)
+                c.sliderInnerShadowDy.value = layer.innerShadowDy.coerceIn(-30f, 30f)
+            }
+            TOOL_EMBOSS -> {
+                val c = fs.embossControlsInclude
+                c.switchEmbossEnabled.isChecked = layer.embossEnabled
+                c.embossSliderGroup.visibility = if (layer.embossEnabled) View.VISIBLE else View.GONE
+                c.sliderEmbossAngle.value = layer.embossLightAngle.coerceIn(0f, 360f)
+                c.sliderEmbossAmbient.value = layer.embossAmbient.coerceIn(0f, 1f)
+                c.sliderEmbossSpecular.value = layer.embossSpecular.coerceIn(0.1f, 20f)
+                c.sliderEmbossBevel.value = layer.embossBevel.coerceIn(0.5f, 12f)
+                c.sliderEmbossIntensity.value = layer.embossIntensity.coerceIn(0f, 2.5f)
+            }
+            TOOL_GRADIENT -> syncGradientUI(layer)
+            TOOL_TEXTURE -> syncTextureUIHook?.invoke(layer)
+            TOOL_3D_TEXT -> rebuildExtrudePaletteHook?.invoke(layer)
+            TOOL_3D_ROTATE -> {
+                val c = fs.rotate3DControlsInclude
+                c.sliderRotateX.value = layer.rotate3DX.coerceIn(-180f, 180f)
+                c.sliderRotateY.value = layer.rotate3DY.coerceIn(-180f, 180f)
+                c.sliderRotateZ.value = layer.rotate3DZ.coerceIn(-180f, 180f)
+            }
+            TOOL_PERSPECTIVE -> {
+                val c = fs.perspectiveControlsInclude
+                c.switchPerspectiveEnabled.isChecked = layer.perspectiveEnabled
+                c.perspectiveControlsGroup.visibility = if (layer.perspectiveEnabled) View.VISIBLE else View.GONE
+            }
+            TOOL_BLEND -> updateBlendButtonStates(layer.blendMode)
+            TOOL_NEON -> {
+                val c = fs.neonControlsInclude
+                c.switchNeonEnabled.isChecked = layer.neonEnabled
+                c.neonControlsGroup.visibility = if (layer.neonEnabled) View.VISIBLE else View.GONE
+                c.sliderNeonRadius.value = layer.neonRadius.coerceIn(1f, 40f)
+                c.sliderNeonIntensity.value = layer.neonIntensity.coerceIn(0.1f, 2f)
+                c.switchNeonCore.isChecked = layer.neonCoreEnabled
+                c.tvNeonRadiusLabel.text = "Glow Radius: ${(layer.neonRadius * 10).toInt() / 10f}"
+                c.tvNeonIntensityLabel.text = "Intensity: ${(layer.neonIntensity * 100).toInt() / 100f}"
+            }
+        }
+        val title = textToolLabels[tag] ?: "Effect Settings"
+        binding.effectSettingsInclude.effectSettingsTitle.text = title
+    }
+
+    /**
      * Membuka EditTextDialog interaktif untuk mengubah isi teks layer.
      */
 
@@ -1166,7 +1425,7 @@ class TextPanelController(
         }
         val curLayer = pixelCanvasView.selectedLayer as? TextLayer
         if (curLayer != null) {
-            val b = binding.textPropertyPanelInclude.textureControlsInclude
+            val b = binding.effectSettingsInclude.textureControlsInclude
             b.imgTextureThumbnail.setImageBitmap(bitmap)
             b.btnSelectTexture.text = "Ganti Foto"
             b.btnDeleteTexture.visibility = View.VISIBLE
@@ -1199,9 +1458,11 @@ class TextPanelController(
         val hasEditor = layer != null && !layer.isLocked
 
         binding.textEditorBar.visibility = if (isPageOpen) View.VISIBLE else View.GONE
+        updateEffectSettingsVisibility()
         binding.textPropertyPanelInclude.root.visibility =
-            if (isPageOpen && hasEditor && activeTextToolTag.isNotEmpty()) View.VISIBLE else View.GONE
-        binding.textToolStripInclude.textToolStripScroll.visibility = if (isPageOpen) View.VISIBLE else View.GONE
+            if (isPageOpen && hasEditor && activeTextToolTag.isNotEmpty() && activeTextToolTag !in complexEffectTags) View.VISIBLE else View.GONE
+        binding.textToolStripInclude.textToolStripScroll.visibility =
+            if (isPageOpen && activeTextToolTag !in complexEffectTags) View.VISIBLE else View.GONE
 
         if (isPageOpen && hasEditor) {
             if (activeTextToolTag.isEmpty()) {
@@ -1217,12 +1478,137 @@ class TextPanelController(
         onCanvasChanged()
     }
 
+    /**
+     * Tampilkan/sembunyikan halaman Effect Settings sesuai tool yang aktif.
+     * Halaman ini mengambil alih area strip + panel properti sehingga efek
+     * kompleks mendapat ruang yang lebih lega tanpa tumpukan menu.
+     */
+    private fun updateEffectSettingsVisibility() {
+        val show = isPageOpen && activeTextToolTag in complexEffectTags &&
+            (pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer)?.let { !it.isLocked } ?: false
+        val wasOpen = binding.effectSettingsInclude.root.visibility == View.VISIBLE
+        val changed = wasOpen != show
+        binding.effectSettingsInclude.root.visibility = if (show) View.VISIBLE else View.GONE
+        effectSettingsOpen = show
+        if (changed) onEffectSettingsOpenChanged(show)
+    }
+
+    /**
+     * Entri titik-antarmuka: panggil dari Activity & controller lain untuk
+     * membuka halaman Effect Settings dari tool strip.
+     */
+    fun openEffectSettings(tag: String) {
+        val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+        if (layer == null || layer.isLocked) {
+            showSnackbar("Pilih layer teks terlebih dahulu")
+            return
+        }
+        if (tag !in complexEffectTags) {
+            selectTextTool(tag)
+            return
+        }
+        snapshotCurrentState()
+        eventsGated = true
+        selectTextTool(tag)
+        eventsGated = false
+    }
+
+    /**
+     * Terapkan (✓): tutup halaman settings namun pertahankan perubahan di kanvas.
+     */
+    fun applyEffectSettings() { closeEffectSettings() }
+
+    /**
+     * Periksa apakah halaman Effect Settings sedang terbuka (untuk back-press).
+     */
+    fun isEffectSettingsOpen(): Boolean = effectSettingsOpen
+
+    /**
+     * Batal (✕): kembalikan seluruh parameter efek ke kondisi sebelum halaman dibuka.
+     */
+    fun cancelEffectSettings() {
+        val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+        if (layer != null) restoreSnapshot(layer)
+        closeEffectSettings()
+    }
+
+    /**
+     * Tutup halaman settings (baik via ✓ maupun ✕) dan kembali ke strip tool.
+     */
+    private fun closeEffectSettings() {
+        settingsSnapshot = null
+        activeTextToolTag = ""
+        effectSettingsOpen = false
+        for (v in textPanelViews.values) v.visibility = View.GONE
+        pixelCanvasView.invalidate()
+        refreshTextPageUI()
+    }
+
+    /**
+     * Simpan snapshot parameter efek-affectable sebelum pengguna mengedit.
+     * Snapshot lurus (referensi) antar-field dipakai kembali untuk ✕ (restore).
+     */
+    private fun snapshotCurrentState() {
+        val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+        settingsSnapshot = layer
+    }
+
+    private fun restoreSnapshot(snapshot: com.flyerpix.editor.canvas.model.TextLayer) {
+        val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
+        layer.shadowEnabled        = snapshot.shadowEnabled
+        layer.shadowColor          = snapshot.shadowColor
+        layer.shadowRadius         = snapshot.shadowRadius
+        layer.shadowDx             = snapshot.shadowDx
+        layer.shadowDy             = snapshot.shadowDy
+        layer.shadowOpacity        = snapshot.shadowOpacity
+        layer.innerShadowEnabled   = snapshot.innerShadowEnabled
+        layer.innerShadowColor     = snapshot.innerShadowColor
+        layer.innerShadowRadius    = snapshot.innerShadowRadius
+        layer.innerShadowDx        = snapshot.innerShadowDx
+        layer.innerShadowDy        = snapshot.innerShadowDy
+        layer.innerShadowOpacity   = snapshot.innerShadowOpacity
+        layer.embossEnabled        = snapshot.embossEnabled
+        layer.embossLightAngle     = snapshot.embossLightAngle
+        layer.embossAmbient        = snapshot.embossAmbient
+        layer.embossSpecular       = snapshot.embossSpecular
+        layer.embossIntensity      = snapshot.embossIntensity
+        layer.embossBevel          = snapshot.embossBevel
+        layer.gradientEnabled      = snapshot.gradientEnabled
+        layer.gradient             = snapshot.gradient?.copy()
+        layer.textureEnabled       = snapshot.textureEnabled
+        layer.textureBitmap        = snapshot.textureBitmap
+        layer.textureScale         = snapshot.textureScale
+        layer.textureRotation      = snapshot.textureRotation
+        layer.extrudeEnabled       = snapshot.extrudeEnabled
+        layer.extrudeDepth         = snapshot.extrudeDepth
+        layer.extrudeColor         = snapshot.extrudeColor
+        layer.extrudeViewType      = snapshot.extrudeViewType
+        layer.extrudeAngle         = snapshot.extrudeAngle
+        layer.rotate3DX            = snapshot.rotate3DX
+        layer.rotate3DY            = snapshot.rotate3DY
+        layer.rotate3DZ            = snapshot.rotate3DZ
+        layer.perspectiveEnabled   = snapshot.perspectiveEnabled
+        layer.perspectiveCorners   = snapshot.perspectiveCorners.clone()
+        layer.blendMode            = snapshot.blendMode
+        layer.neonEnabled          = snapshot.neonEnabled
+        layer.neonColor            = snapshot.neonColor
+        layer.neonRadius           = snapshot.neonRadius
+        layer.neonIntensity        = snapshot.neonIntensity
+        layer.neonCoreEnabled      = snapshot.neonCoreEnabled
+    }
+
+    /**
+     * Jeda sementara listener slider/switch agar nilai awal yang di-set ke UI
+     * saat membuka halaman settings tidak tercatat sebagai perubahan on-submit.
+     */
+    private var eventsGated = false
+
     private fun updateTextPanelTitle() {
         binding.textPropertyPanelInclude.textPropertyPanelTitle.text =
             textToolLabels[activeTextToolTag] ?: "Tool"
     }
 
-    private fun registerTextPanels() {
+private fun registerTextPanels() {
         val tp = binding.textPropertyPanelInclude
         textPanelViews.clear()
         textPanelViews[TOOL_STYLES]      = tp.stylesPanel.root
@@ -1232,8 +1618,6 @@ class TextPanelController(
         textPanelViews[TOOL_SIZE]        = tp.sizePanel.root
         textPanelViews[TOOL_PADDING]     = tp.paddingPanel.root
         textPanelViews[TOOL_COLOR]       = tp.colorPanel.root
-        textPanelViews[TOOL_GRADIENT]    = tp.gradientControlsInclude.root
-        textPanelViews[TOOL_TEXTURE]     = tp.textureControlsInclude.root
         textPanelViews[TOOL_OPACITY]     = tp.opacityPanel.root
         textPanelViews[TOOL_ROTATE]      = tp.rotatePanel.root
         textPanelViews[TOOL_MASK]        = tp.maskPanel.root
@@ -1244,14 +1628,21 @@ class TextPanelController(
         textPanelViews[TOOL_LETTER]      = tp.spacingControlsInclude.root
         textPanelViews[TOOL_LINE]        = tp.spacingControlsInclude.root
         textPanelViews[TOOL_STROKE]      = tp.strokePanel.root
-        textPanelViews[TOOL_SHADOW]      = tp.shadowControlsInclude.root
-        textPanelViews[TOOL_INNER]       = tp.innerShadowControlsInclude.root
-        textPanelViews[TOOL_EMBOSS]      = tp.embossControlsInclude.root
-        textPanelViews[TOOL_PERSPECTIVE] = tp.perspectiveControlsInclude.root
-        textPanelViews[TOOL_3D_ROTATE]   = tp.rotate3DControlsInclude.root
-        textPanelViews[TOOL_3D_TEXT]     = tp.extrudeControlsInclude.root
-        textPanelViews[TOOL_3D_SHADOW]   = tp.shadowControlsInclude.root
         textPanelViews[TOOL_REFLECTION]  = tp.reflectionPanel.root
+
+        // Efek kompleks → halaman Effect Settings terpisah
+        val fs = binding.effectSettingsInclude
+        textPanelViews[TOOL_GRADIENT]    = fs.gradientControlsInclude.root
+        textPanelViews[TOOL_TEXTURE]     = fs.textureControlsInclude.root
+        textPanelViews[TOOL_SHADOW]      = fs.shadowControlsInclude.root
+        textPanelViews[TOOL_INNER]       = fs.innerShadowControlsInclude.root
+        textPanelViews[TOOL_EMBOSS]      = fs.embossControlsInclude.root
+        textPanelViews[TOOL_PERSPECTIVE] = fs.perspectiveControlsInclude.root
+        textPanelViews[TOOL_3D_ROTATE]   = fs.rotate3DControlsInclude.root
+        textPanelViews[TOOL_3D_TEXT]     = fs.extrudeControlsInclude.root
+        textPanelViews[TOOL_3D_SHADOW]   = fs.shadowControlsInclude.root
+        textPanelViews[TOOL_BLEND]       = fs.blendControlsInclude.root
+        textPanelViews[TOOL_NEON]        = fs.neonControlsInclude.root
     }
 
     private fun buildTextToolStrip() {
@@ -1287,7 +1678,9 @@ class TextPanelController(
             TextToolSpec(TOOL_3D_ROTATE,   "3D Rotate",   R.drawable.ic_3d_rotate_24px),
             TextToolSpec(TOOL_3D_TEXT,     "3D Text",     R.drawable.ic_3d_text_24px),
             TextToolSpec(TOOL_3D_SHADOW,   "3D Shadow",   R.drawable.ic_3d_shadow_24px),
-            TextToolSpec(TOOL_REFLECTION,  "Reflection",  R.drawable.ic_reflection_24px)
+            TextToolSpec(TOOL_REFLECTION,  "Reflection",  R.drawable.ic_reflection_24px),
+            TextToolSpec(TOOL_BLEND,       "Blend",       R.drawable.ic_layers_24px),
+            TextToolSpec(TOOL_NEON,        "Neon",        R.drawable.ic_neon_24px)
         )
 
         val density = activity.resources.displayMetrics.density
@@ -1381,8 +1774,28 @@ class TextPanelController(
     }
 
     private fun selectTextTool(tag: String) {
+        if (isInitializing) return
+        if (activeTextToolTag == tag) return
+
+        // Routing untuk efek kompleks → buka halaman Effect Settings
+        if (tag in complexEffectTags) {
+            activeTextToolTag = tag
+            binding.textPropertyPanelInclude.root.visibility = View.GONE
+            binding.textToolStripInclude.textToolStripScroll.visibility = View.GONE
+            for (v in textPanelViews.values) v.visibility = View.GONE
+            updateEffectSettingsVisibility()
+            syncEffectUI(tag, pixelCanvasView.selectedLayer as? TextLayer)
+            pixelCanvasView.invalidate()
+            onCanvasChanged()
+            return
+        }
+
         activeTextToolTag = tag
         if (textToolItems.isEmpty()) return
+
+        // Sembunyikan halaman Effect Settings jika beralih ke tool sederhana
+        updateEffectSettingsVisibility()
+
         for ((t, item) in textToolItems) {
             val selected = t == tag
             item.isSelected = selected
@@ -1396,6 +1809,7 @@ class TextPanelController(
         applyTextPanelVisibility()
         binding.textPropertyPanelInclude.root.visibility = View.VISIBLE
         updateTextPanelTitle()
+        binding.textToolStripInclude.textToolStripScroll.visibility = View.VISIBLE
     }
 
     private fun deselectTextTool() {
@@ -1853,6 +2267,12 @@ class TextPanelController(
             btn.strokeWidth = if (active) 0 else 1
         }
 
+        fun setActiveText(btn: com.google.android.material.button.MaterialButton, active: Boolean) {
+            btn.isSelected = active
+            btn.setBackgroundColor(if (active) COLOR_ACTIVE else android.graphics.Color.TRANSPARENT)
+            btn.setTextColor(if (active) android.graphics.Color.WHITE else COLOR_GRAY)
+        }
+
         fun apply(align: android.text.Layout.Alignment, justify: Boolean) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
             pixelCanvasView.runRecordedAction("Ubah Perataan Teks") {
@@ -1883,6 +2303,49 @@ class TextPanelController(
             setActive(b.btnAlignRight, false); setActive(b.btnAlignJustify, true)
         }
 
+        // ── Wrap Text: pembungkusan baris pada lebar tetap ───────────────────
+        var syncingWrap = false
+
+        fun syncWrap() {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
+            syncingWrap = true
+            val enabled = layer.wrapTextEnabled
+            setActiveText(b.btnWrapText, enabled)
+            b.wrapControlsGroup.visibility = if (enabled) View.VISIBLE else View.GONE
+            if (layer.wrapWidth > 0f) {
+                val v = layer.wrapWidth.coerceIn(60f, 1600f)
+                b.sliderWrapWidth.value = v
+                b.tvWrapWidth.text = "Lebar: ${v.toInt()}"
+            }
+            syncingWrap = false
+        }
+
+        b.btnWrapText.setOnClickListener {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+                ?: return@setOnClickListener
+            val enable = !layer.wrapTextEnabled
+            pixelCanvasView.runRecordedAction("Wrap Teks") {
+                layer.wrapTextEnabled = enable
+                if (enable && layer.wrapWidth <= 0f) {
+                    layer.wrapWidth = layer.measureNaturalWidth().coerceAtLeast(60f)
+                }
+            }
+            pixelCanvasView.invalidate()
+            syncWrap()
+        }
+
+        b.sliderWrapWidth.addOnChangeListener { _, value, _ ->
+            if (syncingWrap) return@addOnChangeListener
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+                ?: return@addOnChangeListener
+            if (!layer.wrapTextEnabled) return@addOnChangeListener
+            b.tvWrapWidth.text = "Lebar: ${value.toInt()}"
+            pixelCanvasView.runRecordedAction("Ubah Lebar Wrap") {
+                layer.wrapWidth = value
+            }
+            pixelCanvasView.invalidate()
+        }
+
         val prevListener = pixelCanvasView.onLayerSelectedListener
         pixelCanvasView.onLayerSelectedListener = { layer ->
             prevListener?.invoke(layer)
@@ -1896,6 +2359,7 @@ class TextPanelController(
                     align == android.text.Layout.Alignment.ALIGN_OPPOSITE -> { setActive(b.btnAlignLeft, false); setActive(b.btnAlignCenter, false); setActive(b.btnAlignRight, true) }
                     else -> { setActive(b.btnAlignLeft, false); setActive(b.btnAlignCenter, false); setActive(b.btnAlignRight, false) }
                 }
+                syncWrap()
             }
         }
     }
@@ -2243,7 +2707,7 @@ class TextPanelController(
                 layer.textureBitmap = null
                 layer.textureEnabled = false
             }
-            val t = binding.textPropertyPanelInclude.textureControlsInclude
+            val t = binding.effectSettingsInclude.textureControlsInclude
             t.imgTextureThumbnail.setImageDrawable(null)
             t.btnSelectTexture.text = "Pilih Foto"
             t.btnDeleteTexture.visibility = View.GONE
@@ -2350,7 +2814,13 @@ class TextPanelController(
         target.embossLightAngle = style.embossLightAngle
         target.embossAmbient = style.embossAmbient
         target.embossSpecular = style.embossSpecular
-        target.embossBlurRadius = style.embossBlurRadius
+        target.embossIntensity = style.embossIntensity
+        target.embossBevel = style.embossBevel
+        target.neonEnabled = style.neonEnabled
+        target.neonColor = style.neonColor
+        target.neonRadius = style.neonRadius
+        target.neonIntensity = style.neonIntensity
+        target.neonCoreEnabled = style.neonCoreEnabled
         target.gradientEnabled = style.gradientEnabled
         target.gradient = style.gradient?.copy()
         target.textureEnabled = style.textureEnabled
@@ -2434,9 +2904,14 @@ class TextPanelController(
     }
 
     fun hideStripAndPanels() {
+        val wasOpen = effectSettingsOpen
         binding.textPropertyPanelInclude.root.visibility = View.GONE
         binding.textToolStripInclude.textToolStripScroll.visibility = View.GONE
+        binding.effectSettingsInclude.root.visibility = View.GONE
         activeTextToolTag = ""
+        effectSettingsOpen = false
+        settingsSnapshot = null
         for (v in textPanelViews.values) v.visibility = View.GONE
+        if (wasOpen) onEffectSettingsOpenChanged(false)
     }
 }

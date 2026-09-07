@@ -45,7 +45,7 @@ static void boxBlurLine1D(const uint8_t* src, uint8_t* dst, int32_t len,
         d[3] = static_cast<uint8_t>(a * recip + 0.5f);
 
         if (x == len - 1) break;
-        const uint8_t* pAdd = pxAt(clampIdx(x + radius));      // slot baru masuk
+        const uint8_t* pAdd = pxAt(clampIdx(x + radius + 1));  // slot baru masuk
         const uint8_t* pRem = pxAt(clampIdx(x - radius));      // slot lama keluar
         r += pAdd[0] - pRem[0];
         g += pAdd[1] - pRem[1];

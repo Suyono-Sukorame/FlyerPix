@@ -698,7 +698,8 @@ class PixelCanvasView @JvmOverloads constructor(
         DRAGGING_LAYER,
         DRAGGING_SCALE_HANDLE,
         DRAGGING_ROTATE_HANDLE,
-        DRAGGING_PERSPECTIVE_HANDLE
+        DRAGGING_PERSPECTIVE_HANDLE,
+        DRAGGING_WRAP_HANDLE
     }
 
     var currentTouchState: TouchState = TouchState.IDLE
@@ -1458,7 +1459,8 @@ class PixelCanvasView @JvmOverloads constructor(
         DUPLICATE,    // Kiri atas
         DELETE,       // Kanan atas
         SCALE,        // Kanan bawah
-        ROTATE        // Kiri bawah
+        ROTATE,       // Kiri bawah
+        WRAP          // Tengah-kanan (resize lebar wrap teks)
     }
 
     /**
@@ -1480,7 +1482,30 @@ class PixelCanvasView @JvmOverloads constructor(
         if (hypot(touchX - pts[4], touchY - pts[5]) <= touchRadius) return TransformHandle.SCALE
         if (hypot(touchX - pts[6], touchY - pts[7]) <= touchRadius) return TransformHandle.ROTATE
 
+        // Handle lebar wrap teks: titik tengah sisi kanan bounding box
+        if (selectedLayer is TextLayer) {
+            val wp = wrapHandleCanvasPoint()
+            if (wp != null && hypot(touchX - wp.first, touchY - wp.second) <= touchRadius) {
+                return TransformHandle.WRAP
+            }
+        }
+
         return TransformHandle.NONE
+    }
+
+    /**
+     * Titik tengah sisi kanan kotak teks (untuk handle resize lebar wrap).
+     * Hanya tersedia untuk text layer dengan wrap aktif yang tidak terkunci,
+     * tanpa perspektif dan tanpa rotasi 3D.
+     */
+    private fun wrapHandleCanvasPoint(): Pair<Float, Float>? {
+        val layer = selectedLayer as? TextLayer ?: return null
+        if (!layer.wrapTextEnabled) return null
+        if (layer.isLocked || layer.perspectiveEnabled) return null
+        if (layer.rotate3DX != 0f || layer.rotate3DY != 0f || layer.rotate3DZ != 0f) return null
+        val pts = layer.getSelectionBoxPoints(0f)
+        if (pts.size < 8) return null
+        return Pair((pts[2] + pts[4]) / 2f, (pts[3] + pts[5]) / 2f)
     }
 
     /**
@@ -1505,6 +1530,26 @@ class PixelCanvasView @JvmOverloads constructor(
 
         // 4. Kiri bawah (Bottom-Left): Rotate (ikon panah melingkar)
         drawRotateHandle(canvas, pts[6], pts[7], r)
+
+        // 5. Tengah-kanan: resize lebar wrap teks (hanya saat wrap aktif)
+        wrapHandleCanvasPoint()?.let { wp ->
+            drawWidthHandle(canvas, wp.first, wp.second, r)
+        }
+    }
+
+    private fun drawWidthHandle(canvas: Canvas, cx: Float, cy: Float, r: Float) {
+        val isActive = (currentTouchState == TouchState.DRAGGING_WRAP_HANDLE)
+        canvas.drawCircle(cx, cy, r, if (isActive) perspectiveHandleActiveCenterPaint else handleBgPaint)
+        canvas.drawCircle(cx, cy, r, handleBorderPaint)
+
+        val d = r * 0.5f
+        val paint = if (isActive) handleBgPaint else handleIconPaint
+        // Panah horizontal bolak-balik (tahan → geser kiri/kanan)
+        canvas.drawLine(cx - d, cy, cx + d, cy, paint)
+        canvas.drawLine(cx - d, cy, cx - d + r * 0.3f, cy - r * 0.28f, paint)
+        canvas.drawLine(cx - d, cy, cx - d + r * 0.3f, cy + r * 0.28f, paint)
+        canvas.drawLine(cx + d, cy, cx + d - r * 0.3f, cy - r * 0.28f, paint)
+        canvas.drawLine(cx + d, cy, cx + d - r * 0.3f, cy + r * 0.28f, paint)
     }
 
     private fun drawDeleteHandle(canvas: Canvas, cx: Float, cy: Float, r: Float) {
@@ -1782,6 +1827,58 @@ class PixelCanvasView @JvmOverloads constructor(
             }
         }
 
+        // 1b. Tangani interaksi geser handle lebar wrap teks
+        if (currentTouchState == TouchState.DRAGGING_WRAP_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    selectedLayer?.let { layer ->
+                        if (!layer.isLocked && layer is TextLayer) {
+                            val padL = layer.paddingLeft.coerceAtLeast(0f)
+                            val padR = layer.paddingRight.coerceAtLeast(0f)
+                            val wrap = layer.wrapWidth.coerceAtLeast(1f)
+                            val pw = wrap + padL + padR
+                            val (_, ph) = layer.getUnwarpedDimensions()
+                            val cx = pw / 2f
+                            val cy = ph / 2f
+                            val rad = Math.toRadians(layer.rotation.toDouble())
+                            val cosA = Math.cos(rad).toFloat()
+                            val sinA = Math.sin(rad).toFloat()
+                            val s = if (layer.scale != 0f) layer.scale else 1f
+
+                            // Anchor kiri tetap: proyeksikan sentuhan dari titik tengah-kiri
+                            // kotak ke sumbu-x lokal (px tak diskalakan).
+                            val leftMidX = layer.x + cx * (1f - s * cosA)
+                            val leftMidY = layer.y + cy - s * cx * sinA
+                            val u = ((event.x - leftMidX) * cosA + (event.y - leftMidY) * sinA) / s
+                            val newWrap = (u - (padL + padR)).coerceIn(40f, 4000f)
+
+                            // Geser posisi layer agar sisi kiri tidak ikut bergerak.
+                            val delta = newWrap - layer.wrapWidth
+                            layer.wrapWidth = newWrap
+                            layer.x -= (delta / 2f) * (1f - s * cosA)
+                            layer.y += (delta / 2f) * s * sinA
+
+                            hasTouchTransformed = true
+                            invalidate()
+                        }
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Ubah Lebar Wrap Teks", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
         // 2. Tangani interaksi geser handle rotasi jika sedang aktif (Prompt 28)
         if (currentTouchState == TouchState.DRAGGING_ROTATE_HANDLE) {
             when (event.actionMasked) {
@@ -1899,6 +1996,19 @@ class PixelCanvasView @JvmOverloads constructor(
                                 initialCenterPoint = Pair(cx, cy)
                                 previousTouchAngle = RotationCalculator.touchAngle(cx, cy, event.x, event.y)
                                 currentTouchState = TouchState.DRAGGING_ROTATE_HANDLE
+                                isDragging = false
+                                invalidate()
+                                return true
+                            }
+                        }
+                    }
+                    TransformHandle.WRAP -> {
+                        selectedLayer?.let { layer ->
+                            if (!layer.isLocked && layer is TextLayer) {
+                                if (layer.wrapWidth <= 0f) {
+                                    layer.wrapWidth = layer.measureNaturalWidth().coerceAtLeast(40f)
+                                }
+                                currentTouchState = TouchState.DRAGGING_WRAP_HANDLE
                                 isDragging = false
                                 invalidate()
                                 return true

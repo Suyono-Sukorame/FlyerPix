@@ -10,7 +10,7 @@ import org.junit.Test
  * Unit test untuk 4 Tombol Handle Sudut Interaktif (Prompt 26).
  *
  * Verifikasi:
- *  1. Nilai enum TransformHandle lengkap (NONE, DUPLICATE, DELETE, SCALE, ROTATE)
+ *  1. Nilai enum TransformHandle lengkap (NONE, DUPLICATE, DELETE, SCALE, ROTATE, WRAP)
  *  2. Posisi 4 titik sudut dari getSelectionBoxPoints memetakan posisi handle secara benar:
  *     - Top-Left     -> DUPLICATE
  *     - Top-Right    -> DELETE
@@ -20,14 +20,15 @@ import org.junit.Test
 class TransformHandlesTest {
 
     @Test
-    fun `enum TransformHandle has all 5 required states`() {
+    fun `enum TransformHandle has all 6 required states`() {
         val values = TransformHandle.values()
-        assertEquals(5, values.size)
+        assertEquals(6, values.size)
         assertEquals(TransformHandle.NONE, TransformHandle.valueOf("NONE"))
         assertEquals(TransformHandle.DUPLICATE, TransformHandle.valueOf("DUPLICATE"))
         assertEquals(TransformHandle.DELETE, TransformHandle.valueOf("DELETE"))
         assertEquals(TransformHandle.SCALE, TransformHandle.valueOf("SCALE"))
         assertEquals(TransformHandle.ROTATE, TransformHandle.valueOf("ROTATE"))
+        assertEquals(TransformHandle.WRAP, TransformHandle.valueOf("WRAP"))
     }
 
     @Test
