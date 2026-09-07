@@ -66,7 +66,24 @@ class ImagePreEditView @JvmOverloads constructor(
     fun setImage(bitmap: Bitmap) {
         image = bitmap
         selection.reset()
-        zoomIndex = 0
+        
+        // Smart Initial Zoom: Auto-detect optimal zoom level based on image size
+        // If image is much larger than view, start with zoom level 1 or 2
+        val vw = width.toFloat()
+        val vh = height.toFloat()
+        
+        zoomIndex = if (vw > 0f && vh > 0f) {
+            val fitScale = minOf(vw / bitmap.width, vh / bitmap.height)
+            // If image needs to be scaled down more than 50%, start zoomed in
+            when {
+                fitScale < 0.3f -> 2  // Very large image, zoom to 2.4x
+                fitScale < 0.5f -> 1  // Large image, zoom to 1.6x
+                else -> 0             // Normal size, start at 1.0x
+            }
+        } else {
+            0  // View not laid out yet, default to 1.0x
+        }
+        
         panX = 0f
         panY = 0f
         invalidate()

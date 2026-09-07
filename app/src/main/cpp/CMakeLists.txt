@@ -45,6 +45,7 @@ set(CORE_SOURCES
     core/document.cpp
     core/layer.cpp
     core/bitmap_data.cpp
+    core/thread_pool.cpp
 )
 
 # ============================================================================
@@ -176,4 +177,38 @@ if(BUILD_TESTS)
     target_compile_options(benchmark_render_engine PRIVATE -Wall -Wextra -O3)
     
     message(STATUS "Benchmarks enabled - run dengan: ./benchmark_render_engine")
+endif()
+
+# Filter Engine Tests
+if(BUILD_TESTS)
+    set(FILTER_TEST_SOURCES
+        test/test_filter_engine.cpp
+        ${CORE_SOURCES}
+        ${RENDER_SOURCES}
+        ${BITMAP_SOURCES}
+        ${FILTER_SOURCES}
+    )
+    
+    add_executable(test_filter_engine ${FILTER_TEST_SOURCES})
+    
+    target_compile_options(test_filter_engine PRIVATE -Wall -Wextra -g)
+    
+    message(STATUS "Filter engine tests enabled - run dengan: ./test_filter_engine")
+endif()
+
+# Filter Engine Benchmark
+if(BUILD_TESTS)
+    set(FILTER_BENCHMARK_SOURCES
+        test/benchmark_filter_engine.cpp
+        ${CORE_SOURCES}
+        ${RENDER_SOURCES}
+        ${BITMAP_SOURCES}
+        ${FILTER_SOURCES}
+    )
+    
+    add_executable(benchmark_filter_engine ${FILTER_BENCHMARK_SOURCES})
+    
+    target_compile_options(benchmark_filter_engine PRIVATE -Wall -Wextra -O3)
+    
+    message(STATUS "Filter engine benchmark enabled - run dengan: ./benchmark_filter_engine")
 endif()
