@@ -49,6 +49,26 @@ Java_com_flyerpix_editor_nativepix_FpNative_applyColorMatrix(
     env->SetIntArrayRegion(pixels, 0, len, reinterpret_cast<const jint*>(buf.data()));
 }
 
+JNIEXPORT void JNICALL
+Java_com_flyerpix_editor_nativepix_FpNative_applyNoiseVignette(
+        JNIEnv* env, jobject thiz, jintArray pixels,
+        jint width, jint height, jint noiseAlpha, jint noiseSeed, jboolean vignette) {
+    if (pixels == nullptr) return;
+
+    jsize len = env->GetArrayLength(pixels);
+    if (len <= 0) return;
+
+    std::vector<int32_t> buf(static_cast<size_t>(len));
+    env->GetIntArrayRegion(pixels, 0, len, reinterpret_cast<jint*>(buf.data()));
+    if (env->ExceptionCheck()) return;
+
+    fp::applyNoiseVignette(buf.data(), len, width, height,
+                           noiseAlpha, static_cast<uint32_t>(noiseSeed),
+                           vignette == JNI_TRUE);
+
+    env->SetIntArrayRegion(pixels, 0, len, reinterpret_cast<const jint*>(buf.data()));
+}
+
 #ifdef __cplusplus
 }
 #endif

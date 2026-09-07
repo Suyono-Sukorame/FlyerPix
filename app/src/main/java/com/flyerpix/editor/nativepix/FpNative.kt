@@ -37,4 +37,20 @@ object FpNative {
         contrast: Float,
         saturation: Float,
     )
+
+    /**
+     * Menerapkan noise film-grain dan/atau vignette ke array piksel RGBA8888
+     * secara in-place di snapshot ¼-resolusi (pola sama dengan efek overlay
+     * Skia milik PixelCanvasView). `noiseAlpha` 0 = tanpa noise (misal 26 untuk
+     * grain setara Paint.alpha), `vignette` true = gelap radial di tepi.
+     */
+    @SuppressLint("DiscouragedApi")
+    external fun applyNoiseVignette(
+        pixels: IntArray,
+        width: Int,
+        height: Int,
+        noiseAlpha: Int,
+        noiseSeed: Int,
+        vignette: Boolean,
+    )
 }

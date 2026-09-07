@@ -445,7 +445,7 @@ class PixelCanvasView @JvmOverloads constructor(
     private val noiseShader: BitmapShader by lazy {
         val size = 96
         val tile = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val rnd = java.util.Random(0xC0FFEEL)
+        val rnd = java.util.Random(NOISE_SEED.toLong())
         for (x in 0 until size) {
             for (y in 0 until size) {
                 val v = rnd.nextInt(256)
@@ -459,7 +459,7 @@ class PixelCanvasView @JvmOverloads constructor(
      * Paint grain dengan alpha rendah agar noise tampak halus (bukan blok abu-abu).
      */
     private val noisePaint = Paint().apply {
-        alpha = 26
+        alpha = NOISE_OVERLAY_ALPHA
     }
 
     private fun drawVignetteEffect(canvas: Canvas, target: RectF) {
@@ -489,9 +489,9 @@ class PixelCanvasView @JvmOverloads constructor(
      * Efek [CanvasEffect.FILTER] tidak digambar di sini karena diterapkan
      * sebagai layer komposit via [colorMatrixFilterPaint] pada tahap konten.
      */
-    private fun drawEffectsOverlay(canvas: Canvas, target: RectF) {
-        if (isEffectEnabled(CanvasEffect.NOISE)) drawNoiseEffect(canvas, target)
-        if (isEffectEnabled(CanvasEffect.VIGNETTE)) drawVignetteEffect(canvas, target)
+    private fun drawEffectsOverlay(canvas: Canvas, target: RectF, bakedBlur: Boolean) {
+        if (isEffectEnabled(CanvasEffect.NOISE) && !bakedBlur) drawNoiseEffect(canvas, target)
+        if (isEffectEnabled(CanvasEffect.VIGNETTE) && !bakedBlur) drawVignetteEffect(canvas, target)
     }
 
     /**
@@ -1109,6 +1109,9 @@ class PixelCanvasView @JvmOverloads constructor(
         h = h * 31 + (adjustments[CanvasAdjustment.BRIGHTNESS] ?: 0f).toRawBits()
         h = h * 31 + (adjustments[CanvasAdjustment.CONTRAST] ?: 0f).toRawBits()
         h = h * 31 + (adjustments[CanvasAdjustment.SATURATION] ?: 0f).toRawBits()
+        // Noise & vignette ikut dibakar ke overlay saat blur aktif.
+        h = h * 31 + (if (isEffectEnabled(CanvasEffect.NOISE)) 1 else 0)
+        h = h * 31 + (if (isEffectEnabled(CanvasEffect.VIGNETTE)) 1 else 0)
         for (layer in layers) {
             if (layer.isVisible) h = h * 31 + layer.contentBlurSignature()
         }
@@ -1160,6 +1163,13 @@ class PixelCanvasView @JvmOverloads constructor(
             val saturation = adjustments[CanvasAdjustment.SATURATION] ?: 0f
             if (brightness != 0f || contrast != 0f || saturation != 0f) {
                 runCatching { FpNative.applyColorMatrix(pixels, brightness, contrast, saturation) }
+            }
+            val noiseAlpha = if (isEffectEnabled(CanvasEffect.NOISE)) NOISE_OVERLAY_ALPHA else 0
+            val vignette = isEffectEnabled(CanvasEffect.VIGNETTE)
+            if (noiseAlpha != 0 || vignette) {
+                runCatching {
+                    FpNative.applyNoiseVignette(pixels, bw, bh, noiseAlpha, NOISE_SEED, vignette)
+                }
             }
             val t2 = System.nanoTime()
             val out = blurOutBufferFor(bw, bh)
@@ -1288,7 +1298,9 @@ class PixelCanvasView @JvmOverloads constructor(
         }
 
         // 2b. Render efek overlay non-destruktif (Noise, Vignette) di atas konten (Prompt 51).
-        drawEffectsOverlay(canvas, vp)
+        // Saat blur aktif, noise+vignette sudah dibakar ke overlay blur (¼-res native),
+        // jadi di sini dilewati agar tidak digambar dua kali.
+        drawEffectsOverlay(canvas, vp, blurRadius > 0f)
 
         // 3. Render Bounding Box seleksi garis putus-putus jika ada layer aktif (Prompt 25, 34)
         selectedLayer?.let { layer ->
@@ -2505,7 +2517,7 @@ class PixelCanvasView @JvmOverloads constructor(
         endFilterEffectLayer(offscreenCanvas, filterEffectLayer)
 
         // 4. Terapkan efek overlay non-destruktif (Noise, Vignette) pada resolusi target (Prompt 51)
-        drawEffectsOverlay(offscreenCanvas, offscreenRect)
+        drawEffectsOverlay(offscreenCanvas, offscreenRect, bakedBlur = false)
 
         return bitmap
     }
@@ -2681,5 +2693,11 @@ class PixelCanvasView @JvmOverloads constructor(
     companion object {
         private const val PROFILE_TAG = "FlyerPixProfile"
         @Volatile var profileEnabled = false
+
+        /** Alpha grain noise (setara [noisePaint] Skia). */
+        const val NOISE_OVERLAY_ALPHA = 26
+
+        /** Seed deterministik noise (sama dengan tile Java milik Skia). */
+        const val NOISE_SEED = 0xC0FFEE
     }
 }

@@ -911,7 +911,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
      * Stress test rendering: tambah N layer gambar + efek sesuai mode, lalu render
      * berulang. Baca frame-time per segmen via profiler onDraw (aktifkan
      * `debug.flyerpix_profile`). Dipicu `setprop debug.flyerpix_stress N`.
-     * Mode: `debug.flyerpix_stressmode` 0=all, 1=layer saja, 2=blur+adjust, 3=blur saja.
+     * Mode: `debug.flyerpix_stressmode` 0=all, 1=layer saja, 2=blur+adjust, 3=blur saja,
+     * 4=blur+noise+vignette.
      */
     private fun runRenderStressTest(layerCount: Int) {
         val mode = readSystemProperty("debug.flyerpix_stressmode").toIntOrNull() ?: 0
@@ -943,6 +944,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 pixelCanvasView.toggleEffect(PixelCanvasView.CanvasEffect.FILTER)
             } else if (mode == 3) {
                 pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.BLUR, 12f)
+            } else if (mode == 4) {
+                pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.BLUR, 12f)
+                pixelCanvasView.setEffectEnabled(PixelCanvasView.CanvasEffect.NOISE, true)
+                pixelCanvasView.setEffectEnabled(PixelCanvasView.CanvasEffect.VIGNETTE, true)
             }
         }
 

@@ -57,4 +57,69 @@ void applyColorMatrix(int32_t* pixels, int32_t count,
     }
 }
 
+// Terapkan noise film-grain (blend abu-abu dengan alpha) lalu vignette
+// (gelap radial di tepi) ke array ARGB8888 in-place. Minim meniru
+// drawNoiseEffect + drawVignetteEffect milik PixelCanvasView agar snapshot
+// blur bisa dibakar bersama efek overlay (draw tunggal, off-UI-thread).
+void applyNoiseVignette(int32_t* pixels, int32_t count, int32_t width, int32_t height,
+                        int32_t noiseAlpha, uint32_t noiseSeed, bool vignette) {
+    if (pixels == nullptr || count <= 0) return;
+    if (noiseAlpha <= 0 && !vignette) return;
+
+    const float nAlpha = static_cast<float>(noiseAlpha) / 255.0f;
+    const float cx = static_cast<float>(width) * 0.5f;
+    const float cy = static_cast<float>(height) * 0.5f;
+    const float radius = static_cast<float>(width > height ? width : height) * 0.75f;
+    const float rInv = 1.0f / (radius > 0.0f ? radius : 1.0f);
+    const float v0 = 0.25f;                       // (0.50)^2
+    const float v1 = 0.6084f;                     // (0.78)^2
+    const float v2 = 1.0f - v1;
+    const uint32_t seed = noiseSeed != 0u ? noiseSeed : 0x9E3779B9u;
+    int32_t xc = 0;
+    int32_t yc = 0;
+
+    for (int32_t i = 0; i < count; ++i) {
+        int32_t p = pixels[i];
+        const int32_t alpha = p & 0xFF000000;
+
+        if (noiseAlpha > 0) {
+            // Deterministik per-pixel: xorshift32 dari seed + posisi.
+            uint32_t s = seed + static_cast<uint32_t>(i);
+            s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+            const float g = static_cast<float>(s & 0xFF);
+            const float inv = 1.0f - nAlpha;
+            const int32_t r = static_cast<int32_t>(((p >> 16) & 0xFF) * inv + g * nAlpha + 0.5f);
+            const int32_t gg = static_cast<int32_t>(((p >> 8) & 0xFF) * inv + g * nAlpha + 0.5f);
+            const int32_t b = static_cast<int32_t>((p & 0xFF) * inv + g * nAlpha + 0.5f);
+            p = alpha | (r << 16) | (gg << 8) | b;
+        }
+
+        if (vignette) {
+            const float dx = static_cast<float>(xc) - cx;
+            const float dy = static_cast<float>(yc) - cy;
+            const float d = (dx * dx + dy * dy) * rInv * rInv;
+            // Stop gradasi (Skia): alpha 0 @ 0.5, 0x52 @ 0.78, 0xA6 @ 1.0,
+            // dihitung pada kuadrat jarak ternormalisasi.
+            float va;
+            if (d <= v0) {
+                va = 0.0f;
+            } else if (d <= v1) {
+                va = 0x52f * ((d - v0) / (v1 - v0));
+            } else if (d <= 1.0f) {
+                va = 0x52f + (0xA6f - 0x52f) * ((d - v1) / v2);
+            } else {
+                va = 0xA6f;
+            }
+            const float inv = 1.0f - va / 255.0f;
+            const int32_t r = static_cast<int32_t>(((p >> 16) & 0xFF) * inv + 0.5f);
+            const int32_t gg = static_cast<int32_t>(((p >> 8) & 0xFF) * inv + 0.5f);
+            const int32_t b = static_cast<int32_t>((p & 0xFF) * inv + 0.5f);
+            p = alpha | (r << 16) | (gg << 8) | b;
+        }
+
+        pixels[i] = p;
+        if (++xc >= width) { xc = 0; yc++; }
+    }
+}
+
 } // namespace fp
