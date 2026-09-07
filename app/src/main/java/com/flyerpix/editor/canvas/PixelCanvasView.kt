@@ -110,7 +110,9 @@ class PixelCanvasView @JvmOverloads constructor(
         set(value) {
             if (field != value) {
                 field = value
-                onLayerSelectedListener?.invoke(value)
+                if (!suppressLayerSelectEvents) {
+                    onLayerSelectedListener?.invoke(value)
+                }
                 invalidate()
             }
         }
@@ -121,6 +123,30 @@ class PixelCanvasView @JvmOverloads constructor(
      * dengan properti layer yang baru dipilih.
      */
     var onLayerSelectedListener: ((CanvasLayer?) -> Unit)? = null
+
+    /**
+     * Saat true, perubahan [selectedLayer] tetap terjadi (field & invalidate jalan)
+     * tapi [onLayerSelectedListener] tidak dipanggil. Dipakai untuk perubahan seleksi
+     * programatik (mis. apply template preset) agar menu navigasi tidak ikut berpindah.
+     * Hanya boleh diubah lewat [runWithLayerSelectSuppressed].
+     */
+    @Volatile
+    private var suppressLayerSelectEvents = false
+
+    /**
+     * Menjalankan [block] dengan suppresi sementara event seleksi layer
+     * (auto-switch menu navigasi tetap di posisi sekarang; seleksi itu sendiri
+     * tetap tersimpan). Aman dipanggil berulang (nilai sebelumnya direstore).
+     */
+    fun runWithLayerSelectSuppressed(block: () -> Unit) {
+        val prev = suppressLayerSelectEvents
+        suppressLayerSelectEvents = true
+        try {
+            block()
+        } finally {
+            suppressLayerSelectEvents = prev
+        }
+    }
 
     /**
      * Callback yang dipanggil setiap kali komposisi [layers] berubah

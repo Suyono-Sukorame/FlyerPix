@@ -204,6 +204,22 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         val stressCount = readSystemProperty("debug.flyerpix_stress").toIntOrNull() ?: -1
         if (stressCount >= 0) binding.pixelCanvasView.post { runRenderStressTest(stressCount) }
 
+        // ── Template smoke test (debug): `adb shell setprop debug.flyerpix_template 1`
+        binding.pixelCanvasView.postDelayed({
+            if (readSystemProperty("debug.flyerpix_template") == "1" && ::templateController.isInitialized) {
+                templateController.applyTemplateByTitle("3D")
+                val before = binding.bottomNavigation.selectedItemId
+                binding.pixelCanvasView.postDelayed({
+                    val after = binding.bottomNavigation.selectedItemId
+                    android.util.Log.d(
+                        "FlyerPixProfile",
+                        "TemplateTest navBefore=$before navAfter=$after expected=${R.id.nav_presets}" +
+                            " selected=${pixelCanvasView.selectedLayer?.javaClass?.simpleName}"
+                    )
+                }, 600)
+            }
+        }, 2000)
+
         // ── Export smoke test (debug): `adb shell setprop debug.flyerpix_export 1`
         binding.pixelCanvasView.postDelayed({
             if (readSystemProperty("debug.flyerpix_export") == "1") {

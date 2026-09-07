@@ -58,8 +58,12 @@ class TemplateController(
             // Preset khusus "My Projects" membuka project manager
             onProjectOpen()
         } else {
-            // Apply preset normal ke canvas
-            preset.applyToCanvas(pixelCanvasView)
+            // Apply preset normal ke canvas. Seleksi layer di-suppress sementara
+            // agar auto-switch menu navigasi (mis. ke Text) tidak menyambar:
+            // halaman Presets tetap tampil, teks preset tetap terpilih.
+            pixelCanvasView.runWithLayerSelectSuppressed {
+                preset.applyToCanvas(pixelCanvasView)
+            }
             showSnackbar("Preset '${preset.title}' diterapkan")
         }
     }
@@ -128,8 +132,10 @@ class TemplateController(
      * Reset ke template default (PixelLab default state).
      */
     fun resetToDefaultTemplate() {
-        pixelCanvasView.clearLayers()
-        TemplatePreset.applyDefaultPixelLabState(pixelCanvasView)
+        pixelCanvasView.runWithLayerSelectSuppressed {
+            pixelCanvasView.clearLayers()
+            TemplatePreset.applyDefaultPixelLabState(pixelCanvasView)
+        }
         showSnackbar("Template default diterapkan")
     }
 
