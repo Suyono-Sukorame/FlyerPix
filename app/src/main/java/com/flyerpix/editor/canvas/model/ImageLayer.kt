@@ -112,6 +112,26 @@ open class ImageLayer(
         return Pair(width, height)
     }
 
+    override fun contentBlurSignature(): Int {
+        var h = 1
+        h = h * 31 + id.hashCode()
+        h = h * 31 + x.hashCode()
+        h = h * 31 + y.hashCode()
+        h = h * 31 + scale.hashCode()
+        h = h * 31 + rotation.hashCode()
+        h = h * 31 + opacity
+        h = h * 31 + (if (isVisible) 1 else 0)
+        h = h * 31 + (if (isLocked) 1 else 0)
+        h = h * 31 + blendMode.ordinal
+        h = h * 31 + (if (perspectiveEnabled) 1 else 0)
+        for (c in perspectiveCorners) h = h * 31 + c.hashCode()
+        h = h * 31 + System.identityHashCode(bitmap)
+        h = h * 31 + bitmap.generationId
+        h = h * 31 + bitmap.width
+        h = h * 31 + bitmap.height
+        return h
+    }
+
     override fun copyLayer(): ImageLayer {
         return ImageLayer(
             id = UUID.randomUUID().toString(),

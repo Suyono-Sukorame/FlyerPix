@@ -13,6 +13,6 @@
       android:pathData="M2,6h8v8H2z"/>
   <!-- Panah ke bawah/belakang -->
   <path
-      android:fillColor="#00E5FF"
+      android:fillColor="#18C8F5"
       android:pathData="M18,7v10l-4,-4 1.41,-1.41L17,13.17V7h2zM18,21l-5,-5h10l-5,5z"/>
 </vector>

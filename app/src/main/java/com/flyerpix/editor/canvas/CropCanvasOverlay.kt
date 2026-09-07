@@ -72,7 +72,7 @@ class CropCanvasOverlay @JvmOverloads constructor(
     }
 
     private val handleBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF00E5FF.toInt()
+        color = 0xFF18C8F5.toInt()
         style = Paint.Style.STROKE
         strokeWidth = 2f * resources.displayMetrics.density
     }

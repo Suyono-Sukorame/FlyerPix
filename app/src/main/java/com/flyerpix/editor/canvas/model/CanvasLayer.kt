@@ -280,6 +280,15 @@ abstract class CanvasLayer(
     }
 
     /**
+     * Signature konten untuk cache overlay blur (PixelCanvasView).
+     * Data class turunan dijamin sudah mencakup seluruh field render
+     * lewat [hashCode]; override disediakan untuk kelas open yang tidak
+     * menghitung hash struktural (mis. [com.flyerpix.editor.canvas.model.ImageLayer])
+     * atau yang memegang Bitmap yang bisa berubah piksel secara in-place.
+     */
+    open fun contentBlurSignature(): Int = hashCode()
+
+    /**
      * Mengembalikan nama deskriptif dari [blendMode] saat ini.
      */
     fun getBlendModeName(): String = when (blendMode) {

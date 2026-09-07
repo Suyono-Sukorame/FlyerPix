@@ -2,8 +2,14 @@ package com.flyerpix.editor.ui.controller
 
 import android.app.Activity
 import android.graphics.Color
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.GradientDrawable
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.fragment.app.FragmentManager
 import com.flyerpix.editor.R
@@ -36,6 +42,26 @@ class CanvasMenuController(
     private var bgGalleryLauncher: ActivityResultLauncher<String>? = null
     private var onCameraRequested: (() -> Unit)? = null
 
+    companion object {
+        const val TOOL_BG = "canvas_bg"
+
+        const val COLOR_ACTIVE = 0xFF1769FF.toInt()
+        const val COLOR_GRAY   = 0xFF616161.toInt()
+    }
+
+    private val toolItems = LinkedHashMap<String, ViewGroup>()
+    var activeTag: String = ""
+
+    /**
+     * Dipanggil saat status detail (buka/tutup) berubah, agar activity bisa
+     * mengekspansi panel dan menyembunyikan/memunculkan kembali nav.
+     */
+    var onDetailExpandedChanged: ((Boolean) -> Unit)? = null
+
+    private fun notifyDetailExpanded() {
+        onDetailExpandedChanged?.invoke(activeTag.isNotEmpty())
+    }
+
     /**
      * Set launcher untuk memilih gambar dari galeri.
      */
@@ -54,12 +80,90 @@ class CanvasMenuController(
      * Inisialisasi semua kontrol canvas menu.
      */
     fun initialize() {
+        buildToolStrip()
         setupCanvasBgSwatches()
         setupBackgroundModeChips()
         setupGradientPicker()
         setupCustomColorButtons()
         setupImageBackgroundButtons()
         restoreCanvasBgMode()
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // TOOL STRIP (ikon menu master, pola sama dengan Text/Objects)
+    // ────────────────────────────────────────────────────────────────────────
+
+    private fun buildToolStrip() {
+        data class Spec(val tag: String, val label: String, val iconRes: Int)
+        val specs = listOf(
+            Spec(TOOL_BG, "Background", R.drawable.ic_background_24px)
+        )
+        val density = activity.resources.displayMetrics.density
+        val container = binding.canvasToolStripInclude.canvasToolStripContainer
+        container.removeAllViews()
+
+        for (spec in specs) {
+            val item = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER
+                isClickable = true; isFocusable = true
+                setBackgroundResource(R.drawable.bg_text_tool_item)
+                setPadding((6*density).toInt(), (6*density).toInt(), (6*density).toInt(), (4*density).toInt())
+                setOnClickListener { onToolClicked(spec.tag) }
+            }
+            val iconSize = (22 * density).toInt()
+            item.addView(ImageView(activity).apply {
+                setImageResource(spec.iconRes)
+                colorFilter = PorterDuffColorFilter(COLOR_GRAY, PorterDuff.Mode.SRC_IN)
+                layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
+            })
+            item.addView(TextView(activity).apply {
+                text = spec.label; textSize = 9.5f; maxLines = 1
+                gravity = android.view.Gravity.CENTER; setTextColor(COLOR_GRAY)
+            })
+            val lp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            lp.width = (52 * density).toInt()
+            container.addView(item, lp)
+            toolItems[spec.tag] = item
+        }
+    }
+
+    private fun onToolClicked(tag: String) {
+        if (tag == activeTag) deselect() else select(tag)
+    }
+
+    fun select(tag: String) {
+        activeTag = tag
+        for ((t, item) in toolItems) {
+            val sel = t == tag
+            item.isSelected = sel
+            val c = if (sel) COLOR_ACTIVE else COLOR_GRAY
+            (item.getChildAt(0) as? ImageView)?.colorFilter =
+                PorterDuffColorFilter(c, PorterDuff.Mode.SRC_IN)
+            (item.getChildAt(1) as? TextView)?.setTextColor(c)
+        }
+        applyContentVisibility()
+    }
+
+    fun deselect() {
+        activeTag = ""
+        for (item in toolItems.values) {
+            item.isSelected = false
+            (item.getChildAt(0) as? ImageView)?.colorFilter =
+                PorterDuffColorFilter(COLOR_GRAY, PorterDuff.Mode.SRC_IN)
+            (item.getChildAt(1) as? TextView)?.setTextColor(COLOR_GRAY)
+        }
+        applyContentVisibility()
+    }
+
+    private fun applyContentVisibility() {
+        binding.canvasContentPanel.visibility =
+            if (activeTag.isEmpty()) View.GONE else View.VISIBLE
+        restoreCanvasBgMode()
+        notifyDetailExpanded()
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -213,6 +317,9 @@ class CanvasMenuController(
      * Refresh UI canvas menu jika diperlukan.
      */
     fun refreshUI() {
+        binding.canvasToolStripInclude.canvasToolStripScroll.visibility = View.VISIBLE
+        if (activeTag.isEmpty()) binding.canvasContentPanel.visibility = View.GONE
+        else applyContentVisibility()
         restoreCanvasBgMode()
     }
 

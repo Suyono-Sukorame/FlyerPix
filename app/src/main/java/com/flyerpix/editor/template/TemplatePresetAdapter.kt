@@ -46,9 +46,9 @@ class TemplatePresetAdapter(
             tvTitle.text = preset.title
 
             if (isSelected) {
-                card.strokeColor = 0xFF00E5FF.toInt() // Biru cyan aktif
+                card.strokeColor = 0xFF18C8F5.toInt() // Biru cyan aktif
                 card.strokeWidth = 4
-                tvTitle.setTextColor(0xFF00E5FF.toInt())
+                tvTitle.setTextColor(0xFF18C8F5.toInt())
             } else {
                 card.strokeColor = 0xFF555555.toInt()
                 card.strokeWidth = 2
@@ -59,7 +59,7 @@ class TemplatePresetAdapter(
                 tvPreviewText.visibility = View.GONE
                 imgIcon.visibility = View.VISIBLE
                 imgIcon.setImageResource(R.drawable.ic_outline_photo_24px)
-                previewContainer.setBackgroundColor(0xFF37474F.toInt())
+                previewContainer.setBackgroundColor(0xFF1A3A6B.toInt())
             } else {
                 imgIcon.visibility = View.GONE
                 tvPreviewText.visibility = View.VISIBLE

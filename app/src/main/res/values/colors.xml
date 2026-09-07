@@ -17,4 +17,14 @@
     <color name="teal">#26a69a</color>
     <color name="tealDark">#00796b</color>
     <color name="ic_launcher_background">#F9F9F9</color>
+
+    <!-- ===== FlyerPix Brand Palette ===== -->
+    <color name="brand_navy">#07164F</color>
+    <color name="brand_blue">#1769FF</color>
+    <color name="brand_cyan">#18C8F5</color>
+    <color name="brand_violet">#6938EF</color>
+    <color name="brand_orange">#FF9F2D</color>
+    <!-- Turunan gelap navy untuk permukaan panel -->
+    <color name="brand_surface_dark">#0A1C4E</color>
+    <color name="brand_surface_darker">#123065</color>
 </resources>

@@ -4,7 +4,7 @@
     android:id="@+id/authenticTopBarContainer"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#1E88E5"
+    android:background="@color/brand_blue"
     android:elevation="6dp"
     android:orientation="vertical">
 
@@ -73,7 +73,7 @@
         android:id="@+id/topBarRow2"
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:background="#1976D2"
+        android:background="@color/brand_violet"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="6dp">
@@ -85,7 +85,7 @@
             android:layout_marginStart="4dp"
             android:background="@drawable/bg_pixellab_badge"
             android:text="FlyerPix"
-            android:textColor="@android:color/white"
+            android:textColor="@color/brand_navy"
             android:textSize="12sp"
             android:textStyle="bold" />
 

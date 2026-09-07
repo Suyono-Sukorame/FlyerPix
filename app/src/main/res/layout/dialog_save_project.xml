@@ -24,8 +24,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Nama Proyek"
-        app:boxStrokeColor="#00E5FF"
-        app:hintTextColor="#00E5FF">
+        app:boxStrokeColor="#18C8F5"
+        app:hintTextColor="#18C8F5">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etProjectName"

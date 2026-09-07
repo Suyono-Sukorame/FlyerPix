@@ -19,7 +19,7 @@
             android:layout_width="28dp"
             android:layout_height="28dp"
             android:src="@drawable/ic_aspect_ratio_24px"
-            app:tint="#00E5FF"
+            app:tint="#18C8F5"
             android:contentDescription="Icon Ukuran Gambar" />
 
         <TextView
@@ -141,9 +141,9 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="Lebar (px)"
-            app:boxStrokeColor="#00E5FF"
-            app:hintTextColor="#00E5FF"
-            app:boxBackgroundColor="#2D2D2D">
+            app:boxStrokeColor="#18C8F5"
+            app:hintTextColor="#18C8F5"
+            app:boxBackgroundColor="#123065">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etWidth"
@@ -175,9 +175,9 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="Tinggi (px)"
-            app:boxStrokeColor="#00E5FF"
-            app:hintTextColor="#00E5FF"
-            app:boxBackgroundColor="#2D2D2D">
+            app:boxStrokeColor="#18C8F5"
+            app:hintTextColor="#18C8F5"
+            app:boxBackgroundColor="#123065">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etHeight"
@@ -208,7 +208,7 @@
             android:background="#37474F"
             android:paddingHorizontal="10dp"
             android:paddingVertical="4dp"
-            android:textColor="#00E5FF"
+            android:textColor="#18C8F5"
             android:textSize="12sp"
             android:textStyle="bold"
             tools:text="Rasio: 1:1 (1.00)" />
@@ -226,7 +226,7 @@
             android:text="Kunci Rasio"
             android:textColor="#CCCCCC"
             android:textSize="12sp"
-            app:buttonTint="#00E5FF" />
+            app:buttonTint="#18C8F5" />
     </LinearLayout>
 
     <!-- ── Tombol Batal & Terapkan ── -->
@@ -256,7 +256,7 @@
             android:textColor="@android:color/black"
             android:textSize="14sp"
             android:textStyle="bold"
-            app:backgroundTint="#00E5FF"
+            app:backgroundTint="#18C8F5"
             app:cornerRadius="8dp" />
     </LinearLayout>
 

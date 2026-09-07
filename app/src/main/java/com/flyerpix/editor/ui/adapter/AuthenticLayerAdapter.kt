@@ -156,7 +156,7 @@ class AuthenticLayerAdapter(
                 // Background kartu sesuai status centang
                 if (isChecked) {
                     binding.cardLayerItem.setCardBackgroundColor(Color.parseColor("#E3F2FD"))
-                    binding.cardLayerItem.strokeColor = Color.parseColor("#2196F3")
+                    binding.cardLayerItem.strokeColor = Color.parseColor("#1769FF")
                 } else {
                     binding.cardLayerItem.setCardBackgroundColor(Color.parseColor("#FFFFFF"))
                     binding.cardLayerItem.strokeColor = Color.parseColor("#C8C8C8")
@@ -184,7 +184,7 @@ class AuthenticLayerAdapter(
                 // Seleksi Visual: latar dan garis tepi saat aktif terpilih
                 if (isSelected) {
                     binding.cardLayerItem.setCardBackgroundColor(Color.parseColor("#E3F2FD"))
-                    binding.cardLayerItem.strokeColor = Color.parseColor("#1976D2")
+                    binding.cardLayerItem.strokeColor = Color.parseColor("#1769FF")
                 } else {
                     binding.cardLayerItem.setCardBackgroundColor(Color.parseColor("#FFFFFF"))
                     binding.cardLayerItem.strokeColor = Color.parseColor("#C8C8C8")
@@ -208,7 +208,7 @@ class AuthenticLayerAdapter(
                 // Visibility Button & Icon
                 if (layer.isVisible) {
                     binding.btnLayerVisibility.setImageResource(R.drawable.ic_visibility_24px)
-                    binding.btnLayerVisibility.setColorFilter(Color.parseColor("#1976D2"))
+                    binding.btnLayerVisibility.setColorFilter(Color.parseColor("#1769FF"))
                 } else {
                     binding.btnLayerVisibility.setImageResource(R.drawable.ic_visibility_off_24px)
                     binding.btnLayerVisibility.setColorFilter(Color.parseColor("#9E9E9E"))

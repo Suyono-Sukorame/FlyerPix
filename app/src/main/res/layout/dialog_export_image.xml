@@ -20,7 +20,7 @@
             android:layout_height="28dp"
             android:contentDescription="Icon Ekspor"
             android:src="@drawable/ic_outline_share_24px"
-            app:tint="#00E5FF" />
+            app:tint="#18C8F5" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -116,8 +116,8 @@
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:hint="Lebar (px)"
-            app:boxStrokeColor="#00E5FF"
-            app:hintTextColor="#00E5FF">
+            app:boxStrokeColor="#18C8F5"
+            app:hintTextColor="#18C8F5">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etCustomWidth"
@@ -136,8 +136,8 @@
             android:layout_marginStart="6dp"
             android:layout_weight="1"
             android:hint="Tinggi (px)"
-            app:boxStrokeColor="#00E5FF"
-            app:hintTextColor="#00E5FF">
+            app:boxStrokeColor="#18C8F5"
+            app:hintTextColor="#18C8F5">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etCustomHeight"
@@ -165,7 +165,7 @@
             android:layout_height="20dp"
             android:contentDescription="Info Resolusi"
             android:src="@drawable/ic_aspect_ratio_24px"
-            app:tint="#00E5FF" />
+            app:tint="#18C8F5" />
 
         <TextView
             android:id="@+id/tvResolutionPreview"
@@ -173,7 +173,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_weight="1"
-            android:textColor="#00E5FF"
+            android:textColor="#18C8F5"
             android:textSize="13sp"
             android:textStyle="bold"
             tools:text="Resolusi: 3840 × 2160 piksel (4K Ultra HD)" />

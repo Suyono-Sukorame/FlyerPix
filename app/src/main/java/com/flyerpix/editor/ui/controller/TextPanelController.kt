@@ -98,7 +98,7 @@ class TextPanelController(
         const val TOOL_3D_SHADOW    = "3dshadow"
         const val TOOL_REFLECTION   = "reflection"
 
-        const val COLOR_ACTIVE = 0xFF32B3FE.toInt()
+        const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY      = 0xFF616161.toInt()
     }
 
@@ -165,7 +165,17 @@ class TextPanelController(
         initializeSpacingControls()
         initializeBlendModeControls()
         
-        // Selesai initialization, allow auto-switch
+        // Selesai inisialisasi panel. Catatan: flag isInitializing sengaja TIDAK
+        // dimatikan di sini — harus diakhiri via finishInitialization() SETELAH
+        // template default tertunda diterapkan (lihat EditorActivity), agar
+        // auto-switch ke menu Text tidak menimpa menu Presets saat pertama buka.
+    }
+
+    /**
+     * Mengakhiri fase inisialisasi dan mengizinkan auto-switch ke menu Text.
+     * Dipanggil setelah template default selesai diterapkan saat pertama buka.
+     */
+    fun finishInitialization() {
         isInitializing = false
     }
 
@@ -1053,7 +1063,7 @@ class TextPanelController(
 
         fun updateButtonStates(currentMode: android.graphics.PorterDuff.Mode) {
             tvDesc.text = descriptionFor(currentMode)
-            val activeColor = 0xFF1976D2.toInt()
+            val activeColor = 0xFF1769FF.toInt()
             for ((btn, mode) in buttons) {
                 if (mode == currentMode) {
                     btn.setBackgroundColor(activeColor)

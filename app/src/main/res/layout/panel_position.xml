@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:text="X"
             android:textStyle="bold"
-            android:textColor="#3F51B5" />
+            android:textColor="@color/brand_violet" />
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editPosX"
@@ -70,7 +70,7 @@
             android:layout_height="wrap_content"
             android:text="Y"
             android:textStyle="bold"
-            android:textColor="#3F51B5" />
+            android:textColor="@color/brand_violet" />
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editPosY"

@@ -25,13 +25,23 @@ class ObjectMenuController(
         const val OBJ_BEZIER  = "obj_bezier"
         const val OBJ_ARROW   = "obj_arrow"
 
-        const val COLOR_ACTIVE = 0xFF32B3FE.toInt()
+        const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
     }
 
     private val toolItems = LinkedHashMap<String, android.view.ViewGroup>()
     private val contentViews = LinkedHashMap<String, View>()
     var activeTag: String = ""
+
+    /**
+     * Dipanggil saat status detail (buka/tutup) berubah, agar activity bisa
+     * mengekspansi panel dan menyembunyikan/memunculkan kembali nav.
+     */
+    var onDetailExpandedChanged: ((Boolean) -> Unit)? = null
+
+    private fun notifyDetailExpanded() {
+        onDetailExpandedChanged?.invoke(activeTag.isNotEmpty())
+    }
 
     fun initialize() {
         contentViews[OBJ_STICKER] = binding.fragmentTabSticker
@@ -133,6 +143,7 @@ class ObjectMenuController(
     private fun applyContentVisibility() {
         binding.objectContentPanel.visibility = if (activeTag.isEmpty()) View.GONE else View.VISIBLE
         for ((t, v) in contentViews) v.visibility = if (t == activeTag) View.VISIBLE else View.GONE
+        notifyDetailExpanded()
     }
 
     fun refreshUI() {

@@ -730,6 +730,15 @@ data class TextLayer(
         return rect
     }
 
+    override fun contentBlurSignature(): Int {
+        var h = hashCode()
+        textureBitmap?.let { bmp ->
+            h = h * 31 + System.identityHashCode(bmp)
+            h = h * 31 + bmp.generationId
+        }
+        return h
+    }
+
     override fun copyLayer(): TextLayer = this.copy(
         id = UUID.randomUUID().toString(),
         x  = this.x + 30f,

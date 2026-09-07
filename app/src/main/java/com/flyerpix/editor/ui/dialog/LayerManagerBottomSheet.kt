@@ -185,7 +185,7 @@ class LayerManagerBottomSheet : BottomSheetDialogFragment() {
         adapter.setMergeMode(enabled)
         binding.layoutMergeActionBar.visibility = if (enabled) View.VISIBLE else View.GONE
         binding.btnToggleMergeMode.setColorFilter(
-            if (enabled) 0xFF00E5FF.toInt() else 0xFFAAAAAA.toInt()
+            if (enabled) 0xFF18C8F5.toInt() else 0xFFAAAAAA.toInt()
         )
         if (enabled) {
             binding.tvMergeCountStatus.text = "Pilih minimal 2 layer"

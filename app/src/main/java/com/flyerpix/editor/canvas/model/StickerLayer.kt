@@ -164,6 +164,13 @@ data class StickerLayer(
         }
     }
 
+    override fun contentBlurSignature(): Int {
+        var h = hashCode()
+        h = h * 31 + System.identityHashCode(stickerBitmap)
+        h = h * 31 + stickerBitmap.generationId
+        return h
+    }
+
     override fun getBounds(): RectF {
         val pts = getSelectionBoxPoints(0f)
         var minX = Float.MAX_VALUE

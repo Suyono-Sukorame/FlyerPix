@@ -11,5 +11,6 @@ app/build/
 .vscode/
 /captures
 .externalNativeBuild
+app/.cxx/
 *.md
 !README.md

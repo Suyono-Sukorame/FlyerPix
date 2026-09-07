@@ -9,16 +9,16 @@
         <item name="colorPrimaryDark">@color/black</item>
 
         <item name="colorSurface">@color/white</item>
-        <item name="colorOnSurface">@color/blueDark</item>
+        <item name="colorOnSurface">@color/brand_navy</item>
 
         <!-- SeekBar -->
-        <item name="android:colorControlActivated">@color/black</item>
+        <item name="android:colorControlActivated">@color/brand_blue</item>
         <!-- Back button & SeekBar color -->
         <item name="android:colorControlNormal">@color/gray</item>
 
         <!-- Status Bar color and windowLightStatusBar true if Status bar is Light and false if it's dark-->
-        <item name="android:statusBarColor">@color/whiteDark</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/brand_navy</item>
+        <item name="android:windowLightStatusBar">false</item>
 
         <item name="textInputStyle">
             @style/AppTextInputLayout
@@ -135,13 +135,13 @@
     </style>
 
     <style name="AppButton" parent="Widget.MaterialComponents.Button.UnelevatedButton">
-        <item name="strokeColor">@color/black</item>
+        <item name="strokeColor">@color/brand_blue</item>
         <item name="strokeWidth">1dp</item>
-        <item name="android:textColor">@color/black</item>
+        <item name="android:textColor">@color/brand_blue</item>
     </style>
 
     <style name="AppTextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense">
-        <item name="boxStrokeColor">@color/black</item>
+        <item name="boxStrokeColor">@color/brand_blue</item>
         <item name="counterTextColor">@color/gray</item>
         <item name="hintTextColor">@color/gray</item>
         <item name="boxCornerRadiusBottomEnd">0dp</item>
@@ -151,7 +151,7 @@
     </style>
 
     <style name="AppAlertDialog" parent="Theme.MaterialComponents.Light.Dialog.Alert">
-        <item name="android:colorPrimary">@color/black</item>
+        <item name="android:colorPrimary">@color/brand_blue</item>
     </style>
 
 </resources>

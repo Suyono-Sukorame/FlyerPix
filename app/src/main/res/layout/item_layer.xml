@@ -43,7 +43,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="gone"
-                app:buttonTint="#00E5FF"
+                app:buttonTint="#18C8F5"
                 android:contentDescription="Select layer to merge" />
         </FrameLayout>
 
@@ -67,7 +67,7 @@
                 android:layout_height="match_parent"
                 android:padding="8dp"
                 android:src="@drawable/ic_text_fields_24px"
-                app:tint="#00E5FF"
+                app:tint="#18C8F5"
                 android:contentDescription="Layer type preview icon" />
 
         </com.google.android.material.card.MaterialCardView>

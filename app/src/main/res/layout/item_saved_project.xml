@@ -10,7 +10,7 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
-    app:cardBackgroundColor="#2A2A2A"
+    app:cardBackgroundColor="@color/brand_surface_darker"
     app:cardCornerRadius="10dp"
     app:cardElevation="2dp"
     app:strokeColor="#3E3E3E"
@@ -31,7 +31,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="#00E5FF"
+            app:tint="#18C8F5"
             android:contentDescription="Project Icon" />
 
         <TextView

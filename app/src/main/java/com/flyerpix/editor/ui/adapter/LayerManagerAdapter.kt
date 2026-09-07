@@ -113,23 +113,23 @@ class LayerManagerAdapter(
             // 1. Highlight border & background card
             if (isMergeMode) {
                 if (isMergeChecked) {
-                    binding.cardLayerItem.strokeColor = 0xFF00E5FF.toInt() // Cyan PixelLab
+                    binding.cardLayerItem.strokeColor = 0xFF18C8F5.toInt() // Cyan PixelLab
                     binding.cardLayerItem.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
-                    binding.cardLayerItem.setCardBackgroundColor(0xFF1E3942.toInt())
+                    binding.cardLayerItem.setCardBackgroundColor(0xFF0A1C4E.toInt())
                 } else {
                     binding.cardLayerItem.strokeColor = 0xFF3A3A3A.toInt()
                     binding.cardLayerItem.strokeWidth = (1 * context.resources.displayMetrics.density).toInt()
-                    binding.cardLayerItem.setCardBackgroundColor(0xFF2D2D2D.toInt())
+                    binding.cardLayerItem.setCardBackgroundColor(0xFF123065.toInt())
                 }
             } else {
                 if (isSelected) {
-                    binding.cardLayerItem.strokeColor = 0xFF00E5FF.toInt() // Cyan PixelLab
+                    binding.cardLayerItem.strokeColor = 0xFF18C8F5.toInt() // Cyan PixelLab
                     binding.cardLayerItem.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
-                    binding.cardLayerItem.setCardBackgroundColor(0xFF37474F.toInt())
+                    binding.cardLayerItem.setCardBackgroundColor(0xFF1A3A6B.toInt())
                 } else {
                     binding.cardLayerItem.strokeColor = 0xFF3A3A3A.toInt()
                     binding.cardLayerItem.strokeWidth = (1 * context.resources.displayMetrics.density).toInt()
-                    binding.cardLayerItem.setCardBackgroundColor(0xFF2D2D2D.toInt())
+                    binding.cardLayerItem.setCardBackgroundColor(0xFF123065.toInt())
                 }
             }
 
@@ -245,13 +245,13 @@ class LayerManagerAdapter(
             binding.cbMergeSelect.isChecked = isChecked
             val context = binding.root.context
             if (isChecked) {
-                binding.cardLayerItem.strokeColor = 0xFF00E5FF.toInt()
+                binding.cardLayerItem.strokeColor = 0xFF18C8F5.toInt()
                 binding.cardLayerItem.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
-                binding.cardLayerItem.setCardBackgroundColor(0xFF1E3942.toInt())
+                binding.cardLayerItem.setCardBackgroundColor(0xFF0A1C4E.toInt())
             } else {
                 binding.cardLayerItem.strokeColor = 0xFF3A3A3A.toInt()
                 binding.cardLayerItem.strokeWidth = (1 * context.resources.displayMetrics.density).toInt()
-                binding.cardLayerItem.setCardBackgroundColor(0xFF2D2D2D.toInt())
+                binding.cardLayerItem.setCardBackgroundColor(0xFF123065.toInt())
             }
             onMergeSelectionChanged?.invoke(selectedMergeLayers.size)
         }

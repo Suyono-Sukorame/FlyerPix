@@ -9,7 +9,6 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.DashPathEffect
 import android.graphics.Path
-import android.graphics.BlurMaskFilter
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
@@ -18,6 +17,8 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.util.AttributeSet
+import android.util.Log
+import com.flyerpix.editor.nativepix.FpNative
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -26,9 +27,14 @@ import android.content.Intent
 import android.net.Uri
 import kotlin.math.min
 import android.os.Build
+import android.os.Process
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Looper
 import android.os.Environment
 import android.provider.MediaStore
 import android.view.View
+import java.util.concurrent.CountDownLatch
 import com.flyerpix.editor.canvas.calc.RotationCalculator
 import com.flyerpix.editor.canvas.calc.SnapCalculator
 import com.flyerpix.editor.canvas.calc.ViewportCalculator
@@ -84,6 +90,17 @@ class PixelCanvasView @JvmOverloads constructor(
      * ke z-index tertinggi (atas).
      */
     val layers = mutableListOf<CanvasLayer>()
+
+    // ── Profiling (debug via `adb shell setprop debug.flyerpix_profile 1`) ──
+    private var pfFilterMs = 0L
+    private var pfAdjustMs = 0L
+    private var pfLayersMs = 0L
+    private var pfBlurMs = 0L
+    private var pfTotalMs = 0L
+    private var pfFrameCount = 0
+    private var pfFrameStart = 0L
+
+    private fun profileMark(t0: Long): Long = System.nanoTime() - t0
 
     /**
      * Layer yang saat ini sedang aktif dipilih oleh pengguna.
@@ -708,6 +725,39 @@ class PixelCanvasView @JvmOverloads constructor(
     /** Bitmap hasil capture kanvas untuk pembacaan pixel. */
     private var capturedBitmap: Bitmap? = null
 
+    /**
+     * Pipeline blur native worker:
+     * - UI thread merender snapshot konten ke [nativeBlurBitmap] (render ringan ¼ res).
+     * - Worker thread menjalankan getPixels → blur → setPixels → publish
+     *   [nativeBlurResult], lalu [postInvalidateOnAnimation].
+     * - Saat konten/radius/ukuran tidak berubah ([nativeBlurResultFp] sama)
+     *   skema "cache hit": blur block hanya `drawBitmap` hasil cached.
+     */
+    private var nativeBlurBitmap: Bitmap? = null
+    private var nativeBlurPixels: IntArray? = null
+    private var nativeBlurResult: Bitmap? = null
+    private var nativeBlurResultFp: Int = Int.MIN_VALUE
+    private val blurOutBuffer: Array<Bitmap?> = arrayOfNulls(2)
+    private var blurOutIndex = 0
+    private val nativeBlurOverlayPaint by lazy {
+        Paint().apply { alpha = 220; isFilterBitmap = true }
+    }
+    private val blurWorkerThread = HandlerThread("fp-blur", Process.THREAD_PRIORITY_DEFAULT)
+        .apply { start() }
+    private val blurWorker = Handler(blurWorkerThread.looper)
+
+    @Volatile
+    private var blurRebuildPending = false
+    @Volatile
+    private var blurRebuildFp: Int = 0
+    @Volatile
+    private var blurRebuildRadius: Int = 0
+
+    /** Jumlah rebuild blur yang selesai (debug/stress). */
+    @Volatile
+    var blurRebuildCount: Int = 0
+        private set
+
     /** Posisi sentuh X terakhir dalam koordinat kanvas (dibaca oleh overlay). */
     var touchEventX: Float = 0f
         private set
@@ -794,7 +844,7 @@ class PixelCanvasView @JvmOverloads constructor(
 
     // ── Paint untuk Bounding Box Seleksi (Prompt 25) ────────────────────────
     private val selectionBoxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF00E5FF.toInt() // Cyan khas PixelLab
+        color = 0xFF18C8F5.toInt() // Cyan khas PixelLab
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
         pathEffect = DashPathEffect(floatArrayOf(14f, 10f), 0f)
@@ -835,7 +885,7 @@ class PixelCanvasView @JvmOverloads constructor(
 
     // ── Paint untuk Handle & Garis Pandu Perspektif ─────────────────────────
     private val perspectiveGuidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF00E5FF.toInt()
+        color = 0xFF18C8F5.toInt()
         style = Paint.Style.STROKE
         strokeWidth = 3f
         pathEffect = DashPathEffect(floatArrayOf(15f, 10f), 0f)
@@ -853,7 +903,7 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     private val perspectiveHandleCenterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF00E5FF.toInt()
+        color = 0xFF18C8F5.toInt()
         style = Paint.Style.FILL
     }
 
@@ -888,7 +938,7 @@ class PixelCanvasView @JvmOverloads constructor(
         }
 
     private val snapGuidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF00E5FF.toInt() // Biru cyan magnetik khas PixelLab
+        color = 0xFF18C8F5.toInt() // Biru cyan magnetik khas PixelLab
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
         pathEffect = DashPathEffect(floatArrayOf(12f, 8f), 0f)
@@ -988,6 +1038,179 @@ class PixelCanvasView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Overlay blur berbasis native blur (NDK) dengan pipeline async + cache:
+     * 1. Fingerprint konten+radius+ukuran → cache hit: hanya `drawBitmap` hasil
+     *    publish lalu selesai (kondisi statis = biaya nyaris nol).
+     * 2. Cache miss: UI thread merender snapshot konten ¼ resolusi ke
+     *    [nativeBlurBitmap], worker thread menjalankan get/blur/set, hasil
+     *    di-publish sebagai [nativeBlurResult] + [postInvalidateOnAnimation].
+     * 3. Selama rebuild berjalan, frame saat ini menggambar hasil publish lama
+     *    (lag satu frame pada blur tidak terlihat).
+     */
+    private fun drawNativeBlurOverlay(canvas: Canvas, vp: RectF, blurRadius: Float) {
+        val w = vp.width().toInt()
+        val h = vp.height().toInt()
+        if (w <= 0 || h <= 0) return
+
+        val bw = (w / 4).coerceAtLeast(1)
+        val bh = (h / 4).coerceAtLeast(1)
+
+        var bmp = nativeBlurBitmap
+        if (bmp == null || bmp.width != bw || bmp.height != bh) {
+            nativeBlurBitmap?.recycle()
+            bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
+            nativeBlurBitmap = bmp
+            nativeBlurPixels = IntArray(bw * bh)
+        }
+        val radius = ((blurRadius * 2f) / 4f).toInt().coerceAtLeast(1)
+        val result = nativeBlurResult
+        val fp = computeBlurSignature(bw, bh, radius)
+
+        // Cache hit: konten tidak berubah → hanya gambar hasil yang sudah publish.
+        if (result != null && result.width == bw && result.height == bh && fp == nativeBlurResultFp) {
+            canvas.drawBitmap(result, null, vp, nativeBlurOverlayPaint)
+            return
+        }
+
+        // Cache miss → minta rebuild async (coalesce bila ada build berjalan).
+        blurRebuildFp = fp
+        blurRebuildRadius = radius
+        if (!blurRebuildPending) {
+            blurRebuildPending = true
+            blurWorker.post { runBlurBuild() }
+        }
+
+        // Sambil menunggu build baru, gambar hasil publish lama (bila ada).
+        if (result != null && result.width == bw && result.height == bh) {
+            canvas.drawBitmap(result, null, vp, nativeBlurOverlayPaint)
+        }
+    }
+
+    /**
+     * Menghitung fingerprint ringkas konten canvas yang memengaruhi hasil blur:
+     * dimensi snapshot, radius, latar belakang, dan setiap layer terlihat.
+     */
+    private fun computeBlurSignature(bw: Int, bh: Int, radius: Int): Int {
+        var h = bw
+        h = h * 31 + bh
+        h = h * 31 + radius
+        val bg = canvasBackground
+        h = h * 31 + bg.mode.ordinal
+        h = h * 31 + bg.solidColor
+        bg.gradient?.let { h = h * 31 + it.hashCode() }
+        bg.imageBitmap?.let { bmp ->
+            h = h * 31 + System.identityHashCode(bmp)
+            h = h * 31 + bmp.generationId
+            h = h * 31 + bmp.width
+            h = h * 31 + bmp.height
+        }
+        // Overlay blur membawa warna adjustment, jadi nilainya ikut jadi trigger.
+        h = h * 31 + (adjustments[CanvasAdjustment.BRIGHTNESS] ?: 0f).toRawBits()
+        h = h * 31 + (adjustments[CanvasAdjustment.CONTRAST] ?: 0f).toRawBits()
+        h = h * 31 + (adjustments[CanvasAdjustment.SATURATION] ?: 0f).toRawBits()
+        for (layer in layers) {
+            if (layer.isVisible) h = h * 31 + layer.contentBlurSignature()
+        }
+        return h
+    }
+
+    /** Merender snapshot konten ke [nativeBlurBitmap] (di panggil dari UI thread). */
+    private fun renderBlurSnapshot(w: Int, h: Int, vp: RectF) {
+        val bitmap = nativeBlurBitmap ?: return
+        val bw = bitmap.width
+        val bh = bitmap.height
+        val scaleX = bw.toFloat() / w
+        val scaleY = bh.toFloat() / h
+        val off = Canvas(bitmap)
+        off.scale(scaleX, scaleY)
+        off.translate(-vp.left, -vp.top)
+        drawBackgroundOnCanvas(off, RectF(0f, 0f, w.toFloat(), h.toFloat()))
+        for (layer in layers) {
+            if (layer.isVisible) layer.draw(off, renderPaint)
+        }
+    }
+
+    /** Body worker: render snapshot di UI thread → blur native → publish. */
+    private fun runBlurBuild() {
+        while (true) {
+            val bmp = nativeBlurBitmap
+            val pixels = nativeBlurPixels
+            if (bmp == null || pixels == null) break
+            val bw = bmp.width
+            val bh = bmp.height
+            val fp = blurRebuildFp
+            val radius = blurRebuildRadius
+
+            // Render snapshot di UI thread; tunggu selesai agar pixel stabil.
+            val latch = CountDownLatch(1)
+            val posted = Handler(Looper.getMainLooper()).post {
+                renderBlurSnapshot(width, height, viewportRectOrFull())
+                latch.countDown()
+            }
+            if (!posted) { blurRebuildPending = false; return }
+            latch.await()
+
+            val t0 = System.nanoTime()
+            bmp.getPixels(pixels, 0, bw, 0, 0, bw, bh)
+            runCatching { FpNative.blurPixels(pixels, bw, bh, radius) }
+            val t1 = System.nanoTime()
+            val brightness = adjustments[CanvasAdjustment.BRIGHTNESS] ?: 0f
+            val contrast = adjustments[CanvasAdjustment.CONTRAST] ?: 0f
+            val saturation = adjustments[CanvasAdjustment.SATURATION] ?: 0f
+            if (brightness != 0f || contrast != 0f || saturation != 0f) {
+                runCatching { FpNative.applyColorMatrix(pixels, brightness, contrast, saturation) }
+            }
+            val t2 = System.nanoTime()
+            val out = blurOutBufferFor(bw, bh)
+            out.setPixels(pixels, 0, bw, 0, 0, bw, bh)
+            val t3 = System.nanoTime()
+            blurRebuildCount++
+            if (profileEnabled) {
+                android.util.Log.d(
+                    PROFILE_TAG,
+                    "blurBuild get+blur=${(t1 - t0) / 1_000_000.0}ms adjust=${(t2 - t1) / 1_000_000.0}ms" +
+                        " set=${(t3 - t2) / 1_000_000.0}ms total=${(t3 - t0) / 1_000_000.0}ms" +
+                        " size=${bw}x${bh} r=$radius rebuilds=$blurRebuildCount"
+                )
+            }
+
+            nativeBlurResult = out
+            nativeBlurResultFp = fp
+            postInvalidateOnAnimation()
+
+            // Coalescing: bila selama build ada permintaan baru, rebuild lagi.
+            if (blurRebuildFp == fp) {
+                blurRebuildPending = false
+                break
+            }
+        }
+    }
+
+    /** viewportRect, atau area penuh view bila belum dihitung. */
+    private fun viewportRectOrFull(): RectF {
+        if (viewportRect.spanX > 0 && viewportRect.spanY > 0) return viewportRect
+        return RectF(0f, 0f, width.toFloat(), height.toFloat())
+    }
+
+    /**
+     * Ambil buffer output blur dari double-buffer (buat saat pertama/ukuran
+     * berubah), bergantian tiap rebuild untuk menghindari alokasi bitmap
+     * per rebuild (penyebab spike GC).
+     */
+    private fun blurOutBufferFor(bw: Int, bh: Int): Bitmap {
+        val stale = blurOutBuffer.any { it == null || it.width != bw || it.height != bh }
+        if (stale) {
+            blurOutBuffer.forEach { it?.recycle() }
+            blurOutBuffer[0] = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
+            blurOutBuffer[1] = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
+            blurOutIndex = 0
+        }
+        val out = blurOutBuffer[blurOutIndex]!!
+        blurOutIndex = blurOutIndex xor 1
+        return out
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -998,13 +1221,20 @@ class PixelCanvasView @JvmOverloads constructor(
             bottom = height.toFloat()
         }
 
+        val profiling = profileEnabled
+        if (profiling) pfFrameStart = System.nanoTime()
+
         // Efek Filter (monokrom) dibungkus sebagai layer komposit di atas
         // background, grid, dan seluruh layer (Prompt 51).
+        val tFilter = System.nanoTime()
         val filterEffectLayer = beginFilterEffectLayer(canvas)
+        if (profiling) pfFilterMs += profileMark(tFilter)
 
         // Adjustment layer: brightness/contrast/saturation via ColorMatrix saveLayer
+        val tAdjust = System.nanoTime()
         val adjPaint = buildAdjustmentPaint()
         val adjSaveIndex = if (adjPaint != null) canvas.saveLayer(null, adjPaint) else -1
+        if (profiling) pfAdjustMs += profileMark(tAdjust)
 
         // 1. Render background kanvas independen (Prompt 44)
         drawBackgroundOnCanvas(canvas, vp)
@@ -1015,6 +1245,7 @@ class PixelCanvasView @JvmOverloads constructor(
         }
 
         // 2. Render seluruh layer secara berurutan sesuai z-index jika isVisible bernilai true
+        val tLayers = System.nanoTime()
         for (i in 0 until layers.size) {
             val layer = layers[i]
             if (layer.isVisible) {
@@ -1032,6 +1263,7 @@ class PixelCanvasView @JvmOverloads constructor(
                 }
             }
         }
+        if (profiling) pfLayersMs += profileMark(tLayers)
 
         // 2b. Live preview goresan gambar bebas yang sedang aktif
         if (freeDrawActive && freeDrawPoints.size >= 2) {
@@ -1047,19 +1279,12 @@ class PixelCanvasView @JvmOverloads constructor(
         // Tutup adjustment layer (brightness/contrast/saturation)
         if (adjSaveIndex >= 0) canvas.restoreToCount(adjSaveIndex)
 
-        // Blur overlay: gambar ulang konten dengan BlurMaskFilter di atas
+        // Blur overlay: snapshot konten, blur via native (NDK), gambar darinya
         val blurRadius = adjustments[CanvasAdjustment.BLUR] ?: 0f
         if (blurRadius > 0f) {
-            val blurPaint = Paint().apply {
-                maskFilter = BlurMaskFilter(blurRadius * 2f, BlurMaskFilter.Blur.NORMAL)
-                alpha = 220
-            }
-            val blurSave = canvas.saveLayer(null, blurPaint)
-            drawBackgroundOnCanvas(canvas, vp)
-            for (layer in layers) {
-                if (layer.isVisible) layer.draw(canvas, renderPaint)
-            }
-            canvas.restoreToCount(blurSave)
+            val tBlur = System.nanoTime()
+            drawNativeBlurOverlay(canvas, vp, blurRadius)
+            if (profiling) pfBlurMs += profileMark(tBlur)
         }
 
         // 2b. Render efek overlay non-destruktif (Noise, Vignette) di atas konten (Prompt 51).
@@ -1082,6 +1307,24 @@ class PixelCanvasView @JvmOverloads constructor(
         // 5. Render garis panduan magnetik (Snap Guidelines) biru cyan saat layer mendekati tengah kanvas (Prompt 30)
         if (isSnapGuideXVisible || isSnapGuideYVisible) {
             drawSnapGuidelines(canvas, vp)
+        }
+
+        if (profiling) {
+            pfTotalMs += profileMark(pfFrameStart)
+            pfFrameCount++
+            if (pfFrameCount >= 30) {
+                Log.d(
+                    PROFILE_TAG,
+                    "frames=30 total=" + (pfTotalMs / 30 / 1_000_000) +
+                        "ms f-filter=" + (pfFilterMs / 30 / 1_000_000) +
+                        "ms f-adjust=" + (pfAdjustMs / 30 / 1_000_000) +
+                        "ms f-layers=" + (pfLayersMs / 30 / 1_000_000) +
+                        "ms f-blur=" + (pfBlurMs / 30 / 1_000_000) +
+                        "ms layers=" + layers.size
+                )
+                pfFilterMs = 0; pfAdjustMs = 0; pfLayersMs = 0; pfBlurMs = 0
+                pfTotalMs = 0; pfFrameCount = 0
+            }
         }
     }
 
@@ -2434,4 +2677,9 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     fun getAdjustment(type: CanvasAdjustment): Float = adjustments[type] ?: 0f
+
+    companion object {
+        private const val PROFILE_TAG = "FlyerPixProfile"
+        @Volatile var profileEnabled = false
+    }
 }

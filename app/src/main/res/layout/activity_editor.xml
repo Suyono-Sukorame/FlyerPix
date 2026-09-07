@@ -64,7 +64,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
-            android:background="#1E1E1E"
+            android:background="@color/brand_surface_dark"
             android:orientation="vertical"
             android:elevation="8dp">
 
@@ -83,7 +83,7 @@
             android:id="@+id/bottom_navigation"
             android:layout_gravity="bottom"
             app:menu="@menu/authentic_bottom_nav_menu"
-            android:background="#1A1A1A"
+            android:background="@color/brand_navy"
             app:itemIconTint="@color/bottom_nav_colors"
             app:itemTextColor="@color/bottom_nav_colors"
             app:labelVisibilityMode="labeled"
@@ -120,7 +120,7 @@
     <LinearLayout
             android:id="@+id/objectMenuPanel"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="107dp"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
             android:background="#FFFFFF"
@@ -129,14 +129,20 @@
             android:visibility="gone">
 
         <!-- Konten detail: satu konten aktif sesuai tool yang dipilih pada strip -->
-        <LinearLayout
+        <ScrollView
                 android:id="@+id/objectContentPanel"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#FFFFFF"
-                android:elevation="6dp"
-                android:orientation="vertical"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true"
+                android:scrollbars="none"
+                android:fadeScrollbars="false"
                 android:visibility="gone">
+
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
         <!-- Konten: Sticker -->
         <androidx.fragment.app.FragmentContainerView
@@ -282,6 +288,7 @@
         </LinearLayout>
 
         </LinearLayout>
+        </ScrollView>
 
         <!-- Tool strip: ikon + label, scroll horizontal -->
         <include
@@ -295,7 +302,7 @@
     <LinearLayout
             android:id="@+id/canvasMenuPanel"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="107dp"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
             android:background="#FFFFFF"
@@ -303,6 +310,21 @@
             android:orientation="vertical"
             android:visibility="gone">
 
+        <!-- Konten detail (tersembunyi sampai ikon tool ditekan) -->
+        <ScrollView
+                android:id="@+id/canvasContentPanel"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true"
+                android:scrollbars="none"
+                android:fadeScrollbars="false"
+                android:visibility="gone">
+
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
         <!-- Chip mode latar -->
         <com.google.android.material.chip.ChipGroup
                 android:id="@+id/cgCanvasBgMode"
@@ -389,6 +411,7 @@
                     android:minWidth="0dp"
                     android:paddingHorizontal="8dp"
                     android:text="Custom…"
+                    android:textColor="@color/brand_blue"
                     android:textSize="12sp" />
         </LinearLayout>
 
@@ -418,6 +441,7 @@
                     android:minWidth="0dp"
                     android:paddingHorizontal="12dp"
                     android:text="Custom gradasi…"
+                    android:textColor="@color/brand_blue"
                     android:textSize="12sp" />
         </LinearLayout>
 
@@ -463,22 +487,44 @@
                     android:textColor="#E53935"
                     android:textSize="12sp" />
         </LinearLayout>
+        </LinearLayout>
+        </ScrollView>
+
+        <!-- Tool strip icon: Background -->
+        <include
+                android:id="@+id/canvasToolStripInclude"
+                layout="@layout/layout_canvas_tool_strip" />
     </LinearLayout>
 
     <!-- Halaman Efek: 2 lapis (Lapis 1: kategori, Lapis 2: slider detail) -->
     <LinearLayout
             android:id="@+id/effectsMenuPanel"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="107dp"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
-            android:background="#1E1E1E"
+            android:background="@color/brand_surface_dark"
             android:elevation="6dp"
             android:orientation="vertical"
             android:visibility="gone">
 
-        <!-- Semua kontrol efek ditampilkan langsung tanpa baris kategori -->
+        <!-- Semua kontrol efek tersembunyi sampai ikon tool pada strip ditekan -->
 
+        <!-- Konten detail efek (tersembunyi sampai ikon tool ditekan) -->
+        <ScrollView
+                android:id="@+id/effectContentPanel"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true"
+                android:scrollbars="none"
+                android:fadeScrollbars="false"
+                android:visibility="gone">
+
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
         <!-- Konten: Adjust -->
         <LinearLayout
                 android:id="@+id/effectContentAdjust"
@@ -493,7 +539,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="ADJUST"
-                    android:textColor="#00E5FF"
+                    android:textColor="#18C8F5"
                     android:textSize="11sp"
                     android:textStyle="bold" />
 
@@ -512,10 +558,10 @@
                     android:valueTo="100"
                     android:value="0"
                     android:stepSize="1"
-                    app:thumbColor="#00E5FF"
-                    app:trackColorActive="#00E5FF"
-                    app:trackColorInactive="#3A3A3A"
-                    app:haloColor="#2200E5FF" />
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="#123065"
+                    app:haloColor="#2218C8F5" />
 
             <TextView
                     android:layout_width="wrap_content"
@@ -532,10 +578,10 @@
                     android:valueTo="100"
                     android:value="0"
                     android:stepSize="1"
-                    app:thumbColor="#00E5FF"
-                    app:trackColorActive="#00E5FF"
-                    app:trackColorInactive="#3A3A3A"
-                    app:haloColor="#2200E5FF" />
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="#123065"
+                    app:haloColor="#2218C8F5" />
 
             <TextView
                     android:layout_width="wrap_content"
@@ -552,10 +598,10 @@
                     android:valueTo="100"
                     android:value="0"
                     android:stepSize="1"
-                    app:thumbColor="#00E5FF"
-                    app:trackColorActive="#00E5FF"
-                    app:trackColorInactive="#3A3A3A"
-                    app:haloColor="#2200E5FF" />
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="#123065"
+                    app:haloColor="#2218C8F5" />
         </LinearLayout>
 
         <!-- Konten: Effects (Vignette / Noise / Filter) -->
@@ -572,7 +618,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="EFFECTS"
-                    android:textColor="#00E5FF"
+                    android:textColor="#18C8F5"
                     android:textSize="11sp"
                     android:textStyle="bold" />
 
@@ -634,7 +680,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="BLUR"
-                    android:textColor="#00E5FF"
+                    android:textColor="#18C8F5"
                     android:textSize="11sp"
                     android:textStyle="bold" />
 
@@ -653,11 +699,18 @@
                     android:valueTo="25"
                     android:value="0"
                     android:stepSize="1"
-                    app:thumbColor="#00E5FF"
-                    app:trackColorActive="#00E5FF"
-                    app:trackColorInactive="#3A3A3A"
-                    app:haloColor="#2200E5FF" />
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="#123065"
+                    app:haloColor="#2218C8F5" />
         </LinearLayout>
+        </LinearLayout>
+        </ScrollView>
+
+        <!-- Tool strip icon: Adjust / Effects / Blur -->
+        <include
+                android:id="@+id/effectToolStripInclude"
+                layout="@layout/layout_effect_tool_strip" />
     </LinearLayout>
 
     <!-- Crop Confirm/Cancel Toolbar (Prompt 46) -->

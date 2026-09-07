@@ -183,6 +183,27 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         this.title = ""
         pixelCanvasView = binding.pixelCanvasView
 
+        // ── Profiling: baca flag debug via system property ─────────────────
+        // `adb shell setprop debug.flyerpix_profile 1` → aktifkan timer onDraw.
+        // Polling kecil tiap 500ms cukup karena flag hanya untuk sesi debug.
+        val profileRunnable = object : Runnable {
+            override fun run() {
+                val enabled = readSystemProperty("debug.flyerpix_profile") == "1"
+                if (enabled != PixelCanvasView.profileEnabled) {
+                    PixelCanvasView.profileEnabled = enabled
+                    android.util.Log.d("FlyerPixProfile", "profileEnabled=$enabled")
+                }
+                binding.pixelCanvasView.postDelayed(this, 500)
+            }
+        }
+        binding.pixelCanvasView.postDelayed(profileRunnable, 500)
+
+        // ── Stress test otomatis (debug) ────────────────────────────────────
+        // `adb shell setprop debug.flyerpix_stress 10` → tambah 10 layer lalu
+        // aktifkan blur+adjust, render beberapa detik, cetak frame-time.
+        val stressCount = readSystemProperty("debug.flyerpix_stress").toIntOrNull() ?: -1
+        if (stressCount >= 0) binding.pixelCanvasView.post { runRenderStressTest(stressCount) }
+
         // ── Inisialisasi Controllers ────────────────────────────────────────
         initializeControllers()
 
@@ -253,6 +274,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         canvasMenuController.initialize()
         canvasMenuController.setBgGalleryLauncher(bgGalleryLauncher)
         canvasMenuController.setOnCameraRequested { checkCameraPermissionForBackground() }
+        canvasMenuController.onDetailExpandedChanged = { setDetailExpanded(canvasMenuController.activeTag.isNotEmpty()) }
 
         // Effects Controller - Mengelola efek kanvas
         effectsController = EffectsController(
@@ -262,6 +284,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             { showSnackbar(it) }
         )
         effectsController.initialize()
+        effectsController.onDetailExpandedChanged = { setDetailExpanded(it) }
 
         // Template Controller - Mengelola template presets
         templateController = TemplateController(
@@ -273,6 +296,12 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             onProjectSave = { exportController.showSaveProjectDialog() }
         )
         templateController.initialize()
+
+        // Akhiri phase init TextPanelController SETELAH template default diterapkan.
+        // Keduanya di-post ke queue yang sama (pixelCanvasView) → FIFO, post ini
+        // dijalankan setelah applyDefaultTemplateIfNeeded, sehingga auto-switch
+        // ke menu Text tidak menimpa menu Presets saat pertama membuka aplikasi.
+        pixelCanvasView.post { textPanelController.finishInitialization() }
 
         // Layer Panel Controller
         layerPanel = LayerPanelController(
@@ -294,6 +323,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             onPanelChanged = { updateCanvasCardMargin() }
         )
         objectMenu.initialize()
+        objectMenu.onDetailExpandedChanged = { setDetailExpanded(objectMenu.activeTag.isNotEmpty()) }
 
         // Canvas Tools Controller - Mengelola eyedropper, crop, dan palette
         // DISABLED: Fitur ini belum diperlukan, di-disable untuk menghindari bug FAB
@@ -466,6 +496,18 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             objectMenu.refreshUI()
         } else {
             objectMenu.deselect()
+        }
+
+        if (menuId == R.id.nav_canvas) {
+            canvasMenuController.refreshUI()
+        } else {
+            canvasMenuController.deselect()
+        }
+
+        if (menuId == R.id.nav_effects) {
+            effectsController.refreshUI()
+        } else {
+            effectsController.deselect()
         }
         
         // Update FAB visibility berdasarkan menu yang aktif
@@ -674,6 +716,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private fun exitSaveMode() {
         binding.bottomNavigation.visibility = View.VISIBLE
+        binding.bottomNavigation.translationY = 0f
         binding.saveFab.visibility = View.GONE
         binding.topBarInclude.root.visibility = View.VISIBLE
         binding.nameTextInputLayout.visibility = View.GONE
@@ -759,6 +802,175 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     // ═══════════════════════════════════════════════════════════════════════
     //  TEXT EDITOR (UX ala PixelLab): Tool Strip + Property Panel Kontekstual
     // ═══════════════════════════════════════════════════════════════════════
+
+    // ────────────────────────────────────────────────────────────────────────
+    // DETAIL EXPAND: menyembunyikan bottom nav saat detail dibuka agar
+    // jendela konten lebih lebar, dan memunculkannya kembali saat ditutup.
+    // ────────────────────────────────────────────────────────────────────────
+
+    private var navTranslationAnimator: android.animation.ValueAnimator? = null
+    private val panelHeightAnimators = HashMap<View, android.animation.ValueAnimator>()
+
+    /**
+     * Mengekspansi panel detail (object/canvas/effects) dan menggeser keluar
+     * bottom nav saat `expanded == true`; kembali normal saat `false`.
+     *
+     * Panel tertutup:   tinggi 107dp, marginBottom 56dp (di atas nav).
+     * Panel terbuka:    tinggi 163dp, marginBottom 0dp (nav disembunyikan).
+     */
+    private fun setDetailExpanded(expanded: Boolean) {
+        val density = resources.displayMetrics.density
+        val collapsedH = (107 * density).toInt()
+        val expandedH = (163 * density).toInt()
+        val collapsedMargin = (56 * density).toInt()
+
+        if (!expanded) {
+            // Kontraksi: semua panel kembali ke ukuran default & nav dipanggil kembali.
+            listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+                .filter { it != null }
+                .forEach { panel ->
+                    panel.animateLayoutHeight(collapsedH)
+                    panel.animateLayoutMarginBottom(collapsedMargin)
+                }
+            animateNavTranslation(0)
+            updateCanvasCardMargin()
+            return
+        }
+
+        val activePanel = when (binding.bottomNavigation.selectedItemId) {
+            R.id.nav_object -> binding.objectMenuPanel
+            R.id.nav_canvas -> binding.canvasMenuPanel
+            R.id.nav_effects -> binding.effectsMenuPanel
+            else -> return
+        } ?: return
+
+        val navOffset = (56 * density).toInt()
+        listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+            .filter { it != null && it != activePanel }
+            .forEach { panel -> panel.animateLayoutHeight(collapsedH) }
+        activePanel.animateLayoutHeight(expandedH)
+        activePanel.animateLayoutMarginBottom(0)
+        animateNavTranslation(navOffset)
+        updateCanvasCardMargin()
+    }
+
+    private fun View.animateLayoutHeight(target: Int) {
+        panelHeightAnimators[this]?.cancel()
+        val lp = layoutParams
+        val start = lp?.height ?: 0
+        val anim = android.animation.ValueAnimator.ofInt(start, target).apply {
+            duration = 220
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener {
+                val l = layoutParams ?: return@addUpdateListener
+                l.height = animatedValue as Int
+                layoutParams = l
+            }
+        }
+        panelHeightAnimators[this] = anim
+        anim.start()
+    }
+
+    private fun View.animateLayoutMarginBottom(target: Int) {
+        val lp = layoutParams as? android.view.ViewGroup.MarginLayoutParams ?: return
+        val start = lp.bottomMargin
+        val anim = android.animation.ValueAnimator.ofInt(start, target).apply {
+            duration = 220
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener {
+                val l = layoutParams as? android.view.ViewGroup.MarginLayoutParams ?: return@addUpdateListener
+                l.bottomMargin = animatedValue as Int
+                layoutParams = l
+            }
+        }
+        anim.start()
+    }
+
+    private fun animateNavTranslation(target: Int) {
+        val nav = binding.bottomNavigation
+        val start = nav.translationY.toInt()
+        navTranslationAnimator?.cancel()
+        navTranslationAnimator = android.animation.ValueAnimator.ofInt(start, target).apply {
+            duration = 220
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener {
+                nav.translationY = (animatedValue as Int).toFloat()
+            }
+        }
+        navTranslationAnimator?.start()
+    }
+
+    private fun readSystemProperty(key: String): String = try {
+        val clazz = Class.forName("android.os.SystemProperties")
+        clazz.getMethod("get", String::class.java).invoke(null, key) as String
+    } catch (t: Throwable) {
+        ""
+    }
+
+    /**
+     * Stress test rendering: tambah N layer gambar + efek sesuai mode, lalu render
+     * berulang. Baca frame-time per segmen via profiler onDraw (aktifkan
+     * `debug.flyerpix_profile`). Dipicu `setprop debug.flyerpix_stress N`.
+     * Mode: `debug.flyerpix_stressmode` 0=all, 1=layer saja, 2=blur+adjust, 3=blur saja.
+     */
+    private fun runRenderStressTest(layerCount: Int) {
+        val mode = readSystemProperty("debug.flyerpix_stressmode").toIntOrNull() ?: 0
+        val colors = intArrayOf(
+            android.graphics.Color.rgb(230, 57, 70),
+            android.graphics.Color.rgb(23, 105, 255),
+            android.graphics.Color.rgb(105, 56, 239),
+            android.graphics.Color.rgb(24, 200, 245),
+            android.graphics.Color.rgb(46, 125, 50)
+        )
+        val size = 256
+        for (i in 0 until layerCount) {
+            val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+            android.graphics.Canvas(bmp).drawCircle(
+                size / 2f, size / 2f, size / 2f - 4f,
+                android.graphics.Paint().apply { color = colors[i % colors.size] }
+            )
+            val layer = com.flyerpix.editor.canvas.model.ImageLayer(bitmap = bmp, scale = 0.6f, layerName = "Stress#$i")
+            layer.x = (60 + (i % 8) * 40).toFloat()
+            layer.y = (80 + (i % 8) * 40).toFloat()
+            pixelCanvasView.addLayer(layer)
+        }
+        if (mode != 1) {
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.BRIGHTNESS, 25f)
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.CONTRAST, 30f)
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.SATURATION, 40f)
+            if (mode == 0 || mode == 2) {
+                pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.BLUR, 12f)
+                pixelCanvasView.toggleEffect(PixelCanvasView.CanvasEffect.FILTER)
+            } else if (mode == 3) {
+                pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.BLUR, 12f)
+            }
+        }
+
+        android.util.Log.d("FlyerPixProfile", "StressTest mode=$mode memulai dengan $layerCount layer")
+        val jiggle = readSystemProperty("debug.flyerpix_stressjiggle") == "1"
+        val jiggleLayer = if (jiggle) pixelCanvasView.layers.firstOrNull() else null
+        var frames = 0
+        val start = System.nanoTime()
+        val renderer = object : Runnable {
+            override fun run() {
+                // Jiggle: ubah x layer tiap frame agar signature blur berubah
+                // (menguji jalur rebuild, bukan cache hit).
+                jiggleLayer?.let {
+                    it.x = it.x + (frames % 3 - 2) * 2f
+                }
+                pixelCanvasView.invalidate()
+                frames++
+                val elapsed = (System.nanoTime() - start) / 1_000_000_000
+                if (elapsed < 6) binding.pixelCanvasView.postOnAnimation(this) else {
+                    android.util.Log.d(
+                        "FlyerPixProfile",
+                        "StressTest selesai: $frames frame dalam ${elapsed}s, layers=${pixelCanvasView.layers.size}, blurRebuilds=${pixelCanvasView.blurRebuildCount}"
+                    )
+                }
+            }
+        }
+        binding.pixelCanvasView.postOnAnimation(renderer)
+    }
 
     private fun updateCanvasCardMargin() {
         // Kesimpulan verifikasi empiris (09/2026): margin bawah canvasCard
