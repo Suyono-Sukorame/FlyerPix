@@ -1,28 +1,37 @@
 /**
  * filter_jni.cpp
  * 
- * JNI bindings untuk Filter Engine
+ * JNI bindings untuk Filter Engine dengan complete bitmap marshalling
  * 
  * Exposes native filter methods ke Java layer untuk use di Android UI
+ * 
+ * Features:
+ * - AndroidBitmap API untuk lock/unlock pixel buffers
+ * - Automatic Bitmap wrapping dengan C++ Bitmap::wrap()
+ * - Error handling dengan JNI exceptions
+ * - Thread-safe FilterEngine access
  */
 
 #include <jni.h>
 #include "filter_engine.h"
 #include "bitmap.h"
 #include "thread_pool.h"
+#include <android/bitmap.h>
 #include <android/log.h>
 #include <memory>
+#include <cstring>
 
 #define LOG_TAG "FilterJNI"
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
 // ============================================================================
 // JNI Utility Functions
 // ============================================================================
 
 /**
- * Convert Java Status to int
+ * Convert C++ Status to Java int (mirrors FilterStatus.kt)
  */
 static int statusToJni(Status status) {
     return static_cast<int>(status);
@@ -31,7 +40,7 @@ static int statusToJni(Status status) {
 /**
  * Get native FilterEngine instance dari Java object
  * 
- * Java layer maintains FilterEngine pointer sebagai long (nativePtr)
+ * Java layer maintains FilterEngine pointer sebagai long (nativePtr field)
  */
 static FilterEngine* getFilterEngine(JNIEnv* env, jobject obj) {
     jclass clazz = env->GetObjectClass(obj);
@@ -39,6 +48,82 @@ static FilterEngine* getFilterEngine(JNIEnv* env, jobject obj) {
     jlong ptr = env->GetLongField(obj, fieldPtr);
     env->DeleteLocalRef(clazz);
     return reinterpret_cast<FilterEngine*>(ptr);
+}
+
+/**
+ * Throw Java exception dari C++
+ */
+static void throwJniException(JNIEnv* env, const char* exceptionClass, const char* message) {
+    jclass exc = env->FindClass(exceptionClass);
+    if (exc) {
+        env->ThrowNew(exc, message);
+        env->DeleteLocalRef(exc);
+    }
+}
+
+/**
+ * Lock Android Bitmap dan retrieve pixel buffer info
+ */
+struct BitmapLock {
+    JNIEnv* env;
+    jobject bitmap;
+    AndroidBitmapInfo info;
+    void* pixels;
+    bool locked;
+    
+    BitmapLock(JNIEnv* e, jobject b) : env(e), bitmap(b), pixels(nullptr), locked(false) {
+        int ret = AndroidBitmap_getInfo(env, bitmap, &info);
+        if (ret < 0) {
+            LOGE("AndroidBitmap_getInfo failed: %d", ret);
+            return;
+        }
+        
+        // Validate format
+        if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
+            LOGE("Unsupported bitmap format: %d (require RGBA_8888)", info.format);
+            return;
+        }
+        
+        ret = AndroidBitmap_lockPixels(env, bitmap, &pixels);
+        if (ret < 0) {
+            LOGE("AndroidBitmap_lockPixels failed: %d", ret);
+            pixels = nullptr;
+            return;
+        }
+        
+        locked = true;
+        LOGD("Bitmap locked: %dx%d, stride=%d", info.width, info.height, info.stride);
+    }
+    
+    ~BitmapLock() {
+        if (locked && pixels) {
+            AndroidBitmap_unlockPixels(env, bitmap);
+            locked = false;
+            LOGD("Bitmap unlocked");
+        }
+    }
+    
+    bool isValid() const {
+        return locked && pixels != nullptr;
+    }
+};
+
+/**
+ * Wrap locked Android Bitmap into C++ Bitmap object
+ */
+static Bitmap wrapAndroidBitmap(const BitmapLock& lock) {
+    if (!lock.isValid()) {
+        throw std::runtime_error("Cannot wrap invalid bitmap lock");
+    }
+    
+    // Create non-owning Bitmap wrapper
+    return Bitmap::wrap(
+        lock.info.width,
+        lock.info.height,
+        lock.info.stride,
+        static_cast<uint8_t*>(lock.pixels),
+        PixelFormat::ARGB_8888
+    );
 }
 
 // ============================================================================
@@ -105,16 +190,54 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeApplyBlur(
         FilterEngine* engine = getFilterEngine(env, obj);
         if (!engine) {
             LOGE("FilterEngine pointer is null");
+            throwJniException(env, "java/lang/NullPointerException", "FilterEngine not initialized");
             return statusToJni(Status::ERROR_INVALID_PARAM);
         }
         
-        // TODO: Implement Bitmap marshalling (get Bitmap pointers from Java objects)
-        // For now, return OK placeholder
-        LOGD("applyBlur JNI binding ready (bitmap marshalling needed)");
-        return statusToJni(Status::OK);
+        // Lock source bitmap
+        BitmapLock srcLock(env, jSrc);
+        if (!srcLock.isValid()) {
+            LOGE("Failed to lock source bitmap");
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid source bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        // Lock destination bitmap
+        BitmapLock dstLock(env, jDst);
+        if (!dstLock.isValid()) {
+            LOGE("Failed to lock destination bitmap");
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid destination bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        // Validate dimensions match
+        if (srcLock.info.width != dstLock.info.width || srcLock.info.height != dstLock.info.height) {
+            LOGE("Bitmap dimensions mismatch: src=%dx%d, dst=%dx%d",
+                 srcLock.info.width, srcLock.info.height,
+                 dstLock.info.width, dstLock.info.height);
+            throwJniException(env, "java/lang/IllegalArgumentException", 
+                            "Source and destination bitmaps must have same dimensions");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        // Wrap Android Bitmaps into C++ Bitmap objects
+        Bitmap srcBitmap = wrapAndroidBitmap(srcLock);
+        Bitmap dstBitmap = wrapAndroidBitmap(dstLock);
+        
+        // Create blur parameters
+        FilterEngine::BlurParams params;
+        params.radius = radius;
+        params.passes = passes;
+        
+        // Apply blur filter
+        Status status = engine->applyBlur(srcBitmap, dstBitmap, params);
+        
+        LOGD("Blur completed with status: %d", static_cast<int>(status));
+        return statusToJni(status);
         
     } catch (const std::exception& e) {
-        LOGE("applyBlur failed: %s", e.what());
+        LOGE("applyBlur exception: %s", e.what());
+        throwJniException(env, "java/lang/RuntimeException", e.what());
         return statusToJni(Status::ERROR_RENDERING_FAILED);
     }
 }
@@ -146,21 +269,50 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeApplyColorAdjust(
         FilterEngine* engine = getFilterEngine(env, obj);
         if (!engine) {
             LOGE("FilterEngine pointer is null");
+            throwJniException(env, "java/lang/NullPointerException", "FilterEngine not initialized");
             return statusToJni(Status::ERROR_INVALID_PARAM);
         }
         
+        // Lock bitmaps
+        BitmapLock srcLock(env, jSrc);
+        if (!srcLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid source bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        BitmapLock dstLock(env, jDst);
+        if (!dstLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid destination bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        // Validate dimensions
+        if (srcLock.info.width != dstLock.info.width || srcLock.info.height != dstLock.info.height) {
+            throwJniException(env, "java/lang/IllegalArgumentException", 
+                            "Bitmap dimensions mismatch");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        // Wrap bitmaps
+        Bitmap srcBitmap = wrapAndroidBitmap(srcLock);
+        Bitmap dstBitmap = wrapAndroidBitmap(dstLock);
+        
+        // Create color adjust parameters
         FilterEngine::ColorAdjustParams params;
         params.brightness = brightness;
         params.contrast = contrast;
         params.saturation = saturation;
         params.hue = hue;
         
-        // TODO: Implement Bitmap marshalling
-        LOGD("applyColorAdjust JNI binding ready (bitmap marshalling needed)");
-        return statusToJni(Status::OK);
+        // Apply filter
+        Status status = engine->applyColorAdjust(srcBitmap, dstBitmap, params);
+        
+        LOGD("Color adjust completed with status: %d", static_cast<int>(status));
+        return statusToJni(status);
         
     } catch (const std::exception& e) {
-        LOGE("applyColorAdjust failed: %s", e.what());
+        LOGE("applyColorAdjust exception: %s", e.what());
+        throwJniException(env, "java/lang/RuntimeException", e.what());
         return statusToJni(Status::ERROR_RENDERING_FAILED);
     }
 }
@@ -186,20 +338,42 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeApplyEmboss(
     try {
         FilterEngine* engine = getFilterEngine(env, obj);
         if (!engine) {
-            LOGE("FilterEngine pointer is null");
+            throwJniException(env, "java/lang/NullPointerException", "FilterEngine not initialized");
             return statusToJni(Status::ERROR_INVALID_PARAM);
         }
+        
+        BitmapLock srcLock(env, jSrc);
+        if (!srcLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid source bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        BitmapLock dstLock(env, jDst);
+        if (!dstLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid destination bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        if (srcLock.info.width != dstLock.info.width || srcLock.info.height != dstLock.info.height) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Bitmap dimensions mismatch");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        Bitmap srcBitmap = wrapAndroidBitmap(srcLock);
+        Bitmap dstBitmap = wrapAndroidBitmap(dstLock);
         
         FilterEngine::EmbossParams params;
         params.amount = amount;
         params.angle = angle;
         
-        // TODO: Implement Bitmap marshalling
-        LOGD("applyEmboss JNI binding ready (bitmap marshalling needed)");
-        return statusToJni(Status::OK);
+        Status status = engine->applyEmboss(srcBitmap, dstBitmap, params);
+        
+        LOGD("Emboss completed with status: %d", static_cast<int>(status));
+        return statusToJni(status);
         
     } catch (const std::exception& e) {
-        LOGE("applyEmboss failed: %s", e.what());
+        LOGE("applyEmboss exception: %s", e.what());
+        throwJniException(env, "java/lang/RuntimeException", e.what());
         return statusToJni(Status::ERROR_RENDERING_FAILED);
     }
 }
@@ -223,16 +397,38 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeApplyGrayscale(
     try {
         FilterEngine* engine = getFilterEngine(env, obj);
         if (!engine) {
-            LOGE("FilterEngine pointer is null");
+            throwJniException(env, "java/lang/NullPointerException", "FilterEngine not initialized");
             return statusToJni(Status::ERROR_INVALID_PARAM);
         }
         
-        // TODO: Implement Bitmap marshalling
-        LOGD("applyGrayscale JNI binding ready (bitmap marshalling needed)");
-        return statusToJni(Status::OK);
+        BitmapLock srcLock(env, jSrc);
+        if (!srcLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid source bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        BitmapLock dstLock(env, jDst);
+        if (!dstLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid destination bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        if (srcLock.info.width != dstLock.info.width || srcLock.info.height != dstLock.info.height) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Bitmap dimensions mismatch");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        Bitmap srcBitmap = wrapAndroidBitmap(srcLock);
+        Bitmap dstBitmap = wrapAndroidBitmap(dstLock);
+        
+        Status status = engine->applyGrayscale(srcBitmap, dstBitmap);
+        
+        LOGD("Grayscale completed with status: %d", static_cast<int>(status));
+        return statusToJni(status);
         
     } catch (const std::exception& e) {
-        LOGE("applyGrayscale failed: %s", e.what());
+        LOGE("applyGrayscale exception: %s", e.what());
+        throwJniException(env, "java/lang/RuntimeException", e.what());
         return statusToJni(Status::ERROR_RENDERING_FAILED);
     }
 }
@@ -252,16 +448,38 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeApplyInvert(
     try {
         FilterEngine* engine = getFilterEngine(env, obj);
         if (!engine) {
-            LOGE("FilterEngine pointer is null");
+            throwJniException(env, "java/lang/NullPointerException", "FilterEngine not initialized");
             return statusToJni(Status::ERROR_INVALID_PARAM);
         }
         
-        // TODO: Implement Bitmap marshalling
-        LOGD("applyInvert JNI binding ready (bitmap marshalling needed)");
-        return statusToJni(Status::OK);
+        BitmapLock srcLock(env, jSrc);
+        if (!srcLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid source bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        BitmapLock dstLock(env, jDst);
+        if (!dstLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid destination bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        if (srcLock.info.width != dstLock.info.width || srcLock.info.height != dstLock.info.height) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Bitmap dimensions mismatch");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        Bitmap srcBitmap = wrapAndroidBitmap(srcLock);
+        Bitmap dstBitmap = wrapAndroidBitmap(dstLock);
+        
+        Status status = engine->applyInvert(srcBitmap, dstBitmap);
+        
+        LOGD("Invert completed with status: %d", static_cast<int>(status));
+        return statusToJni(status);
         
     } catch (const std::exception& e) {
-        LOGE("applyInvert failed: %s", e.what());
+        LOGE("applyInvert exception: %s", e.what());
+        throwJniException(env, "java/lang/RuntimeException", e.what());
         return statusToJni(Status::ERROR_RENDERING_FAILED);
     }
 }
@@ -282,16 +500,38 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeApplySepia(
     try {
         FilterEngine* engine = getFilterEngine(env, obj);
         if (!engine) {
-            LOGE("FilterEngine pointer is null");
+            throwJniException(env, "java/lang/NullPointerException", "FilterEngine not initialized");
             return statusToJni(Status::ERROR_INVALID_PARAM);
         }
         
-        // TODO: Implement Bitmap marshalling
-        LOGD("applySepia JNI binding ready (bitmap marshalling needed)");
-        return statusToJni(Status::OK);
+        BitmapLock srcLock(env, jSrc);
+        if (!srcLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid source bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        BitmapLock dstLock(env, jDst);
+        if (!dstLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid destination bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        if (srcLock.info.width != dstLock.info.width || srcLock.info.height != dstLock.info.height) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Bitmap dimensions mismatch");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        Bitmap srcBitmap = wrapAndroidBitmap(srcLock);
+        Bitmap dstBitmap = wrapAndroidBitmap(dstLock);
+        
+        Status status = engine->applySepia(srcBitmap, dstBitmap, intensity);
+        
+        LOGD("Sepia completed with status: %d", static_cast<int>(status));
+        return statusToJni(status);
         
     } catch (const std::exception& e) {
-        LOGE("applySepia failed: %s", e.what());
+        LOGE("applySepia exception: %s", e.what());
+        throwJniException(env, "java/lang/RuntimeException", e.what());
         return statusToJni(Status::ERROR_RENDERING_FAILED);
     }
 }
@@ -330,4 +570,34 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeSetSIMDEnabled(
         LOGD("Setting SIMD %s", enabled ? "enabled" : "disabled");
         engine->setSIMDEnabled(enabled);
     }
+}
+
+/**
+ * native int nativeGetThreadCount()
+ */
+extern "C" JNIEXPORT jint JNICALL
+Java_com_flyerpix_editor_filter_FilterEngine_nativeGetThreadCount(
+    JNIEnv* env,
+    jobject obj) {
+    
+    FilterEngine* engine = getFilterEngine(env, obj);
+    if (engine) {
+        return engine->getThreadCount();
+    }
+    return 0;
+}
+
+/**
+ * native boolean nativeIsSIMDEnabled()
+ */
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_flyerpix_editor_filter_FilterEngine_nativeIsSIMDEnabled(
+    JNIEnv* env,
+    jobject obj) {
+    
+    FilterEngine* engine = getFilterEngine(env, obj);
+    if (engine) {
+        return engine->isSIMDEnabled() ? JNI_TRUE : JNI_FALSE;
+    }
+    return JNI_FALSE;
 }

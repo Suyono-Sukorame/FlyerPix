@@ -30,6 +30,30 @@ public:
     Bitmap(Bitmap&& other) noexcept;
     Bitmap& operator=(Bitmap&& other) noexcept;
     
+    // ========== Factory Methods ==========
+    
+    /**
+     * Wrap external pixel buffer into Bitmap without allocation
+     *
+     * Creates a Bitmap that points to external pixel data (e.g., from Android Bitmap).
+     * The external buffer MUST remain valid for the lifetime of this Bitmap.
+     * The Bitmap will NOT free the buffer on destruction.
+     *
+     * @param width image width
+     * @param height image height
+     * @param stride bytes per row (must be >= width * bpp)
+     * @param buffer external pixel buffer pointer
+     * @param format pixel format (default ARGB_8888)
+     * @return Bitmap instance (non-owning, don't delete the buffer)
+     */
+    static Bitmap wrap(int width, int height, int stride, uint8_t* buffer,
+                       PixelFormat format = PixelFormat::ARGB_8888);
+    
+    /**
+     * Check if this Bitmap owns its buffer (vs wrapping external buffer)
+     */
+    bool ownsBuffer() const { return owns_buffer_; }
+    
     // ========== Properties ==========
     
     int getWidth() const { return width_; }
@@ -115,6 +139,10 @@ private:
     int bytes_per_pixel_;
     
     std::unique_ptr<uint8_t[]> data_;
+    bool owns_buffer_ = true;  // false if wrapping external buffer
+    
+    // Private constructor for wrap() factory (non-owning)
+    Bitmap(int width, int height, int stride, uint8_t* buffer, PixelFormat format, bool owning);
     
     // Allocate aligned buffer
     void allocate();

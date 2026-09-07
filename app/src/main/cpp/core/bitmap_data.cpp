@@ -21,13 +21,20 @@ Bitmap::Bitmap(int width, int height, PixelFormat format)
 }
 
 Bitmap::~Bitmap() {
-    data_.reset();
+    // If we own the buffer, unique_ptr will delete it automatically
+    // If we don't own it (wrap()), we don't delete - just let it go out of scope
+    if (owns_buffer_) {
+        data_.reset();
+    } else {
+        // Release ownership without deleting
+        data_.release();
+    }
 }
 
 Bitmap::Bitmap(const Bitmap& other)
     : width_(other.width_), height_(other.height_), 
       stride_(other.stride_), format_(other.format_),
-      bytes_per_pixel_(other.bytes_per_pixel_) {
+      bytes_per_pixel_(other.bytes_per_pixel_), owns_buffer_(true) {
     allocate();
     if (other.data_) {
         std::memcpy(data_.get(), other.data_.get(), getBufferSize());
@@ -41,6 +48,7 @@ Bitmap& Bitmap::operator=(const Bitmap& other) {
         stride_ = other.stride_;
         format_ = other.format_;
         bytes_per_pixel_ = other.bytes_per_pixel_;
+        owns_buffer_ = true;  // Copy always owns its own buffer
         allocate();
         if (other.data_) {
             std::memcpy(data_.get(), other.data_.get(), getBufferSize());
@@ -53,7 +61,8 @@ Bitmap::Bitmap(Bitmap&& other) noexcept
     : width_(other.width_), height_(other.height_),
       stride_(other.stride_), format_(other.format_),
       bytes_per_pixel_(other.bytes_per_pixel_),
-      data_(std::move(other.data_)) {
+      data_(std::move(other.data_)),
+      owns_buffer_(other.owns_buffer_) {
     other.width_ = 0;
     other.height_ = 0;
 }
@@ -65,12 +74,45 @@ Bitmap& Bitmap::operator=(Bitmap&& other) noexcept {
         stride_ = other.stride_;
         format_ = other.format_;
         bytes_per_pixel_ = other.bytes_per_pixel_;
+        owns_buffer_ = other.owns_buffer_;
         data_ = std::move(other.data_);
         
         other.width_ = 0;
         other.height_ = 0;
     }
     return *this;
+}
+
+// ============================================================================
+// Factory Methods
+// ============================================================================
+
+/**
+ * Wrap external pixel buffer into Bitmap without allocation
+ */
+Bitmap Bitmap::wrap(int width, int height, int stride, uint8_t* buffer, PixelFormat format) {
+    // Create using private constructor - non-owning
+    return Bitmap(width, height, stride, buffer, format, false);
+}
+
+/**
+ * Private constructor for wrap() - creates non-owning Bitmap
+ */
+Bitmap::Bitmap(int width, int height, int stride, uint8_t* buffer, PixelFormat format, bool owning)
+    : width_(width), height_(height), stride_(stride), format_(format), owns_buffer_(owning) {
+    
+    bytes_per_pixel_ = getBytesPerPixel(format);
+    
+    if (owning) {
+        // Normal case - allocate our own buffer
+        allocate();
+    } else {
+        // Wrap mode - point to external buffer without owning it
+        // We store the raw pointer and let destructor handle it based on owns_buffer_ flag
+        // Reset the unique_ptr to point to buffer without taking ownership
+        data_.release();  // Release any existing allocation
+        data_ = std::unique_ptr<uint8_t[]>(buffer);
+    }
 }
 
 // ============================================================================

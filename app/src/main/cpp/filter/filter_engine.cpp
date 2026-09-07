@@ -13,6 +13,7 @@
 #define LOG_TAG "FilterEngine"
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
 
 // ============================================================================
 // FilterEngine Implementation
@@ -212,4 +213,35 @@ Status FilterEngine::applySepia(const Bitmap& src, Bitmap& dst, float intensity)
     }
     
     return pool.waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
+}
+
+// ============================================================================
+// Thread-Safe Configuration Methods
+// ============================================================================
+
+void FilterEngine::setThreadCount(int threads) {
+    std::lock_guard<std::mutex> lock(config_mutex_);
+    if (threads > 0 && threads <= 32) {
+        thread_count_ = threads;
+        LOGD("Thread count set to %d", thread_count_);
+    } else {
+        LOGW("Invalid thread count: %d (valid range: 1-32), keeping %d", 
+             threads, thread_count_);
+    }
+}
+
+int FilterEngine::getThreadCount() const {
+    std::lock_guard<std::mutex> lock(config_mutex_);
+    return thread_count_;
+}
+
+void FilterEngine::setSIMDEnabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(config_mutex_);
+    simd_enabled_ = enabled;
+    LOGD("SIMD %s", simd_enabled_ ? "enabled" : "disabled");
+}
+
+bool FilterEngine::isSIMDEnabled() const {
+    std::lock_guard<std::mutex> lock(config_mutex_);
+    return simd_enabled_;
 }

@@ -16,6 +16,7 @@
 #include "flyerpix_types.h"
 #include "bitmap.h"
 #include <memory>
+#include <mutex>
 
 // Forward declaration
 class Bitmap;
@@ -93,13 +94,20 @@ public:
     
     // ========== Performance ==========
     
-    // Set number of threads untuk multi-threaded filters
-    void setThreadCount(int threads) { thread_count_ = threads; }
+    // Set number of threads untuk multi-threaded filters (thread-safe)
+    void setThreadCount(int threads);
     
-    // Enable/disable SIMD optimizations
-    void setSIMDEnabled(bool enabled) { simd_enabled_ = enabled; }
+    // Get current thread count (thread-safe)
+    int getThreadCount() const;
+    
+    // Enable/disable SIMD optimizations (thread-safe)
+    void setSIMDEnabled(bool enabled);
+    
+    // Get current SIMD setting (thread-safe)
+    bool isSIMDEnabled() const;
     
 private:
+    mutable std::mutex config_mutex_;  // Protects thread_count_ and simd_enabled_
     int thread_count_ = 4;
     bool simd_enabled_ = true;
     
