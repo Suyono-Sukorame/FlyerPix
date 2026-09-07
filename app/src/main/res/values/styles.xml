@@ -140,6 +140,25 @@
         <item name="android:textColor">@color/brand_blue</item>
     </style>
 
+    <style name="LightPanelOutlinedButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="strokeColor">@color/brand_blue</item>
+        <item name="android:textColor">@color/brand_navy</item>
+        <item name="iconTint">@color/brand_navy</item>
+        <item name="android:textColorHint">@color/gray</item>
+    </style>
+
+    <style name="LightPanelTextButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/brand_blue</item>
+        <item name="iconTint">@color/brand_blue</item>
+    </style>
+
+    <style name="LightPanelTheme" parent="ThemeOverlay.MaterialComponents.Light">
+        <item name="colorPrimary">@color/brand_blue</item>
+        <item name="colorSecondary">@color/brand_blue</item>
+        <item name="colorOnSurface">@color/brand_navy</item>
+        <item name="android:colorControlNormal">@color/gray</item>
+    </style>
+
     <style name="AppTextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense">
         <item name="boxStrokeColor">@color/brand_blue</item>
         <item name="counterTextColor">@color/gray</item>

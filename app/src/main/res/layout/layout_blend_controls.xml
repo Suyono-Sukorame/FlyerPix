@@ -29,12 +29,12 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnResetBlendMode"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/LightPanelTextButton"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:text="Normal"
             android:textSize="12sp"
-            android:textColor="?attr/colorSecondary"
+            android:textColor="@color/brand_blue"
             android:minWidth="0dp"
             android:paddingHorizontal="8dp" />
     </LinearLayout>
@@ -47,7 +47,7 @@
         android:layout_marginTop="2dp"
         android:text="Normal: Menampilkan warna teks biasa di atas background."
         android:textAppearance="?attr/textAppearanceCaption"
-        android:textColor="#AAAAAA" />
+        android:textColor="#5F6368" />
 
     <!-- ── Tombol Pilihan Blending Mode Populer ── -->
     <HorizontalScrollView
@@ -63,7 +63,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBlendNormal"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="34dp"
                 android:layout_marginEnd="6dp"
@@ -74,7 +74,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBlendMultiply"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="34dp"
                 android:layout_marginEnd="6dp"
@@ -85,7 +85,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBlendScreen"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="34dp"
                 android:layout_marginEnd="6dp"
@@ -96,7 +96,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBlendOverlay"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="34dp"
                 android:layout_marginEnd="6dp"
@@ -107,7 +107,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBlendDarken"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="34dp"
                 android:layout_marginEnd="6dp"
@@ -118,7 +118,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBlendLighten"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="34dp"
                 android:layout_marginEnd="6dp"
@@ -129,7 +129,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBlendAdd"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="34dp"
                 android:text="Add (Dodge)"

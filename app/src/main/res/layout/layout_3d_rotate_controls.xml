@@ -29,12 +29,12 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnReset3DRotate"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/LightPanelTextButton"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:text="Reset"
             android:textSize="12sp"
-            android:textColor="?attr/colorSecondary"
+            android:textColor="@color/brand_blue"
             android:minWidth="0dp"
             android:paddingHorizontal="8dp" />
     </LinearLayout>

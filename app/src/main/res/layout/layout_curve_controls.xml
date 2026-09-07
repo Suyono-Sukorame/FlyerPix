@@ -29,12 +29,12 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnResetCurve"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/LightPanelTextButton"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:text="Reset"
             android:textSize="12sp"
-            android:textColor="?attr/colorSecondary"
+            android:textColor="@color/brand_blue"
             android:minWidth="0dp"
             android:paddingHorizontal="8dp" />
     </LinearLayout>
@@ -70,7 +70,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCurveDown100"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -82,7 +82,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCurveDown50"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -94,7 +94,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCurveFlat"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -106,7 +106,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCurveUp50"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -118,7 +118,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCurveUp100"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"

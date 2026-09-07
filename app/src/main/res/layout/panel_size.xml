@@ -29,7 +29,7 @@
             android:layout_height="36dp"
             android:text="Reset"
             android:textSize="12sp"
-            android:textColor="?attr/colorSecondary"
+            android:textColor="@color/brand_blue"
             android:minWidth="0dp"
             android:paddingHorizontal="8dp" />
     </LinearLayout>

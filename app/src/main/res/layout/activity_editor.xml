@@ -99,6 +99,7 @@
             android:layout_marginBottom="56dp"
             android:maxHeight="560dp"
             android:orientation="vertical"
+            android:theme="@style/LightPanelTheme"
             android:visibility="gone">
 
         <!-- Panel properti kontekstual: satu panel aktif sesuai tool yang dipilih pada strip -->
@@ -134,6 +135,7 @@
             android:background="#FFFFFF"
             android:elevation="6dp"
             android:orientation="vertical"
+            android:theme="@style/LightPanelTheme"
             android:visibility="gone">
 
         <!-- Konten detail: satu konten aktif sesuai tool yang dipilih pada strip -->
@@ -316,6 +318,7 @@
             android:background="#FFFFFF"
             android:elevation="6dp"
             android:orientation="vertical"
+            android:theme="@style/LightPanelTheme"
             android:visibility="gone">
 
         <!-- Konten detail (tersembunyi sampai ikon tool ditekan) -->

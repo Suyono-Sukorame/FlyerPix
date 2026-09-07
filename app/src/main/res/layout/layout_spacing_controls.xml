@@ -29,12 +29,12 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnResetSpacing"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/LightPanelTextButton"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:text="Reset"
             android:textSize="12sp"
-            android:textColor="?attr/colorSecondary"
+            android:textColor="@color/brand_blue"
             android:minWidth="0dp"
             android:paddingHorizontal="8dp" />
     </LinearLayout>
@@ -60,7 +60,7 @@
             android:layout_height="wrap_content"
             android:text="Kerning"
             android:textAppearance="?attr/textAppearanceCaption"
-            android:textColor="#888888" />
+            android:textColor="#5F6368" />
     </LinearLayout>
 
     <com.google.android.material.slider.Slider
@@ -83,7 +83,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLetterTight"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -95,7 +95,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLetterNormal"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -107,7 +107,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLetterMedium"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -119,7 +119,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLetterWide"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -150,7 +150,7 @@
             android:layout_height="wrap_content"
             android:text="Leading"
             android:textAppearance="?attr/textAppearanceCaption"
-            android:textColor="#888888" />
+            android:textColor="#5F6368" />
     </LinearLayout>
 
     <com.google.android.material.slider.Slider
@@ -173,7 +173,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLineTight"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -185,7 +185,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLineNormal"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -197,7 +197,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLineMedium"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
@@ -209,7 +209,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLineWide"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"

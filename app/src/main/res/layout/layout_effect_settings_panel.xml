@@ -12,6 +12,7 @@
     android:orientation="vertical"
     android:background="#FFFFFF"
     android:elevation="6dp"
+    android:theme="@style/LightPanelTheme"
     android:visibility="gone">
 
     <!-- ── Header: judul + aksi ✓/✕ ── -->

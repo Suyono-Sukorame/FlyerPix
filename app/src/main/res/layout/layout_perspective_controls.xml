@@ -35,12 +35,12 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnResetPerspective"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+            style="@style/LightPanelTextButton"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:text="Reset"
             android:textSize="12sp"
-            android:textColor="?attr/colorSecondary"
+            android:textColor="@color/brand_blue"
             android:minWidth="0dp"
             android:paddingHorizontal="8dp" />
     </LinearLayout>
@@ -59,7 +59,7 @@
             android:layout_marginTop="2dp"
             android:text="Geser 4 titik sudut handle pada kanvas untuk menyesuaikan bidang miring."
             android:textAppearance="?attr/textAppearanceCaption"
-            android:textColor="#AAAAAA" />
+            android:textColor="#5F6368" />
 
         <!-- ── Preset Perspektif Cepat ── -->
         <HorizontalScrollView
@@ -75,7 +75,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPresetFlat"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="34dp"
                     android:layout_marginEnd="6dp"
@@ -86,7 +86,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPresetLeftWall"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="34dp"
                     android:layout_marginEnd="6dp"
@@ -97,7 +97,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPresetRightWall"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="34dp"
                     android:layout_marginEnd="6dp"
@@ -108,7 +108,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPresetBillboard"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="34dp"
                     android:layout_marginEnd="6dp"
@@ -119,7 +119,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPresetFloor"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="34dp"
                     android:text="▼ Lantai / Bawah"
