@@ -204,6 +204,25 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         val stressCount = readSystemProperty("debug.flyerpix_stress").toIntOrNull() ?: -1
         if (stressCount >= 0) binding.pixelCanvasView.post { runRenderStressTest(stressCount) }
 
+        // ── Export smoke test (debug): `adb shell setprop debug.flyerpix_export 1`
+        binding.pixelCanvasView.postDelayed({
+            if (readSystemProperty("debug.flyerpix_export") == "1") {
+                val format =
+                    if (readSystemProperty("debug.flyerpix_exportformat") == "jpeg")
+                        com.flyerpix.editor.canvas.model.ExportFormat.JPEG
+                    else com.flyerpix.editor.canvas.model.ExportFormat.PNG
+                binding.pixelCanvasView.exportHighResolutionAsync(
+                    quality = com.flyerpix.editor.canvas.model.ExportQuality.ULTRA_HD,
+                    format = format
+                ) { uri ->
+                    android.util.Log.d(
+                        "FlyerPixProfile",
+                        "ExportTest uri=${uri != null} ms=${binding.pixelCanvasView.shareExportMillis}"
+                    )
+                }
+            }
+        }, 2000)
+
         // ── Inisialisasi Controllers ────────────────────────────────────────
         initializeControllers()
 

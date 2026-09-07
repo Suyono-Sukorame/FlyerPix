@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -34,6 +36,9 @@ class ExportController(
 
     var currentProjectName: String = "Untitled"
 
+    private val exportExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     fun showExportDialog() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
             ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
@@ -46,16 +51,17 @@ class ExportController(
             canvasWidth = canvas.canvasWidth,
             canvasHeight = canvas.canvasHeight,
             onExportToGallery = { quality, format, customW, customH ->
-                val uri = canvas.exportHighResolution(
+                canvas.exportHighResolutionAsync(
                     quality = quality, format = format,
                     customWidth = customW, customHeight = customH,
                     fileName = currentProjectName.takeIf { it.isNotBlank() && it != "Untitled" }
-                )
-                if (uri != null) {
-                    val (w, h) = if (customW != null && customH != null) Pair(customW, customH)
-                    else quality.calculateDimensions(canvas.canvasWidth, canvas.canvasHeight)
-                    showSnackbar("Gambar berhasil disimpan ke Galeri (${w} × ${h} px)!")
-                } else showSnackbar("Gagal mengekspor gambar ke Galeri")
+                ) { uri ->
+                    if (uri != null) {
+                        val (w, h) = if (customW != null && customH != null) Pair(customW, customH)
+                        else quality.calculateDimensions(canvas.canvasWidth, canvas.canvasHeight)
+                        showSnackbar("Gambar berhasil disimpan ke Galeri (${w} × ${h} px)!")
+                    } else showSnackbar("Gagal mengekspor gambar ke Galeri")
+                }
             },
             onShareRequested = { quality, format, customW, customH ->
                 shareImage(quality, format, customW, customH)
@@ -69,23 +75,27 @@ class ExportController(
         customW: Int? = null,
         customH: Int? = null
     ) {
-        try {
-            val bmp = canvas.renderOffscreenBitmap(quality, format, customW, customH)
-            val cachePath = File(activity.cacheDir, "images").apply { if (!exists()) mkdirs() }
-            val file = File(cachePath, "flyerpix_export_${System.currentTimeMillis()}.${format.extension}")
-            FileOutputStream(file).use { stream ->
-                bmp.compress(format.compressFormat, 100, stream)
+        exportExecutor.execute {
+            try {
+                val bmp = canvas.renderOffscreenBitmap(quality, format, customW, customH)
+                val cachePath = File(activity.cacheDir, "images").apply { if (!exists()) mkdirs() }
+                val file = File(cachePath, "flyerpix_export_${System.currentTimeMillis()}.${format.extension}")
+                FileOutputStream(file).use { stream ->
+                    bmp.compress(format.compressFormat, 100, stream)
+                }
+                bmp.recycle()
+                val contentUri = FileProvider.getUriForFile(activity, "com.flyerpix.editor", file)
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = format.mimeType
+                    putExtra(Intent.EXTRA_STREAM, contentUri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                mainHandler.post {
+                    activity.startActivity(Intent.createChooser(intent, "Bagikan Gambar PixelLab"))
+                }
+            } catch (e: Exception) {
+                mainHandler.post { showSnackbar("Gagal membagikan gambar: ${e.localizedMessage}") }
             }
-            bmp.recycle()
-            val contentUri = FileProvider.getUriForFile(activity, "com.flyerpix.editor", file)
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = format.mimeType
-                putExtra(Intent.EXTRA_STREAM, contentUri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            activity.startActivity(Intent.createChooser(intent, "Bagikan Gambar PixelLab"))
-        } catch (e: Exception) {
-            showSnackbar("Gagal membagikan gambar: ${e.localizedMessage}")
         }
     }
 

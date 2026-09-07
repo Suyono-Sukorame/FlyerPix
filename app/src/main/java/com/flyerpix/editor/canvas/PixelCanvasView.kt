@@ -746,6 +746,10 @@ class PixelCanvasView @JvmOverloads constructor(
         .apply { start() }
     private val blurWorker = Handler(blurWorkerThread.looper)
 
+    /** Eksekutor untuk export/render off-UI-thread (tidak memblokir blur worker). */
+    private val exportExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     @Volatile
     private var blurRebuildPending = false
     @Volatile
@@ -2423,6 +2427,10 @@ class PixelCanvasView @JvmOverloads constructor(
         val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
         val offscreenCanvas = Canvas(bitmap)
 
+        // Ekspor bisa berjalan di thread background (exportHighResolutionAsync);
+        // ambil snapshot layer agar aman dari mutasi UI selama render panjang.
+        val snapshotLayers = layers.toList()
+
         // Efek Filter (monokrom) dibungkus sebagai layer komposit (Prompt 51).
         val filterEffectLayer = beginFilterEffectLayer(offscreenCanvas)
 
@@ -2493,8 +2501,7 @@ class PixelCanvasView @JvmOverloads constructor(
         offscreenCanvas.translate(-vp.left, -vp.top)
 
         // 3. Render Seluruh Layer Aktif (Tanpa Handle Seleksi Bounding Box, Grid, atau Garis Panduan)
-        for (i in 0 until layers.size) {
-            val layer = layers[i]
+        for (layer in snapshotLayers) {
             if (layer.isVisible) {
                 if (layer.blendMode != PorterDuff.Mode.SRC_OVER) {
                     renderPaint.xfermode = PorterDuffXfermode(layer.blendMode)
@@ -2541,6 +2548,47 @@ class PixelCanvasView @JvmOverloads constructor(
         fileName: String? = null
     ): Uri? {
         val bitmap = renderOffscreenBitmap(quality, format, customWidth, customHeight)
+        return runExport(bitmap, format, fileName)
+    }
+
+    /**
+     * Versi asinkron dari [exportHighResolution]: render offscreen + kompres +
+     * tulis MediaStore dijalankan di thread background agar UI tidak tersendat,
+     * lalu [onResult] dipanggil di main thread dengan URI (null jika gagal).
+     */
+    fun exportHighResolutionAsync(
+        quality: ExportQuality = ExportQuality.DEFAULT,
+        format: ExportFormat = ExportFormat.PNG,
+        customWidth: Int? = null,
+        customHeight: Int? = null,
+        fileName: String? = null,
+        onResult: (Uri?) -> Unit
+    ) {
+        val t0 = System.nanoTime()
+        shareExportMillis = 0L
+        exportExecutor.execute {
+            val t1 = System.nanoTime()
+            val uri = try {
+                val bitmap = renderOffscreenBitmap(quality, format, customWidth, customHeight)
+                runExport(bitmap, format, fileName)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+            shareExportMillis = (System.nanoTime() - t1) / 1_000_000
+            if (profileEnabled) {
+                android.util.Log.d(
+                    PROFILE_TAG,
+                    "export render+write=${(System.nanoTime() - t1) / 1_000_000}ms" +
+                        " (mulai render ${(t1 - t0) / 1_000_000}ms setelah diminta)"
+                )
+            }
+            mainHandler.post { onResult(uri) }
+        }
+    }
+
+    /** Proses kompres + tulis URI dari bitmap hasil render. */
+    private fun runExport(bitmap: Bitmap, format: ExportFormat, fileName: String?): Uri? {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val finalFileName = if (!fileName.isNullOrBlank()) fileName.trim() else "PixelLab_$timestamp"
         val ext = format.extension
@@ -2586,6 +2634,13 @@ class PixelCanvasView @JvmOverloads constructor(
             bitmap.recycle()
         }
     }
+
+    /**
+     * Durasi (ms) export asinkron terakhir (render+kompres+tulis). Untuk debug.
+     */
+    @Volatile
+    var shareExportMillis: Long = 0L
+        private set
 
     // ── Shape Layer ──────────────────────────────────────────────────────────
 
