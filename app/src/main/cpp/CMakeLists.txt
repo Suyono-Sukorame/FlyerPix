@@ -53,9 +53,8 @@ set(CORE_SOURCES
 
 set(RENDER_SOURCES
     render/render_engine.cpp
-    render/render_cache.cpp
-    render/render_context.cpp
     render/dirty_region.cpp
+    render/blend_modes.cpp
 )
 
 # ============================================================================
@@ -139,3 +138,42 @@ message(STATUS "  Architecture: ${ANDROID_ABI}")
 message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "  SIMD Flags: ${CMAKE_CXX_FLAGS}")
+
+
+# ============================================================================
+# Unit Tests (Optional - for development only)
+# ============================================================================
+
+# Note: Tests are compile untuk desktop testing, tidak untuk Android device
+# To run: cmake -DBUILD_TESTS=ON && make && ./test_render_engine
+
+if(BUILD_TESTS)
+    set(TEST_SOURCES
+        test/test_render_engine.cpp
+        ${CORE_SOURCES}
+        ${RENDER_SOURCES}
+        ${BITMAP_SOURCES}
+    )
+    
+    add_executable(test_render_engine ${TEST_SOURCES})
+    
+    target_compile_options(test_render_engine PRIVATE -Wall -Wextra -g)
+    
+    message(STATUS "Unit tests enabled - compile dengan: cmake -DBUILD_TESTS=ON")
+endif()
+
+# Benchmark executable (for performance testing on desktop)
+if(BUILD_TESTS)
+    set(BENCHMARK_SOURCES
+        test/benchmark_render_engine.cpp
+        ${CORE_SOURCES}
+        ${RENDER_SOURCES}
+        ${BITMAP_SOURCES}
+    )
+    
+    add_executable(benchmark_render_engine ${BENCHMARK_SOURCES})
+    
+    target_compile_options(benchmark_render_engine PRIVATE -Wall -Wextra -O3)
+    
+    message(STATUS "Benchmarks enabled - run dengan: ./benchmark_render_engine")
+endif()

@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <algorithm>
 
 // ============================================================================
 // Color & Pixel Formats
@@ -70,9 +71,35 @@ struct Rect {
     int height() const { return bottom - top; }
     bool isEmpty() const { return width() <= 0 || height() <= 0; }
     
+    size_t getArea() const {
+        if (isEmpty()) return 0;
+        return width() * height();
+    }
+    
     bool intersects(const Rect& other) const {
         return left < other.right && right > other.left &&
                top < other.bottom && bottom > other.top;
+    }
+    
+    Rect getIntersection(const Rect& other) const {
+        if (!intersects(other)) {
+            return Rect(0, 0, 0, 0);
+        }
+        int l = std::max(left, other.left);
+        int t = std::max(top, other.top);
+        int r = std::min(right, other.right);
+        int b = std::min(bottom, other.bottom);
+        return Rect(l, t, r, b);
+    }
+    
+    Rect getUnion(const Rect& other) const {
+        if (isEmpty()) return other;
+        if (other.isEmpty()) return *this;
+        int l = std::min(left, other.left);
+        int t = std::min(top, other.top);
+        int r = std::max(right, other.right);
+        int b = std::max(bottom, other.bottom);
+        return Rect(l, t, r, b);
     }
 };
 

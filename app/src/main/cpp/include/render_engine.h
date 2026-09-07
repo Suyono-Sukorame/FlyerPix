@@ -45,6 +45,9 @@ public:
     // Render specific region (optimized for partial updates)
     Status renderRegion(Document* doc, const Rect& region, Bitmap* output);
     
+    // Render with dirty region optimization (skip clean areas)
+    Status renderWithDirtyDetection(Document* doc, Bitmap* output);
+    
     // ========== Cache Management ==========
     
     // Clear all layer caches
@@ -82,6 +85,13 @@ private:
     // Internal rendering passes
     Status renderLayers(Document* doc, RenderContext* ctx);
     Status composeLayers(RenderContext* ctx, Bitmap* output);
+    
+    // Helper untuk blend layer ke frame buffer
+    void blendLayerToBuffer(
+        Bitmap* layerBitmap,
+        Bitmap* frameBuffer,
+        BlendMode blendMode,
+        uint8_t opacity);
 };
 
 /**
@@ -96,6 +106,7 @@ public:
     
     // Get current frame bitmap
     Bitmap* getFrameBuffer() { return frame_buffer_.get(); }
+    const Bitmap* getFrameBuffer() const { return frame_buffer_.get(); }
     
     // Get layer-specific temp buffer
     Bitmap* getTempBuffer(int width, int height);
@@ -104,7 +115,35 @@ public:
     void markRendered(const Rect& region);
     
     // Get union of all rendered regions
-    Rect getRenderedRegion() const { return rendered_region_; }
+    Rect getRenderedRegion() const;
+    
+    // Clear rendered region tracking
+    void clearRenderedRegion();
+    
+    // ========== Advanced Features ==========
+    
+    struct ContextStats {
+        int frameBufferWidth = 0;
+        int frameBufferHeight = 0;
+        size_t frameBufferSize = 0;
+        int tempBufferWidth = 0;
+        int tempBufferHeight = 0;
+        size_t tempBufferSize = 0;
+        Rect renderedRegion;
+        size_t totalMemoryUsage = 0;
+    };
+    
+    // Get context statistics
+    ContextStats getStats() const;
+    
+    // Estimate total memory usage
+    size_t estimateMemoryUsage() const;
+    
+    // Resize frame buffer
+    Status resizeFrameBuffer(int width, int height);
+    
+    // Optimize memory usage
+    void optimizeMemory();
     
 private:
     std::unique_ptr<Bitmap> frame_buffer_;
@@ -147,10 +186,48 @@ public:
     int getCacheHitCount() const { return hit_count_; }
     int getCacheMissCount() const { return miss_count_; }
     
+    // Get cache hit rate (0-100)
+    float getCacheHitRate() const;
+    
+    // Get number of cached layers
+    int getCachedLayerCount() const;
+    
     // ========== Memory Management ==========
+    
+    // Set max cache memory
+    void setMaxMemory(size_t bytes);
     
     // Evict least-recently-used entries if needed
     void evictIfNeeded(size_t requiredMemory);
+    
+    // Compact cache to 80% of max memory
+    void compact();
+    
+    // ========== Advanced Features ==========
+    
+    struct MemoryBreakdown {
+        size_t totalUsed;
+        size_t totalAvailable;
+        float percentUsed;
+    };
+    
+    MemoryBreakdown getMemoryBreakdown() const;
+    
+    // Estimate cache efficiency (0.0 to 1.0)
+    float estimateCacheEfficiency() const;
+    
+    // Get list of cached layers
+    std::vector<std::pair<const Layer*, size_t>> getCachedLayersList() const;
+    
+    // Reset statistics
+    void resetStats();
+    
+    struct CacheEntryInfo {
+        size_t memoryUsage;
+        uint64_t lastAccessTime;
+    };
+    
+    std::vector<CacheEntryInfo> getCacheEntries() const;
     
 private:
     struct CacheEntry {
@@ -162,11 +239,12 @@ private:
     
     std::vector<CacheEntry> cache_entries_;
     size_t max_memory_;
-    size_t current_memory_ = 0;
-    int hit_count_ = 0;
-    int miss_count_ = 0;
+    size_t current_memory_;
+    int hit_count_;
+    int miss_count_;
     
     uint64_t getCurrentTime() const;
+    void updateAccessTime(std::vector<CacheEntry>::iterator it);
 };
 
 /**
