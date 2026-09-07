@@ -9,6 +9,7 @@ import android.text.Layout
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonSyntaxException
 import com.flyerpix.editor.canvas.model.*
+import com.flyerpix.editor.font.FontManager
 import com.flyerpix.editor.project.model.*
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -431,6 +432,7 @@ object ProjectSerializer {
                 text               = dto.text ?: "",
                 textSize           = dto.textSize ?: 64f,
                 textColor          = dto.textColor ?: Color.WHITE,
+                typeface           = FontManager.findFont(dto.fontName)?.typeface,
                 fontName           = dto.fontName,
                 letterSpacing      = dto.letterSpacing ?: 0f,
                 lineSpacing        = dto.lineSpacing ?: 0f,

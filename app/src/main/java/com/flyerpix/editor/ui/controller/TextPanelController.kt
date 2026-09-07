@@ -43,8 +43,10 @@ class TextPanelController(
     private val showSnackbar: (String) -> Unit,
     private val onShowMenu: (Int) -> Unit,
     private val onEditTextRequested: (TextLayer) -> Unit,
+    private val onFontRequested: (TextLayer) -> Unit,
     private val onCanvasChanged: () -> Unit,
-    private val onEffectSettingsOpenChanged: (Boolean) -> Unit
+    private val onEffectSettingsOpenChanged: (Boolean) -> Unit,
+    private val onAlignSettingsOpenChanged: (Boolean) -> Unit
 ) {
 
     private lateinit var gradientPickerAdapter: GradientPickerAdapter
@@ -68,6 +70,8 @@ class TextPanelController(
     // ── Effect Settings Page State ──────────────────────────────────────────────
     private var settingsSnapshot: com.flyerpix.editor.canvas.model.TextLayer? = null
     private var effectSettingsOpen = false
+    private var alignSettingsOpen = false
+    private var alignSettingsSnapshot: com.flyerpix.editor.canvas.history.CanvasStateSnapshot? = null
     private var textToolTagBeforeEffect = ""
     private var toolIsTextPage = false
     private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_BLEND, TOOL_NEON)
@@ -134,8 +138,10 @@ class TextPanelController(
         // Controller terpusat. Dipasang PALING AWAL sehingga menjadi innermost
         // pada rantai onLayerSelectedListener → dijalankan PALING AKHIR, dan
         // visibilitas halaman yang ditetapkannya selalu menang.
-        pixelCanvasView.onLayerSelectedListener = { layer ->
+        pixelCanvasView.onLayerSelectedListener = listener@{ layer ->
             val textLayer = layer as? TextLayer
+
+            if (alignSettingsOpen) return@listener
             
             // Skip auto-switch saat initialization untuk mempertahankan menu default (Presets)
             if (!isInitializing && textLayer != null && !textLayer.isLocked) {
@@ -635,6 +641,7 @@ class TextPanelController(
             panel.visibility = View.VISIBLE
             switch.isChecked = layer.extrudeEnabled
             group.visibility = if (layer.extrudeEnabled) View.VISIBLE else View.GONE
+            rgType.visibility = if (layer.extrudeEnabled) View.VISIBLE else View.GONE
 
             if (layer.extrudeViewType == ExtrudeViewType.ISOMETRIC) {
                 rbIso.isChecked = true
@@ -667,6 +674,7 @@ class TextPanelController(
         // Toggle Switch
         switch.setOnCheckedChangeListener { _, isChecked ->
             group.visibility = if (isChecked) View.VISIBLE else View.GONE
+            rgType.visibility = if (isChecked) View.VISIBLE else View.GONE
             applyToTextLayer { layer ->
                 layer.extrudeEnabled = isChecked
             }
@@ -1295,13 +1303,13 @@ class TextPanelController(
             c.gradientAngleContainer.visibility = if (grad.type == GradientType.LINEAR) View.VISIBLE else View.GONE
             c.sliderGradientAngle.value = grad.angle.coerceIn(0f, 360f)
             c.tvAngleLabel.text = "Gradient Angle (${grad.angle.toInt()}°)"
-            gradientPickerAdapter?.setSelectedPreset(grad)
+            gradientPickerAdapter.setSelectedPreset(grad)
         } else {
             c.rbLinear.isChecked = true
             c.gradientAngleContainer.visibility = View.VISIBLE
             c.sliderGradientAngle.value = 0f
             c.tvAngleLabel.text = "Gradient Angle (0°)"
-            gradientPickerAdapter?.setSelectedPreset(null)
+            gradientPickerAdapter.setSelectedPreset(null)
         }
     }
 
@@ -1458,7 +1466,7 @@ class TextPanelController(
         val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
         val hasEditor = layer != null && !layer.isLocked
 
-        binding.textEditorBar.visibility = if (isPageOpen && !effectSettingsOpen) View.VISIBLE else View.GONE
+        binding.textEditorBar.visibility = if (isPageOpen && !effectSettingsOpen && !alignSettingsOpen) View.VISIBLE else View.GONE
         updateEffectSettingsVisibility()
         binding.textPropertyPanelInclude.root.visibility =
             if (isPageOpen && hasEditor && activeTextToolTag.isNotEmpty() && activeTextToolTag !in complexEffectTags) View.VISIBLE else View.GONE
@@ -1774,7 +1782,7 @@ private fun registerTextPanels() {
                 return
             }
             TOOL_FONT -> {
-                selectTextTool(tag)
+                onFontRequested(layer)
                 return
             }
         }
@@ -1783,6 +1791,10 @@ private fun registerTextPanels() {
 
     private fun selectTextTool(tag: String) {
         if (isInitializing) return
+        if (tag == TOOL_ALIGN) {
+            openAlignSettings()
+            return
+        }
         if (activeTextToolTag == tag) return
 
         // Routing untuk efek kompleks → buka halaman Effect Settings
@@ -1815,7 +1827,7 @@ private fun registerTextPanels() {
 
     private fun deselectTextTool() {
         activeTextToolTag = ""
-        for ((t, item) in textToolItems) {
+        for ((_, item) in textToolItems) {
             item.isSelected = false
             val icon = item.getChildAt(0) as? android.widget.ImageView
             val label = item.getChildAt(1) as? android.widget.TextView
@@ -1834,6 +1846,78 @@ private fun registerTextPanels() {
         for ((t, v) in textPanelViews) {
             v.visibility = if (t == activeTextToolTag) View.VISIBLE else View.GONE
         }
+    }
+
+    private fun openAlignSettings() {
+        val layer = pixelCanvasView.selectedLayer as? TextLayer
+        if (layer == null || layer.isLocked) {
+            showSnackbar("Pilih layer teks terlebih dahulu")
+            return
+        }
+        if (alignSettingsOpen) return
+
+        alignSettingsSnapshot = pixelCanvasView.captureCurrentState("Align")
+        alignSettingsOpen = true
+        activeTextToolTag = TOOL_ALIGN
+        binding.textEditorBar.visibility = View.GONE
+        for (v in textPanelViews.values) v.visibility = View.GONE
+        binding.alignSettingsInclude.alignControlsInclude.root.visibility = View.VISIBLE
+        binding.alignSettingsInclude.root.visibility = View.VISIBLE
+        val source = binding.textPropertyPanelInclude.alignPanel
+        val target = binding.alignSettingsInclude.alignControlsInclude
+        fun copyAlignButton(
+            sourceButton: com.google.android.material.button.MaterialButton,
+            targetButton: com.google.android.material.button.MaterialButton
+        ) {
+            val active = sourceButton.isSelected
+            targetButton.isSelected = active
+            targetButton.setBackgroundColor(if (active) COLOR_ACTIVE else android.graphics.Color.TRANSPARENT)
+            targetButton.iconTint = android.content.res.ColorStateList.valueOf(
+                if (active) android.graphics.Color.WHITE else COLOR_GRAY
+            )
+            targetButton.strokeWidth = if (active) 0 else 1
+        }
+        copyAlignButton(source.btnAlignLeft, target.btnAlignLeft)
+        copyAlignButton(source.btnAlignCenter, target.btnAlignCenter)
+        copyAlignButton(source.btnAlignRight, target.btnAlignRight)
+        copyAlignButton(source.btnAlignJustify, target.btnAlignJustify)
+        target.btnWrapText.isSelected = source.btnWrapText.isSelected
+        target.btnWrapText.setBackgroundColor(
+            if (source.btnWrapText.isSelected) COLOR_ACTIVE else android.graphics.Color.TRANSPARENT
+        )
+        target.btnWrapText.setTextColor(
+            if (source.btnWrapText.isSelected) android.graphics.Color.WHITE else COLOR_GRAY
+        )
+        // Wrap width is adjusted directly with the right-center handle on the
+        // canvas, keeping this page focused on alignment icons.
+        target.wrapHeader.visibility = View.GONE
+        target.wrapControlsGroup.visibility = View.GONE
+        onAlignSettingsOpenChanged(true)
+    }
+
+    fun isAlignSettingsOpen(): Boolean = alignSettingsOpen
+
+    fun applyAlignSettings() {
+        alignSettingsSnapshot?.let { pixelCanvasView.recordAction("Atur Align", it) }
+        closeAlignSettings()
+    }
+
+    fun cancelAlignSettings() {
+        val snapshot = alignSettingsSnapshot
+        if (snapshot != null) pixelCanvasView.restoreState(snapshot)
+        closeAlignSettings()
+    }
+
+    private fun closeAlignSettings() {
+        if (!alignSettingsOpen) return
+        alignSettingsOpen = false
+        alignSettingsSnapshot = null
+        binding.alignSettingsInclude.root.visibility = View.GONE
+        binding.alignSettingsInclude.alignControlsInclude.root.visibility = View.GONE
+        activeTextToolTag = ""
+        pixelCanvasView.invalidate()
+        onAlignSettingsOpenChanged(false)
+        refreshTextPageUI()
     }
 
     private fun clampPropertyPanelHeight() {
@@ -2276,10 +2360,11 @@ private fun registerTextPanels() {
 
         fun apply(align: android.text.Layout.Alignment, justify: Boolean) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
-            pixelCanvasView.runRecordedAction("Ubah Perataan Teks") {
+            val update = {
                 layer.alignment = align
                 layer.justifyEnabled = justify
             }
+            if (alignSettingsOpen) update() else pixelCanvasView.runRecordedAction("Ubah Perataan Teks", update)
             pixelCanvasView.invalidate()
         }
 
@@ -2325,12 +2410,13 @@ private fun registerTextPanels() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
                 ?: return@setOnClickListener
             val enable = !layer.wrapTextEnabled
-            pixelCanvasView.runRecordedAction("Wrap Teks") {
+            val update = {
                 layer.wrapTextEnabled = enable
                 if (enable && layer.wrapWidth <= 0f) {
                     layer.wrapWidth = layer.measureNaturalWidth().coerceAtLeast(60f)
                 }
             }
+            if (alignSettingsOpen) update() else pixelCanvasView.runRecordedAction("Wrap Teks", update)
             pixelCanvasView.invalidate()
             syncWrap()
         }
@@ -2341,9 +2427,10 @@ private fun registerTextPanels() {
                 ?: return@addOnChangeListener
             if (!layer.wrapTextEnabled) return@addOnChangeListener
             b.tvWrapWidth.text = "Lebar: ${value.toInt()}"
-            pixelCanvasView.runRecordedAction("Ubah Lebar Wrap") {
+            val update = {
                 layer.wrapWidth = value
             }
+            if (alignSettingsOpen) update() else pixelCanvasView.runRecordedAction("Ubah Lebar Wrap", update)
             pixelCanvasView.invalidate()
         }
 
@@ -2361,6 +2448,31 @@ private fun registerTextPanels() {
                     else -> { setActive(b.btnAlignLeft, false); setActive(b.btnAlignCenter, false); setActive(b.btnAlignRight, false) }
                 }
                 syncWrap()
+            }
+        }
+
+        val page = binding.alignSettingsInclude
+        page.btnAlignApply.setOnClickListener { applyAlignSettings() }
+        page.btnAlignCancel.setOnClickListener { cancelAlignSettings() }
+        page.alignControlsInclude.btnAlignLeft.setOnClickListener {
+            b.btnAlignLeft.performClick()
+        }
+        page.alignControlsInclude.btnAlignCenter.setOnClickListener {
+            b.btnAlignCenter.performClick()
+        }
+        page.alignControlsInclude.btnAlignRight.setOnClickListener {
+            b.btnAlignRight.performClick()
+        }
+        page.alignControlsInclude.btnAlignJustify.setOnClickListener {
+            b.btnAlignJustify.performClick()
+        }
+        page.alignControlsInclude.btnWrapText.setOnClickListener {
+            b.btnWrapText.performClick()
+        }
+        page.alignControlsInclude.sliderWrapWidth.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                b.sliderWrapWidth.value = value
+                page.alignControlsInclude.tvWrapWidth.text = "Lebar: ${value.toInt()}"
             }
         }
     }
@@ -2423,7 +2535,6 @@ private fun registerTextPanels() {
 
     private fun initializeStrokePanel() {
         val b = binding.textPropertyPanelInclude.strokePanel
-        val density = activity.resources.displayMetrics.density
         var syncing = false
 
         fun updateSwatch(color: Int) {
@@ -2479,7 +2590,7 @@ private fun registerTextPanels() {
 
         b.viewStrokeColorSwatch.setOnClickListener {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
-            showColorSwatchDialog("Warna Outline", layer.strokeColor) { color ->
+            showColorSwatchDialog("Warna Outline") { color ->
                 applyToTextLayer { it.strokeColor = color }
                 sync(layer)
                 pixelCanvasView.invalidate()
@@ -2630,7 +2741,7 @@ private fun registerTextPanels() {
 
         b.viewBgColorSwatch.setOnClickListener {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
-            showColorSwatchDialog("Warna Latar Teks", layer.bgColor) { color ->
+            showColorSwatchDialog("Warna Latar Teks") { color ->
                 applyToTextLayer { it.bgColor = color }
                 sync(layer)
                 pixelCanvasView.invalidate()
@@ -2852,7 +2963,7 @@ private fun registerTextPanels() {
         target.reflectionFade = style.reflectionFade
     }
 
-    private fun showColorSwatchDialog(title: String, initial: Int, onPick: (Int) -> Unit) {
+    private fun showColorSwatchDialog(title: String, onPick: (Int) -> Unit) {
         val density = activity.resources.displayMetrics.density
         val palette = intArrayOf(
             0xFFFFFFFF.toInt(), 0xFF000000.toInt(), 0xFF757575.toInt(), 0xFFD32F2F.toInt(),
@@ -2905,6 +3016,10 @@ private fun registerTextPanels() {
     }
 
     fun hideStripAndPanels() {
+        if (alignSettingsOpen) {
+            cancelAlignSettings()
+            return
+        }
         val wasOpen = effectSettingsOpen
         binding.textPropertyPanelInclude.root.visibility = View.GONE
         binding.textToolStripInclude.textToolStripScroll.visibility = View.GONE

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/alignSettingsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="96dp"
+    android:orientation="horizontal"
+    android:background="#FFFFFF"
+    android:elevation="6dp"
+    android:theme="@style/LightPanelTheme"
+    android:visibility="gone">
+
+    <ScrollView
+        android:id="@+id/alignSettingsScroll"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <include
+            android:id="@+id/alignControlsInclude"
+            layout="@layout/panel_align"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="48dp"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:background="#F2F4F8">
+
+        <ImageButton
+            android:id="@+id/btnAlignApply"
+            style="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_check_24px"
+            app:tint="#1769FF"
+            android:contentDescription="Terapkan pengaturan Align" />
+
+        <ImageButton
+            android:id="@+id/btnAlignCancel"
+            style="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_sharp_clear_24px"
+            app:tint="#E53935"
+            android:contentDescription="Batalkan pengaturan Align" />
+    </LinearLayout>
+</LinearLayout>

@@ -33,6 +33,7 @@ import android.os.HandlerThread
 import android.os.Looper
 import android.os.Environment
 import android.provider.MediaStore
+import android.media.MediaScannerConnection
 import android.view.View
 import java.util.concurrent.CountDownLatch
 import com.flyerpix.editor.canvas.calc.RotationCalculator
@@ -79,6 +80,7 @@ private inline val RectF.midY: Float get() = (top + bottom) / 2f
  * Mengelola tumpukan layer ([layers]) serta layer yang sedang aktif ([selectedLayer]).
  * Merender setiap layer berurutan berdasarkan urutan z-index.
  */
+@Suppress("SENSELESS_COMPARISON", "USELESS_ELVIS", "UNNECESSARY_SAFE_CALL")
 class PixelCanvasView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -123,6 +125,15 @@ class PixelCanvasView @JvmOverloads constructor(
      * dengan properti layer yang baru dipilih.
      */
     var onLayerSelectedListener: ((CanvasLayer?) -> Unit)? = null
+
+    private var textEditMode = false
+
+    fun setTextEditMode(active: Boolean) {
+        if (textEditMode != active) {
+            textEditMode = active
+            invalidate()
+        }
+    }
 
     /**
      * Saat true, perubahan [selectedLayer] tetap terjadi (field & invalidate jalan)
@@ -235,9 +246,7 @@ class PixelCanvasView @JvmOverloads constructor(
         val mgr = historyManager
         val before = captureCurrentState(actionName)
         action()
-        mgr?.let {
-            recordAction(actionName, before)
-        }
+        mgr?.let { recordAction(actionName, before) }
     }
 
     /**
@@ -877,8 +886,42 @@ class PixelCanvasView @JvmOverloads constructor(
     private val selectionBoxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF18C8F5.toInt() // Cyan khas PixelLab
         style = Paint.Style.STROKE
-        strokeWidth = 2.5f
+        strokeWidth = 3f
         pathEffect = DashPathEffect(floatArrayOf(14f, 10f), 0f)
+    }
+
+    private val textSelectionFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x6618C8F5
+        style = Paint.Style.FILL
+    }
+
+    private val textEditSelectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x801769FF.toInt()
+        style = Paint.Style.FILL
+    }
+
+    private val selectionOuterBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 6f
+    }
+
+    private val textEditBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF1769FF.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
+
+    private val textEditLabelBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF1769FF.toInt()
+        style = Paint.Style.FILL
+    }
+
+    private val textEditLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        textSize = 11f * resources.displayMetrics.density
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
 
     // ── Paint untuk 4 Handle Sudut Bounding Box (Prompt 26) ─────────────────
@@ -1431,7 +1474,7 @@ class PixelCanvasView @JvmOverloads constructor(
         val (w, h) = layer.getUnwarpedDimensions()
         if (w <= 0f || h <= 0f) return
 
-        val padding = 8f * resources.displayMetrics.density
+        val padding = 12f * resources.displayMetrics.density
         val pts = layer.getSelectionBoxPoints(padding)
         if (pts.size < 8) return
 
@@ -1443,12 +1486,44 @@ class PixelCanvasView @JvmOverloads constructor(
             close()
         }
 
+        if (layer is TextLayer) {
+            canvas.drawPath(
+                boxPath,
+                if (textEditMode) textEditSelectionPaint else textSelectionFillPaint
+            )
+            canvas.drawPath(boxPath, selectionOuterBorderPaint)
+        }
         canvas.drawPath(boxPath, selectionBoxPaint)
+
+        if (layer is TextLayer && textEditMode) {
+            canvas.drawPath(boxPath, textEditBorderPaint)
+            drawTextEditLabel(canvas, pts)
+        }
 
         // Gambar 4 tombol handle interaktif di setiap sudut Bounding Box (Prompt 26)
         if (!layer.isLocked) {
             drawTransformHandles(canvas, pts)
         }
+    }
+
+    private fun drawTextEditLabel(canvas: Canvas, pts: FloatArray) {
+        val left = minOf(pts[0], pts[2], pts[4], pts[6])
+        val top = minOf(pts[1], pts[3], pts[5], pts[7])
+        val label = "EDITING TEXT"
+        val horizontalPadding = 7f * resources.displayMetrics.density
+        val verticalPadding = 4f * resources.displayMetrics.density
+        val width = textEditLabelPaint.measureText(label) + horizontalPadding * 2f
+        val height = textEditLabelPaint.textSize + verticalPadding * 2f
+        val labelLeft = left
+        val labelTop = (top - height - 4f * resources.displayMetrics.density).coerceAtLeast(0f)
+        val labelRect = RectF(labelLeft, labelTop, labelLeft + width, labelTop + height)
+        canvas.drawRoundRect(labelRect, 5f, 5f, textEditLabelBackgroundPaint)
+        canvas.drawText(
+            label,
+            labelLeft + horizontalPadding,
+            labelTop + height - verticalPadding,
+            textEditLabelPaint
+        )
     }
 
     /**
@@ -1464,14 +1539,14 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     /**
-     * Memeriksa apakah sentuhan (touchX, touchY) mengenai salah satu dari 4 tombol handle sudut.
+    * Memeriksa apakah sentuhan mengenai handle transformasi atau handle lebar teks.
      * Mengembalikan [TransformHandle] yang tersentuh, atau [TransformHandle.NONE].
      */
     fun getTransformHandleAt(touchX: Float, touchY: Float): TransformHandle {
         val layer = selectedLayer ?: return TransformHandle.NONE
         if (!layer.isVisible || layer.isLocked || layer.perspectiveEnabled) return TransformHandle.NONE
 
-        val padding = 8f * resources.displayMetrics.density
+        val padding = 12f * resources.displayMetrics.density
         val pts = layer.getSelectionBoxPoints(padding)
         if (pts.size < 8) return TransformHandle.NONE
 
@@ -1494,13 +1569,12 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     /**
-     * Titik tengah sisi kanan kotak teks (untuk handle resize lebar wrap).
-     * Hanya tersedia untuk text layer dengan wrap aktif yang tidak terkunci,
-     * tanpa perspektif dan tanpa rotasi 3D.
+     * Titik tengah sisi kanan kotak teks untuk mengatur lebar wrap.
+     * Handle tersedia sejak layer teks dipilih agar wrapping bisa dimulai
+     * langsung dengan menarik sisi kanan ke dalam.
      */
     private fun wrapHandleCanvasPoint(): Pair<Float, Float>? {
         val layer = selectedLayer as? TextLayer ?: return null
-        if (!layer.wrapTextEnabled) return null
         if (layer.isLocked || layer.perspectiveEnabled) return null
         if (layer.rotate3DX != 0f || layer.rotate3DY != 0f || layer.rotate3DZ != 0f) return null
         val pts = layer.getSelectionBoxPoints(0f)
@@ -1531,7 +1605,7 @@ class PixelCanvasView @JvmOverloads constructor(
         // 4. Kiri bawah (Bottom-Left): Rotate (ikon panah melingkar)
         drawRotateHandle(canvas, pts[6], pts[7], r)
 
-        // 5. Tengah-kanan: resize lebar wrap teks (hanya saat wrap aktif)
+        // 5. Tengah-kanan: aktifkan dan resize lebar wrap teks
         wrapHandleCanvasPoint()?.let { wp ->
             drawWidthHandle(canvas, wp.first, wp.second, r)
         }
@@ -2008,6 +2082,7 @@ class PixelCanvasView @JvmOverloads constructor(
                                 if (layer.wrapWidth <= 0f) {
                                     layer.wrapWidth = layer.measureNaturalWidth().coerceAtLeast(40f)
                                 }
+                                layer.wrapTextEnabled = true
                                 currentTouchState = TouchState.DRAGGING_WRAP_HANDLE
                                 isDragging = false
                                 invalidate()
@@ -2759,8 +2834,7 @@ class PixelCanvasView @JvmOverloads constructor(
                     bitmap.compress(format.compressFormat, 100, stream)
                 }
                 val uri = Uri.fromFile(destFile)
-                val scanIntent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, uri)
-                context.sendBroadcast(scanIntent)
+                MediaScannerConnection.scanFile(context, arrayOf(destFile.absolutePath), arrayOf(mime), null)
                 uri
             }
         } catch (e: Exception) {

@@ -5,20 +5,22 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="6dp"
     android:visibility="gone">
 
     <TextView
+        android:id="@+id/alignPanelTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Perataan Teks"
         android:textAppearance="?attr/textAppearanceSubtitle2"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="0dp"
         android:orientation="horizontal"
         android:gravity="center">
 
@@ -71,26 +73,32 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/alignMultilineHint"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:layout_marginStart="4dp"
         android:text="Berlaku untuk teks multiline."
         android:textAppearance="?attr/textAppearanceCaption"
-        android:textColor="#888888" />
+        android:textColor="#888888"
+        android:visibility="gone" />
 
     <View
+        android:id="@+id/alignDivider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="10dp"
-        android:background="#EEEEEE" />
+        android:background="#EEEEEE"
+        android:visibility="gone" />
 
     <LinearLayout
+        android:id="@+id/wrapHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="0dp"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:visibility="gone">
 
         <TextView
             android:layout_width="0dp"

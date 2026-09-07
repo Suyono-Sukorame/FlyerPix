@@ -26,19 +26,26 @@ class EditTextDialog(
         binding.etTextInput.setText(initialText)
         binding.etTextInput.setSelection(initialText.length)
 
-        // Tombol Cepat: Toggle ALL CAPS / lowercase
-        binding.btnToggleCase.setOnClickListener {
-            val current = binding.etTextInput.text?.toString().orEmpty()
-            val hasLetters = current.any { it.isLetter() }
-            val isAllUpper = hasLetters && current.none { it.isLowerCase() }
-
-            val transformed = if (isAllUpper) {
-                current.lowercase()
-            } else {
-                current.uppercase()
-            }
+        fun updateText(transform: (String) -> String) {
+            val transformed = transform(binding.etTextInput.text?.toString().orEmpty())
             binding.etTextInput.setText(transformed)
             binding.etTextInput.setSelection(transformed.length)
+        }
+
+        binding.btnUppercase.setOnClickListener {
+            updateText { it.uppercase() }
+        }
+
+        binding.btnCapitalize.setOnClickListener {
+            updateText { value ->
+                value.lowercase().replaceFirstChar { character ->
+                    if (character.isLowerCase()) character.titlecase() else character.toString()
+                }
+            }
+        }
+
+        binding.btnLowercase.setOnClickListener {
+            updateText { it.lowercase() }
         }
 
         // Tombol Cepat: Bersihkan teks

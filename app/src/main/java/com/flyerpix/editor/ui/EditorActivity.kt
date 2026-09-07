@@ -282,7 +282,14 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             { showSnackbar(it) },
             onShowMenu = { showMenu(it) },
             onEditTextRequested = { showEditTextDialog(it) },
+            onFontRequested = { fontController.openFontPicker(it) },
             onCanvasChanged = { updateCanvasCardMargin() },
+            onAlignSettingsOpenChanged = { alignOpen ->
+                binding.bottomNavigation.visibility = if (alignOpen) View.GONE else View.VISIBLE
+                if (alignOpen) binding.textEditorBar.visibility = View.GONE
+                animateNavTranslation(0)
+                updateCanvasCardMargin()
+            },
             onEffectSettingsOpenChanged = { effectSettingsOpen ->
                 val density = resources.displayMetrics.density
                 val offset = (56 * density).toInt()
@@ -390,11 +397,15 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     }
 
     fun showEditTextDialog(textLayer: com.flyerpix.editor.canvas.model.TextLayer) {
-        com.flyerpix.editor.ui.dialog.EditTextDialog.show(this, textLayer.text) { newText ->
+        pixelCanvasView.setTextEditMode(true)
+        val dialog = com.flyerpix.editor.ui.dialog.EditTextDialog.show(this, textLayer.text) { newText ->
             pixelCanvasView.runRecordedAction("Ubah Teks") {
                 textLayer.text = newText
             }
             pixelCanvasView.invalidate()
+        }
+        dialog.setOnDismissListener {
+            pixelCanvasView.setTextEditMode(false)
         }
     }
 
@@ -456,6 +467,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     }
 
     override fun onBackPressed() {
+        if (textPanelController.isAlignSettingsOpen()) {
+            textPanelController.cancelAlignSettings()
+            return
+        }
         if (textPanelController.isEffectSettingsOpen()) {
             textPanelController.cancelEffectSettings()
             return
@@ -510,6 +525,11 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         // binding.paletteFab.visibility = View.GONE
         // binding.eyedropperFab.visibility = View.GONE
         // binding.cropFab.visibility = View.GONE
+
+        if (textPanelController.isAlignSettingsOpen()) {
+            textPanelController.cancelAlignSettings()
+        }
+        binding.alignSettingsInclude.root.visibility = View.GONE
 
         if (menuId != R.id.nav_text && textPanelController.isEffectSettingsOpen()) {
             textPanelController.cancelEffectSettings()

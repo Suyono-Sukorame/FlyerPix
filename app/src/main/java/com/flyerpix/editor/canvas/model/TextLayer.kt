@@ -377,7 +377,7 @@ data class TextLayer(
         // ── Pass 1: Stroke / Outline ──────────────────────────────────────────
         if (strokeWidth > 0f) {
             if (curvePercent != 0) {
-                drawCurvedText(canvas, obtainTextPaint(Paint.Style.STROKE, strokeColor), w)
+                drawCurvedText(canvas, obtainTextPaint(Paint.Style.STROKE, strokeColor))
             } else {
                 createLayout(obtainTextPaint(Paint.Style.STROKE, strokeColor)).draw(canvas)
             }
@@ -386,7 +386,7 @@ data class TextLayer(
         // ── Pass 2 & 3: Fill / Inner Shadow / Emboss ─────────────────────────────
         if (curvePercent != 0) {
             // Mode Curved Text: gunakan drawTextOnPath sebagai ganti StaticLayout
-            drawCurvedText(canvas, fillPaint, w)
+            drawCurvedText(canvas, fillPaint)
         } else {
             when {
                 neonEnabled        -> drawNeonEffect(canvas, layout)
@@ -479,9 +479,8 @@ data class TextLayer(
      *
      * @param canvas Canvas target
      * @param paint  TextPaint yang sudah dikonfigurasi (fill / stroke / gradient / texture)
-     * @param textWidth Lebar teks dalam piksel (dari StaticLayout)
      */
-    private fun drawCurvedText(canvas: Canvas, paint: TextPaint, textWidth: Float) {
+    private fun drawCurvedText(canvas: Canvas, paint: TextPaint) {
         val content = if (text.isEmpty()) " " else text
         val pct = curvePercent.coerceIn(-100, 100)
         if (pct == 0) return
@@ -590,12 +589,14 @@ data class TextLayer(
             } else if (gradientEnabled && gradient != null) {
                 shader = gradient?.createShader(lw.toFloat(), lh.toFloat())
             }
-            maskFilter = EmbossMaskFilter(
+            @Suppress("DEPRECATION")
+            val embossFilter = EmbossMaskFilter(
                 lightDir,
                 ambient,
                 specular,
                 embossBevel.coerceIn(0.5f, 12f)
             )
+            maskFilter = embossFilter
         }
 
         bmpCanvas.translate(pad.toFloat(), pad.toFloat())

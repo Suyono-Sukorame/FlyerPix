@@ -1,11 +1,17 @@
 package com.flyerpix.editor.ui.controller
 
 import android.app.Activity
+import android.app.Dialog
+import android.graphics.Typeface
 import android.net.Uri
+import android.view.LayoutInflater
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.activity.result.ActivityResultLauncher
 import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.canvas.model.TextLayer
 import com.flyerpix.editor.databinding.ActivityEditorBinding
+import com.flyerpix.editor.databinding.DialogFontPickerBinding
+import com.flyerpix.editor.font.FontItem
 import com.flyerpix.editor.font.FontManager
 import com.flyerpix.editor.font.FontPickerAdapter
 
@@ -27,6 +33,9 @@ class FontController(
 
     private lateinit var fontPickerAdapter: FontPickerAdapter
     private var customFontLauncher: ActivityResultLauncher<String>? = null
+    private var fontDialog: Dialog? = null
+    private var dialogPreview: android.widget.TextView? = null
+    private var dialogRefresh: (() -> Unit)? = null
 
     /**
      * Inisialisasi FontManager dan font picker.
@@ -65,9 +74,124 @@ class FontController(
      */
     private fun setupFontPicker() {
         fontPickerAdapter = FontPickerAdapter(FontManager.getFonts()) { fontItem ->
-            applyFontToSelectedTextLayer(fontItem.typeface)
+            val layer = pixelCanvasView.selectedLayer as? TextLayer
+            if (layer != null) {
+                applyFont(layer, fontItem)
+                pixelCanvasView.invalidate()
+            }
         }
         binding.textPropertyPanelInclude.fontPanel.rvFontPicker.adapter = fontPickerAdapter
+    }
+
+    fun openFontPicker(textLayer: TextLayer) {
+        val dialogBinding = DialogFontPickerBinding.inflate(LayoutInflater.from(activity))
+        val originalTypeface = textLayer.typeface
+        var confirmed = false
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
+            .setView(dialogBinding.root)
+            .create()
+        fontDialog = dialog
+
+        val dialogAdapter = FontPickerAdapter(FontManager.getFonts()) { fontItem ->
+            applyFont(textLayer, fontItem)
+            FontManager.recordRecent(activity, fontItem.name)
+            dialogBinding.tvFontPreview.typeface = fontItem.typeface
+            pixelCanvasView.invalidate()
+        }
+        dialogPreview = dialogBinding.tvFontPreview
+        dialogBinding.rvFontPicker.layoutManager = LinearLayoutManager(activity)
+        dialogBinding.rvFontPicker.adapter = dialogAdapter
+        dialogBinding.tvFontPreview.text = textLayer.text.ifBlank { "New Text" }
+        dialogBinding.tvFontPreview.typeface = originalTypeface
+        textLayer.fontName?.let { dialogAdapter.setSelectedFont(it) }
+
+        var activeFontFilter: (FontItem) -> Boolean = { it.category != "My Fonts" }
+        var activeFontLabel = "Basic"
+
+        fun showFonts(filter: (com.flyerpix.editor.font.FontItem) -> Boolean, label: String) {
+            activeFontFilter = filter
+            activeFontLabel = label
+            val query = dialogBinding.searchFont.query?.toString()?.trim().orEmpty()
+            val fonts = FontManager.getFonts().filter(filter).filter { font ->
+                query.isBlank() || font.name.contains(query, ignoreCase = true)
+            }
+            dialogBinding.tvFontCategory.text = label
+            dialogAdapter.updateFonts(fonts)
+            textLayer.fontName?.let { dialogAdapter.setSelectedFont(it) }
+        }
+        dialogRefresh = { showFonts(activeFontFilter, activeFontLabel) }
+
+        dialogBinding.searchFont.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                showFonts(activeFontFilter, activeFontLabel)
+                return true
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                showFonts(activeFontFilter, activeFontLabel)
+                return true
+            }
+        })
+
+        fun selectTab(tab: android.view.View, filter: (com.flyerpix.editor.font.FontItem) -> Boolean, label: String) {
+            dialogBinding.tabFonts.setTextColor(0xFF616161.toInt())
+            dialogBinding.tabMyFonts.setTextColor(0xFF616161.toInt())
+            dialogBinding.tabRecent.setTextColor(0xFF616161.toInt())
+            (tab as android.widget.TextView).setTextColor(0xFF1769FF.toInt())
+            showFonts(filter, label)
+            val tabIndex = when (tab.id) {
+                dialogBinding.tabMyFonts.id -> 1
+                dialogBinding.tabRecent.id -> 2
+                else -> 0
+            }
+            dialogBinding.root.post {
+                val tabWidth = dialogBinding.root.width / 3
+                dialogBinding.fontTabIndicator.layoutParams = dialogBinding.fontTabIndicator.layoutParams.apply {
+                    width = tabWidth
+                }
+                dialogBinding.fontTabIndicator.translationX = (tabWidth * tabIndex).toFloat()
+            }
+        }
+
+        dialogBinding.tabFonts.setOnClickListener {
+            selectTab(it, { font -> font.category != "My Fonts" }, "Basic")
+        }
+        dialogBinding.tabMyFonts.setOnClickListener {
+            selectTab(it, { font -> font.category == "My Fonts" }, "My Fonts")
+        }
+        dialogBinding.tabRecent.setOnClickListener {
+            selectTab(it, { font -> FontManager.getRecentFonts().any { recent -> recent.name == font.name } }, "Recent")
+        }
+        dialogBinding.btnAddCustomFont.setOnClickListener { openCustomFontPicker() }
+        dialogBinding.btnFontCancel.setOnClickListener {
+            textLayer.typeface = originalTypeface
+            pixelCanvasView.invalidate()
+            dialog.dismiss()
+        }
+        dialogBinding.btnFontOk.setOnClickListener {
+            confirmed = true
+            dialog.dismiss()
+        }
+        dialogBinding.root.post {
+            val tabWidth = dialogBinding.root.width / 3
+            dialogBinding.fontTabIndicator.layoutParams = dialogBinding.fontTabIndicator.layoutParams.apply {
+                width = tabWidth
+            }
+        }
+        dialog.setOnDismissListener {
+            if (!confirmed) {
+                textLayer.typeface = originalTypeface
+                pixelCanvasView.invalidate()
+            }
+            fontDialog = null
+            dialogPreview = null
+            dialogRefresh = null
+        }
+        dialog.show()
+        dialog.window?.setLayout(
+            (activity.resources.displayMetrics.widthPixels * 0.94f).toInt(),
+            (activity.resources.displayMetrics.heightPixels * 0.82f).toInt()
+        )
     }
 
     /**
@@ -100,10 +224,16 @@ class FontController(
         if (fontItem != null) {
             // Update adapter dengan daftar font terbaru
             fontPickerAdapter.updateFonts(FontManager.getFonts())
+            dialogRefresh?.invoke()
             fontPickerAdapter.setSelectedFont(fontItem.name)
 
             // Terapkan langsung ke layer teks aktif jika ada
-            applyFontToSelectedTextLayer(fontItem.typeface)
+            val selectedLayer = pixelCanvasView.selectedLayer as? TextLayer
+            if (selectedLayer != null) {
+                applyFont(selectedLayer, fontItem)
+            }
+            FontManager.recordRecent(activity, fontItem.name)
+            dialogPreview?.typeface = fontItem.typeface
 
             showSnackbar("Font '${fontItem.name}' berhasil ditambahkan ke 'My Fonts'!")
         } else {
@@ -118,12 +248,10 @@ class FontController(
     /**
      * Menerapkan typeface ke TextLayer yang sedang dipilih.
      */
-    private fun applyFontToSelectedTextLayer(typeface: android.graphics.Typeface) {
-        val textLayer = pixelCanvasView.selectedLayer as? TextLayer
-        if (textLayer != null && !textLayer.isLocked) {
-            textLayer.typeface = typeface
-            pixelCanvasView.invalidate()
-        }
+    private fun applyFont(textLayer: TextLayer, fontItem: FontItem) {
+        if (textLayer.isLocked) return
+        textLayer.typeface = fontItem.typeface
+        textLayer.fontName = fontItem.name
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -136,10 +264,10 @@ class FontController(
     fun refreshUI() {
         val textLayer = pixelCanvasView.selectedLayer as? TextLayer
         if (textLayer != null) {
-            // Cari font yang cocok dengan typeface layer
-            val matchingFont = FontManager.getFonts().find { fontItem ->
-                fontItem.typeface == textLayer.typeface
-            }
+            val matchingFont = FontManager.findFont(textLayer.fontName)
+                ?: FontManager.getFonts().find { fontItem ->
+                    fontItem.typeface == textLayer.typeface
+                }
             
             if (matchingFont != null) {
                 fontPickerAdapter.setSelectedFont(matchingFont.name)
@@ -170,7 +298,8 @@ class FontController(
     fun resetToDefaultFont() {
         val defaultFont = FontManager.getFonts().firstOrNull()
         if (defaultFont != null) {
-            applyFontToSelectedTextLayer(defaultFont.typeface)
+            val layer = pixelCanvasView.selectedLayer as? TextLayer
+            if (layer != null) applyFont(layer, defaultFont)
             fontPickerAdapter.setSelectedFont(defaultFont.name)
             showSnackbar("Font direset ke ${defaultFont.name}")
         }

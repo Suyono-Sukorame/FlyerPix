@@ -15,7 +15,10 @@ import java.io.FileOutputStream
 object FontManager {
 
     private val fontList = mutableListOf<FontItem>()
+    private val recentFontNames = mutableListOf<String>()
     private var isInitialized = false
+    private const val RECENT_PREFS = "font_preferences"
+    private const val RECENT_NAMES = "recent_font_names"
 
     private val BUILT_IN_FONT_DEFINITIONS = listOf(
         // Sans-Serif
@@ -48,6 +51,7 @@ object FontManager {
         if (isInitialized) return
 
         fontList.clear()
+        recentFontNames.clear()
 
         // 1. Tambahkan default system font
         fontList.add(FontItem("Default", "Sans-Serif", null, null, Typeface.DEFAULT))
@@ -70,6 +74,13 @@ object FontManager {
 
         // 3. Muat kembali font kustom (My Fonts) yang pernah disimpan di internal storage
         loadSavedCustomFonts(context)
+        recentFontNames.addAll(
+            context.getSharedPreferences(RECENT_PREFS, Context.MODE_PRIVATE)
+                .getString(RECENT_NAMES, "")
+                ?.split('\u0001')
+                ?.filter(String::isNotBlank)
+                .orEmpty()
+        )
 
         isInitialized = true
     }
@@ -83,18 +94,24 @@ object FontManager {
      * @return [FontItem] jika berhasil dimuat, atau null jika gagal
      */
     fun loadFontFromUri(context: Context, uri: Uri): FontItem? {
+        val sourceName = queryFileName(context, uri)
+        val extension = sourceName?.substringAfterLast('.', "")?.lowercase()
+        if (extension !in setOf("ttf", "otf")) return null
+
+        var destFile: File? = null
         try {
-            val fileName = queryFileName(context, uri) ?: "custom_font_${System.currentTimeMillis()}.ttf"
+            val fileName = sourceName ?: "custom_font_${System.currentTimeMillis()}.$extension"
+            val safeFileName = fileName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
             val customFontsDir = File(context.filesDir, "custom_fonts").apply {
                 if (!exists()) mkdirs()
             }
 
-            val destFile = File(customFontsDir, fileName)
+            destFile = File(customFontsDir, safeFileName)
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 FileOutputStream(destFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
                 }
-            }
+            } ?: return null
 
             val typeface = Typeface.createFromFile(destFile)
             val displayName = fileName.substringBeforeLast(".")
@@ -121,6 +138,7 @@ object FontManager {
 
             return fontItem
         } catch (e: Exception) {
+            destFile?.delete()
             e.printStackTrace()
             return null
         }
@@ -187,6 +205,23 @@ object FontManager {
      * Mengembalikan hanya font kustom pengguna (kategori "My Fonts").
      */
     fun getMyFonts(): List<FontItem> = fontList.filter { it.category == "My Fonts" }
+
+    fun findFont(name: String?): FontItem? {
+        if (name.isNullOrBlank()) return null
+        return fontList.firstOrNull { it.name.equals(name, ignoreCase = true) }
+    }
+
+    fun getRecentFonts(): List<FontItem> = recentFontNames.mapNotNull(::findFont)
+
+    fun recordRecent(context: Context, name: String) {
+        recentFontNames.remove(name)
+        recentFontNames.add(0, name)
+        while (recentFontNames.size > 12) recentFontNames.removeLast()
+        context.getSharedPreferences(RECENT_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(RECENT_NAMES, recentFontNames.joinToString("\u0001"))
+            .apply()
+    }
 
     /**
      * Menambahkan font kustom langsung ke daftar font.

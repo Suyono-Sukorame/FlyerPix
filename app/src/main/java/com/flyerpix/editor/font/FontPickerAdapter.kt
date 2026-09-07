@@ -14,7 +14,7 @@ class FontPickerAdapter(
     private val onFontSelected: (FontItem) -> Unit
 ) : RecyclerView.Adapter<FontPickerAdapter.FontViewHolder>() {
 
-    private var selectedPosition = 0
+    private var selectedPosition = RecyclerView.NO_POSITION
 
     inner class FontViewHolder(val binding: ItemFontPickerBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -36,15 +36,17 @@ class FontPickerAdapter(
 
             // Indikator visual seleksi font
             if (isSelected) {
+                cardFont.setCardBackgroundColor(Color.parseColor("#EAF7FF"))
                 cardFont.strokeColor = Color.parseColor("#1E88E5")
-                cardFont.strokeWidth = 4
-                cardFont.cardElevation = 6f
+                cardFont.strokeWidth = 2
+                cardFont.cardElevation = 1f
                 tvFontName.setTextColor(Color.parseColor("#1E88E5"))
             } else {
-                cardFont.strokeColor = Color.parseColor("#DDDDDD")
-                cardFont.strokeWidth = 2
-                cardFont.cardElevation = 2f
-                tvFontName.setTextColor(Color.parseColor("#555555"))
+                cardFont.setCardBackgroundColor(Color.WHITE)
+                cardFont.strokeColor = Color.parseColor("#E3E8F0")
+                cardFont.strokeWidth = 0
+                cardFont.cardElevation = 0f
+                tvFontName.setTextColor(Color.parseColor("#26344D"))
             }
 
             root.setOnClickListener {
@@ -52,7 +54,7 @@ class FontPickerAdapter(
                 val currentPos = holder.adapterPosition
                 if (currentPos != RecyclerView.NO_POSITION) {
                     selectedPosition = currentPos
-                    notifyItemChanged(prevSelected)
+                    if (prevSelected in fonts.indices) notifyItemChanged(prevSelected)
                     notifyItemChanged(selectedPosition)
                     onFontSelected(item)
                 }
@@ -64,6 +66,7 @@ class FontPickerAdapter(
 
     fun updateFonts(newFonts: List<FontItem>) {
         fonts = newFonts
+        selectedPosition = RecyclerView.NO_POSITION
         notifyDataSetChanged()
     }
 
@@ -72,7 +75,7 @@ class FontPickerAdapter(
         if (index != -1 && index != selectedPosition) {
             val prev = selectedPosition
             selectedPosition = index
-            notifyItemChanged(prev)
+            if (prev in fonts.indices) notifyItemChanged(prev)
             notifyItemChanged(selectedPosition)
         }
     }

@@ -23,19 +23,6 @@
             android:textAppearance="?attr/textAppearanceHeadline6"
             android:textStyle="bold" />
 
-        <!-- Tombol Cepat Ubah Huruf Besar/Kecil (ALL CAPS / lowercase) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnToggleCase"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minWidth="48dp"
-            android:paddingHorizontal="12dp"
-            android:text="TT"
-            android:textStyle="bold"
-            app:cornerRadius="8dp"
-            app:strokeColor="?attr/colorPrimary" />
-
         <!-- Tombol Hapus Cepat -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClearText"
@@ -48,6 +35,56 @@
             android:text="Clear"
             android:textColor="?attr/colorError" />
 
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUppercase"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="38dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="UPPERCASE"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            app:cornerRadius="8dp"
+            app:strokeColor="?attr/colorPrimary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCapitalize"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Capitalize"
+            android:textSize="10sp"
+            app:cornerRadius="8dp"
+            app:strokeColor="#8A94A6" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLowercase"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="lowercase"
+            android:textSize="10sp"
+            app:cornerRadius="8dp"
+            app:strokeColor="#8A94A6" />
     </LinearLayout>
 
     <!-- Input Teks Multi-line -->

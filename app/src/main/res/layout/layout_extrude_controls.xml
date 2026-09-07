@@ -9,17 +9,51 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="4dp"
     android:visibility="gone">
 
-    <!-- ── Toggle enable/disable ── -->
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchExtrudeEnabled"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="3D Text (Extrude)"
-        android:textAppearance="?attr/textAppearanceBody2"
-        android:checked="false" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchExtrudeEnabled"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="3D Text"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:checked="false" />
+
+        <RadioGroup
+            android:id="@+id/rgExtrudeViewType"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.5"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <RadioButton
+                android:id="@+id/rbOblique"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Oblique"
+                android:checked="true"
+                android:textSize="11sp" />
+
+            <RadioButton
+                android:id="@+id/rbIsometric"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Isometric"
+                android:textSize="11sp" />
+        </RadioGroup>
+    </LinearLayout>
 
     <!-- ── Group Kontrol 3D Extrusion ── -->
     <LinearLayout
@@ -29,40 +63,6 @@
         android:orientation="vertical"
         android:layout_marginTop="4dp"
         android:visibility="gone">
-
-        <!-- Selector Tipe Proyeksi: Oblique vs Isometric -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:text="3D View Type"
-            android:textAppearance="?attr/textAppearanceCaption" />
-
-        <RadioGroup
-            android:id="@+id/rgExtrudeViewType"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="4dp">
-
-            <RadioButton
-                android:id="@+id/rbOblique"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Oblique"
-                android:checked="true"
-                android:textSize="12sp" />
-
-            <RadioButton
-                android:id="@+id/rbIsometric"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Isometric"
-                android:textSize="12sp" />
-        </RadioGroup>
 
         <!-- Slider Depth (1 s/d 50) -->
         <TextView

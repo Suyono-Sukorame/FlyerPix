@@ -13,7 +13,9 @@ import androidx.core.content.FileProvider
 import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.canvas.model.ExportFormat
 import com.flyerpix.editor.canvas.model.ExportQuality
+import com.flyerpix.editor.canvas.model.TextLayer
 import com.flyerpix.editor.databinding.ActivityEditorBinding
+import com.flyerpix.editor.font.FontManager
 import com.flyerpix.editor.project.ProjectModel
 import com.flyerpix.editor.project.ProjectSerializer
 import com.flyerpix.editor.ui.dialog.ExportImageDialog
@@ -120,6 +122,12 @@ class ExportController(
 
     fun loadProject(project: ProjectModel) {
         currentProjectName = project.projectName
+        FontManager.init(activity)
+        project.layers.filterIsInstance<TextLayer>().forEach { layer ->
+            layer.fontName?.let { name ->
+                FontManager.findFont(name)?.let { layer.typeface = it.typeface }
+            }
+        }
         canvas.importProjectSnapshot(project)
         updateCanvasAspectRatio(project.canvasWidth, project.canvasHeight)
         showSnackbar("Proyek '${project.projectName}' berhasil dimuat!")
