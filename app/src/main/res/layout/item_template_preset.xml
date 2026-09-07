@@ -13,7 +13,7 @@
         android:layout_height="72dp"
         app:cardCornerRadius="8dp"
         app:cardElevation="3dp"
-        app:strokeColor="#555555"
+        app:strokeColor="@color/light_divider"
         app:strokeWidth="1dp">
 
         <FrameLayout
@@ -39,7 +39,7 @@
                 android:layout_gravity="center"
                 android:src="@drawable/ic_outline_photo_24px"
                 android:visibility="gone"
-                app:tint="@android:color/white" />
+                app:tint="#1769FF" />
         </FrameLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -51,7 +51,7 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:text="Default"
-        android:textColor="#E0E0E0"
+        android:textColor="@color/light_text_primary"
         android:textSize="11sp" />
 
 </LinearLayout>

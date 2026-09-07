@@ -64,7 +64,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
-            android:background="@color/brand_surface_dark"
+            android:background="@color/light_surface"
             android:orientation="vertical"
             android:elevation="8dp">
 
@@ -83,7 +83,7 @@
             android:id="@+id/bottom_navigation"
             android:layout_gravity="bottom"
             app:menu="@menu/authentic_bottom_nav_menu"
-            android:background="@color/brand_navy"
+            android:background="@color/light_surface"
             app:itemIconTint="@color/bottom_nav_colors"
             app:itemTextColor="@color/bottom_nav_colors"
             app:labelVisibilityMode="labeled"
@@ -521,7 +521,7 @@
             android:layout_height="107dp"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
-            android:background="@color/brand_surface_dark"
+            android:background="@color/light_surface"
             android:elevation="6dp"
             android:orientation="vertical"
             android:visibility="gone">
@@ -566,7 +566,7 @@
                     android:layout_height="wrap_content"
                     android:id="@+id/tvAdjustBrightness"
                     android:text="Brightness: 0"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/light_text_secondary"
                     android:textSize="11sp" />
             <com.google.android.material.slider.Slider
                     android:id="@+id/sliderBrightness"
@@ -578,7 +578,7 @@
                     android:stepSize="1"
                     app:thumbColor="#18C8F5"
                     app:trackColorActive="#18C8F5"
-                    app:trackColorInactive="#123065"
+                    app:trackColorInactive="@color/light_track"
                     app:haloColor="#2218C8F5" />
 
             <TextView
@@ -586,7 +586,7 @@
                     android:layout_height="wrap_content"
                     android:id="@+id/tvAdjustContrast"
                     android:text="Contrast: 0"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/light_text_secondary"
                     android:textSize="11sp" />
             <com.google.android.material.slider.Slider
                     android:id="@+id/sliderContrast"
@@ -598,7 +598,7 @@
                     android:stepSize="1"
                     app:thumbColor="#18C8F5"
                     app:trackColorActive="#18C8F5"
-                    app:trackColorInactive="#123065"
+                    app:trackColorInactive="@color/light_track"
                     app:haloColor="#2218C8F5" />
 
             <TextView
@@ -606,7 +606,7 @@
                     android:layout_height="wrap_content"
                     android:id="@+id/tvAdjustSaturation"
                     android:text="Saturation: 0"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/light_text_secondary"
                     android:textSize="11sp" />
             <com.google.android.material.slider.Slider
                     android:id="@+id/sliderSaturation"
@@ -618,7 +618,7 @@
                     android:stepSize="1"
                     app:thumbColor="#18C8F5"
                     app:trackColorActive="#18C8F5"
-                    app:trackColorInactive="#123065"
+                    app:trackColorInactive="@color/light_track"
                     app:haloColor="#2218C8F5" />
         </LinearLayout>
 
@@ -707,7 +707,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Blur Radius: 0"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/light_text_secondary"
                     android:textSize="11sp" />
             <com.google.android.material.slider.Slider
                     android:id="@+id/sliderBlurRadius"
@@ -719,7 +719,7 @@
                     android:stepSize="1"
                     app:thumbColor="#18C8F5"
                     app:trackColorActive="#18C8F5"
-                    app:trackColorInactive="#123065"
+                    app:trackColorInactive="@color/light_track"
                     app:haloColor="#2218C8F5" />
         </LinearLayout>
         </LinearLayout>
@@ -760,7 +760,7 @@
                 android:layout_width="1dp"
                 android:layout_height="20dp"
                 android:layout_marginHorizontal="4dp"
-                android:background="#444444" />
+                android:background="@color/light_divider" />
 
         <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCropConfirm"
@@ -949,7 +949,7 @@
             android:id="@+id/layoutLayerSidePanel"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:background="#77000000"
+            android:background="#99FFFFFF"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="@+id/guidelineCenterVertical"
             app:layout_constraintTop_toTopOf="parent"
@@ -972,7 +972,7 @@
                 android:id="@+id/layoutLayerFooter"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
-                android:background="#424242"
+                android:background="@color/light_surface_alt"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
@@ -982,7 +982,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_gravity="top"
-                    android:background="#616161" />
+                    android:background="@color/light_divider" />
 
                 <!-- Mode Normal (SS 1): Tombol Toggle Mode Centang & Tombol Panah 4-Arah -->
                 <RelativeLayout

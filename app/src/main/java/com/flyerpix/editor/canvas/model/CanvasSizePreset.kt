@@ -99,6 +99,12 @@ data class CanvasSizePreset(
                 description = "Format feed Instagram, avatar profil WhatsApp/IG"
             ),
             CanvasSizePreset(
+                name = "Instagram Post (4:5)",
+                width = 1080,
+                height = 1350,
+                description = "Post gambar Instagram feed format portrait"
+            ),
+            CanvasSizePreset(
                 name = "YouTube Thumbnail (16:9)",
                 width = 1280,
                 height = 720,

@@ -34,7 +34,7 @@ class EffectsController(
         const val TOOL_BLUR     = "effects_blur"
 
         const val COLOR_ACTIVE = 0xFF18C8F5.toInt()
-        const val COLOR_INACTIVE = 0xFFCCCCCC.toInt()
+        const val COLOR_INACTIVE = 0xFF5F6B7A.toInt()
     }
 
     private val toolItems = LinkedHashMap<String, ViewGroup>()

@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#212121"
+    android:background="@color/light_surface"
     android:paddingBottom="24dp">
 
     <!-- Top Drag Handle Bar -->
@@ -14,7 +14,7 @@
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_marginTop="10dp"
-        android:background="#666666"
+        android:background="@color/light_divider"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -38,7 +38,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
         android:text="Latar Belakang Kanvas"
-        android:textColor="@android:color/white"
+        android:textColor="@color/light_text_primary"
         android:textSize="17sp"
         android:textStyle="bold"
         app:layout_constraintStart_toEndOf="@id/ivHeaderIcon"
@@ -53,7 +53,7 @@
         android:layout_marginEnd="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_sharp_clear_24px"
-        app:tint="#B0BEC5"
+        app:tint="@color/light_text_secondary"
         android:contentDescription="Close Bottom Sheet"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/ivHeaderIcon"
@@ -65,7 +65,7 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="12dp"
-        android:background="#123065"
+        android:background="@color/light_divider"
         app:layout_constraintTop_toBottomOf="@id/ivHeaderIcon" />
 
     <!-- Mode Selector Chips (Transparan, Solid, Gradasi) -->
@@ -85,8 +85,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Transparan"
-            android:textColor="@android:color/white"
-            app:chipBackgroundColor="#2C3E50" />
+            android:textColor="@color/light_text_primary"
+            app:chipBackgroundColor="@color/light_chip" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipSolidColor"
@@ -94,8 +94,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Warna Solid"
-            android:textColor="@android:color/white"
-            app:chipBackgroundColor="#2C3E50" />
+            android:textColor="@color/light_text_primary"
+            app:chipBackgroundColor="@color/light_chip" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipGradient"
@@ -103,8 +103,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Gradasi"
-            android:textColor="@android:color/white"
-            app:chipBackgroundColor="#2C3E50" />
+            android:textColor="@color/light_text_primary"
+            app:chipBackgroundColor="@color/light_chip" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipImage"
@@ -112,8 +112,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Gambar"
-            android:textColor="@android:color/white"
-            app:chipBackgroundColor="#2C3E50" />
+            android:textColor="@color/light_text_primary"
+            app:chipBackgroundColor="@color/light_chip" />
     </com.google.android.material.chip.ChipGroup>
 
     <!-- SECTION: Background Transparan -->
@@ -123,7 +123,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
         android:layout_marginTop="14dp"
-        android:background="#263238"
+        android:background="@color/light_surface_alt"
         android:orientation="vertical"
         android:padding="16dp"
         android:visibility="gone"
@@ -133,7 +133,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🏁 Kanvas Transparan Aktif"
-            android:textColor="#18C8F5"
+            android:textColor="#1769FF"
             android:textSize="15sp"
             android:textStyle="bold" />
 
@@ -142,7 +142,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="Latar belakang kanvas menjadi tembus pandang (checkerboard). Sangat cocok untuk membuat stiker, logo, atau gambar transparan dengan format ekspor PNG."
-            android:textColor="#CFD8DC"
+            android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -161,7 +161,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Pilihan Warna Cepat:"
-            android:textColor="#B0BEC5"
+            android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
 
         <HorizontalScrollView
@@ -185,10 +185,10 @@
             android:layout_height="40dp"
             android:layout_marginTop="12dp"
             android:text="+ Pilih Warna Kustom (HSV / Hex)"
-            android:textColor="#18C8F5"
+            android:textColor="#1769FF"
             android:textSize="12sp"
             app:cornerRadius="8dp"
-            app:strokeColor="#18C8F5" />
+            app:strokeColor="#1769FF" />
     </LinearLayout>
 
     <!-- SECTION: Warna Gradasi -->
@@ -206,7 +206,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Preset Gradasi Profesional:"
-            android:textColor="#B0BEC5"
+            android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
 
         <androidx.recyclerview.widget.RecyclerView
@@ -231,7 +231,7 @@
                 android:layout_height="wrap_content"
                 android:checked="true"
                 android:text="Linear"
-                android:textColor="@android:color/white"
+                android:textColor="@color/light_text_primary"
                 android:textSize="13sp" />
 
             <RadioButton
@@ -240,7 +240,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:text="Radial"
-                android:textColor="@android:color/white"
+                android:textColor="@color/light_text_primary"
                 android:textSize="13sp" />
 
             <RadioButton
@@ -249,7 +249,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:text="Sweep"
-                android:textColor="@android:color/white"
+                android:textColor="@color/light_text_primary"
                 android:textSize="13sp" />
         </RadioGroup>
 
@@ -267,7 +267,7 @@
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
                 android:text="Sudut (0°)"
-                android:textColor="#CFD8DC"
+                android:textColor="@color/light_text_secondary"
                 android:textSize="12sp" />
 
             <com.google.android.material.slider.Slider
@@ -281,7 +281,7 @@
                 android:value="0"
                 app:thumbColor="#18C8F5"
                 app:trackColorActive="#18C8F5"
-                app:trackColorInactive="#123065" />
+                app:trackColorInactive="@color/light_track" />
         </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
@@ -291,10 +291,10 @@
             android:layout_height="40dp"
             android:layout_marginTop="8dp"
             android:text="+ Buat Gradasi Kustom"
-            android:textColor="#18C8F5"
+            android:textColor="#1769FF"
             android:textSize="12sp"
             app:cornerRadius="8dp"
-            app:strokeColor="#18C8F5" />
+            app:strokeColor="#1769FF" />
     </LinearLayout>
 
     <!-- SECTION: Gambar Latar Belakang (Prompt 45) -->
@@ -312,7 +312,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Sumber Gambar:"
-            android:textColor="#B0BEC5"
+            android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
 
         <LinearLayout
@@ -329,12 +329,12 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="6dp"
                 android:text="Dari Galeri"
-                android:textColor="#18C8F5"
+                android:textColor="#1769FF"
                 android:textSize="13sp"
                 app:cornerRadius="8dp"
-                app:strokeColor="#18C8F5"
+                app:strokeColor="#1769FF"
                 app:icon="@drawable/ic_sharp_photo_24px"
-                app:iconTint="#18C8F5" />
+                app:iconTint="#1769FF" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnFromCamera"
@@ -344,12 +344,12 @@
                 android:layout_weight="1"
                 android:layout_marginStart="6dp"
                 android:text="Dari Kamera"
-                android:textColor="#18C8F5"
+                android:textColor="#1769FF"
                 android:textSize="13sp"
                 app:cornerRadius="8dp"
-                app:strokeColor="#18C8F5"
+                app:strokeColor="#1769FF"
                 app:icon="@drawable/ic_sharp_photo_camera_24px"
-                app:iconTint="#18C8F5" />
+                app:iconTint="#1769FF" />
         </LinearLayout>
 
         <TextView
@@ -357,7 +357,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Gambar akan otomatis di-crop/fill menyesuaikan rasio aspek kanvas aktif."
-            android:textColor="#78909C"
+            android:textColor="@color/light_text_tertiary"
             android:textSize="12sp" />
 
         <com.google.android.material.button.MaterialButton

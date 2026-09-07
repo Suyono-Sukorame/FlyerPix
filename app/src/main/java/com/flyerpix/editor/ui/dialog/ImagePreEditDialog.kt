@@ -22,7 +22,7 @@ class ImagePreEditDialog : DialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setStyle(STYLE_NO_TITLE, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        setStyle(STYLE_NO_TITLE, android.R.style.Theme_Light_NoTitleBar_Fullscreen)
     }
 
     override fun onCreateView(
@@ -72,7 +72,7 @@ class ImagePreEditDialog : DialogFragment() {
         super.onStart()
         dialog?.window?.apply {
             setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            setBackgroundDrawable(ColorDrawable(Color.BLACK))
+            setBackgroundDrawable(ColorDrawable(Color.WHITE))
         }
     }
 

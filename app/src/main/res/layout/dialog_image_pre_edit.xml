@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#111111">
+    android:background="@color/light_surface">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,7 +13,7 @@
         android:gravity="center_vertical"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
-        android:background="#1C1C1C">
+        android:background="@color/light_surface_alt">
 
         <TextView
             android:id="@+id/btnCancel"
@@ -22,7 +22,7 @@
             android:padding="12dp"
             android:text="Batal"
             android:textSize="16sp"
-            android:textColor="@android:color/white"
+            android:textColor="@color/light_text_primary"
             android:clickable="true"
             android:focusable="true"
             android:background="?attr/selectableItemBackground" />
@@ -35,7 +35,7 @@
             android:text="Sesuaikan Gambar"
             android:textSize="17sp"
             android:textStyle="bold"
-            android:textColor="@android:color/white" />
+            android:textColor="@color/light_text_primary" />
 
         <TextView
             android:id="@+id/btnOk"
@@ -45,7 +45,7 @@
             android:text="OK"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="#42A5F5"
+            android:textColor="#1769FF"
             android:clickable="true"
             android:focusable="true"
             android:background="?attr/selectableItemBackground" />
@@ -56,12 +56,12 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#181818" />
+        android:background="@color/light_surface_alt" />
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#333333" />
+        android:background="@color/light_divider" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -70,7 +70,7 @@
         android:gravity="center"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
-        android:background="#1C1C1C">
+        android:background="@color/light_surface_alt">
 
         <ImageButton
             android:id="@+id/btnRotateLeft"
@@ -80,7 +80,7 @@
             android:contentDescription="Rotasi Kiri"
             android:src="@drawable/ic_rotate_left_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
+            android:tint="@color/light_text_primary"
             android:scaleType="center" />
 
         <ImageButton
@@ -91,7 +91,7 @@
             android:contentDescription="Rotasi Kanan"
             android:src="@drawable/ic_rotate_right_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
+            android:tint="@color/light_text_primary"
             android:scaleType="center" />
 
         <ImageButton
@@ -102,7 +102,7 @@
             android:contentDescription="Zoom Keluar"
             android:src="@drawable/ic_zoom_out_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
+            android:tint="@color/light_text_primary"
             android:scaleType="center" />
 
         <ImageButton
@@ -113,7 +113,7 @@
             android:contentDescription="Zoom Masuk"
             android:src="@drawable/ic_zoom_in_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
+            android:tint="@color/light_text_primary"
             android:scaleType="center" />
 
         <ImageButton
@@ -124,7 +124,7 @@
             android:contentDescription="Cermin Kiri-Kanan"
             android:src="@drawable/ic_flip_horizontal_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
+            android:tint="@color/light_text_primary"
             android:scaleType="center" />
 
         <ImageButton
@@ -135,7 +135,7 @@
             android:contentDescription="Cermin Atas-Bawah"
             android:src="@drawable/ic_flip_vertical_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
+            android:tint="@color/light_text_primary"
             android:scaleType="center" />
 
         <ImageButton
@@ -146,7 +146,7 @@
             android:contentDescription="Kunci Rasio"
             android:src="@drawable/ic_lock_open_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
+            android:tint="@color/light_text_primary"
             android:scaleType="center" />
 
         <ImageButton
@@ -157,7 +157,7 @@
             android:contentDescription="Bentuk Potongan"
             android:src="@drawable/ic_sharp_crop_free_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
+            android:tint="@color/light_text_primary"
             android:scaleType="center" />
     </LinearLayout>
 </LinearLayout>

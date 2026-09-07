@@ -27,4 +27,14 @@
     <!-- Turunan gelap navy untuk permukaan panel -->
     <color name="brand_surface_dark">#0A1C4E</color>
     <color name="brand_surface_darker">#123065</color>
+
+    <!-- ===== Light Mode Palette (menggantikan panel gelap) ===== -->
+    <color name="light_surface">#FFFFFF</color>
+    <color name="light_surface_alt">#F2F4F8</color>
+    <color name="light_chip">#E3EBF6</color>
+    <color name="light_divider">#E0E0E0</color>
+    <color name="light_track">#D4DAE3</color>
+    <color name="light_text_primary">#1A1A1A</color>
+    <color name="light_text_secondary">#5F6B7A</color>
+    <color name="light_text_tertiary">#8A94A6</color>
 </resources>

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#212121"
+    android:background="@color/light_surface"
     android:paddingBottom="24dp">
 
     <!-- Drag Handle -->
@@ -13,7 +13,7 @@
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_marginTop="10dp"
-        android:background="#666666"
+        android:background="@color/light_divider"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -38,7 +38,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
         android:text="Proyek Saya (.plp)"
-        android:textColor="@android:color/white"
+        android:textColor="@color/light_text_primary"
         android:textSize="17sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@id/ivHeaderIcon"
@@ -51,10 +51,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:background="#37474F"
+        android:background="@color/light_chip"
         android:paddingHorizontal="8dp"
         android:paddingVertical="2dp"
-        android:textColor="#18C8F5"
+        android:textColor="#07164F"
         android:textSize="12sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@id/tvHeaderTitle"
@@ -70,11 +70,11 @@
         android:layout_height="36dp"
         android:layout_marginEnd="16dp"
         android:text="Impor .plp"
-        android:textColor="#18C8F5"
+        android:textColor="#1769FF"
         android:textSize="12sp"
         app:icon="@drawable/ic_sharp_photo_camera_24px"
         app:iconSize="16dp"
-        app:iconTint="#18C8F5"
+        app:iconTint="#1769FF"
         app:layout_constraintBottom_toBottomOf="@id/ivHeaderIcon"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/ivHeaderIcon" />
@@ -84,7 +84,7 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="12dp"
-        android:background="#333333"
+        android:background="@color/light_divider"
         app:layout_constraintTop_toBottomOf="@id/ivHeaderIcon" />
 
     <!-- RecyclerView Proyek -->
@@ -116,14 +116,14 @@
             android:layout_height="56dp"
             android:contentDescription="Empty Icon"
             android:src="@drawable/ic_nav_presets_24px"
-            app:tint="#555555" />
+            app:tint="@color/light_text_tertiary" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="Belum Ada Proyek Tersimpan"
-            android:textColor="#CCCCCC"
+            android:textColor="@color/light_text_primary"
             android:textSize="15sp"
             android:textStyle="bold" />
 
@@ -134,7 +134,7 @@
             android:paddingHorizontal="32dp"
             android:text="Simpan kanvas Anda melalui menu 'Simpan sebagai Proyek' agar muncul di sini."
             android:textAlignment="center"
-            android:textColor="#888888"
+            android:textColor="@color/light_text_secondary"
             android:textSize="12sp" />
 
     </LinearLayout>

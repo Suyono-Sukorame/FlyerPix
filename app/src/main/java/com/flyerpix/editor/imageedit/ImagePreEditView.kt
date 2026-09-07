@@ -41,23 +41,23 @@ class ImagePreEditView @JvmOverloads constructor(
     private val density = resources.displayMetrics.density
     private val minNormSize = 0.03f
 
-    private val bgPaint = Paint().apply { color = Color.rgb(24, 24, 24) }
+    private val bgPaint = Paint().apply { color = Color.rgb(242, 244, 248) }
     private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val scrimPaint = Paint().apply { color = 0x73000000 }
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f * density
-        color = Color.WHITE
+        color = Color.rgb(26, 26, 26)
     }
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1f * density
-        color = 0x55FFFFFF
+        color = 0x551A1A1A
     }
     private val handlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f * density
-        color = Color.WHITE
+        color = Color.rgb(26, 26, 26)
     }
     private val handleFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(66, 165, 245)

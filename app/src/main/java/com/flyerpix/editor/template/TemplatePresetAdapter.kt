@@ -50,16 +50,16 @@ class TemplatePresetAdapter(
                 card.strokeWidth = 4
                 tvTitle.setTextColor(0xFF18C8F5.toInt())
             } else {
-                card.strokeColor = 0xFF555555.toInt()
+                card.strokeColor = 0xFFE0E0E0.toInt()
                 card.strokeWidth = 2
-                tvTitle.setTextColor(0xFFCCCCCC.toInt())
+                tvTitle.setTextColor(0xFF5F6B7A.toInt())
             }
 
             if (preset.isMyProjects) {
                 tvPreviewText.visibility = View.GONE
                 imgIcon.visibility = View.VISIBLE
                 imgIcon.setImageResource(R.drawable.ic_outline_photo_24px)
-                previewContainer.setBackgroundColor(0xFF1A3A6B.toInt())
+                previewContainer.setBackgroundColor(0xFFE3ECF9.toInt())
             } else {
                 imgIcon.visibility = View.GONE
                 tvPreviewText.visibility = View.VISIBLE

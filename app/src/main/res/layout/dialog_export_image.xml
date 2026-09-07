@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#242424"
+    android:background="@color/light_surface"
     android:orientation="vertical"
     android:padding="20dp">
 
@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:text="Ekspor Gambar (Save as Image)"
-            android:textColor="@android:color/white"
+            android:textColor="@color/light_text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -37,21 +37,21 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:text="Simpan hasil desain tanpa handle seleksi dengan resolusi tajam hingga 4K Ultra HD."
-        android:textColor="#9E9E9E"
+        android:textColor="@color/light_text_secondary"
         android:textSize="12sp" />
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginVertical="14dp"
-        android:background="#3A3A3A" />
+        android:background="@color/light_divider" />
 
     <!-- Format Berkas (PNG vs JPEG) -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Format Gambar"
-        android:textColor="#B0BEC5"
+        android:textColor="@color/light_text_secondary"
         android:textSize="12sp"
         android:textStyle="bold" />
 
@@ -69,7 +69,7 @@
             android:layout_weight="1"
             android:checked="true"
             android:text="PNG (Transparan)"
-            android:textColor="@android:color/white"
+            android:textColor="@color/light_text_primary"
             android:textSize="13sp" />
 
         <RadioButton
@@ -78,7 +78,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="JPEG / JPG"
-            android:textColor="@android:color/white"
+            android:textColor="@color/light_text_primary"
             android:textSize="13sp" />
     </RadioGroup>
 
@@ -88,7 +88,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
         android:text="Kualitas &amp; Dimensi (Ultra HD / 4K)"
-        android:textColor="#B0BEC5"
+        android:textColor="@color/light_text_secondary"
         android:textSize="12sp"
         android:textStyle="bold" />
 
@@ -125,7 +125,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="number"
                 android:maxLines="1"
-                android:textColor="@android:color/white"
+                android:textColor="@color/light_text_primary"
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -145,7 +145,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="number"
                 android:maxLines="1"
-                android:textColor="@android:color/white"
+                android:textColor="@color/light_text_primary"
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
@@ -155,7 +155,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
-        android:background="#2E3A3F"
+        android:background="@color/light_surface_alt"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:padding="10dp">

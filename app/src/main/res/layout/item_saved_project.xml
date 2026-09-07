@@ -10,10 +10,10 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
-    app:cardBackgroundColor="@color/brand_surface_darker"
+    app:cardBackgroundColor="@color/light_surface"
     app:cardCornerRadius="10dp"
     app:cardElevation="2dp"
-    app:strokeColor="#3E3E3E"
+    app:strokeColor="@color/light_divider"
     app:strokeWidth="1dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -25,13 +25,13 @@
             android:id="@+id/ivProjectIcon"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="#37474F"
+            android:background="@color/light_chip"
             android:padding="8dp"
             android:src="@drawable/ic_nav_presets_24px"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="#18C8F5"
+            app:tint="#1769FF"
             android:contentDescription="Project Icon" />
 
         <TextView
@@ -42,7 +42,7 @@
             android:layout_marginEnd="8dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:textColor="@android:color/white"
+            android:textColor="@color/light_text_primary"
             android:textSize="15sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toStartOf="@+id/btnDeleteProject"
@@ -59,7 +59,7 @@
             android:layout_marginEnd="8dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:textColor="#9E9E9E"
+            android:textColor="@color/light_text_secondary"
             android:textSize="12sp"
             app:layout_constraintEnd_toStartOf="@+id/btnDeleteProject"
             app:layout_constraintStart_toEndOf="@+id/ivProjectIcon"

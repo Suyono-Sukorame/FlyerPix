@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#212121"
+    android:background="@color/light_surface"
     android:paddingBottom="16dp">
 
     <!-- Top Drag Handle Bar -->
@@ -14,7 +14,7 @@
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_marginTop="10dp"
-        android:background="#666666"
+        android:background="@color/light_divider"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -38,7 +38,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
         android:text="Pengelola Lapisan"
-        android:textColor="@android:color/white"
+        android:textColor="@color/light_text_primary"
         android:textSize="17sp"
         android:textStyle="bold"
         app:layout_constraintStart_toEndOf="@id/ivHeaderIcon"
@@ -51,10 +51,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:background="#37474F"
+        android:background="@color/light_chip"
         android:paddingHorizontal="8dp"
         android:paddingVertical="2dp"
-        android:textColor="#18C8F5"
+        android:textColor="#07164F"
         android:textSize="12sp"
         android:textStyle="bold"
         tools:text="3 Layer"
@@ -84,7 +84,7 @@
         android:layout_marginEnd="12dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_sharp_clear_24px"
-        app:tint="#AAAAAA"
+        app:tint="@color/light_text_secondary"
         android:contentDescription="Tutup"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/tvHeaderTitle"
@@ -96,7 +96,7 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="12dp"
-        android:background="#333333"
+        android:background="@color/light_divider"
         app:layout_constraintTop_toBottomOf="@id/tvHeaderTitle" />
 
     <!-- Empty State View: Ditampilkan jika belum ada layer di kanvas -->
@@ -116,7 +116,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:src="@drawable/ic_layers_24px"
-            app:tint="#555555"
+            app:tint="@color/light_text_tertiary"
             android:contentDescription="Empty state icon" />
 
         <TextView
@@ -125,7 +125,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Belum ada layer di kanvas"
-            android:textColor="#777777"
+            android:textColor="@color/light_text_secondary"
             android:textSize="14sp" />
     </LinearLayout>
 
@@ -151,7 +151,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:background="@color/brand_surface_darker"
+        android:background="@color/light_surface_alt"
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
         android:paddingVertical="10dp"
@@ -167,7 +167,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Pilih minimal 2 layer"
-            android:textColor="#BBBBBB"
+            android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
 
         <com.google.android.material.button.MaterialButton
@@ -176,7 +176,7 @@
             android:layout_width="wrap_content"
             android:layout_height="40dp"
             android:text="Batal"
-            android:textColor="#AAAAAA"
+            android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
 
         <com.google.android.material.button.MaterialButton

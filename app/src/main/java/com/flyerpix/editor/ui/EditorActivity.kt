@@ -22,7 +22,7 @@ import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentPagerAdapter
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.bumptech.glide.Glide
 import com.flyerpix.editor.R
 import com.flyerpix.editor.editableimageview.EditableImageView
@@ -296,11 +296,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 animateNavTranslation(if (effectSettingsOpen) offset else 0)
                 if (effectSettingsOpen) {
                     listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
-                        .filter { it != null }
                         .forEach { it.animateLayoutHeight((107 * density).toInt()) }
                 } else {
                     listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
-                        .filter { it != null }
                         .forEach {
                             it.animateLayoutHeight((107 * density).toInt())
                             it.animateLayoutMarginBottom((56 * density).toInt())
@@ -867,7 +865,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private fun initializeBottomSheetBehavior() {
         toolsBottomSheetBehavior = BottomSheetBehavior.from(binding.toolsBottomSheet)
-        toolsBottomSheetBehavior.setBottomSheetCallback(createBottomSheetCallback())
+        toolsBottomSheetBehavior.addBottomSheetCallback(createBottomSheetCallback()!!)
     }
 
     private fun createBottomSheetCallback(): BottomSheetBehavior.BottomSheetCallback? {
@@ -908,7 +906,6 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         if (!expanded) {
             // Kontraksi: semua panel kembali ke ukuran default & nav dipanggil kembali.
             listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
-                .filter { it != null }
                 .forEach { panel ->
                     panel.animateLayoutHeight(collapsedH)
                     panel.animateLayoutMarginBottom(collapsedMargin)
@@ -923,11 +920,11 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             R.id.nav_canvas -> binding.canvasMenuPanel
             R.id.nav_effects -> binding.effectsMenuPanel
             else -> return
-        } ?: return
+        }
 
         val navOffset = (56 * density).toInt()
         listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
-            .filter { it != null && it != activePanel }
+            .filter { it != activePanel }
             .forEach { panel -> panel.animateLayoutHeight(collapsedH) }
         activePanel.animateLayoutHeight(expandedH)
         activePanel.animateLayoutMarginBottom(0)
@@ -1100,7 +1097,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         }
     }
 
-    private class ToolsViewPagerAdapter(fm: FragmentManager, var tabsNum: Int) : FragmentPagerAdapter(fm) {
+    @Suppress("DEPRECATION")
+    private class ToolsViewPagerAdapter(fm: FragmentManager, var tabsNum: Int) : androidx.fragment.app.FragmentPagerAdapter(fm) {
         override fun getItem(position: Int): Fragment {
             var fragment: Fragment? = null
             if (position == PAINT) {

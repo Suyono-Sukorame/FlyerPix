@@ -90,6 +90,7 @@ class ImageSizeDialog private constructor(
         binding.btnChip16x9.setOnClickListener { applyPresetByChip(1280, 720) }
         binding.btnChipBanner.setOnClickListener { applyPresetByChip(2560, 1440) }
         binding.btnChipFbCover.setOnClickListener { applyPresetByChip(820, 312) }
+        binding.btnChipInstagram.setOnClickListener { applyPresetByChip(1080, 1350) }
 
         // 5. Watcher untuk sinkronisasi teks input Width & Height
         val textWatcher = object : TextWatcher {

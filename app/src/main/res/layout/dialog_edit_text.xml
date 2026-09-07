@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:padding="20dp">
 
-    <!-- Header dengan Tombol Cepat (ALL CAPS / lowercase) -->
+    <!-- Header dengan Tombol Cepat (Clear) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -37,55 +37,100 @@
 
     </LinearLayout>
 
-    <LinearLayout
+    <!-- Toolbar Formatting Kustom (Bold / Italic / Underline / Strikethrough) -->
+    <HorizontalScrollView
+        android:id="@+id/formatToolbarScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="10dp"
-        android:gravity="center"
-        android:orientation="horizontal">
+        android:scrollbars="none">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnUppercase"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="38dp"
-            android:layout_weight="1"
-            android:minWidth="0dp"
-            android:paddingHorizontal="4dp"
-            android:text="UPPERCASE"
-            android:textSize="10sp"
-            android:textStyle="bold"
-            app:cornerRadius="8dp"
-            app:strokeColor="?attr/colorPrimary" />
+        <LinearLayout
+            android:id="@+id/formatToolbarContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCapitalize"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="38dp"
-            android:layout_marginStart="6dp"
-            android:layout_weight="1"
-            android:minWidth="0dp"
-            android:paddingHorizontal="4dp"
-            android:text="Capitalize"
-            android:textSize="10sp"
-            app:cornerRadius="8dp"
-            app:strokeColor="#8A94A6" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBold"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="44dp"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:text="B"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLowercase"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="38dp"
-            android:layout_marginStart="6dp"
-            android:layout_weight="1"
-            android:minWidth="0dp"
-            android:paddingHorizontal="4dp"
-            android:text="lowercase"
-            android:textSize="10sp"
-            app:cornerRadius="8dp"
-            app:strokeColor="#8A94A6" />
-    </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnItalic"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="44dp"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:text="I"
+                android:textSize="18sp"
+                android:textStyle="italic" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnUnderline"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="44dp"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:text="U"
+                android:textSize="18sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStrikethrough"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="44dp"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:text="S"
+                android:textSize="18sp"
+                android:textColor="#8A94A6" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="30dp"
+                android:layout_marginHorizontal="8dp"
+                android:background="#DDDDDD" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnUppercase"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="UPPERCASE"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCapitalize"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="Capitalize"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLowercase"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="lowercase"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <!-- Input Teks Multi-line -->
     <com.google.android.material.textfield.TextInputLayout
@@ -108,7 +153,8 @@
             android:minLines="4"
             android:maxLines="8"
             android:scrollbars="vertical"
-            android:textAppearance="?attr/textAppearanceBody1" />
+            android:textAppearance="?attr/textAppearanceBody1"
+            android:textColorHint="@color/brand_blue" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

@@ -10,7 +10,7 @@
         android:layout_height="52dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:background="#0B1838"
+        android:background="@color/light_surface_alt"
         android:paddingHorizontal="12dp">
 
         <TextView
@@ -19,7 +19,7 @@
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:text="Font"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/light_text_primary"
             android:textSize="16sp"
             android:textStyle="bold" />
 
@@ -29,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="CANCEL"
-            android:textColor="#B8C4DA"
+            android:textColor="@color/light_text_secondary"
             android:textSize="11sp" />
 
         <com.google.android.material.button.MaterialButton

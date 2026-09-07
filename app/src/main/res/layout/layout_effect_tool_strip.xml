@@ -3,7 +3,7 @@
     android:id="@+id/effectToolStripScroll"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/brand_surface_dark"
+    android:background="@color/light_surface"
     android:elevation="6dp"
     android:scrollbars="none">
 
