@@ -433,9 +433,14 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     fun showEditTextDialog(textLayer: com.flyerpix.editor.canvas.model.TextLayer) {
         pixelCanvasView.setTextEditMode(true)
-        val dialog = com.flyerpix.editor.ui.dialog.EditTextDialog.show(this, textLayer.text) { newText ->
+        val dialog = com.flyerpix.editor.ui.dialog.EditTextDialog.show(
+            this,
+            textLayer.text,
+            textLayer.richTextSpans
+        ) { newText, spans ->
             pixelCanvasView.runRecordedAction("Ubah Teks") {
                 textLayer.text = newText
+                textLayer.richTextSpans = spans.toMutableList()
             }
             pixelCanvasView.invalidate()
         }

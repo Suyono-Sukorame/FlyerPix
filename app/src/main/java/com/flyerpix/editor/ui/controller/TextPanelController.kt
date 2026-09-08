@@ -2642,13 +2642,17 @@ private fun registerTextPanels() {
         b.sliderPosX.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
             b.tvPosXLabel.text = String.format(Locale.US, "X: %.0f px", value)
-            applyToTextLayer { it.x = value }
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@addOnChangeListener
+            pixelCanvasView.runRecordedAction("Atur Posisi X") { layer.x = value }
+            pixelCanvasView.invalidate()
         }
 
         b.sliderPosY.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
             b.tvPosYLabel.text = String.format(Locale.US, "Y: %.0f px", value)
-            applyToTextLayer { it.y = value }
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@addOnChangeListener
+            pixelCanvasView.runRecordedAction("Atur Posisi Y") { layer.y = value }
+            pixelCanvasView.invalidate()
         }
 
         fun center(horizontal: Boolean, vertical: Boolean) {

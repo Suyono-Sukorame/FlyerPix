@@ -58,6 +58,17 @@ data class GradientColorDto(
     val angle: Float = 0f
 )
 
+data class RichTextSpanDto(
+    val start: Int = 0,
+    val end: Int = 0,
+    val color: Int? = null,
+    val textSize: Float? = null,
+    val isBold: Boolean = false,
+    val isItalic: Boolean = false,
+    val isUnderline: Boolean = false,
+    val isStrikethrough: Boolean = false
+)
+
 // ─── Layer ────────────────────────────────────────────────────────────────────
 
 /**
@@ -88,6 +99,7 @@ data class LayerDto(
 
     // ── TextLayer ────────────────────────────────────────────────────────────
     val text: String? = null,
+    val richTextSpans: List<RichTextSpanDto> = emptyList(),
     val textSize: Float? = null,
     val textColor: Int? = null,
     val fontName: String? = null,

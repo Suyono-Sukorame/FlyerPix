@@ -17,8 +17,15 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.os.Build
 import android.text.Layout
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.style.AbsoluteSizeSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.StrikethroughSpan
+import android.text.style.StyleSpan
+import android.text.style.UnderlineSpan
 import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -50,6 +57,7 @@ data class TextLayer(
     override var isLocked: Boolean = false,
     override var isVisible: Boolean = true,
     var text: String = "New Text",
+    var richTextSpans: MutableList<RichTextSpan> = mutableListOf(),
     var textSize: Float = 64f,
     var textColor: Int = Color.WHITE,
     var typeface: Typeface? = null,
@@ -275,8 +283,28 @@ data class TextLayer(
         return p
     }
 
-    private fun createLayout(paint: TextPaint): StaticLayout {
+    private fun styledText(paint: TextPaint): CharSequence {
         val content = if (text.isEmpty()) " " else text
+        if (richTextSpans.isEmpty() || paint.style != Paint.Style.FILL || paint.color != textColor) return content
+
+        val styled = SpannableString(content)
+        richTextSpans.forEach { span ->
+            val start = span.start.coerceIn(0, content.length)
+            val end = span.end.coerceIn(start, content.length)
+            if (end <= start) return@forEach
+            span.color?.let { styled.setSpan(ForegroundColorSpan(it), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+            span.textSize?.let { styled.setSpan(AbsoluteSizeSpan(it.toInt().coerceAtLeast(1), false), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+            if (span.isBold && span.isItalic) styled.setSpan(StyleSpan(Typeface.BOLD_ITALIC), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            else if (span.isBold) styled.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            else if (span.isItalic) styled.setSpan(StyleSpan(Typeface.ITALIC), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            if (span.isUnderline) styled.setSpan(UnderlineSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            if (span.isStrikethrough) styled.setSpan(StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        return styled
+    }
+
+    private fun createLayout(paint: TextPaint): StaticLayout {
+        val content = styledText(paint)
         val lines = content.split("\n")
         val useWrap = wrapTextEnabled && wrapWidth > 0f
         val layoutWidth = if (useWrap) {
@@ -284,7 +312,7 @@ data class TextLayer(
         } else {
             var maxLineWidth = 0f
             for (line in lines) {
-                val width = paint.measureText(line)
+                val width = paint.measureText(line.toString())
                 if (width > maxLineWidth) maxLineWidth = width
             }
             max(1, ceil(maxLineWidth).toInt() + 4)

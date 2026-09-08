@@ -282,16 +282,26 @@ class ObjectPanelController(
         b.sliderPosY.valueFrom = -range
         b.sliderPosY.valueTo = range
 
-        b.sliderPosX.addOnChangeListener { _, v, _ -> applyToLayer { it.x = v }; syncPosLabels() }
-        b.sliderPosY.addOnChangeListener { _, v, _ -> applyToLayer { it.y = v }; syncPosLabels() }
-        b.btnPosXMinus.setOnClickListener { applyToLayer { it.x -= 1f }; syncPosLabels() }
-        b.btnPosXPlus.setOnClickListener { applyToLayer { it.x += 1f }; syncPosLabels() }
-        b.btnPosYMinus.setOnClickListener { applyToLayer { it.y -= 1f }; syncPosLabels() }
-        b.btnPosYPlus.setOnClickListener { applyToLayer { it.y += 1f }; syncPosLabels() }
-        b.btnPosCenterH.setOnClickListener { applyToLayer { it.x = centerX(it) }; syncPosLabels() }
-        b.btnPosCenterV.setOnClickListener { applyToLayer { it.y = centerY(it) }; syncPosLabels() }
-        b.btnPosCenter.setOnClickListener { applyToLayer { it.x = centerX(it); it.y = centerY(it) }; syncPosLabels() }
-        b.btnResetPosition.setOnClickListener { applyToLayer { it.x = 0f; it.y = 0f }; syncPosLabels() }
+        b.sliderPosX.addOnChangeListener { _, v, _ ->
+            if (pixelCanvasView.selectedLayer !is TextLayer) {
+                applyToLayer { it.x = v }
+                syncPosLabels()
+            }
+        }
+        b.sliderPosY.addOnChangeListener { _, v, _ ->
+            if (pixelCanvasView.selectedLayer !is TextLayer) {
+                applyToLayer { it.y = v }
+                syncPosLabels()
+            }
+        }
+        b.btnPosXMinus.setOnClickListener { if (pixelCanvasView.selectedLayer !is TextLayer) { applyToLayer { it.x -= 1f }; syncPosLabels() } }
+        b.btnPosXPlus.setOnClickListener { if (pixelCanvasView.selectedLayer !is TextLayer) { applyToLayer { it.x += 1f }; syncPosLabels() } }
+        b.btnPosYMinus.setOnClickListener { if (pixelCanvasView.selectedLayer !is TextLayer) { applyToLayer { it.y -= 1f }; syncPosLabels() } }
+        b.btnPosYPlus.setOnClickListener { if (pixelCanvasView.selectedLayer !is TextLayer) { applyToLayer { it.y += 1f }; syncPosLabels() } }
+        b.btnPosCenterH.setOnClickListener { if (pixelCanvasView.selectedLayer !is TextLayer) { applyToLayer { it.x = centerX(it) }; syncPosLabels() } }
+        b.btnPosCenterV.setOnClickListener { if (pixelCanvasView.selectedLayer !is TextLayer) { applyToLayer { it.y = centerY(it) }; syncPosLabels() } }
+        b.btnPosCenter.setOnClickListener { if (pixelCanvasView.selectedLayer !is TextLayer) { applyToLayer { it.x = centerX(it); it.y = centerY(it) }; syncPosLabels() } }
+        b.btnResetPosition.setOnClickListener { if (pixelCanvasView.selectedLayer !is TextLayer) { applyToLayer { it.x = 0f; it.y = 0f }; syncPosLabels() } }
     }
 
     private fun syncPositionUI(layer: CanvasLayer) {

@@ -210,6 +210,18 @@ object ProjectSerializer {
     private fun textLayerToDto(l: TextLayer): LayerDto = baseLayerFields(l).copy(
         type                = "TEXT",
         text                = l.text,
+        richTextSpans       = l.richTextSpans.map { span ->
+            RichTextSpanDto(
+                start = span.start,
+                end = span.end,
+                color = span.color,
+                textSize = span.textSize,
+                isBold = span.isBold,
+                isItalic = span.isItalic,
+                isUnderline = span.isUnderline,
+                isStrikethrough = span.isStrikethrough
+            )
+        },
         textSize            = l.textSize,
         textColor           = l.textColor,
         fontName            = l.fontName,
@@ -448,6 +460,18 @@ object ProjectSerializer {
                 isLocked           = dto.isLocked,
                 isVisible          = dto.isVisible,
                 text               = dto.text ?: "",
+                richTextSpans      = dto.richTextSpans.map { span ->
+                    RichTextSpan(
+                        start = span.start,
+                        end = span.end,
+                        color = span.color,
+                        textSize = span.textSize,
+                        isBold = span.isBold,
+                        isItalic = span.isItalic,
+                        isUnderline = span.isUnderline,
+                        isStrikethrough = span.isStrikethrough
+                    )
+                }.toMutableList(),
                 textSize           = dto.textSize ?: 64f,
                 textColor          = dto.textColor ?: Color.WHITE,
                 typeface           = FontManager.findFont(dto.fontName)?.typeface,

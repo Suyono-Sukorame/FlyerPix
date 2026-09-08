@@ -94,6 +94,28 @@
                 android:textColor="@color/brand_navy"
                 android:textSize="18sp" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTextColor"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="Color"
+                android:textColor="@color/brand_navy"
+                android:textSize="11sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTextSize"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="Size"
+                android:textColor="@color/brand_navy"
+                android:textSize="11sp" />
+
             <View
                 android:layout_width="1dp"
                 android:layout_height="30dp"
