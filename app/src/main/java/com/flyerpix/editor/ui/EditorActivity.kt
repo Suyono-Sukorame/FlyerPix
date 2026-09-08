@@ -74,6 +74,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     // ── Controllers untuk memisahkan tanggung jawab ──────────────────────────
     private lateinit var layerPanel: LayerPanelController
     private lateinit var objectMenu: ObjectMenuController
+    private lateinit var objectPanelController: ObjectPanelController
     private lateinit var exportController: ExportController
     private lateinit var textPanelController: TextPanelController
     private lateinit var canvasMenuController: CanvasMenuController
@@ -387,6 +388,36 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         )
         objectMenu.initialize()
         objectMenu.onDetailExpandedChanged = { setDetailExpanded(objectMenu.activeTag.isNotEmpty()) }
+
+        // Object Panel Controller - Mengelola efek properti objek (Shape/Image/etc)
+        objectPanelController = ObjectPanelController(
+            this,
+            binding,
+            pixelCanvasView,
+            { showSnackbar(it) },
+            onEffectSettingsOpenChanged = { effectSettingsOpen ->
+                val density = resources.displayMetrics.density
+                val offset = (56 * density).toInt()
+                animateNavTranslation(if (effectSettingsOpen) offset else 0)
+                if (effectSettingsOpen) {
+                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+                        .forEach { it.animateLayoutHeight((107 * density).toInt()) }
+                } else {
+                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+                        .forEach {
+                            it.animateLayoutHeight((107 * density).toInt())
+                            it.animateLayoutMarginBottom((56 * density).toInt())
+                        }
+                }
+                updateCanvasCardMargin()
+            }
+        )
+        objectPanelController.initialize()
+
+        // Sambungkan tombol ✓/✕ Effect Settings (halaman yang sama dgn Text) ke ObjectPanelController
+        textPanelController.onObjectEffectApply = { objectPanelController.applyEffectSettings() }
+        textPanelController.onObjectEffectCancel = { objectPanelController.cancelEffectSettings() }
+        textPanelController.isObjectEffectSettingsOpen = { objectPanelController.isEffectSettingsOpen() }
 
         // Canvas Tools Controller - Mengelola eyedropper, crop, dan palette
         // DISABLED: Fitur ini belum diperlukan, di-disable untuk menghindari bug FAB

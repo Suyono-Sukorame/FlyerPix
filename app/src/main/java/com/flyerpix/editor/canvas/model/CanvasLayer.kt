@@ -66,6 +66,22 @@ abstract class CanvasLayer(
      */
     open var blendExtra: ExtendedBlendMode? = null
 
+    // ── Shared Effect Properties ───────────────────────────────────────────
+    // Dipakai oleh semua layer type (text, shape, image, sticker, pen, arrow).
+    // TextLayer meng-override ini di constructor-nya sendiri.
+
+    // Drop Shadow
+    open var shadowEnabled: Boolean = false
+    open var shadowColor: Int = android.graphics.Color.BLACK
+    open var shadowRadius: Float = 8f
+    open var shadowDx: Float = 4f
+    open var shadowDy: Float = 4f
+    open var shadowOpacity: Float = 0.6f
+
+    // Gradient Fill
+    open var gradientEnabled: Boolean = false
+    open var gradient: GradientColor? = null
+
     /**
      * Menggambar layer pada [canvas] dengan menggunakan [paint].
      *

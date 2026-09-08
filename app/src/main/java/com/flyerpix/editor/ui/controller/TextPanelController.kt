@@ -1660,12 +1660,28 @@ initializeMaskControls()
      */
     private fun initializeEffectSettingsHeader() {
         binding.effectSettingsInclude.btnEffectApply.setOnClickListener {
-            applyEffectSettings()
+            // Jika dibuka dari Object menu, arahkan ke ObjectPanelController
+            if (objectEffectSettingsActive()) {
+                onObjectEffectApply()
+            } else {
+                applyEffectSettings()
+            }
         }
         binding.effectSettingsInclude.btnEffectCancel.setOnClickListener {
-            cancelEffectSettings()
+            if (objectEffectSettingsActive()) {
+                onObjectEffectCancel()
+            } else {
+                cancelEffectSettings()
+            }
         }
     }
+
+    /** Callback di-set oleh EditorActivity setelah ObjectPanelController dibuat. */
+    var onObjectEffectApply: () -> Unit = {}
+    var onObjectEffectCancel: () -> Unit = {}
+    var isObjectEffectSettingsOpen: () -> Boolean = { false }
+
+    private fun objectEffectSettingsActive(): Boolean = isObjectEffectSettingsOpen()
 
     /**
      * Inisialisasi panel kontrol Neon / Glow.

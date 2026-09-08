@@ -76,7 +76,15 @@ open class ImageLayer(
 
         // 3. Konfigurasi opasitas dan penggambaran bitmap
         paint.alpha = opacity.coerceIn(0, 255)
+        if (shadowEnabled && shadowRadius > 0f) {
+            val a = (shadowOpacity.coerceIn(0f, 1f) * 255).toInt()
+            paint.setShadowLayer(shadowRadius, shadowDx, shadowDy,
+                (shadowColor and 0x00FFFFFF) or (a shl 24))
+        } else {
+            paint.clearShadowLayer()
+        }
         canvas.drawBitmap(bitmap, 0f, 0f, paint)
+        paint.clearShadowLayer()
 
         canvas.restoreToCount(saveCount)
     }

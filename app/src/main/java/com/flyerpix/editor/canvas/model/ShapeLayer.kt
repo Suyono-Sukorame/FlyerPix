@@ -186,7 +186,20 @@ data class ShapeLayer(
         paint.color = fillColor
         paint.alpha = opacity.coerceIn(0, 255)
         paint.strokeWidth = 0f
+
+        // Drop Shadow (via setShadowLayer — berfungsi untuk semua draw call)
+        if (shadowEnabled && shadowRadius > 0f) {
+            val a = (shadowOpacity.coerceIn(0f, 1f) * 255).toInt()
+            paint.setShadowLayer(shadowRadius, shadowDx, shadowDy,
+                (shadowColor and 0x00FFFFFF) or (a shl 24))
+        } else {
+            paint.clearShadowLayer()
+        }
+
         canvas.drawPath(path, paint)
+
+        // Clear shadow for stroke pass
+        paint.clearShadowLayer()
 
         // Stroke
         if (strokeWidth > 0f) {

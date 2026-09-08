@@ -86,12 +86,12 @@ data class TextLayer(
     var strokeColor: Int = Color.BLACK,
     var strokeWidth: Float = 0f,
     // ── Drop Shadow ──────────────────────────────────────────────────────────
-    var shadowEnabled: Boolean = false,
-    var shadowColor: Int = Color.BLACK,
-    var shadowRadius: Float = 8f,
-    var shadowDx: Float = 4f,
-    var shadowDy: Float = 4f,
-    var shadowOpacity: Float = 0.6f,
+    override var shadowEnabled: Boolean = false,
+    override var shadowColor: Int = Color.BLACK,
+    override var shadowRadius: Float = 8f,
+    override var shadowDx: Float = 4f,
+    override var shadowDy: Float = 4f,
+    override var shadowOpacity: Float = 0.6f,
     // ── Inner Shadow ─────────────────────────────────────────────────────────
     var innerShadowEnabled: Boolean = false,
     var innerShadowColor: Int = Color.BLACK,
@@ -107,8 +107,8 @@ data class TextLayer(
     var embossIntensity: Float = 1f,     // 0–2.5    (penguat kontras cahaya: highlight & bayangan)
     var embossBevel: Float = 3f,         // 0.5–12   (ketebalan/lebar relief bevel)
     // ── Gradient Fill ────────────────────────────────────────────────────────
-    var gradientEnabled: Boolean = false,
-    var gradient: GradientColor? = null,
+    override var gradientEnabled: Boolean = false,
+    override var gradient: GradientColor? = null,
     // ── Texture Masking ──────────────────────────────────────────────────────
     var textureBitmap: Bitmap? = null,
     var textureEnabled: Boolean = false,
