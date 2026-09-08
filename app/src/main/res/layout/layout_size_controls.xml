@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Ukuran untuk TextLayer.
+  Gaya kompak ala 3D Text: judul + tombol reset sebaris, grid preset ukuran,
+  slider 2 kolom dengan label dinamis, dan aksi fit-to-canvas / skala 100%.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/sizeControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Ukuran"
+            android:textAppearance="?attr/textAppearanceSubtitle2"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSizeReset"
+            style="@style/LightPanelTextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="@color/brand_blue"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
+
+    <!-- Grid Preset Ukuran Cepat -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSizePreset24"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="24"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSizePreset36"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="36"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSizePreset48"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="48"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSizePreset64"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="64"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSizePreset96"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="96"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSizePreset160"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="160"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Slider 2 kolom: Ukuran Font & Skala -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvSizeLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Ukuran: 64 px"
+                android:textAppearance="?attr/textAppearanceCaption" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderFontSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="8"
+                android:valueTo="600"
+                android:stepSize="1"
+                android:value="64"
+                app:labelBehavior="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvScaleLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Skala: 100%"
+                android:textAppearance="?attr/textAppearanceCaption" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderScaleXY"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="0.1"
+                android:valueTo="8.0"
+                android:stepSize="0.05"
+                android:value="1.0"
+                app:labelBehavior="gone" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Aksi: Sesuaikan Kanvas / Skala 100% -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScaleFit"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Sesuaikan Kanvas"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScaleReset"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Skala 100%"
+            android:textSize="10sp" />
+    </LinearLayout>
+</LinearLayout>

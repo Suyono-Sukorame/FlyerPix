@@ -55,27 +55,8 @@
 
             <!-- ── Tahap 1: Panel Baru ────────────────────────────────────── -->
 
-            <!-- Position -->
-            <include
-                layout="@layout/panel_position"
-            android:id="@+id/positionPanel" />
-
-            <!-- Relative Position -->
-            <include
-                layout="@layout/panel_relative_position"
-            android:id="@+id/relativePositionPanel" />
-
-            <!-- Size -->
-            <include
-                layout="@layout/panel_size"
-            android:id="@+id/sizePanel" />
-
-            <!-- Color / Padding dipindah ke Effect Settings page -->
-
-            <!-- Styles -->
-            <include
-                layout="@layout/panel_styles"
-            android:id="@+id/stylesPanel" />
+            <!-- Color / Padding / Position / Relative / Size / Styles
+                 dipindah ke halaman Effect Settings -->
 
             <!-- Font -->
             <include

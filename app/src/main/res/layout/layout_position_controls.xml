@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Posisi untuk TextLayer.
+  Gaya kompak ala 3D Text: judul + tombol reset sebaris, input X/Y + nudge,
+  slider 2 kolom untuk posisi cepat, dan tombol tengah kanvas (H/V/keduanya).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/positionControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Posisi"
+            android:textAppearance="?attr/textAppearanceSubtitle2"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetPosition"
+            style="@style/LightPanelTextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="@color/brand_blue"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
+
+    <!-- Baris X -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="28dp"
+            android:layout_height="wrap_content"
+            android:text="X"
+            android:textStyle="bold"
+            android:textColor="@color/brand_violet" />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editPosX"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_panel_input"
+            android:inputType="numberDecimal"
+            android:paddingHorizontal="10dp"
+            android:textSize="14sp" />
+
+        <ImageButton
+            android:id="@+id/btnPosXMinus"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_sharp_remove_circle_outline"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#616161"
+            android:contentDescription="Kurangi X" />
+
+        <ImageButton
+            android:id="@+id/btnPosXPlus"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_add_circle_outline"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#616161"
+            android:contentDescription="Tambah X" />
+    </LinearLayout>
+
+    <!-- Baris Y -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="28dp"
+            android:layout_height="wrap_content"
+            android:text="Y"
+            android:textStyle="bold"
+            android:textColor="@color/brand_violet" />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editPosY"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_panel_input"
+            android:inputType="numberDecimal"
+            android:paddingHorizontal="10dp"
+            android:textSize="14sp" />
+
+        <ImageButton
+            android:id="@+id/btnPosYMinus"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_sharp_remove_circle_outline"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#616161"
+            android:contentDescription="Kurangi Y" />
+
+        <ImageButton
+            android:id="@+id/btnPosYPlus"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_add_circle_outline"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#616161"
+            android:contentDescription="Tambah Y" />
+    </LinearLayout>
+
+    <!-- Slider 2 kolom: Posisi X & Y (presisi halus) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvPosXLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="X: 0 px"
+                android:textAppearance="?attr/textAppearanceCaption" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderPosX"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="-1000"
+                android:valueTo="1000"
+                android:stepSize="10"
+                android:value="0"
+                app:labelBehavior="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvPosYLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Y: 0 px"
+                android:textAppearance="?attr/textAppearanceCaption" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderPosY"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="-1000"
+                android:valueTo="1000"
+                android:stepSize="10"
+                android:value="0"
+                app:labelBehavior="gone" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Aksi Penempatan: Tengah H / V / Kanvas -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPosCenterH"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Tengah H"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPosCenterV"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Tengah V"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPosCenter"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Tengah Kanvas"
+            android:textSize="10sp" />
+    </LinearLayout>
+</LinearLayout>

@@ -51,10 +51,38 @@
                 android:scrollbars="none"
                 android:fadeScrollbars="false">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
+<LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                    <!-- Position -->
+                    <include
+                        layout="@layout/layout_position_controls"
+                        android:id="@+id/positionControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Relative Position -->
+                    <include
+                        layout="@layout/layout_relative_position_controls"
+                        android:id="@+id/relativePositionControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Size -->
+                    <include
+                        layout="@layout/layout_size_controls"
+                        android:id="@+id/sizeControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Styles (Tersimpan) -->
+                    <include
+                        layout="@layout/layout_styles_controls"
+                        android:id="@+id/stylesControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
 
                     <!-- Drop Shadow -->
                     <include

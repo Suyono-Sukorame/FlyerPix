@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Posisi Relatif untuk TextLayer.
+  Gaya kompak ala 3D Text: judul + tombol reset sebaris, grid anchor 3x3
+  dengan highlight, dan slider 2 kolom offset X/Y berlabel dinamis.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/relativePositionControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Posisi Relatif"
+            android:textAppearance="?attr/textAppearanceSubtitle2"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetRelative"
+            style="@style/LightPanelTextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="@color/brand_blue"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
+
+    <GridLayout
+        android:id="@+id/gridRelativePos"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:columnCount="3"
+        android:rowCount="3">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRelTopLeft"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1"
+            android:layout_height="34dp"
+            android:layout_margin="2dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="Atas Kiri"
+            android:textSize="9sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRelTopCenter"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1"
+            android:layout_height="34dp"
+            android:layout_margin="2dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="Atas Tengah"
+            android:textSize="9sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRelTopRight"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1"
+            android:layout_height="34dp"
+            android:layout_margin="2dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="Atas Kanan"
+            android:textSize="9sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRelCenterLeft"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1"
+            android:layout_height="34dp"
+            android:layout_margin="2dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="Tengah Kiri"
+            android:textSize="9sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRelCenter"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1"
+            android:layout_height="34dp"
+            android:layout_margin="2dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="Tengah"
+            android:textSize="9sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRelCenterRight"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1"
+            android:layout_height="34dp"
+            android:layout_margin="2dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="Tengah Kanan"
+            android:textSize="9sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRelBottomLeft"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1"
+            android:layout_height="34dp"
+            android:layout_margin="2dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="Bawah Kiri"
+            android:textSize="9sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRelBottomCenter"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1"
+            android:layout_height="34dp"
+            android:layout_margin="2dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="Bawah Tengah"
+            android:textSize="9sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRelBottomRight"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1"
+            android:layout_height="34dp"
+            android:layout_margin="2dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="2dp"
+            android:text="Bawah Kanan"
+            android:textSize="9sp" />
+    </GridLayout>
+
+    <!-- Slider 2 kolom: Offset X & Y -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvRelOffsetXLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Offset X: 0 px"
+                android:textAppearance="?attr/textAppearanceCaption" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderRelOffsetX"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="-500"
+                android:valueTo="500"
+                android:stepSize="1"
+                android:value="0"
+                app:labelBehavior="gone" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvRelOffsetYLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Offset Y: 0 px"
+                android:textAppearance="?attr/textAppearanceCaption" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderRelOffsetY"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="-500"
+                android:valueTo="500"
+                android:stepSize="1"
+                android:value="0"
+                app:labelBehavior="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

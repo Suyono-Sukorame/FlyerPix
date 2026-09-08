@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.ImageDecoder
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.view.View
@@ -54,7 +55,7 @@ class TextPanelController(
     // ── Text Page State─────────────────────────────────────────────────────
     private val textToolItems = LinkedHashMap<String, ViewGroup>()
     private val textPanelViews = LinkedHashMap<String, View>()
-    private val savedTextStyles = LinkedHashMap<String, TextLayer>()
+    private val savedTextStyles = LinkedHashMap<String, SavedTextStyle>()
     private var activeTextToolTag: String = ""
     private var maxPropertyPanelScrollH = 0
     var isPageOpen = false
@@ -71,7 +72,7 @@ class TextPanelController(
     private var effectSettingsOpen = false
     private var textToolTagBeforeEffect = ""
     private var toolIsTextPage = false
-    private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_REFLECTION, TOOL_BLEND, TOOL_NEON, TOOL_STROKE, TOOL_LINE, TOOL_LETTER, TOOL_ALIGN, TOOL_BG, TOOL_CURVE, TOOL_STYLE, TOOL_MASK, TOOL_OPACITY, TOOL_ROTATE, TOOL_COLOR, TOOL_PADDING)
+    private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_REFLECTION, TOOL_BLEND, TOOL_NEON, TOOL_STROKE, TOOL_LINE, TOOL_LETTER, TOOL_ALIGN, TOOL_BG, TOOL_CURVE, TOOL_STYLE, TOOL_MASK, TOOL_OPACITY, TOOL_ROTATE, TOOL_COLOR, TOOL_PADDING, TOOL_SIZE, TOOL_POSITION, TOOL_REL_POS, TOOL_STYLES)
     private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncInnerShadowUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncEmbossUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
@@ -94,6 +95,10 @@ class TextPanelController(
     private var syncColorUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncPaddingUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncGradientUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncSizeUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncPositionUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncRelativePositionUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncStylesUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
 
     companion object {
         const val TOOL_STYLES       = "styles"
@@ -171,9 +176,9 @@ class TextPanelController(
             }
         }
 
-        initializePositionPanel()
-        initializeRelativePositionPanel()
-        initializeSizePanel()
+        initializePositionControls()
+initializeRelativePositionControls()
+initializeSizeControls()
 initializeOpacityControls()
 initializeRotateControls()
 initializeStyleControls()
@@ -184,7 +189,7 @@ initializePaddingControls()
         initializeBackgroundControls()
         initializeReflectionControls()
 initializeMaskControls()
-        initializeTextStylesPanel()
+        initializeStylesControls()
 
         initializeShadowControls()
         initializeInnerShadowControls()
@@ -1850,6 +1855,10 @@ initializeMaskControls()
             TOOL_ROTATE -> syncRotateUIHook?.invoke(layer)
             TOOL_COLOR -> syncColorUIHook?.invoke(layer)
             TOOL_PADDING -> syncPaddingUIHook?.invoke(layer)
+            TOOL_SIZE -> syncSizeUIHook?.invoke(layer)
+            TOOL_POSITION -> syncPositionUIHook?.invoke(layer)
+            TOOL_REL_POS -> syncRelativePositionUIHook?.invoke(layer)
+            TOOL_STYLES -> syncStylesUIHook?.invoke(layer)
             TOOL_INNER -> syncInnerShadowUIHook?.invoke(layer)
             TOOL_EMBOSS -> syncEmbossUIHook?.invoke(layer)
             TOOL_GRADIENT -> syncGradientUIHook?.invoke(layer)
@@ -2141,6 +2150,10 @@ initializeMaskControls()
         layer.fontName             = snapshot.fontName
         layer.opacity              = snapshot.opacity
         layer.rotation             = snapshot.rotation
+        layer.textSize             = snapshot.textSize
+        layer.scale                = snapshot.scale
+        layer.x                    = snapshot.x
+        layer.y                    = snapshot.y
         layer.paddingTop           = snapshot.paddingTop
         layer.paddingBottom        = snapshot.paddingBottom
         layer.paddingLeft          = snapshot.paddingLeft
@@ -2161,11 +2174,7 @@ initializeMaskControls()
 private fun registerTextPanels() {
         val tp = binding.textPropertyPanelInclude
         textPanelViews.clear()
-        textPanelViews[TOOL_STYLES]      = tp.stylesPanel.root
         textPanelViews[TOOL_FONT]        = tp.fontPanel.root
-        textPanelViews[TOOL_POSITION]    = tp.positionPanel.root
-        textPanelViews[TOOL_REL_POS]     = tp.relativePositionPanel.root
-        textPanelViews[TOOL_SIZE]        = tp.sizePanel.root
 
         // Efek kompleks → halaman Effect Settings terpisah
         val fs = binding.effectSettingsInclude
@@ -2193,6 +2202,10 @@ private fun registerTextPanels() {
         textPanelViews[TOOL_ROTATE]      = fs.rotateControlsInclude.root
         textPanelViews[TOOL_COLOR]       = fs.colorControlsInclude.root
         textPanelViews[TOOL_PADDING]     = fs.paddingControlsInclude.root
+        textPanelViews[TOOL_POSITION]    = fs.positionControlsInclude.root
+        textPanelViews[TOOL_REL_POS]     = fs.relativePositionControlsInclude.root
+        textPanelViews[TOOL_SIZE]        = fs.sizeControlsInclude.root
+        textPanelViews[TOOL_STYLES]      = fs.stylesControlsInclude.root
     }
 
     private fun buildTextToolStrip() {
@@ -2428,14 +2441,27 @@ private fun registerTextPanels() {
              .show((activity as androidx.fragment.app.FragmentActivity).supportFragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
     }
 
-    // ─── Panel: Posisi ─────────────────────────────────────────────────────
+    // ─── Effect Page: Posisi ───────────────────────────────────────────────
 
-    private fun initializePositionPanel() {
-        val b = binding.textPropertyPanelInclude.positionPanel
+    private fun initializePositionControls() {
+        val b = binding.effectSettingsInclude.positionControlsInclude
+        val panel = b.root
+        var syncing = false
+        val range = max(pixelCanvasView.width, pixelCanvasView.height).toFloat().coerceAtLeast(1000f)
+        b.sliderPosX.valueFrom = -range
+        b.sliderPosX.valueTo = range
+        b.sliderPosY.valueFrom = -range
+        b.sliderPosY.valueTo = range
 
-        fun sync(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+        fun refreshAll(layer: com.flyerpix.editor.canvas.model.TextLayer) {
             b.editPosX.setText(if (layer.x == 0f) "0" else String.format(Locale.US, "%.0f", layer.x))
             b.editPosY.setText(if (layer.y == 0f) "0" else String.format(Locale.US, "%.0f", layer.y))
+            syncing = true
+            b.sliderPosX.value = layer.x.coerceIn(-range, range)
+            b.sliderPosY.value = layer.y.coerceIn(-range, range)
+            syncing = false
+            b.tvPosXLabel.text = String.format(Locale.US, "X: %.0f px", layer.x)
+            b.tvPosYLabel.text = String.format(Locale.US, "Y: %.0f px", layer.y)
         }
 
         fun commitX() {
@@ -2443,6 +2469,7 @@ private fun registerTextPanels() {
             val v = b.editPosX.text.toString().toFloatOrNull() ?: return
             pixelCanvasView.runRecordedAction("Atur Posisi X") { layer.x = v }
             pixelCanvasView.invalidate()
+            refreshAll(layer)
         }
 
         fun commitY() {
@@ -2450,6 +2477,7 @@ private fun registerTextPanels() {
             val v = b.editPosY.text.toString().toFloatOrNull() ?: return
             pixelCanvasView.runRecordedAction("Atur Posisi Y") { layer.y = v }
             pixelCanvasView.invalidate()
+            refreshAll(layer)
         }
 
         b.editPosX.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) commitX() }
@@ -2457,72 +2485,113 @@ private fun registerTextPanels() {
         b.editPosX.setOnEditorActionListener { _, _, _ -> commitX(); true }
         b.editPosY.setOnEditorActionListener { _, _, _ -> commitY(); true }
 
-        fun nudgeX(delta: Float, edit: com.google.android.material.textfield.TextInputEditText) {
+        fun nudgeX(delta: Float) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
             pixelCanvasView.runRecordedAction("Pindah X") { layer.x += delta }
             pixelCanvasView.invalidate()
-            edit.setText(String.format(Locale.US, "%.0f", layer.x))
+            refreshAll(layer)
         }
 
-        fun nudgeY(delta: Float, edit: com.google.android.material.textfield.TextInputEditText) {
+        fun nudgeY(delta: Float) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
             pixelCanvasView.runRecordedAction("Pindah Y") { layer.y += delta }
             pixelCanvasView.invalidate()
-            edit.setText(String.format(Locale.US, "%.0f", layer.y))
+            refreshAll(layer)
         }
 
-        b.btnPosXMinus.setOnClickListener { nudgeX(-10f, b.editPosX) }
-        b.btnPosXPlus.setOnClickListener { nudgeX(10f, b.editPosX) }
-        b.btnPosYMinus.setOnClickListener { nudgeY(-10f, b.editPosY) }
-        b.btnPosYPlus.setOnClickListener { nudgeY(10f, b.editPosY) }
+        b.btnPosXMinus.setOnClickListener { nudgeX(-10f) }
+        b.btnPosXPlus.setOnClickListener { nudgeX(10f) }
+        b.btnPosYMinus.setOnClickListener { nudgeY(-10f) }
+        b.btnPosYPlus.setOnClickListener { nudgeY(10f) }
 
-        b.btnPosCenterH.setOnClickListener {
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
-            val (lw, _) = layer.getUnwarpedDimensions()
-            pixelCanvasView.runRecordedAction("Tengah Horizontal") {
-                layer.x = (pixelCanvasView.width - lw * layer.scale) / 2f
+        b.sliderPosX.addOnChangeListener { _, value, _ ->
+            if (syncing) return@addOnChangeListener
+            b.tvPosXLabel.text = String.format(Locale.US, "X: %.0f px", value)
+            applyToTextLayer { it.x = value }
+        }
+
+        b.sliderPosY.addOnChangeListener { _, value, _ ->
+            if (syncing) return@addOnChangeListener
+            b.tvPosYLabel.text = String.format(Locale.US, "Y: %.0f px", value)
+            applyToTextLayer { it.y = value }
+        }
+
+        fun center(horizontal: Boolean, vertical: Boolean) {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
+            val (lw, lh) = layer.getUnwarpedDimensions()
+            pixelCanvasView.runRecordedAction("Tengah Kanvas") {
+                if (horizontal) layer.x = (pixelCanvasView.width - lw * layer.scale) / 2f
+                if (vertical) layer.y = (pixelCanvasView.height - lh * layer.scale) / 2f
             }
-            sync(layer)
+            refreshAll(layer)
             pixelCanvasView.invalidate()
         }
 
-        b.btnPosCenterV.setOnClickListener {
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
-            val (_, lh) = layer.getUnwarpedDimensions()
-            pixelCanvasView.runRecordedAction("Tengah Vertikal") {
-                layer.y = (pixelCanvasView.height - lh * layer.scale) / 2f
-            }
-            sync(layer)
-            pixelCanvasView.invalidate()
-        }
+        b.btnPosCenterH.setOnClickListener { center(true, false) }
+        b.btnPosCenterV.setOnClickListener { center(false, true) }
+        b.btnPosCenter.setOnClickListener { center(true, true) }
 
-        b.btnPosReset.setOnClickListener {
+        b.btnResetPosition.setOnClickListener {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
             pixelCanvasView.runRecordedAction("Reset Posisi") {
                 layer.x = 0f
                 layer.y = 0f
             }
-            sync(layer)
+            refreshAll(layer)
             pixelCanvasView.invalidate()
         }
 
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) sync(layer)
+        syncPositionUIHook = { layer ->
+            panel.visibility = View.VISIBLE
+            refreshAll(layer)
         }
     }
 
-    // ─── Panel: Posisi Relatif ─────────────────────────────────────────────
+    // ─── Effect Page: Posisi Relatif ───────────────────────────────────────
 
     private var relAnchorX = 0f
     private var relAnchorY = 0f
 
-    private fun initializeRelativePositionPanel() {
-        val b = binding.textPropertyPanelInclude.relativePositionPanel
+    private fun initializeRelativePositionControls() {
+        val b = binding.effectSettingsInclude.relativePositionControlsInclude
+        val panel = b.root
         var syncing = false
 
-        fun place(horizontal: String, vertical: String) {
+        val anchors = linkedMapOf(
+            "left-top" to b.btnRelTopLeft,
+            "center-top" to b.btnRelTopCenter,
+            "right-top" to b.btnRelTopRight,
+            "left-center" to b.btnRelCenterLeft,
+            "center-center" to b.btnRelCenter,
+            "right-center" to b.btnRelCenterRight,
+            "left-bottom" to b.btnRelBottomLeft,
+            "center-bottom" to b.btnRelBottomCenter,
+            "right-bottom" to b.btnRelBottomRight
+        )
+
+        fun setAnchorActive(key: String) {
+            for ((k, btn) in anchors) {
+                val active = k == key
+                btn.isSelected = active
+                btn.setBackgroundColor(if (active) COLOR_ACTIVE else Color.TRANSPARENT)
+                btn.setTextColor(if (active) Color.WHITE else COLOR_GRAY)
+            }
+        }
+
+        fun syncLabels(offsetX: Float, offsetY: Float) {
+            b.tvRelOffsetXLabel.text = String.format(Locale.US, "Offset X: %.0f px", offsetX)
+            b.tvRelOffsetYLabel.text = String.format(Locale.US, "Offset Y: %.0f px", offsetY)
+        }
+
+        fun resetOffsets() {
+            syncing = true
+            b.sliderRelOffsetX.value = 0f
+            b.sliderRelOffsetY.value = 0f
+            syncing = false
+            syncLabels(0f, 0f)
+        }
+
+        fun place(horizontal: String, vertical: String, key: String) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
             val (lw, lh) = layer.getUnwarpedDimensions()
             val w = pixelCanvasView.width
@@ -2543,27 +2612,26 @@ private fun registerTextPanels() {
             }
             relAnchorX = layer.x
             relAnchorY = layer.y
-            syncing = true
-            b.sliderRelOffsetX.value = 0f
-            b.sliderRelOffsetY.value = 0f
-            syncing = false
+            setAnchorActive(key)
+            resetOffsets()
             pixelCanvasView.invalidate()
         }
 
-        b.btnRelTopLeft.setOnClickListener { place("left", "top") }
-        b.btnRelTopCenter.setOnClickListener { place("center", "top") }
-        b.btnRelTopRight.setOnClickListener { place("right", "top") }
-        b.btnRelCenterLeft.setOnClickListener { place("left", "center") }
-        b.btnRelCenter.setOnClickListener { place("center", "center") }
-        b.btnRelCenterRight.setOnClickListener { place("right", "center") }
-        b.btnRelBottomLeft.setOnClickListener { place("left", "bottom") }
-        b.btnRelBottomCenter.setOnClickListener { place("center", "bottom") }
-        b.btnRelBottomRight.setOnClickListener { place("right", "bottom") }
+        b.btnRelTopLeft.setOnClickListener { place("left", "top", "left-top") }
+        b.btnRelTopCenter.setOnClickListener { place("center", "top", "center-top") }
+        b.btnRelTopRight.setOnClickListener { place("right", "top", "right-top") }
+        b.btnRelCenterLeft.setOnClickListener { place("left", "center", "left-center") }
+        b.btnRelCenter.setOnClickListener { place("center", "center", "center-center") }
+        b.btnRelCenterRight.setOnClickListener { place("right", "center", "right-center") }
+        b.btnRelBottomLeft.setOnClickListener { place("left", "bottom", "left-bottom") }
+        b.btnRelBottomCenter.setOnClickListener { place("center", "bottom", "center-bottom") }
+        b.btnRelBottomRight.setOnClickListener { place("right", "bottom", "right-bottom") }
 
         b.sliderRelOffsetX.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@addOnChangeListener
             layer.x = relAnchorX + value
+            b.tvRelOffsetXLabel.text = String.format(Locale.US, "Offset X: %.0f px", value)
             pixelCanvasView.invalidate()
         }
 
@@ -2571,42 +2639,68 @@ private fun registerTextPanels() {
             if (syncing) return@addOnChangeListener
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@addOnChangeListener
             layer.y = relAnchorY + value
+            b.tvRelOffsetYLabel.text = String.format(Locale.US, "Offset Y: %.0f px", value)
             pixelCanvasView.invalidate()
         }
 
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) {
-                relAnchorX = layer.x
-                relAnchorY = layer.y
-                syncing = true
-                b.sliderRelOffsetX.value = 0f
-                b.sliderRelOffsetY.value = 0f
-                syncing = false
-            }
+        b.btnResetRelative.setOnClickListener {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
+            layer.x = relAnchorX
+            layer.y = relAnchorY
+            resetOffsets()
+            pixelCanvasView.invalidate()
+        }
+
+        syncRelativePositionUIHook = { layer ->
+            panel.visibility = View.VISIBLE
+            relAnchorX = layer.x
+            relAnchorY = layer.y
+            resetOffsets()
         }
     }
 
-    // ─── Panel: Ukuran ─────────────────────────────────────────────────────
+    // ─── Effect Page: Ukuran ───────────────────────────────────────────────
 
-    private fun initializeSizePanel() {
-        val b = binding.textPropertyPanelInclude.sizePanel
+    private fun initializeSizeControls() {
+        val b = binding.effectSettingsInclude.sizeControlsInclude
+        val panel = b.root
         var syncing = false
 
-        fun sync(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+        val presets = linkedMapOf(
+            b.btnSizePreset24 to 24f,
+            b.btnSizePreset36 to 36f,
+            b.btnSizePreset48 to 48f,
+            b.btnSizePreset64 to 64f,
+            b.btnSizePreset96 to 96f,
+            b.btnSizePreset160 to 160f
+        )
+
+        fun setActive(btn: com.google.android.material.button.MaterialButton, active: Boolean) {
+            btn.isSelected = active
+            btn.setBackgroundColor(if (active) COLOR_ACTIVE else Color.TRANSPARENT)
+            btn.setTextColor(if (active) Color.WHITE else COLOR_GRAY)
+        }
+
+        fun refreshPresets(textSize: Float) {
+            for ((btn, v) in presets) setActive(btn, textSize == v)
+        }
+
+        fun syncUI(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+            panel.visibility = View.VISIBLE
             syncing = true
             b.sliderFontSize.value = layer.textSize.coerceIn(8f, 600f)
             b.sliderScaleXY.value = layer.scale.coerceIn(0.1f, 8f)
             syncing = false
-            b.tvSizeLabel.text =
-                String.format(Locale.US, "Ukuran Font: %.0f px", layer.textSize)
+            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran: %.0f px", layer.textSize)
             b.tvScaleLabel.text = "${(layer.scale * 100).toInt()}%"
+            refreshPresets(layer.textSize)
         }
+        syncSizeUIHook = { layer -> syncUI(layer) }
 
         b.sliderFontSize.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran Font: %.0f px", value)
+            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran: %.0f px", value)
+            refreshPresets(value)
             applyToTextLayer { it.textSize = value }
         }
 
@@ -2616,18 +2710,28 @@ private fun registerTextPanels() {
             applyToTextLayer { it.scale = value }
         }
 
+        fun applyFontSize(value: Float) {
+            syncing = true
+            b.sliderFontSize.value = value.coerceIn(8f, 600f)
+            syncing = false
+            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran: %.0f px", value)
+            refreshPresets(value)
+            applyToTextLayer { it.textSize = value }
+        }
+
+        for ((btn, v) in presets) btn.setOnClickListener { applyFontSize(v) }
+
         b.btnSizeReset.setOnClickListener {
-            applyToTextLayer { it.textSize = 64f }
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
-            if (layer != null) sync(layer)
-            pixelCanvasView.invalidate()
+            applyToTextLayer {
+                it.textSize = 64f
+                it.scale = 1f
+            }
+            (pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer)?.let { syncUI(it) }
         }
 
         b.btnScaleReset.setOnClickListener {
             applyToTextLayer { it.scale = 1f }
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
-            if (layer != null) sync(layer)
-            pixelCanvasView.invalidate()
+            (pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer)?.let { syncUI(it) }
         }
 
         b.btnScaleFit.setOnClickListener {
@@ -2638,14 +2742,8 @@ private fun registerTextPanels() {
                 pixelCanvasView.height / lh * 0.9f
             )
             pixelCanvasView.runRecordedAction("Sesuaikan Kanvas") { layer.scale = s.coerceAtLeast(0.01f) }
-            sync(layer)
+            syncUI(layer)
             pixelCanvasView.invalidate()
-        }
-
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) sync(layer)
         }
     }
 
@@ -3607,30 +3705,58 @@ private fun registerTextPanels() {
 
     // ─── Panel: Styles Teks (Simpan / Terapkan) ────────────────────────────
 
-    private fun initializeTextStylesPanel() {
-        val b = binding.textPropertyPanelInclude.stylesPanel
+    private fun initializeStylesControls() {
+        val b = binding.effectSettingsInclude.stylesControlsInclude
+        val panel = b.root
+
+        savedTextStyles.clear()
+        savedTextStyles.putAll(TextStyleStorage.load(activity))
 
         fun rebuildChips() {
             b.layoutStyleChips.removeAllViews()
             val density = activity.resources.displayMetrics.density
             for ((name, style) in savedTextStyles) {
-                val chip = com.google.android.material.button.MaterialButton(activity)
+                val chip = MaterialButton(activity)
                 chip.text = name
                 chip.textSize = 12f
                 chip.minimumWidth = 0
                 chip.isAllCaps = false
                 chip.setPadding((10 * density).toInt(), 0, (10 * density).toInt(), 0)
+                chip.setTextColor(style.textColor)
+                chip.setBackgroundColor(Color.TRANSPARENT)
+                chip.strokeWidth = 1
+                chip.strokeColor = android.content.res.ColorStateList.valueOf(COLOR_GRAY)
+                val preview = GradientDrawable()
+                preview.shape = GradientDrawable.OVAL
+                preview.setColor(style.textColor)
+                chip.icon = preview
+                chip.iconSize = (12 * density).toInt()
+                chip.iconPadding = (6 * density).toInt()
                 chip.setOnClickListener {
-                    val target = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+                    val target = pixelCanvasView.selectedLayer as? TextLayer
                     if (target == null || target.isLocked) {
                         showSnackbar("Pilih layer teks terlebih dahulu")
                         return@setOnClickListener
                     }
                     pixelCanvasView.runRecordedAction("Terapkan Style") {
-                        copyStyleOntoTarget(style, target)
+                        style.applyTo(target)
                     }
                     pixelCanvasView.invalidate()
                     showSnackbar("Style '$name' diterapkan")
+                }
+                chip.setOnLongClickListener {
+                    MaterialAlertDialogBuilder(activity)
+                        .setTitle("Hapus Style")
+                        .setMessage("Hapus style '$name'?")
+                        .setPositiveButton("Hapus") { _, _ ->
+                            savedTextStyles.remove(name)
+                            TextStyleStorage.save(activity, savedTextStyles)
+                            rebuildChips()
+                            showSnackbar("Style '$name' dihapus")
+                        }
+                        .setNegativeButton("Batal", null)
+                        .show()
+                    true
                 }
                 val params = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -3643,7 +3769,7 @@ private fun registerTextPanels() {
 
         b.btnStyleSave.setOnClickListener {
             val name = b.editStyleName.text?.toString()?.trim()
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            val layer = pixelCanvasView.selectedLayer as? TextLayer
             if (name.isNullOrEmpty()) {
                 showSnackbar("Tulis nama style terlebih dahulu")
                 return@setOnClickListener
@@ -3652,91 +3778,37 @@ private fun registerTextPanels() {
                 showSnackbar("Pilih layer teks terlebih dahulu")
                 return@setOnClickListener
             }
-            savedTextStyles[name] = layer.copyLayer()
+            savedTextStyles[name] = SavedTextStyle.fromLayer(layer)
+            TextStyleStorage.save(activity, savedTextStyles)
             b.editStyleName.setText("")
             rebuildChips()
             hideKeyboard(b.editStyleName)
             showSnackbar("Style '$name' berhasil disimpan")
         }
 
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
+        b.btnStylesClearAll.setOnClickListener {
+            if (savedTextStyles.isEmpty()) {
+                showSnackbar("Belum ada style tersimpan")
+                return@setOnClickListener
+            }
+            MaterialAlertDialogBuilder(activity)
+                .setTitle("Hapus Semua Style")
+                .setMessage("Semua style tersimpan akan dihapus permanen.")
+                .setPositiveButton("Hapus") { _, _ ->
+                    savedTextStyles.clear()
+                    TextStyleStorage.save(activity, savedTextStyles)
+                    rebuildChips()
+                    showSnackbar("Semua style dihapus")
+                }
+                .setNegativeButton("Batal", null)
+                .show()
         }
-        rebuildChips()
-    }
 
-    private fun copyStyleOntoTarget(
-        style: com.flyerpix.editor.canvas.model.TextLayer,
-        target: com.flyerpix.editor.canvas.model.TextLayer
-    ) {
-        target.text = style.text
-        target.textSize = style.textSize
-        target.textColor = style.textColor
-        target.typeface = style.typeface
-        target.fontName = style.fontName
-        target.letterSpacing = style.letterSpacing
-        target.lineSpacing = style.lineSpacing
-        target.alignment = style.alignment
-        target.justifyEnabled = style.justifyEnabled
-        target.isBold = style.isBold
-        target.isItalic = style.isItalic
-        target.isUnderline = style.isUnderline
-        target.isStrikethrough = style.isStrikethrough
-        target.strokeColor = style.strokeColor
-        target.strokeWidth = style.strokeWidth
-        target.shadowEnabled = style.shadowEnabled
-        target.shadowColor = style.shadowColor
-        target.shadowRadius = style.shadowRadius
-        target.shadowDx = style.shadowDx
-        target.shadowDy = style.shadowDy
-        target.shadowOpacity = style.shadowOpacity
-        target.innerShadowEnabled = style.innerShadowEnabled
-        target.innerShadowColor = style.innerShadowColor
-        target.innerShadowRadius = style.innerShadowRadius
-        target.innerShadowDx = style.innerShadowDx
-        target.innerShadowDy = style.innerShadowDy
-        target.innerShadowOpacity = style.innerShadowOpacity
-        target.embossEnabled = style.embossEnabled
-        target.embossLightAngle = style.embossLightAngle
-        target.embossAmbient = style.embossAmbient
-        target.embossSpecular = style.embossSpecular
-        target.embossIntensity = style.embossIntensity
-        target.embossBevel = style.embossBevel
-        target.neonEnabled = style.neonEnabled
-        target.neonColor = style.neonColor
-        target.neonRadius = style.neonRadius
-        target.neonIntensity = style.neonIntensity
-        target.neonCoreEnabled = style.neonCoreEnabled
-        target.gradientEnabled = style.gradientEnabled
-        target.gradient = style.gradient?.copy()
-        target.textureEnabled = style.textureEnabled
-        target.textureBitmap = style.textureBitmap
-        target.textureScale = style.textureScale
-        target.textureRotation = style.textureRotation
-        target.extrudeEnabled = style.extrudeEnabled
-        target.extrudeDepth = style.extrudeDepth
-        target.extrudeColor = style.extrudeColor
-        target.extrudeGradient = style.extrudeGradient?.copy()
-        target.extrudeViewType = style.extrudeViewType
-        target.extrudeAngle = style.extrudeAngle
-        target.rotate3DX = style.rotate3DX
-        target.rotate3DY = style.rotate3DY
-        target.rotate3DZ = style.rotate3DZ
-        target.curvePercent = style.curvePercent
-        target.paddingTop = style.paddingTop
-        target.paddingBottom = style.paddingBottom
-        target.paddingLeft = style.paddingLeft
-        target.paddingRight = style.paddingRight
-        target.bgEnabled = style.bgEnabled
-        target.bgColor = style.bgColor
-        target.bgOpacity = style.bgOpacity
-        target.bgPadding = style.bgPadding
-        target.bgCornerRadius = style.bgCornerRadius
-        target.reflectionEnabled = style.reflectionEnabled
-        target.reflectionOpacity = style.reflectionOpacity
-        target.reflectionDistance = style.reflectionDistance
-        target.reflectionFade = style.reflectionFade
+        syncStylesUIHook = { layer ->
+            panel.visibility = View.VISIBLE
+        }
+
+        rebuildChips()
     }
 
     private fun hideKeyboard(view: View) {
