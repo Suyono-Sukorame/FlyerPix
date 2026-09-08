@@ -18,6 +18,9 @@ class ObjectMenuController(
     private val onPanelChanged: () -> Unit = {}
 ) {
     companion object {
+        // Object-only creation tools: fitur pembuatan/penambahan layer objek.
+        // Semuanya bersifat berbeda dari Text editing tools dan tidak boleh
+        // di-duplicate ke menu Text.
         const val OBJ_STICKER = "obj_sticker"
         const val OBJ_IMPORT  = "obj_import"
         const val OBJ_DRAW    = "obj_draw"

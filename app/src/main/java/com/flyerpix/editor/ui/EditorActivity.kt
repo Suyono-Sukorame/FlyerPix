@@ -50,6 +50,7 @@ import com.flyerpix.editor.ui.dialog.ImagePreEditDialog
 import com.flyerpix.editor.ui.adapter.AuthenticLayerAdapter
 import com.flyerpix.editor.ui.controller.LayerPanelController
 import com.flyerpix.editor.ui.controller.ObjectMenuController
+import com.flyerpix.editor.ui.controller.ObjectPanelController
 import com.flyerpix.editor.ui.controller.ExportController
 import com.flyerpix.editor.ui.controller.TextPanelController
 import com.flyerpix.editor.ui.controller.CanvasMenuController

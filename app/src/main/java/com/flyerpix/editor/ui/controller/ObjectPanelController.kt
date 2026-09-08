@@ -34,6 +34,9 @@ class ObjectPanelController(
 ) {
 
     companion object {
+        // Shared visual effect tools used by both text and object layers.
+        // Keep this list intentionally small and generic so we do not duplicate
+        // text-specific tools like font, letter spacing, curve, style, etc.
         const val OBJ_POSITION    = "obj_position"
         const val OBJ_SCALE       = "obj_scale"
         const val OBJ_OPACITY     = "obj_opacity"
@@ -48,7 +51,7 @@ class ObjectPanelController(
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
 
-        val coreEffectTags = setOf(
+        val sharedCoreEffectTags = setOf(
             OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE, OBJ_COLOR,
             OBJ_STROKE, OBJ_SHADOW, OBJ_GRADIENT, OBJ_BLEND, OBJ_PERSPECTIVE
         )
@@ -98,6 +101,9 @@ class ObjectPanelController(
         val container = binding.objectToolStripInclude.objectToolStripContainer
         container.post {
             for (spec in specs) {
+                require(spec.tag in sharedCoreEffectTags) {
+                    "Object effect tool '${spec.tag}' is not part of the shared-core-only toolset."
+                }
                 toolLabels[spec.tag] = spec.label
                 val item = LinearLayout(activity).apply {
                     orientation = LinearLayout.VERTICAL
@@ -153,7 +159,7 @@ class ObjectPanelController(
     }
 
     private fun showEffectSettingsVisibility() {
-        val show = effectSettingsOpen && activeToolTag in coreEffectTags
+        val show = effectSettingsOpen && activeToolTag in sharedCoreEffectTags
         val wasOpen = binding.effectSettingsInclude.root.visibility == View.VISIBLE
         val changed = wasOpen != show
         binding.effectSettingsInclude.root.visibility = if (show) View.VISIBLE else View.GONE
@@ -257,6 +263,20 @@ class ObjectPanelController(
         val b = binding.effectSettingsInclude.positionControlsInclude
         panelViews[OBJ_POSITION] = b.root
         val range = max(pixelCanvasView.width, pixelCanvasView.height).toFloat().coerceAtLeast(1000f)
+
+        fun centerX(l: CanvasLayer): Float = (pixelCanvasView.width - l.getUnwarpedDimensions().first) / 2f
+        fun centerY(l: CanvasLayer): Float = (pixelCanvasView.height - l.getUnwarpedDimensions().second) / 2f
+
+        fun syncPosLabels() {
+            val l = pixelCanvasView.selectedLayer ?: return
+            b.tvPosXLabel.text = "X: ${l.x.toInt()} px"
+            b.tvPosYLabel.text = "Y: ${l.y.toInt()} px"
+            b.editPosX.setText(String.format(Locale.US, "%.0f", l.x))
+            b.editPosY.setText(String.format(Locale.US, "%.0f", l.y))
+            b.sliderPosX.value = l.x.coerceIn(-range, range)
+            b.sliderPosY.value = l.y.coerceIn(-range, range)
+        }
+
         b.sliderPosX.valueFrom = -range
         b.sliderPosX.valueTo = range
         b.sliderPosY.valueFrom = -range
@@ -272,19 +292,6 @@ class ObjectPanelController(
         b.btnPosCenterV.setOnClickListener { applyToLayer { it.y = centerY(it) }; syncPosLabels() }
         b.btnPosCenter.setOnClickListener { applyToLayer { it.x = centerX(it); it.y = centerY(it) }; syncPosLabels() }
         b.btnResetPosition.setOnClickListener { applyToLayer { it.x = 0f; it.y = 0f }; syncPosLabels() }
-
-        fun centerX(l: CanvasLayer): Float = (pixelCanvasView.width - l.getUnwarpedDimensions().first) / 2f
-        fun centerY(l: CanvasLayer): Float = (pixelCanvasView.height - l.getUnwarpedDimensions().second) / 2f
-
-        fun syncPosLabels() {
-            val l = pixelCanvasView.selectedLayer ?: return
-            b.tvPosXLabel.text = "X: ${l.x.toInt()} px"
-            b.tvPosYLabel.text = "Y: ${l.y.toInt()} px"
-            b.editPosX.setText(String.format(Locale.US, "%.0f", l.x))
-            b.editPosY.setText(String.format(Locale.US, "%.0f", l.y))
-            b.sliderPosX.value = l.x.coerceIn(-range, range)
-            b.sliderPosY.value = l.y.coerceIn(-range, range)
-        }
     }
 
     private fun syncPositionUI(layer: CanvasLayer) {
@@ -302,6 +309,13 @@ class ObjectPanelController(
     private fun initScaleControls() {
         val b = binding.effectSettingsInclude.sizeControlsInclude
         panelViews[OBJ_SCALE] = b.root
+
+        fun syncScaleLabels() {
+            val l = pixelCanvasView.selectedLayer ?: return
+            b.tvScaleLabel.text = "Scale: ${(l.scale * 100).toInt()}%"
+            b.sliderScaleXY.value = l.scale.coerceIn(0.1f, 8f)
+        }
+
         b.sliderScaleXY.valueFrom = 0.1f
         b.sliderScaleXY.valueTo = 8f
         b.sliderScaleXY.addOnChangeListener { _, v, _ -> applyToLayer { it.scale = v }; syncScaleLabels() }
@@ -315,12 +329,6 @@ class ObjectPanelController(
                 }
             }
             syncScaleLabels()
-        }
-
-        fun syncScaleLabels() {
-            val l = pixelCanvasView.selectedLayer ?: return
-            b.tvScaleLabel.text = "Scale: ${(l.scale * 100).toInt()}%"
-            b.sliderScaleXY.value = l.scale.coerceIn(0.1f, 8f)
         }
     }
 
@@ -337,14 +345,15 @@ class ObjectPanelController(
     private fun initOpacityControls() {
         val b = binding.effectSettingsInclude.opacityControlsInclude
         panelViews[OBJ_OPACITY] = b.root
-        b.sliderOpacity.addOnChangeListener { _, v, _ -> applyToLayer { it.opacity = (v * 255 / 100).toInt().coerceIn(0, 255) }; syncOpacityLabels() }
-        b.btnResetOpacity.setOnClickListener { applyToLayer { it.opacity = 255 }; syncOpacityLabels() }
 
         fun syncOpacityLabels() {
             val l = pixelCanvasView.selectedLayer ?: return
             b.tvOpacityLabel.text = "${(l.opacity * 100 / 255)}%"
             b.sliderOpacity.value = (l.opacity * 100f / 255f).coerceIn(0f, 100f)
         }
+
+        b.sliderOpacity.addOnChangeListener { _, v, _ -> applyToLayer { it.opacity = (v * 255 / 100).toInt().coerceIn(0, 255) }; syncOpacityLabels() }
+        b.btnResetOpacity.setOnClickListener { applyToLayer { it.opacity = 255 }; syncOpacityLabels() }
     }
 
     private fun syncOpacityUI(layer: CanvasLayer) {
@@ -360,18 +369,19 @@ class ObjectPanelController(
     private fun initRotateControls() {
         val b = binding.effectSettingsInclude.rotateControlsInclude
         panelViews[OBJ_ROTATE] = b.root
-        b.sliderRotate.addOnChangeListener { _, v, _ -> applyToLayer { it.rotation = v }; syncRotateLabels() }
-        b.btnRotateMinus90.setOnClickListener { applyToLayer { it.rotation -= 90f }; syncRotateLabels() }
-        b.btnRotatePlus90.setOnClickListener { applyToLayer { it.rotation += 90f }; syncRotateLabels() }
-        b.btnRotate180.setOnClickListener { applyToLayer { it.rotation += 180f }; syncRotateLabels() }
-        b.btnRotateReset.setOnClickListener { applyToLayer { it.rotation = 0f }; syncRotateLabels() }
-        b.btnResetRotate.setOnClickListener { applyToLayer { it.rotation = 0f }; syncRotateLabels() }
 
         fun syncRotateLabels() {
             val l = pixelCanvasView.selectedLayer ?: return
             b.tvRotateLabel.text = "${l.rotation.toInt()}°"
             b.sliderRotate.value = l.rotation.coerceIn(-360f, 360f)
         }
+
+        b.sliderRotate.addOnChangeListener { _, v, _ -> applyToLayer { it.rotation = v }; syncRotateLabels() }
+        b.btnRotateMinus90.setOnClickListener { applyToLayer { it.rotation -= 90f }; syncRotateLabels() }
+        b.btnRotatePlus90.setOnClickListener { applyToLayer { it.rotation += 90f }; syncRotateLabels() }
+        b.btnRotate180.setOnClickListener { applyToLayer { it.rotation += 180f }; syncRotateLabels() }
+        b.btnRotateReset.setOnClickListener { applyToLayer { it.rotation = 0f }; syncRotateLabels() }
+        b.btnResetRotate.setOnClickListener { applyToLayer { it.rotation = 0f }; syncRotateLabels() }
     }
 
     private fun syncRotateUI(layer: CanvasLayer) {
@@ -433,16 +443,6 @@ class ObjectPanelController(
     private fun initStrokeControls() {
         val b = binding.effectSettingsInclude.strokeControlsInclude
         panelViews[OBJ_STROKE] = b.root
-        b.sliderStrokeWidth.addOnChangeListener { _, v, _ -> applyToLayer { setStrokeWidth(it, v) }; syncStrokeLabels() }
-        b.sliderStrokeOpacity.addOnChangeListener { _, v, _ ->
-            applyToLayer { l ->
-                setStrokeColor(l, argbFromOpacity(strokeColorOf(l), v))
-            }
-            syncStrokeLabels()
-        }
-        b.btnResetStroke.setOnClickListener { applyToLayer { setStrokeWidth(it, 0f) }; syncStrokeLabels() }
-        b.btnPickStrokeColor.setOnClickListener { launchStrokeColorPicker() }
-        b.chipStrokeColorPreview.setOnClickListener { launchStrokeColorPicker() }
 
         fun syncStrokeLabels() {
             val l = pixelCanvasView.selectedLayer ?: return
@@ -455,6 +455,17 @@ class ObjectPanelController(
             b.switchStrokeEnabled.isChecked = strokeWidthOf(l) > 0f
             b.strokeSliderGroup.visibility = if (strokeWidthOf(l) > 0f) View.VISIBLE else View.GONE
         }
+
+        b.sliderStrokeWidth.addOnChangeListener { _, v, _ -> applyToLayer { setStrokeWidth(it, v) }; syncStrokeLabels() }
+        b.sliderStrokeOpacity.addOnChangeListener { _, v, _ ->
+            applyToLayer { l ->
+                setStrokeColor(l, argbFromOpacity(strokeColorOf(l), v))
+            }
+            syncStrokeLabels()
+        }
+        b.btnResetStroke.setOnClickListener { applyToLayer { setStrokeWidth(it, 0f) }; syncStrokeLabels() }
+        b.btnPickStrokeColor.setOnClickListener { launchStrokeColorPicker() }
+        b.chipStrokeColorPreview.setOnClickListener { launchStrokeColorPicker() }
     }
 
     private fun strokeColorOf(l: CanvasLayer): Int = when (l) {
