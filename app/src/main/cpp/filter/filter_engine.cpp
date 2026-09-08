@@ -20,6 +20,9 @@
 // ============================================================================
 
 FilterEngine::FilterEngine() {
+    // Persistent thread pool: dibuat sekali, dipakai ulang di semua filter call.
+    // Menghindari biaya spawn + join thread pada setiap panggilan filter.
+    pool_ = std::make_unique<ThreadPool>(thread_count_);
     LOGD("FilterEngine initialized (threads=%d, SIMD=%s)", 
          thread_count_, simd_enabled_ ? "ON" : "OFF");
 }
@@ -41,7 +44,7 @@ Status FilterEngine::applyBlur(const Bitmap& src, Bitmap& dst, const BlurParams&
     Bitmap temp = src;
     for (int p = 0; p < params.passes; p++) {
         Bitmap pass_dst(src.getWidth(), src.getHeight(), src.getFormat());
-        Status result = BlurFilter::applySeparable(temp, pass_dst, params.radius, thread_count_);
+        Status result = BlurFilter::applySeparable(temp, pass_dst, params.radius, thread_count_, pool_.get());
         
         if (result != Status::OK) {
             LOGE("Blur pass %d failed", p);
@@ -61,7 +64,7 @@ Status FilterEngine::applyColorAdjust(const Bitmap& src, Bitmap& dst, const Colo
          params.brightness, params.contrast, params.saturation, params.hue);
     
     return ColorFilter::apply(src, dst, params.brightness, params.contrast, 
-                             params.saturation, params.hue, thread_count_);
+                             params.saturation, params.hue, thread_count_, pool_.get());
 }
 
 Status FilterEngine::applyEmboss(const Bitmap& src, Bitmap& dst, const EmbossParams& params) {
@@ -72,7 +75,7 @@ Status FilterEngine::applyEmboss(const Bitmap& src, Bitmap& dst, const EmbossPar
         return Status::ERROR_INVALID_PARAM;
     }
     
-    return EmbossFilter::apply(src, dst, params.amount, params.angle, thread_count_);
+    return EmbossFilter::apply(src, dst, params.amount, params.angle, thread_count_, pool_.get());
 }
 
 Status FilterEngine::applyGrayscale(const Bitmap& src, Bitmap& dst) {
@@ -86,7 +89,7 @@ Status FilterEngine::applyGrayscale(const Bitmap& src, Bitmap& dst) {
         return Status::ERROR_INVALID_PARAM;
     }
     
-    ThreadPool pool(thread_count_);
+    ThreadPool* pool = pool_.get();
     int height = src.getHeight();
     int width = src.getWidth();
     int chunk_size = (height + thread_count_ - 1) / thread_count_;
@@ -107,10 +110,10 @@ Status FilterEngine::applyGrayscale(const Bitmap& src, Bitmap& dst) {
             }
         };
         
-        pool.submit(task);
+        pool->submit(task);
     }
     
-    return pool.waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
+    return pool->waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
 }
 
 Status FilterEngine::applyInvert(const Bitmap& src, Bitmap& dst) {
@@ -124,7 +127,7 @@ Status FilterEngine::applyInvert(const Bitmap& src, Bitmap& dst) {
         return Status::ERROR_INVALID_PARAM;
     }
     
-    ThreadPool pool(thread_count_);
+    ThreadPool* pool = pool_.get();
     int height = src.getHeight();
     int width = src.getWidth();
     int chunk_size = (height + thread_count_ - 1) / thread_count_;
@@ -145,10 +148,10 @@ Status FilterEngine::applyInvert(const Bitmap& src, Bitmap& dst) {
             }
         };
         
-        pool.submit(task);
+        pool->submit(task);
     }
     
-    return pool.waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
+    return pool->waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
 }
 
 Status FilterEngine::applySepia(const Bitmap& src, Bitmap& dst, float intensity) {
@@ -166,7 +169,7 @@ Status FilterEngine::applySepia(const Bitmap& src, Bitmap& dst, float intensity)
         return Status::ERROR_INVALID_PARAM;
     }
     
-    ThreadPool pool(thread_count_);
+    ThreadPool* pool = pool_.get();
     int height = src.getHeight();
     int chunk_size = (height + thread_count_ - 1) / thread_count_;
     
@@ -210,10 +213,10 @@ Status FilterEngine::applySepia(const Bitmap& src, Bitmap& dst, float intensity)
             }
         };
         
-        pool.submit(task);
+        pool->submit(task);
     }
     
-    return pool.waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
+    return pool->waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
 }
 
 // ============================================================================
@@ -223,8 +226,17 @@ Status FilterEngine::applySepia(const Bitmap& src, Bitmap& dst, float intensity)
 void FilterEngine::setThreadCount(int threads) {
     std::lock_guard<std::mutex> lock(config_mutex_);
     if (threads > 0 && threads <= 32) {
+        int old_count = thread_count_;
         thread_count_ = threads;
         LOGD("Thread count set to %d", thread_count_);
+        
+        // Resize persistent pool hanya jika idle (tidak ada task in-flight).
+        // Jika sedang ada task berjalan, pool lama dibiarkan sampai selesai.
+        if (pool_ && thread_count_ != old_count &&
+            pool_->getPendingTaskCount() == 0 && pool_->getActiveWorkerCount() == 0) {
+            pool_ = std::make_unique<ThreadPool>(thread_count_);
+            LOGD("Thread pool resized to %d workers", thread_count_);
+        }
     } else {
         LOGW("Invalid thread count: %d (valid range: 1-32), keeping %d", 
              threads, thread_count_);

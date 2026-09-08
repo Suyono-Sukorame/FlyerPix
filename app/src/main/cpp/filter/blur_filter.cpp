@@ -14,6 +14,7 @@
 #include "thread_pool.h"
 #include <cmath>
 #include <vector>
+#include <memory>
 #include <android/log.h>
 
 #define LOG_TAG "BlurFilter"
@@ -218,7 +219,8 @@ Status BlurFilter::applySeparable(
     const Bitmap& src, 
     Bitmap& dst, 
     float radius, 
-    int threadCount) {
+    int threadCount,
+    ThreadPool* pool) {
     
     if (radius <= 0.0f) {
         // No blur, just copy
@@ -242,12 +244,21 @@ Status BlurFilter::applySeparable(
     auto kernel = generateKernel(radius);
     LOGD("Generated Gaussian kernel (size=%zu, sigma=%.2f)", kernel.size(), radius);
     
+    // Gunakan persistent pool jika disediakan; fallback buat pool lokal agar
+    // masih bisa dipanggil tanpa instance FilterEngine (mis. unit test).
+    // Pool lokal hanya dibuat (spawn thread) saat param pool == nullptr.
+    std::unique_ptr<ThreadPool> owned_pool;
+    ThreadPool* active_pool = pool;
+    if (!active_pool) {
+        owned_pool = std::make_unique<ThreadPool>(threadCount);
+        active_pool = owned_pool.get();
+    }
+    
     // Create intermediate buffer untuk horizontal pass
     Bitmap horizontal_buf(src.getWidth(), src.getHeight(), src.getFormat());
     
     // ========== PASS 1: Horizontal Blur ==========
     {
-        ThreadPool pool(threadCount);
         int height = src.getHeight();
         int chunk_size = (height + threadCount - 1) / threadCount;
         
@@ -259,11 +270,15 @@ Status BlurFilter::applySeparable(
                 blurHorizontal(src, horizontal_buf, kernel, y0, y1);
             };
             
-            pool.submit(task);
+            active_pool->submit(task);
         }
         
-        if (!pool.waitAll(5000)) {
-            LOGE("Horizontal blur pass timeout");
+        if (!active_pool->waitAll(30000)) {
+            // Jangan pernah abandon task: pool persisten masih akan menjalankan
+            // lambdas yang men-capture &src/&dst/&horizontal_buf milik frame ini.
+            // Drain dulu sampai semua task selesai, baru boleh return.
+            LOGE("Horizontal blur pass timeout; draining remaining tasks");
+            active_pool->waitAll();
             return Status::ERROR_RENDERING_FAILED;
         }
     }
@@ -272,7 +287,6 @@ Status BlurFilter::applySeparable(
     
     // ========== PASS 2: Vertical Blur ==========
     {
-        ThreadPool pool(threadCount);
         int width = src.getWidth();
         int chunk_size = (width + threadCount - 1) / threadCount;
         
@@ -284,11 +298,13 @@ Status BlurFilter::applySeparable(
                 blurVertical(horizontal_buf, dst, kernel, x0, x1);
             };
             
-            pool.submit(task);
+            active_pool->submit(task);
         }
         
-        if (!pool.waitAll(5000)) {
-            LOGE("Vertical blur pass timeout");
+        if (!active_pool->waitAll(30000)) {
+            // Drain sebelum return (lihat komentar di pass horizontal).
+            LOGE("Vertical blur pass timeout; draining remaining tasks");
+            active_pool->waitAll();
             return Status::ERROR_RENDERING_FAILED;
         }
     }
@@ -305,7 +321,8 @@ Status BlurFilter::apply(
     const Bitmap& src, 
     Bitmap& dst, 
     float radius, 
-    int threadCount) {
+    int threadCount,
+    ThreadPool* pool) {
     
     if (radius <= 0.0f) {
         dst.copyFrom(src);
@@ -314,5 +331,5 @@ Status BlurFilter::apply(
     
     // For Gaussian blur, use separable optimization
     // (Full 2D convolution would be slower)
-    return applySeparable(src, dst, radius, threadCount);
+    return applySeparable(src, dst, radius, threadCount, pool);
 }

@@ -15,6 +15,7 @@
 #include "thread_pool.h"
 #include <cmath>
 #include <vector>
+#include <memory>
 #include <android/log.h>
 
 #define LOG_TAG "EmbossFilter"
@@ -202,7 +203,8 @@ Status EmbossFilter::apply(
     Bitmap& dst, 
     float amount, 
     float angle, 
-    int threadCount) {
+    int threadCount,
+    ThreadPool* pool) {
     
     LOGD("Applying emboss effect (amount=%.2f, angle=%.1f°)", amount, angle);
     
@@ -229,8 +231,16 @@ Status EmbossFilter::apply(
     
     LOGD("Generated emboss kernel (angle=%.1f°, amount=%.2f)", angle, amount);
     
+    // Gunakan persistent pool jika disediakan; fallback buat pool lokal.
+    // Pool lokal hanya dibuat (spawn thread) saat param pool == nullptr.
+    std::unique_ptr<ThreadPool> owned_pool;
+    ThreadPool* active_pool = pool;
+    if (!active_pool) {
+        owned_pool = std::make_unique<ThreadPool>(threadCount);
+        active_pool = owned_pool.get();
+    }
+    
     // Process in parallel
-    ThreadPool pool(threadCount);
     int height = src.getHeight();
     int chunk_size = (height + threadCount - 1) / threadCount;
     
@@ -270,8 +280,8 @@ Status EmbossFilter::apply(
             }
         };
         
-        pool.submit(task);
+        active_pool->submit(task);
     }
     
-    return pool.waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
+    return active_pool->waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
 }

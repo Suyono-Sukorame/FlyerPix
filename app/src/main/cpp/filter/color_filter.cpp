@@ -15,6 +15,7 @@
 #include "thread_pool.h"
 #include <cmath>
 #include <algorithm>
+#include <memory>
 #include <android/log.h>
 
 #define LOG_TAG "ColorFilter"
@@ -160,7 +161,8 @@ Status ColorFilter::apply(
     float contrast, 
     float saturation, 
     float hue, 
-    int threadCount) {
+    int threadCount,
+    ThreadPool* pool) {
     
     LOGD("Applying color adjust (B=%.2f, C=%.2f, S=%.2f, H=%.1f)", 
          brightness, contrast, saturation, hue);
@@ -186,8 +188,16 @@ Status ColorFilter::apply(
         return Status::OK;
     }
     
+    // Gunakan persistent pool jika disediakan; fallback buat pool lokal.
+    // Pool lokal hanya dibuat (spawn thread) saat param pool == nullptr.
+    std::unique_ptr<ThreadPool> owned_pool;
+    ThreadPool* active_pool = pool;
+    if (!active_pool) {
+        owned_pool = std::make_unique<ThreadPool>(threadCount);
+        active_pool = owned_pool.get();
+    }
+    
     // Process in parallel
-    ThreadPool pool(threadCount);
     int height = src.getHeight();
     int chunk_size = (height + threadCount - 1) / threadCount;
     
@@ -205,8 +215,8 @@ Status ColorFilter::apply(
             }
         };
         
-        pool.submit(task);
+        active_pool->submit(task);
     }
     
-    return pool.waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
+    return active_pool->waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
 }

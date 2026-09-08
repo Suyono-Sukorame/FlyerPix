@@ -15,6 +15,7 @@
 
 #include "flyerpix_types.h"
 #include "bitmap.h"
+#include "thread_pool.h"
 #include <memory>
 #include <mutex>
 
@@ -111,6 +112,10 @@ private:
     int thread_count_ = 4;
     bool simd_enabled_ = true;
     
+    // Persistent thread pool - dibuat sekali di constructor dan digunakan ulang
+    // di setiap panggilan filter (menghindari spawn thread per-call).
+    std::unique_ptr<ThreadPool> pool_;
+    
     // Helper functions
     static inline void blendPixel(Color32& dst, Color32 src, uint8_t alpha);
     static inline Color32 blurPixel(const Bitmap& src, int x, int y, float radius);
@@ -125,10 +130,10 @@ public:
     BlurFilter();
     
     // Apply Gaussian blur dengan kernel optimization
-    static Status apply(const Bitmap& src, Bitmap& dst, float radius, int threadCount = 4);
+    static Status apply(const Bitmap& src, Bitmap& dst, float radius, int threadCount = 4, ThreadPool* pool = nullptr);
     
     // Apply separable Gaussian blur (faster)
-    static Status applySeparable(const Bitmap& src, Bitmap& dst, float radius, int threadCount = 4);
+    static Status applySeparable(const Bitmap& src, Bitmap& dst, float radius, int threadCount = 4, ThreadPool* pool = nullptr);
     
 private:
     // Generate Gaussian kernel
@@ -148,7 +153,7 @@ class ColorFilter {
 public:
     // Apply color adjustments dengan parallel processing
     static Status apply(const Bitmap& src, Bitmap& dst, float brightness, float contrast, 
-                       float saturation, float hue, int threadCount = 4);
+                       float saturation, float hue, int threadCount = 4, ThreadPool* pool = nullptr);
     
 private:
     // RGB to HSV conversion
@@ -168,7 +173,7 @@ private:
 class EmbossFilter {
 public:
     // Apply emboss effect
-    static Status apply(const Bitmap& src, Bitmap& dst, float amount, float angle, int threadCount = 4);
+    static Status apply(const Bitmap& src, Bitmap& dst, float amount, float angle, int threadCount = 4, ThreadPool* pool = nullptr);
     
 private:
     // Generate emboss kernel based on angle
