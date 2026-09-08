@@ -2686,115 +2686,98 @@ private fun registerTextPanels() {
         }
     }
 
-    // ─── Effect Page: Posisi Relatif ───────────────────────────────────────
-
-    private var relAnchorX = 0f
-    private var relAnchorY = 0f
+    // ─── Effect Page: Posisi Relatif (Compact Directional Movement) ────────
 
     private fun initializeRelativePositionControls() {
         val b = binding.effectSettingsInclude.relativePositionControlsInclude
         val panel = b.root
-        var syncing = false
 
-        val anchors = linkedMapOf(
-            "left-top" to b.btnRelTopLeft,
-            "center-top" to b.btnRelTopCenter,
-            "right-top" to b.btnRelTopRight,
-            "left-center" to b.btnRelCenterLeft,
-            "center-center" to b.btnRelCenter,
-            "right-center" to b.btnRelCenterRight,
-            "left-bottom" to b.btnRelBottomLeft,
-            "center-bottom" to b.btnRelBottomCenter,
-            "right-bottom" to b.btnRelBottomRight
-        )
-
-        fun setAnchorActive(key: String) {
-            for ((k, btn) in anchors) {
-                val active = k == key
-                btn.isSelected = active
-                btn.setBackgroundColor(if (active) COLOR_ACTIVE else Color.TRANSPARENT)
-                btn.setTextColor(if (active) Color.WHITE else COLOR_GRAY)
-            }
+        // Get pixel distance from input
+        fun getPixelDistance(): Float {
+            val text = b.etRelMovePixels.text.toString().trim()
+            return text.toFloatOrNull() ?: 10f
         }
 
-        fun syncLabels(offsetX: Float, offsetY: Float) {
-            b.tvRelOffsetXLabel.text = String.format(Locale.US, "Offset X: %.0f px", offsetX)
-            b.tvRelOffsetYLabel.text = String.format(Locale.US, "Offset Y: %.0f px", offsetY)
-        }
-
-        fun resetOffsets() {
-            syncing = true
-            b.sliderRelOffsetX.value = 0f
-            b.sliderRelOffsetY.value = 0f
-            syncing = false
-            syncLabels(0f, 0f)
-        }
-
-        fun place(horizontal: String, vertical: String, key: String) {
+        // Movement functions
+        fun moveLayer(deltaX: Float, deltaY: Float) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
+            pixelCanvasView.runRecordedAction("Move Layer") {
+                layer.x += deltaX
+                layer.y += deltaY
+            }
+            pixelCanvasView.invalidate()
+        }
+
+        // Left arrow: move left
+        b.btnRelLeft.setOnClickListener {
+            val px = -getPixelDistance()
+            moveLayer(px, 0f)
+        }
+
+        // Right arrow: move right
+        b.btnRelRight.setOnClickListener {
+            val px = getPixelDistance()
+            moveLayer(px, 0f)
+        }
+
+        // Up arrow: move up
+        b.btnRelUp.setOnClickListener {
+            val py = -getPixelDistance()
+            moveLayer(0f, py)
+        }
+
+        // Down arrow: move down
+        b.btnRelDown.setOnClickListener {
+            val py = getPixelDistance()
+            moveLayer(0f, py)
+        }
+
+        // Center: reset to center
+        b.btnRelCenter.setOnClickListener {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
             val (lw, lh) = layer.getUnwarpedDimensions()
             val w = pixelCanvasView.width
             val h = pixelCanvasView.height
             val sw = lw * layer.scale
             val sh = lh * layer.scale
-            pixelCanvasView.runRecordedAction("Posisi Relatif") {
-                when (horizontal) {
-                    "left" -> layer.x = 0f
-                    "right" -> layer.x = w - sw
-                    else -> layer.x = (w - sw) / 2f
-                }
-                when (vertical) {
-                    "top" -> layer.y = 0f
-                    "bottom" -> layer.y = h - sh
-                    else -> layer.y = (h - sh) / 2f
-                }
+
+            pixelCanvasView.runRecordedAction("Center Layer") {
+                layer.x = (w - sw) / 2f
+                layer.y = (h - sh) / 2f
             }
-            relAnchorX = layer.x
-            relAnchorY = layer.y
-            setAnchorActive(key)
-            resetOffsets()
             pixelCanvasView.invalidate()
         }
 
-        b.btnRelTopLeft.setOnClickListener { place("left", "top", "left-top") }
-        b.btnRelTopCenter.setOnClickListener { place("center", "top", "center-top") }
-        b.btnRelTopRight.setOnClickListener { place("right", "top", "right-top") }
-        b.btnRelCenterLeft.setOnClickListener { place("left", "center", "left-center") }
-        b.btnRelCenter.setOnClickListener { place("center", "center", "center-center") }
-        b.btnRelCenterRight.setOnClickListener { place("right", "center", "right-center") }
-        b.btnRelBottomLeft.setOnClickListener { place("left", "bottom", "left-bottom") }
-        b.btnRelBottomCenter.setOnClickListener { place("center", "bottom", "center-bottom") }
-        b.btnRelBottomRight.setOnClickListener { place("right", "bottom", "right-bottom") }
-
-        b.sliderRelOffsetX.addOnChangeListener { _, value, _ ->
-            if (syncing) return@addOnChangeListener
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@addOnChangeListener
-            layer.x = relAnchorX + value
-            b.tvRelOffsetXLabel.text = String.format(Locale.US, "Offset X: %.0f px", value)
-            pixelCanvasView.invalidate()
+        // Slider: adjust pixel distance in real-time
+        b.sliderRelMove.addOnChangeListener { _, value, _ ->
+            b.etRelMovePixels.setText(value.toInt().toString())
         }
 
-        b.sliderRelOffsetY.addOnChangeListener { _, value, _ ->
-            if (syncing) return@addOnChangeListener
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@addOnChangeListener
-            layer.y = relAnchorY + value
-            b.tvRelOffsetYLabel.text = String.format(Locale.US, "Offset Y: %.0f px", value)
-            pixelCanvasView.invalidate()
+        // Confirm button: sync value from slider
+        b.btnRelConfirm.setOnClickListener {
+            val sliderValue = b.sliderRelMove.value.toInt()
+            b.etRelMovePixels.setText(sliderValue.toString())
         }
 
-        b.btnResetRelative.setOnClickListener {
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
-            layer.x = relAnchorX
-            layer.y = relAnchorY
-            resetOffsets()
-            pixelCanvasView.invalidate()
+        // Close button: hide panel
+        b.btnRelClose.setOnClickListener {
+            panel.visibility = View.GONE
+        }
+
+        // Plus button: increase value
+        b.btnRelPlus.setOnClickListener {
+            val current = b.sliderRelMove.value
+            b.sliderRelMove.value = (current + 10f).coerceAtMost(200f)
+        }
+
+        // Minus button: decrease value
+        b.btnRelMinus.setOnClickListener {
+            val current = b.sliderRelMove.value
+            b.sliderRelMove.value = (current - 10f).coerceAtLeast(0f)
         }
 
         syncRelativePositionUIHook = { layer ->
             panel.visibility = View.VISIBLE
-            relAnchorX = layer.x
-            relAnchorY = layer.y
-            resetOffsets()
         }
     }
 

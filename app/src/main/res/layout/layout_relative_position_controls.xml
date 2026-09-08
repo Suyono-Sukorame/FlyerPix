@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Panel kontrol Posisi Relatif untuk TextLayer.
-  Gaya kompak ala 3D Text: judul + tombol reset sebaris, grid anchor 3x3
-  dengan highlight, dan slider 2 kolom offset X/Y berlabel dinamis.
+  Relative Position Controls - Compact Symbol-Only Layout
+  Design: Input px + slider with +/- buttons, directional arrows, confirm/close buttons
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -10,209 +9,180 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="4dp"
+    android:padding="8dp"
     android:visibility="gone">
 
+    <!-- Row 1: Input + Confirm/Close -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Posisi Relatif"
-            android:textAppearance="?attr/textAppearanceSubtitle2"
-            android:textStyle="bold" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnResetRelative"
-            style="@style/LightPanelTextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:text="Reset"
-            android:textSize="12sp"
-            android:textColor="@color/brand_blue"
-            android:minWidth="0dp"
-            android:paddingHorizontal="8dp" />
-    </LinearLayout>
-
-    <GridLayout
-        android:id="@+id/gridRelativePos"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:columnCount="3"
-        android:rowCount="3">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRelTopLeft"
-            style="@style/LightPanelOutlinedButton"
-            android:layout_width="0dp"
-            android:layout_columnWeight="1"
-            android:layout_height="34dp"
-            android:layout_margin="2dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="2dp"
-            android:text="Atas Kiri"
-            android:textSize="9sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRelTopCenter"
-            style="@style/LightPanelOutlinedButton"
-            android:layout_width="0dp"
-            android:layout_columnWeight="1"
-            android:layout_height="34dp"
-            android:layout_margin="2dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="2dp"
-            android:text="Atas Tengah"
-            android:textSize="9sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRelTopRight"
-            style="@style/LightPanelOutlinedButton"
-            android:layout_width="0dp"
-            android:layout_columnWeight="1"
-            android:layout_height="34dp"
-            android:layout_margin="2dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="2dp"
-            android:text="Atas Kanan"
-            android:textSize="9sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRelCenterLeft"
-            style="@style/LightPanelOutlinedButton"
-            android:layout_width="0dp"
-            android:layout_columnWeight="1"
-            android:layout_height="34dp"
-            android:layout_margin="2dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="2dp"
-            android:text="Tengah Kiri"
-            android:textSize="9sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRelCenter"
-            style="@style/LightPanelOutlinedButton"
-            android:layout_width="0dp"
-            android:layout_columnWeight="1"
-            android:layout_height="34dp"
-            android:layout_margin="2dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="2dp"
-            android:text="Tengah"
-            android:textSize="9sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRelCenterRight"
-            style="@style/LightPanelOutlinedButton"
-            android:layout_width="0dp"
-            android:layout_columnWeight="1"
-            android:layout_height="34dp"
-            android:layout_margin="2dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="2dp"
-            android:text="Tengah Kanan"
-            android:textSize="9sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRelBottomLeft"
-            style="@style/LightPanelOutlinedButton"
-            android:layout_width="0dp"
-            android:layout_columnWeight="1"
-            android:layout_height="34dp"
-            android:layout_margin="2dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="2dp"
-            android:text="Bawah Kiri"
-            android:textSize="9sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRelBottomCenter"
-            style="@style/LightPanelOutlinedButton"
-            android:layout_width="0dp"
-            android:layout_columnWeight="1"
-            android:layout_height="34dp"
-            android:layout_margin="2dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="2dp"
-            android:text="Bawah Tengah"
-            android:textSize="9sp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRelBottomRight"
-            style="@style/LightPanelOutlinedButton"
-            android:layout_width="0dp"
-            android:layout_columnWeight="1"
-            android:layout_height="34dp"
-            android:layout_margin="2dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="2dp"
-            android:text="Bawah Kanan"
-            android:textSize="9sp" />
-    </GridLayout>
-
-    <!-- Slider 2 kolom: Offset X & Y -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
 
-        <LinearLayout
-            android:layout_width="0dp"
+        <!-- Input Field: Move by _px -->
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:text="Move by:"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="4dp" />
 
-            <TextView
-                android:id="@+id/tvRelOffsetXLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:text="Offset X: 0 px"
-                android:textAppearance="?attr/textAppearanceCaption" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderRelOffsetX"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:valueFrom="-500"
-                android:valueTo="500"
-                android:stepSize="1"
-                android:value="0"
-                app:labelBehavior="gone" />
-        </LinearLayout>
-
-        <LinearLayout
+        <EditText
+            android:id="@+id/etRelMovePixels"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="36dp"
             android:layout_weight="1"
+            android:inputType="numberSigned"
+            android:hint="px"
+            android:text="10"
+            android:textSize="12sp"
+            android:padding="6dp"
+            android:background="@drawable/bg_panel_input"
+            android:gravity="center" />
+
+        <!-- Confirm Button (✓) -->
+        <ImageButton
+            android:id="@+id/btnRelConfirm"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:layout_marginStart="8dp"
-            android:orientation="vertical">
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_check_24px"
+            android:contentDescription="Confirm"
+            android:scaleType="centerInside"
+            app:tint="@color/brand_blue" />
 
-            <TextView
-                android:id="@+id/tvRelOffsetYLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:text="Offset Y: 0 px"
-                android:textAppearance="?attr/textAppearanceCaption" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderRelOffsetY"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:valueFrom="-500"
-                android:valueTo="500"
-                android:stepSize="1"
-                android:value="0"
-                app:labelBehavior="gone" />
-        </LinearLayout>
+        <!-- Close Button (✕) -->
+        <ImageButton
+            android:id="@+id/btnRelClose"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_sharp_clear_24px"
+            android:contentDescription="Close"
+            android:scaleType="centerInside"
+            app:tint="@color/light_text_secondary" />
     </LinearLayout>
+
+    <!-- Row 2: Slider with +/- buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <!-- Minus Button (-) -->
+        <ImageButton
+            android:id="@+id/btnRelMinus"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_sharp_remove_circle_outline"
+            android:contentDescription="Decrease"
+            android:scaleType="fitCenter"
+            app:tint="@color/light_text_secondary" />
+
+        <!-- Slider -->
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderRelMove"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="4dp"
+            android:valueFrom="0"
+            android:valueTo="200"
+            android:stepSize="1"
+            android:value="10"
+            app:labelBehavior="gone"
+            app:haloRadius="8dp" />
+
+        <!-- Plus Button (+) -->
+        <ImageButton
+            android:id="@+id/btnRelPlus"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_add_24px"
+            android:contentDescription="Increase"
+            android:scaleType="fitCenter"
+            app:tint="@color/light_text_secondary" />
+    </LinearLayout>
+
+    <!-- Row 3: Directional Controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp">
+
+        <!-- Left Arrow -->
+        <ImageButton
+            android:id="@+id/btnRelLeft"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_rotate_left_24px"
+            android:contentDescription="Move Left"
+            android:scaleType="centerInside"
+            app:tint="@color/header_primary" />
+
+        <!-- Right Arrow -->
+        <ImageButton
+            android:id="@+id/btnRelRight"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_rotate_right_24px"
+            android:contentDescription="Move Right"
+            android:scaleType="centerInside"
+            app:tint="@color/header_primary" />
+
+        <!-- Center Dot -->
+        <ImageButton
+            android:id="@+id/btnRelCenter"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_circle_24px"
+            android:contentDescription="Center"
+            android:scaleType="centerInside"
+            app:tint="@color/panel_icon_tint" />
+
+        <!-- Up Arrow -->
+        <ImageButton
+            android:id="@+id/btnRelUp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_zoom_in_24px"
+            android:contentDescription="Move Up"
+            android:scaleType="centerInside"
+            app:tint="@color/header_primary" />
+
+        <!-- Down Arrow -->
+        <ImageButton
+            android:id="@+id/btnRelDown"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_zoom_out_24px"
+            android:contentDescription="Move Down"
+            android:scaleType="centerInside"
+            app:tint="@color/header_primary" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
 </LinearLayout>
