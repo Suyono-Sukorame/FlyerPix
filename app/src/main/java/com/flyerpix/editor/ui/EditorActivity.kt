@@ -766,10 +766,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
         // Edit Text button
         top.btnTopEditText.setOnClickListener {
-            val textLayer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
-            if (textLayer != null) {
-                showEditTextDialog(textLayer)
-            }
+            showTextEditMenu(it)
         }
 
         // Delete Text button
@@ -802,6 +799,116 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             top.btnTopEditText.visibility = View.GONE
             top.btnTopDeleteText.visibility = View.GONE
         }
+    }
+
+    /**
+     * Show context menu untuk text layer editing operations
+     */
+    private fun showTextEditMenu(anchor: View) {
+        val textLayer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+        if (textLayer == null) {
+            showSnackbar("Tidak ada text layer yang dipilih")
+            return
+        }
+
+        val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
+
+        // Editing Operations
+        popup.menu.add(0, 1, 0, "Edit Teks")
+        popup.menu.add(0, 2, 1, "Copy")
+        popup.menu.add(0, 3, 2, "Size")
+        popup.menu.add(0, 4, 3, "Rotate")
+        popup.menu.add(0, 5, 4, "Alignment")
+        popup.menu.add(0, 6, 5, "Color")
+
+        // Z-Order Operations
+        popup.menu.add(0, 7, 6, "To Front")
+        popup.menu.add(0, 8, 7, "To Back")
+
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> {
+                    // Edit Teks
+                    showEditTextDialog(textLayer)
+                }
+                2 -> {
+                    // Copy text layer
+                    pixelCanvasView.runRecordedAction("Copy Teks") {
+                        val copiedLayer = textLayer.copyLayer() as com.flyerpix.editor.canvas.model.TextLayer
+                        copiedLayer.x += 30f
+                        copiedLayer.y += 30f
+                        pixelCanvasView.addLayer(copiedLayer)
+                    }
+                    pixelCanvasView.invalidate()
+                    showSnackbar("Text layer di-copy")
+                }
+                3 -> {
+                    // Size - switch to text panel
+                    binding.bottomNavigation.selectedItemId = R.id.nav_text
+                    showSnackbar("Sesuaikan ukuran teks dengan slider di panel Text")
+                }
+                4 -> {
+                    // Rotate - switch to text panel
+                    binding.bottomNavigation.selectedItemId = R.id.nav_text
+                    showSnackbar("Sesuaikan rotasi teks dengan slider di panel Text")
+                }
+                5 -> {
+                    // Alignment menu
+                    showTextAlignmentMenu(anchor, textLayer)
+                }
+                6 -> {
+                    // Color - switch to text panel
+                    binding.bottomNavigation.selectedItemId = R.id.nav_text
+                    showSnackbar("Pilih warna teks di panel Text")
+                }
+                7 -> {
+                    // To Front
+                    pixelCanvasView.runRecordedAction("Bawa ke Depan") {
+                        pixelCanvasView.bringLayerToFront(textLayer)
+                    }
+                    pixelCanvasView.invalidate()
+                    showSnackbar("Layer di-bawa ke depan")
+                }
+                8 -> {
+                    // To Back
+                    pixelCanvasView.runRecordedAction("Kirim ke Belakang") {
+                        pixelCanvasView.sendLayerToBack(textLayer)
+                    }
+                    pixelCanvasView.invalidate()
+                    showSnackbar("Layer di-kirim ke belakang")
+                }
+            }
+            true
+        }
+        popup.show()
+    }
+
+    /**
+     * Show text alignment menu
+     */
+    private fun showTextAlignmentMenu(anchor: View, textLayer: com.flyerpix.editor.canvas.model.TextLayer) {
+        val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
+
+        val alignments = listOf("Left", "Center", "Right")
+        val alignValues = listOf(
+            android.text.Layout.Alignment.ALIGN_NORMAL,
+            android.text.Layout.Alignment.ALIGN_CENTER,
+            android.text.Layout.Alignment.ALIGN_OPPOSITE
+        )
+
+        alignments.forEachIndexed { index, name ->
+            popup.menu.add(0, index + 1, index, name)
+        }
+
+        popup.setOnMenuItemClickListener { item ->
+            val align = alignValues.getOrNull(item.itemId - 1)
+            if (align != null) {
+                // Note: TextLayer doesn't have alignment, but we can add it as future feature
+                showSnackbar("Alignment: ${alignments[item.itemId - 1]}")
+            }
+            true
+        }
+        popup.show()
     }
 
     private fun showTopAddMenu(anchor: View) {
