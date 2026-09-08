@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Masking Foto untuk TextLayer.
+  Gaya kompak ala 3D Text: switch + tombol reset sebaris,
+  thumbnail + tombol Pilih/Hapus, slider berpasangan 2 kolom (Skala & Rotasi).
+  Mengisi teks dengan gambar/foto di dalam area glyph huruf (Texture Masking).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/maskControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp"
+    android:visibility="gone">
+
+    <!-- ── Switch & Tombol Reset ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchMaskEnabled"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Masking Foto"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:checked="false" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetMask"
+            style="@style/LightPanelTextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="@color/brand_blue"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
+
+    <!-- ── Group Kontrol Masking ── -->
+    <LinearLayout
+        android:id="@+id/maskControlsGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="2dp"
+        android:visibility="gone">
+
+        <!-- Baris Pemilihan Gambar & Preview Thumbnail -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:strokeColor="#CCCCCC"
+                app:strokeWidth="1dp">
+
+                <ImageView
+                    android:id="@+id/imgMaskThumbnail"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_sharp_photo_24px" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSelectMask"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pilih dari Galeri"
+                    android:textSize="12sp"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDeleteMask"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="Hapus Mask"
+                    android:textColor="#D32F2F"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Skala & Rotasi sebaris (2 kolom) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvMaskScaleLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="Skala: 100%"
+                    android:textAppearance="?attr/textAppearanceCaption" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderMaskScale"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0.1"
+                    android:valueTo="3.0"
+                    android:stepSize="0.05"
+                    android:value="1.0"
+                    app:labelBehavior="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvMaskRotationLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="Rotasi: 0°"
+                    android:textAppearance="?attr/textAppearanceCaption" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderMaskRotation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="360"
+                    android:stepSize="1"
+                    android:value="0"
+                    app:labelBehavior="gone" />
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

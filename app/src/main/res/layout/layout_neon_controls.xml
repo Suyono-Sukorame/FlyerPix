@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Panel kontrol Neon / Glow untuk TextLayer.
-  Menyesuaikan layout kompak ala PixelLab: toggle + slider + palet warna.
+  Gaya kompak ala 3D Text: switch + tombol reset sebaris, palet chip,
+  baris color picker kustom (preview + hex + '+'), slider berpasangan 2 kolom.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -9,17 +10,36 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="4dp"
     android:visibility="gone">
 
-    <!-- ── Toggle enable/disable ── -->
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchNeonEnabled"
+    <!-- ── Header: Switch & Tombol Reset sebaris ── -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Neon / Glow"
-        android:textAppearance="?attr/textAppearanceBody2"
-        android:checked="false" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchNeonEnabled"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Neon / Glow"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:checked="false" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetNeon"
+            style="@style/LightPanelTextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="@color/brand_blue"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
 
     <!-- ── Slider group ── -->
     <LinearLayout
@@ -27,10 +47,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="2dp"
         android:visibility="gone">
 
-        <!-- Warna cahaya neon -->
+        <!-- Warna cahaya neon: palet preset -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -55,45 +75,115 @@
             </LinearLayout>
         </HorizontalScrollView>
 
-        <!-- Radius / sebaran cahaya -->
-        <TextView
-            android:id="@+id/tvNeonRadiusLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:layout_marginStart="4dp"
-            android:text="Glow Radius: 12"
-            android:textAppearance="?attr/textAppearanceCaption" />
-
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderNeonRadius"
+        <!-- Warna kustom: preview + hex + tombol '+' membuka ColorPickerDialog -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:valueFrom="1"
-            android:valueTo="40"
-            android:stepSize="0.5"
-            android:value="12"
-            app:labelBehavior="gone" />
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <!-- Intensitas cahaya -->
-        <TextView
-            android:id="@+id/tvNeonIntensityLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:layout_marginStart="4dp"
-            android:text="Intensity: 1.0"
-            android:textAppearance="?attr/textAppearanceCaption" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Custom"
+                android:textAppearance="?attr/textAppearanceCaption" />
 
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderNeonIntensity"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/chipNeonColorPreview"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="8dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#CCCCCC"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/tvNeonColorValue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="#00E5FF"
+                android:textAppearance="?attr/textAppearanceCaption"
+                android:textColor="#1A1A2E" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPickNeonColor"
+                style="@style/LightPanelOutlinedButton"
+                android:layout_width="36dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="6dp"
+                android:minWidth="0dp"
+                android:padding="0dp"
+                android:text="+"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Radius & Intensitas sebaris (2 kolom) -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:valueFrom="0.1"
-            android:valueTo="2"
-            android:stepSize="0.05"
-            android:value="1"
-            app:labelBehavior="gone" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvNeonRadiusLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="Glow Radius: 12"
+                    android:textAppearance="?attr/textAppearanceCaption" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderNeonRadius"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="1"
+                    android:valueTo="40"
+                    android:stepSize="0.5"
+                    android:value="12"
+                    app:labelBehavior="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvNeonIntensityLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="Intensity: 1.0"
+                    android:textAppearance="?attr/textAppearanceCaption" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderNeonIntensity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0.1"
+                    android:valueTo="2"
+                    android:stepSize="0.05"
+                    android:value="1"
+                    app:labelBehavior="gone" />
+            </LinearLayout>
+        </LinearLayout>
 
         <!-- Inti teks terang (on) / hollow (off) -->
         <com.google.android.material.switchmaterial.SwitchMaterial

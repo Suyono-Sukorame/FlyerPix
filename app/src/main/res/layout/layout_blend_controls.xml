@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Panel kontrol Blending Mode untuk CanvasLayer (TextLayer, dll).
-  Prompt 24: Mode percampuran populer (Normal, Multiply, Screen, Overlay, Darken, Lighten, Add).
+  Gaya kompak ala 3D Text: header caption + tombol reset sebaris,
+  strip mode horizontal (7 populer + 6 lanjutan, yang lanjutan
+  disembunyikan pada perangkat API < 28 karena PorterDuff.Mode diperluas).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -9,10 +11,10 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="4dp"
     android:visibility="gone">
 
-    <!-- ── Header: Judul & Tombol Reset ── -->
+    <!-- ── Header: Label & Tombol Reset sebaris ── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -23,15 +25,16 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="4dp"
             android:text="Blending Mode"
-            android:textAppearance="?attr/textAppearanceSubtitle2"
-            android:textStyle="bold" />
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:textColor="#1A1A2E" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnResetBlendMode"
             style="@style/LightPanelTextButton"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="32dp"
             android:text="Normal"
             android:textSize="12sp"
             android:textColor="@color/brand_blue"
@@ -45,15 +48,16 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
+        android:layout_marginStart="4dp"
         android:text="Normal: Menampilkan warna teks biasa di atas background."
         android:textAppearance="?attr/textAppearanceCaption"
         android:textColor="#5F6368" />
 
-    <!-- ── Tombol Pilihan Blending Mode Populer ── -->
+    <!-- ── Tombol Pilihan Blending Mode ── -->
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="6dp"
         android:scrollbars="none">
 
         <LinearLayout
@@ -65,7 +69,7 @@
                 android:id="@+id/btnBlendNormal"
                 style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="32dp"
                 android:layout_marginEnd="6dp"
                 android:text="Normal"
                 android:textSize="11sp"
@@ -76,7 +80,7 @@
                 android:id="@+id/btnBlendMultiply"
                 style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="32dp"
                 android:layout_marginEnd="6dp"
                 android:text="Multiply"
                 android:textSize="11sp"
@@ -87,7 +91,7 @@
                 android:id="@+id/btnBlendScreen"
                 style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="32dp"
                 android:layout_marginEnd="6dp"
                 android:text="Screen"
                 android:textSize="11sp"
@@ -98,7 +102,7 @@
                 android:id="@+id/btnBlendOverlay"
                 style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="32dp"
                 android:layout_marginEnd="6dp"
                 android:text="Overlay"
                 android:textSize="11sp"
@@ -109,7 +113,7 @@
                 android:id="@+id/btnBlendDarken"
                 style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="32dp"
                 android:layout_marginEnd="6dp"
                 android:text="Darken"
                 android:textSize="11sp"
@@ -120,7 +124,7 @@
                 android:id="@+id/btnBlendLighten"
                 style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="32dp"
                 android:layout_marginEnd="6dp"
                 android:text="Lighten"
                 android:textSize="11sp"
@@ -131,11 +135,86 @@
                 android:id="@+id/btnBlendAdd"
                 style="@style/LightPanelOutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="6dp"
                 android:text="Add (Dodge)"
                 android:textSize="11sp"
                 android:paddingHorizontal="10dp"
                 android:minWidth="0dp" />
+
+            <!-- Mode lanjutan: hanya aktif di perangkat API >= 28 -->
+            <LinearLayout
+                android:id="@+id/blendAdvancedRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBlendHardLight"
+                    style="@style/LightPanelOutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:text="Hard Light"
+                    android:textSize="11sp"
+                    android:paddingHorizontal="10dp"
+                    android:minWidth="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBlendSoftLight"
+                    style="@style/LightPanelOutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:text="Soft Light"
+                    android:textSize="11sp"
+                    android:paddingHorizontal="10dp"
+                    android:minWidth="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBlendColorBurn"
+                    style="@style/LightPanelOutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:text="Burn"
+                    android:textSize="11sp"
+                    android:paddingHorizontal="10dp"
+                    android:minWidth="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBlendColorDodge"
+                    style="@style/LightPanelOutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:text="Dodge"
+                    android:textSize="11sp"
+                    android:paddingHorizontal="10dp"
+                    android:minWidth="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBlendDifference"
+                    style="@style/LightPanelOutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:text="Difference"
+                    android:textSize="11sp"
+                    android:paddingHorizontal="10dp"
+                    android:minWidth="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBlendExclusion"
+                    style="@style/LightPanelOutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="Exclusion"
+                    android:textSize="11sp"
+                    android:paddingHorizontal="10dp"
+                    android:minWidth="0dp" />
+            </LinearLayout>
         </LinearLayout>
     </HorizontalScrollView>
 </LinearLayout>

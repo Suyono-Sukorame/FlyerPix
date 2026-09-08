@@ -86,6 +86,27 @@ class LayerPerspectiveWarpTest {
     }
 
     @Test
+    fun `slight left and gentle tilt presets produce subtle warp geometries`() {
+        val layer = TextLayer().apply { perspectiveEnabled = true }
+
+        layer.applyPerspectivePreset(PerspectivePreset.SLIGHT_LEFT)
+        assertEquals(-0.08f, layer.perspectiveCorners[1], 0.0001f) // Top-Left naik sedikit
+        assertEquals(0.05f, layer.perspectiveCorners[3], 0.0001f)  // Top-Right turun sedikit
+        assertEquals(1.08f, layer.perspectiveCorners[7], 0.0001f)  // Bottom-Left turun sedikit
+        assertFalse(defaultCorners.contentEquals(layer.perspectiveCorners))
+
+        layer.applyPerspectivePreset(PerspectivePreset.GENTLE_TILT)
+        assertEquals(0.08f, layer.perspectiveCorners[0], 0.0001f)  // Top-Left X miring kanan
+        assertEquals(0.92f, layer.perspectiveCorners[2], 0.0001f)  // Top-Right X miring kanan
+        assertEquals(1.08f, layer.perspectiveCorners[4], 0.0001f)  // Bottom-Right X miring kanan
+        assertEquals(-0.08f, layer.perspectiveCorners[6], 0.0001f) // Bottom-Left X miring kanan
+        assertFalse(defaultCorners.contentEquals(layer.perspectiveCorners))
+
+        layer.applyPerspectivePreset(PerspectivePreset.FLAT)
+        assertArrayEquals(defaultCorners, layer.perspectiveCorners, 0.0001f)
+    }
+
+    @Test
     fun `resetPerspective restores corners to flat rectangle`() {
         val layer = TextLayer().apply {
             perspectiveEnabled = true

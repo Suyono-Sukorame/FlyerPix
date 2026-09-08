@@ -81,6 +81,7 @@ data class LayerDto(
     val isLocked: Boolean = false,
     val isVisible: Boolean = true,
     val blendMode: String = "SRC_OVER",
+    val blendExtra: String? = null,
     val perspectiveEnabled: Boolean = false,
     /** 8 float perspektif corners dikodekan sebagai CSV "x0,y0,x1,y1,..." */
     val perspectiveCorners: String = "0,0,1,0,1,1,0,1",
@@ -156,6 +157,14 @@ data class LayerDto(
     /** "OBLIQUE" | "ISOMETRIC" */
     val extrudeViewType: String? = null,
     val extrudeAngle: Float? = null,
+    val shadow3DEnabled: Boolean? = null,
+    val shadow3DDepth: Int? = null,
+    val shadow3DColor: Int? = null,
+    /** "OBLIQUE" | "ISOMETRIC" */
+    val shadow3DViewType: String? = null,
+    val shadow3DAngle: Float? = null,
+    val shadow3DBlur: Float? = null,
+    val shadow3DOpacity: Float? = null,
     val rotate3DX: Float? = null,
     val rotate3DY: Float? = null,
     val rotate3DZ: Float? = null,

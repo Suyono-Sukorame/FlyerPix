@@ -202,6 +202,7 @@ object ProjectSerializer {
         isLocked           = layer.isLocked,
         isVisible          = layer.isVisible,
         blendMode          = blendModeToString(layer.blendMode),
+        blendExtra         = layer.blendExtra?.name,
         perspectiveEnabled = layer.perspectiveEnabled,
         perspectiveCorners = cornersToString(layer.perspectiveCorners)
     )
@@ -272,6 +273,13 @@ object ProjectSerializer {
         extrudeGradient     = l.extrudeGradient?.let { gradientToDto(it) },
         extrudeViewType     = l.extrudeViewType.name,
         extrudeAngle        = l.extrudeAngle,
+        shadow3DEnabled     = l.shadow3DEnabled,
+        shadow3DDepth       = l.shadow3DDepth,
+        shadow3DColor       = l.shadow3DColor,
+        shadow3DViewType    = l.shadow3DViewType.name,
+        shadow3DAngle       = l.shadow3DAngle,
+        shadow3DBlur        = l.shadow3DBlur,
+        shadow3DOpacity     = l.shadow3DOpacity,
         rotate3DX           = l.rotate3DX,
         rotate3DY           = l.rotate3DY,
         rotate3DZ           = l.rotate3DZ,
@@ -401,6 +409,15 @@ object ProjectSerializer {
         }
     }
 
+    private fun blendExtraFromString(name: String?): ExtendedBlendMode? {
+        if (name.isNullOrBlank()) return null
+        return try {
+            ExtendedBlendMode.valueOf(name)
+        } catch (e: IllegalArgumentException) {
+            null
+        }
+    }
+
     private fun alignmentFromString(name: String?): Layout.Alignment {
         return when (name) {
             "ALIGN_OPPOSITE" -> Layout.Alignment.ALIGN_OPPOSITE
@@ -497,6 +514,15 @@ object ProjectSerializer {
                     try { ExtrudeViewType.valueOf(it) } catch (e: Exception) { ExtrudeViewType.OBLIQUE }
                 } ?: ExtrudeViewType.OBLIQUE,
                 extrudeAngle       = dto.extrudeAngle ?: 45f,
+                shadow3DEnabled     = dto.shadow3DEnabled ?: false,
+                shadow3DDepth       = dto.shadow3DDepth ?: 12,
+                shadow3DColor       = dto.shadow3DColor ?: 0xB3000000.toInt(),
+                shadow3DViewType    = dto.shadow3DViewType?.let {
+                    try { ExtrudeViewType.valueOf(it) } catch (e: Exception) { ExtrudeViewType.OBLIQUE }
+                } ?: ExtrudeViewType.OBLIQUE,
+                shadow3DAngle       = dto.shadow3DAngle ?: 45f,
+                shadow3DBlur        = dto.shadow3DBlur ?: 0f,
+                shadow3DOpacity     = dto.shadow3DOpacity ?: 0.6f,
                 rotate3DX          = dto.rotate3DX ?: 0f,
                 rotate3DY          = dto.rotate3DY ?: 0f,
                 rotate3DZ          = dto.rotate3DZ ?: 0f,
@@ -637,7 +663,7 @@ object ProjectSerializer {
             )
 
             else -> throw IllegalArgumentException("Tipe layer tidak dikenali: '${dto.type}'")
-        }
+        }.also { it.blendExtra = blendExtraFromString(dto.blendExtra) }
     }
 
     // ── Bitmap Encoding/Decoding ───────────────────────────────────────────────

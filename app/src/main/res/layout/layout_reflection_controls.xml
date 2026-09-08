@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Reflection (pantulan teks) untuk TextLayer.
+  Gaya kompak ala 3D Text: switch + tombol reset sebaris,
+  slider berpasangan 2 kolom dengan label dinamis bernilai.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/reflectionControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchReflectionEnabled"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Reflection"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:checked="false" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetReflection"
+            style="@style/LightPanelTextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="@color/brand_blue"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
+
+    <!-- ── Group Kontrol Reflection ── -->
+    <LinearLayout
+        android:id="@+id/reflectionSliderGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="2dp"
+        android:visibility="gone">
+
+        <!-- Opacity & Jarak sebaris (2 kolom) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvReflectionOpacity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="Opacity: 40%"
+                    android:textAppearance="?attr/textAppearanceCaption" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderReflectionOpacity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="100"
+                    android:stepSize="1"
+                    android:value="40"
+                    app:labelBehavior="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvReflectionDistance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="Jarak: 10 px"
+                    android:textAppearance="?attr/textAppearanceCaption" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderReflectionDistance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="200"
+                    android:stepSize="1"
+                    android:value="10"
+                    app:labelBehavior="gone" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Memudar (Fade) -->
+        <TextView
+            android:id="@+id/tvReflectionFade"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="Memudar (Fade): 50%"
+            android:textAppearance="?attr/textAppearanceCaption" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderReflectionFade"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="0"
+            android:valueTo="100"
+            android:stepSize="1"
+            android:value="50"
+            app:labelBehavior="gone" />
+    </LinearLayout>
+</LinearLayout>

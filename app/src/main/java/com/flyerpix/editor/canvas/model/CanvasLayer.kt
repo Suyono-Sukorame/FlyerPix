@@ -13,10 +13,26 @@ import java.util.UUID
  */
 enum class PerspectivePreset {
     FLAT,
+    SLIGHT_LEFT,
     LEFT_WALL,
     RIGHT_WALL,
+    GENTLE_TILT,
     TOP_BILLBOARD,
     FLOOR_TILT
+}
+
+/**
+ * Mode blending lanjutan (API 29+) yang tidak tersedia di [PorterDuff.Mode].
+ * Disimpan sebagai nama agar serialisasi & render aman — hanya direalisasikan
+ * menjadi [android.graphics.BlendMode] saat render di perangkat API >= 29.
+ */
+enum class ExtendedBlendMode(val modeName: String) {
+    HARD_LIGHT("HARD_LIGHT"),
+    SOFT_LIGHT("SOFT_LIGHT"),
+    COLOR_BURN("COLOR_BURN"),
+    COLOR_DODGE("COLOR_DODGE"),
+    DIFFERENCE("DIFFERENCE"),
+    EXCLUSION("EXCLUSION")
 }
 
 /**
@@ -43,6 +59,12 @@ abstract class CanvasLayer(
     ),
     open var blendMode: PorterDuff.Mode = PorterDuff.Mode.SRC_OVER
 ) : Cloneable, Serializable {
+
+    /**
+     * Mode blending lanjutan (API 29+) yang menggantikan [blendMode] saat render.
+     * Null berarti pakai [blendMode] standar PorterDuff.
+     */
+    open var blendExtra: ExtendedBlendMode? = null
 
     /**
      * Menggambar layer pada [canvas] dengan menggunakan [paint].
@@ -260,16 +282,24 @@ abstract class CanvasLayer(
     }
 
     /**
-     * Mengatur preset transformasi perspektif populer.
+     * Mengembalikan array 8 float (4 titik sudut ternormalisasi) untuk [preset].
+     * Dipakai oleh [applyPerspectivePreset] dan untuk deteksi preset aktif di UI.
      */
-    fun applyPerspectivePreset(preset: PerspectivePreset) {
-        perspectiveCorners = when (preset) {
+    fun perspectiveCornersFor(preset: PerspectivePreset): FloatArray = when (preset) {
             PerspectivePreset.FLAT -> floatArrayOf(0f, 0f, 1f, 0f, 1f, 1f, 0f, 1f)
+            PerspectivePreset.SLIGHT_LEFT -> floatArrayOf(0f, -0.08f, 1f, 0.05f, 1f, 0.95f, 0f, 1.08f)
             PerspectivePreset.LEFT_WALL -> floatArrayOf(0f, -0.2f, 1f, 0.1f, 1f, 0.9f, 0f, 1.2f)
             PerspectivePreset.RIGHT_WALL -> floatArrayOf(0f, 0.1f, 1f, -0.2f, 1f, 1.2f, 0f, 0.9f)
+            PerspectivePreset.GENTLE_TILT -> floatArrayOf(0.08f, 0f, 0.92f, 0f, 1.08f, 1f, -0.08f, 1f)
             PerspectivePreset.TOP_BILLBOARD -> floatArrayOf(-0.15f, -0.1f, 1.15f, -0.1f, 1f, 1f, 0f, 1f)
             PerspectivePreset.FLOOR_TILT -> floatArrayOf(0.15f, 0f, 0.85f, 0f, 1.15f, 1f, -0.15f, 1f)
         }
+
+    /**
+     * Mengatur preset transformasi perspektif populer.
+     */
+    fun applyPerspectivePreset(preset: PerspectivePreset) {
+        perspectiveCorners = perspectiveCornersFor(preset)
     }
 
     /**
@@ -289,9 +319,9 @@ abstract class CanvasLayer(
     open fun contentBlurSignature(): Int = hashCode()
 
     /**
-     * Mengembalikan nama deskriptif dari [blendMode] saat ini.
+     * Mengembalikan nama deskriptif dari [blendMode] / [blendExtra] saat ini.
      */
-    fun getBlendModeName(): String = when (blendMode) {
+    fun getBlendModeName(): String = blendExtra?.let { "Blend: ${it.name}" } ?: when (blendMode) {
         PorterDuff.Mode.SRC_OVER -> "Normal"
         PorterDuff.Mode.MULTIPLY -> "Multiply"
         PorterDuff.Mode.SCREEN   -> "Screen"

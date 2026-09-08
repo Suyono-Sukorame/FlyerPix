@@ -121,6 +121,14 @@ data class TextLayer(
     var extrudeGradient: GradientColor? = null, // Gradasi sisi kedalaman 3D (menggantikan warna solid)
     var extrudeViewType: ExtrudeViewType = ExtrudeViewType.OBLIQUE,
     var extrudeAngle: Float = 45f,              // 0° - 360° arah kedalaman
+    // ── 3D Shadow ────────────────────────────────────────────────────────────
+    var shadow3DEnabled: Boolean = false,
+    var shadow3DDepth: Int = 12,                // 1 s/d 50 (ketebalan bayangan)
+    var shadow3DColor: Int = 0xB3000000.toInt(),// Warna bayangan 3D (ARGB, default hitam semi-transparan)
+    var shadow3DViewType: ExtrudeViewType = ExtrudeViewType.OBLIQUE,
+    var shadow3DAngle: Float = 45f,             // 0° - 360° arah bayangan
+    var shadow3DBlur: Float = 0f,               // 0–40 (kelembutan ujung bayangan)
+    var shadow3DOpacity: Float = 0.6f,          // 0.0–1.0 (kegelapan bayangan)
     // ── 3D Rotate (Rotasi Sumbu X dan Y) ──────────────────────────────────
     var rotate3DX: Float = 0f,                  // Kemiringan atas-bawah (-180° s/d 180°)
     var rotate3DY: Float = 0f,                  // Kemiringan kiri-kanan (-180° s/d 180°)
@@ -161,6 +169,21 @@ data class TextLayer(
             Pair(cos(rad).toFloat(), (sin(rad) * 0.58).toFloat())
         } else {
             val rad = Math.toRadians(extrudeAngle.toDouble())
+            Pair(cos(rad).toFloat(), sin(rad).toFloat())
+        }
+    }
+
+    /**
+     * Menghitung vektor arah geseran per pixel untuk efek 3D Shadow.
+     * Mengikuti pola [getExtrudeVector]: OBLIQUE memakai [shadow3DAngle],
+     * ISOMETRIC memakai proyeksi tetap 30°.
+     */
+    fun getShadow3DVector(): Pair<Float, Float> {
+        return if (shadow3DViewType == ExtrudeViewType.ISOMETRIC) {
+            val rad = Math.toRadians(30.0)
+            Pair(cos(rad).toFloat(), (sin(rad) * 0.58).toFloat())
+        } else {
+            val rad = Math.toRadians(shadow3DAngle.toDouble())
             Pair(cos(rad).toFloat(), sin(rad).toFloat())
         }
     }
@@ -370,7 +393,12 @@ data class TextLayer(
         canvas.save()
         canvas.translate(padL, padT)
 
-        // ── Pass 0: 3D Text Extrusion (Volume Lapisan Kedalaman 3D) ───────────
+        // ── Pass 0: 3D Shadow (Bayangan Dalam/3D) ────────────────────────────
+        if (shadow3DEnabled && shadow3DDepth > 0) {
+            draw3DShadow(canvas, fillPaint)
+        }
+
+        // ── Pass 1: 3D Text Extrusion (Volume Lapisan Kedalaman 3D) ───────────
         if (extrudeEnabled && extrudeDepth > 0) {
             draw3DExtrusion(canvas, fillPaint)
         }
@@ -546,6 +574,70 @@ data class TextLayer(
             depthLayout.draw(canvas)
             canvas.restore()
         }
+    }
+
+    /**
+     * Menggambar efek 3D Shadow: tumpukan layer bayangan tebal (1 s/d [shadow3DDepth])
+     * bergeser 1 pixel ke arah [getShadow3DVector], sehingga membentuk bayangan
+     * dalam/solid di belakang teks (berbeda dari Drop Shadow yang soft & bergeser pendek).
+     *
+     * Bila [shadow3DBlur] > 0, lapisan terjauh diblur lewat offscreen software bitmap
+     * (BlurMaskFilter) sehingga ujung bayangan tampak lebih lembut.
+     */
+    private fun draw3DShadow(canvas: Canvas, basePaint: TextPaint) {
+        val depth = shadow3DDepth.coerceIn(1, 50)
+        val alpha = (shadow3DOpacity.coerceIn(0f, 1f) * 255).toInt().coerceIn(0, 255)
+        if (alpha <= 0) return
+        val blur = shadow3DBlur.coerceIn(0f, 40f)
+        val (dirX, dirY) = getShadow3DVector()
+
+        val shadowPaint = TextPaint(basePaint).apply {
+            clearShadowLayer()
+            color = shadow3DColor
+            this.alpha = alpha
+            shader = null
+        }
+
+        if (blur <= 0f) {
+            val shadowLayout = createLayout(shadowPaint)
+            // Tumpukan bayangan solid — lapisan terdalam (belakang) digambar dulu
+            for (d in depth downTo 1) {
+                canvas.save()
+                canvas.translate(dirX * d, dirY * d)
+                shadowLayout.draw(canvas)
+                canvas.restore()
+            }
+            return
+        }
+
+        // Mode blur: render ke offscreen software bitmap (BlurMaskFilter tidak
+        // berfungsi pada canvas hardware). Lapisan terjauh di-blur, sisanya solid.
+        val blurredPaint = TextPaint(shadowPaint).apply {
+            maskFilter = BlurMaskFilter(blur, BlurMaskFilter.Blur.NORMAL)
+        }
+        val solidLayout = createLayout(shadowPaint)
+        val blurredLayout = createLayout(blurredPaint)
+        val pad = (ceil(depth.toFloat()) + blur + 8).toInt()
+        val bw = solidLayout.width + pad * 2
+        val bh = solidLayout.height + pad * 2
+
+        val bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
+        val bc = Canvas(bmp).apply { translate(pad.toFloat(), pad.toFloat()) }
+
+        bc.save()
+        bc.translate(dirX * depth, dirY * depth)
+        blurredLayout.draw(bc)
+        bc.restore()
+
+        for (d in depth - 1 downTo 1) {
+            bc.save()
+            bc.translate(dirX * d, dirY * d)
+            solidLayout.draw(bc)
+            bc.restore()
+        }
+
+        canvas.drawBitmap(bmp, -pad.toFloat(), -pad.toFloat(), Paint(Paint.ANTI_ALIAS_FLAG))
+        bmp.recycle()
     }
 
     /**
@@ -841,6 +933,7 @@ data class TextLayer(
 
     override fun contentBlurSignature(): Int {
         var h = hashCode()
+        h = h * 31 + (blendExtra?.ordinal ?: -1)
         textureBitmap?.let { bmp ->
             h = h * 31 + System.identityHashCode(bmp)
             h = h * 31 + bmp.generationId
@@ -857,5 +950,5 @@ data class TextLayer(
         textureBitmap = this.textureBitmap,
         perspectiveCorners = this.perspectiveCorners.clone(),
         blendMode = this.blendMode
-    )
+    ).also { it.blendExtra = this.blendExtra }
 }

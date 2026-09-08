@@ -280,6 +280,13 @@ class ProjectSerializerTest {
             extrudeColor   = 0xFF555555.toInt(),
             extrudeViewType = "ISOMETRIC",
             extrudeAngle   = 30f,
+            shadow3DEnabled = true,
+            shadow3DDepth   = 18,
+            shadow3DColor   = 0xB3FF0000.toInt(),
+            shadow3DViewType = "OBLIQUE",
+            shadow3DAngle   = 60f,
+            shadow3DBlur    = 4.5f,
+            shadow3DOpacity = 0.75f,
             rotate3DX      = 15f,
             rotate3DY      = -10f,
             rotate3DZ      = 5f,
@@ -292,6 +299,13 @@ class ProjectSerializerTest {
         assertEquals(20,           back.extrudeDepth)
         assertEquals("ISOMETRIC",  back.extrudeViewType)
         assertEquals(30f,          back.extrudeAngle!!, 0.001f)
+        assertTrue(back.shadow3DEnabled!!)
+        assertEquals(18,           back.shadow3DDepth)
+        assertEquals(0xB3FF0000.toInt(), back.shadow3DColor!!)
+        assertEquals("OBLIQUE",    back.shadow3DViewType)
+        assertEquals(60f,          back.shadow3DAngle!!, 0.001f)
+        assertEquals(4.5f,         back.shadow3DBlur!!, 0.001f)
+        assertEquals(0.75f,        back.shadow3DOpacity!!, 0.001f)
         assertEquals(15f,          back.rotate3DX!!, 0.001f)
         assertEquals(-10f,         back.rotate3DY!!, 0.001f)
         assertEquals(5f,           back.rotate3DZ!!, 0.001f)
@@ -511,6 +525,24 @@ class ProjectSerializerTest {
             val back = gson.fromJson(json, LayerDto::class.java)
             assertEquals("blendMode '$mode' tidak tepat", mode, back.blendMode)
         }
+    }
+
+    @Test
+    fun `test extended blend mode roundtrips via string`() {
+        val dto = LayerDto(type = "TEXT", id = "be", blendMode = "SRC_OVER",
+            blendExtra = "HARD_LIGHT",
+            perspectiveCorners = "0.0,0.0,1.0,0.0,1.0,1.0,0.0,1.0",
+            text = "Halo")
+        val json = gson.toJson(dto)
+        val back = gson.fromJson(json, LayerDto::class.java)
+        assertEquals("HARD_LIGHT", back.blendExtra)
+    }
+
+    @Test
+    fun `test blend extra defaults to null`() {
+        val dto  = makeTextLayerDto()
+        val back = gson.fromJson(gson.toJson(dto), LayerDto::class.java)
+        assertNull(back.blendExtra)
     }
 
     // ─── Test: File I/O .plp ───────────────────────────────────────────────────

@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Gaya Teks (Bold / Italic / Underline / Strikethrough + Ketebalan Font).
+  Gaya kompak ala 3D Text: judul + tombol reset sebaris,
+  tombol gaya berikon, grid ketebalan font 2 kolom.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/styleControlsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp"
+    android:visibility="gone">
+
+    <!-- ── Judul & Tombol Reset ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Gaya Teks"
+            android:textAppearance="?attr/textAppearanceSubtitle2"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetStyle"
+            style="@style/LightPanelTextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="@color/brand_blue"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
+
+    <!-- ── Gaya: B / I / U / S berikon ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStyleBold"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:padding="0dp"
+            app:icon="@drawable/ic_format_bold_24px"
+            app:iconSize="18dp"
+            app:iconTint="#616161" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStyleItalic"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:padding="0dp"
+            app:icon="@drawable/ic_format_italic_24px"
+            app:iconSize="18dp"
+            app:iconTint="#616161" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStyleUnderline"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:padding="0dp"
+            app:icon="@drawable/ic_format_underline_24px"
+            app:iconSize="18dp"
+            app:iconTint="#616161" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStyleStrike"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:padding="0dp"
+            app:icon="@drawable/ic_format_strikethrough_24px"
+            app:iconSize="18dp"
+            app:iconTint="#616161" />
+    </LinearLayout>
+
+    <!-- ── Ketebalan Font (Weight) ── -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="4dp"
+        android:text="Ketebalan Font (Weight)"
+        android:textAppearance="?attr/textAppearanceCaption" />
+
+    <!-- Baris 1: Thin / Light -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWeightThin"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Thin"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWeightLight"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Light"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Baris 2: Regular / Medium -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWeightRegular"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Regular"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWeightMedium"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Medium"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Baris 3: SemiBold / Bold -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWeightSemiBold"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="SemiBold"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWeightBold"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Bold"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Baris 4: ExtraBold / Black -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWeightExtraBold"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="ExtraBold"
+            android:textSize="10sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWeightBlack"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:paddingHorizontal="4dp"
+            android:text="Black"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+</LinearLayout>

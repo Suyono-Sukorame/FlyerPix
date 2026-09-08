@@ -1,123 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Panel kontrol Perataan Teks untuk TextLayer.
+  Gaya kompak ala 3D Text: tombol perataan sebaris + grup Wrap Text.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/alignPanel"
+    android:id="@+id/alignControlsPanel"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="6dp"
+    android:padding="4dp"
     android:visibility="gone">
-
-    <TextView
-        android:id="@+id/alignPanelTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Perataan Teks"
-        android:textAppearance="?attr/textAppearanceSubtitle2"
-        android:textStyle="bold"
-        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="0dp"
         android:orientation="horizontal"
         android:gravity="center">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAlignLeft"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="36dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
             android:minWidth="0dp"
+            android:paddingHorizontal="0dp"
             app:icon="@drawable/ic_align_left_24"
-            app:iconSize="20dp"
+            app:iconSize="18dp"
             android:contentDescription="Kiri" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAlignCenter"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="36dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
             android:minWidth="0dp"
+            android:paddingHorizontal="0dp"
             app:icon="@drawable/ic_align_center_24"
-            app:iconSize="20dp"
+            app:iconSize="18dp"
             android:contentDescription="Tengah" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAlignRight"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="36dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
             android:minWidth="0dp"
+            android:paddingHorizontal="0dp"
             app:icon="@drawable/ic_align_right_24"
-            app:iconSize="20dp"
+            app:iconSize="18dp"
             android:contentDescription="Kanan" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAlignJustify"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="36dp"
             android:layout_weight="1"
             android:minWidth="0dp"
+            android:paddingHorizontal="0dp"
             app:icon="@drawable/ic_align_justify_24"
-            app:iconSize="20dp"
+            app:iconSize="18dp"
             android:contentDescription="Rata" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/alignMultilineHint"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="4dp"
-        android:text="Berlaku untuk teks multiline."
-        android:textAppearance="?attr/textAppearanceCaption"
-        android:textColor="#888888"
-        android:visibility="gone" />
-
-    <View
-        android:id="@+id/alignDivider"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="10dp"
-        android:background="#EEEEEE"
-        android:visibility="gone" />
-
+    <!-- ── Wrap Text ── -->
     <LinearLayout
-        android:id="@+id/wrapHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="0dp"
-        android:orientation="horizontal"
+        android:layout_marginTop="4dp"
         android:gravity="center_vertical"
-        android:visibility="gone">
+        android:orientation="horizontal">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="4dp"
             android:text="Pembungkusan Teks"
-            android:textAppearance="?attr/textAppearanceSubtitle2"
-            android:textStyle="bold" />
+            android:textAppearance="?attr/textAppearanceCaption" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnWrapText"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/LightPanelOutlinedButton"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="32dp"
             android:minWidth="0dp"
+            android:paddingHorizontal="12dp"
             android:text="Wrap"
-            android:textSize="13sp"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
+            android:textSize="12sp"
             android:contentDescription="Aktifkan pembungkusan teks" />
     </LinearLayout>
 
@@ -125,9 +102,16 @@
         android:id="@+id/wrapControlsGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
         android:orientation="vertical"
         android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvWrapWidth"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="Lebar: 600 px"
+            android:textAppearance="?attr/textAppearanceCaption" />
 
         <com.google.android.material.slider.Slider
             android:id="@+id/sliderWrapWidth"
@@ -136,15 +120,7 @@
             android:valueFrom="60"
             android:valueTo="1600"
             android:stepSize="10"
-            android:value="600" />
-
-        <TextView
-            android:id="@+id/tvWrapWidth"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
-            android:text="Lebar: 600"
-            android:textAppearance="?attr/textAppearanceCaption"
-            android:textColor="#888888" />
+            android:value="600"
+            app:labelBehavior="gone" />
     </LinearLayout>
 </LinearLayout>

@@ -104,6 +104,30 @@ class PixelCanvasView @JvmOverloads constructor(
 
     private fun profileMark(t0: Long): Long = System.nanoTime() - t0
 
+    /** Bersihkan mode blending pada paint (aman di API < 29). */
+    private fun Paint.clearBlend() {
+        if (Build.VERSION.SDK_INT >= 29) blendMode = null
+        xfermode = null
+    }
+
+    /**
+     * Terapkan blending aktif dari [layer] ke [Paint] sebelum menggambar.
+     * Mode lanjutan ([ExtendedBlendMode], API 29+) diprioritaskan; fallback
+     * ke [PorterDuff.Mode] bila [CanvasLayer.blendExtra] kosong.
+     */
+    private fun Paint.applyLayerBlend(layer: CanvasLayer) {
+        val extra = layer.blendExtra
+        if (extra != null && Build.VERSION.SDK_INT >= 29) {
+            xfermode = null
+            blendMode = android.graphics.BlendMode.valueOf(extra.modeName)
+        } else if (layer.blendMode != PorterDuff.Mode.SRC_OVER) {
+            clearBlend()
+            xfermode = PorterDuffXfermode(layer.blendMode)
+        } else {
+            clearBlend()
+        }
+    }
+
     /**
      * Layer yang saat ini sedang aktif dipilih oleh pengguna.
      * Setiap kali berubah, [onLayerSelectedListener] akan dipanggil.
@@ -837,14 +861,14 @@ class PixelCanvasView @JvmOverloads constructor(
         // Gambar semua layer
         for (layer in layers) {
             if (layer.isVisible) {
-                if (layer.blendMode != PorterDuff.Mode.SRC_OVER) {
-                    renderPaint.xfermode = PorterDuffXfermode(layer.blendMode)
+                if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
+                    renderPaint.applyLayerBlend(layer)
                     val saveCount = offscreen.saveLayer(null, renderPaint)
                     layer.draw(offscreen, renderPaint)
                     offscreen.restoreToCount(saveCount)
-                    renderPaint.xfermode = null
+                    renderPaint.clearBlend()
                 } else {
-                    renderPaint.xfermode = null
+                    renderPaint.clearBlend()
                     val saveCount = offscreen.save()
                     layer.draw(offscreen, renderPaint)
                     offscreen.restoreToCount(saveCount)
@@ -1333,14 +1357,14 @@ class PixelCanvasView @JvmOverloads constructor(
         for (i in 0 until layers.size) {
             val layer = layers[i]
             if (layer.isVisible) {
-                if (layer.blendMode != PorterDuff.Mode.SRC_OVER) {
-                    renderPaint.xfermode = PorterDuffXfermode(layer.blendMode)
+                if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
+                    renderPaint.applyLayerBlend(layer)
                     val saveCount = canvas.saveLayer(null, renderPaint)
                     layer.draw(canvas, renderPaint)
                     canvas.restoreToCount(saveCount)
-                    renderPaint.xfermode = null
+                    renderPaint.clearBlend()
                 } else {
-                    renderPaint.xfermode = null
+                    renderPaint.clearBlend()
                     val saveCount = canvas.save()
                     layer.draw(canvas, renderPaint)
                     canvas.restoreToCount(saveCount)
@@ -2470,12 +2494,12 @@ class PixelCanvasView @JvmOverloads constructor(
 
                 for (layer in sortedLayers) {
                     if (!layer.isVisible) continue
-                    if (layer.blendMode != PorterDuff.Mode.SRC_OVER) {
-                        paint.xfermode = PorterDuffXfermode(layer.blendMode)
+                    if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
+                        paint.applyLayerBlend(layer)
                         val saveCount = offscreenCanvas.saveLayer(null, paint)
                         layer.draw(offscreenCanvas, paint)
                         offscreenCanvas.restoreToCount(saveCount)
-                        paint.xfermode = null
+                        paint.clearBlend()
                     } else {
                         val saveCount = offscreenCanvas.save()
                         layer.draw(offscreenCanvas, paint)
@@ -2714,14 +2738,14 @@ class PixelCanvasView @JvmOverloads constructor(
         // 3. Render Seluruh Layer Aktif (Tanpa Handle Seleksi Bounding Box, Grid, atau Garis Panduan)
         for (layer in snapshotLayers) {
             if (layer.isVisible) {
-                if (layer.blendMode != PorterDuff.Mode.SRC_OVER) {
-                    renderPaint.xfermode = PorterDuffXfermode(layer.blendMode)
+                if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
+                    renderPaint.applyLayerBlend(layer)
                     val layerSave = offscreenCanvas.saveLayer(null, renderPaint)
                     layer.draw(offscreenCanvas, renderPaint)
                     offscreenCanvas.restoreToCount(layerSave)
-                    renderPaint.xfermode = null
+                    renderPaint.clearBlend()
                 } else {
-                    renderPaint.xfermode = null
+                    renderPaint.clearBlend()
                     val layerSave = offscreenCanvas.save()
                     layer.draw(offscreenCanvas, renderPaint)
                     offscreenCanvas.restoreToCount(layerSave)

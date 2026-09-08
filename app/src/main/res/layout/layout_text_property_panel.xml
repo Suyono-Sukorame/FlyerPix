@@ -80,45 +80,18 @@
                 layout="@layout/panel_rotate"
             android:id="@+id/rotatePanel" />
 
-            <!-- Style -->
-            <include
-                layout="@layout/panel_style"
-            android:id="@+id/stylePanel" />
-
-            <!-- Align -->
-            <include
-                layout="@layout/panel_align"
-            android:id="@+id/alignPanel" />
-
             <!-- Color -->
             <include
                 layout="@layout/panel_color"
             android:id="@+id/colorPanel" />
 
-            <!-- Stroke -->
-            <include
-                layout="@layout/panel_stroke"
-            android:id="@+id/strokePanel" />
+            <!-- Stroke / Align / Background / Spacing
+                 (dipindah ke Effect Settings page) -->
 
             <!-- Padding -->
             <include
                 layout="@layout/panel_padding"
             android:id="@+id/paddingPanel" />
-
-            <!-- Background -->
-            <include
-                layout="@layout/panel_background"
-            android:id="@+id/backgroundPanel" />
-
-            <!-- Reflection -->
-            <include
-                layout="@layout/panel_reflection"
-            android:id="@+id/reflectionPanel" />
-
-            <!-- Mask -->
-            <include
-                layout="@layout/panel_mask"
-            android:id="@+id/maskPanel" />
 
             <!-- Styles -->
             <include
@@ -132,20 +105,8 @@
 
             <!-- ── Efek Kompleks dipindah ke Effect Settings Page ───────── -->
             <!-- (Shadow, Inner, Emboss, Gradient, Texture, 3D Text, 3D Rotate,
-                 Perspective, Blend, Neon → layout_effect_settings_panel.xml) -->
-
-            <!-- Curve & Spacing tetap inline -->
-            <include
-                layout="@layout/layout_curve_controls"
-                android:id="@+id/curveControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <include
-                layout="@layout/layout_spacing_controls"
-                android:id="@+id/spacingControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                 Perspective, Blend, Neon, Stroke, Spacing, Curve, Style, Mask,
+                 Align, Background → layout_effect_settings_panel.xml) -->
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

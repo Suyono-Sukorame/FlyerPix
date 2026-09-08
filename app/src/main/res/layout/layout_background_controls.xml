@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Panel kontrol Drop Shadow untuk TextLayer.
+  Panel kontrol Latar Belakang Teks untuk TextLayer.
   Gaya kompak ala 3D Text: switch + tombol reset sebaris,
   baris warna (chip + hex + '+'), slider berpasangan 2 kolom dengan label dinamis.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/shadowControlsPanel"
+    android:id="@+id/backgroundControlsPanel"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -20,16 +20,16 @@
         android:orientation="horizontal">
 
         <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchShadowEnabled"
+            android:id="@+id/switchBgEnabled"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Drop Shadow"
+            android:text="Latar Belakang Teks"
             android:textAppearance="?attr/textAppearanceBody2"
             android:checked="false" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnResetShadow"
+            android:id="@+id/btnResetBg"
             style="@style/LightPanelTextButton"
             android:layout_width="wrap_content"
             android:layout_height="32dp"
@@ -40,16 +40,16 @@
             android:paddingHorizontal="8dp" />
     </LinearLayout>
 
-    <!-- ── Group Kontrol Shadow ── -->
+    <!-- ── Group Kontrol Background ── -->
     <LinearLayout
-        android:id="@+id/shadowSliderGroup"
+        android:id="@+id/bgControlsGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginTop="2dp"
         android:visibility="gone">
 
-        <!-- Warna Shadow: preview + hex + tombol '+' -->
+        <!-- Warna Latar: preview + hex + tombol '+' -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -64,7 +64,7 @@
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/chipShadowColorPreview"
+                android:id="@+id/chipBgColorPreview"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_marginStart="8dp"
@@ -76,7 +76,7 @@
                 android:focusable="true" />
 
             <TextView
-                android:id="@+id/tvShadowColorValue"
+                android:id="@+id/tvBgColorValue"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -88,7 +88,7 @@
                 android:textColor="#1A1A2E" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPickShadowColor"
+                android:id="@+id/btnPickBgColor"
                 style="@style/LightPanelOutlinedButton"
                 android:layout_width="36dp"
                 android:layout_height="32dp"
@@ -99,7 +99,7 @@
                 android:textSize="14sp" />
         </LinearLayout>
 
-        <!-- Blur & Opacity sebaris (2 kolom) -->
+        <!-- Opasitas & Padding sebaris (2 kolom) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -113,21 +113,21 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/tvShadowRadiusLabel"
+                    android:id="@+id/tvBgOpacityLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Blur: 8 px"
+                    android:text="Opasitas: 100%"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider
-                    android:id="@+id/sliderShadowRadius"
+                    android:id="@+id/sliderBgOpacity"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:valueFrom="0"
-                    android:valueTo="40"
-                    android:stepSize="0.5"
-                    android:value="8"
+                    android:valueTo="100"
+                    android:stepSize="1"
+                    android:value="100"
                     app:labelBehavior="gone" />
             </LinearLayout>
 
@@ -139,83 +139,42 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/tvShadowOpacityLabel"
+                    android:id="@+id/tvBgPadding"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Opacity: 60%"
+                    android:text="Padding: 0 px"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider
-                    android:id="@+id/sliderShadowOpacity"
+                    android:id="@+id/sliderBgPadding"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:valueFrom="0"
-                    android:valueTo="1"
-                    android:stepSize="0.01"
-                    android:value="0.6"
+                    android:valueTo="100"
+                    android:stepSize="1"
+                    android:value="0"
                     app:labelBehavior="gone" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Offset X & Y sebaris (2 kolom) -->
-        <LinearLayout
+        <!-- Sudut Membulat -->
+        <TextView
+            android:id="@+id/tvBgCornerRadius"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="Sudut Membulat: 0 px"
+            android:textAppearance="?attr/textAppearanceCaption" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderBgCornerRadius"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvShadowDxLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:text="Offset X: 4 px"
-                    android:textAppearance="?attr/textAppearanceCaption" />
-
-                <com.google.android.material.slider.Slider
-                    android:id="@+id/sliderShadowDx"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:valueFrom="-30"
-                    android:valueTo="30"
-                    android:stepSize="0.5"
-                    android:value="4"
-                    app:labelBehavior="gone" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvShadowDyLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:text="Offset Y: 4 px"
-                    android:textAppearance="?attr/textAppearanceCaption" />
-
-                <com.google.android.material.slider.Slider
-                    android:id="@+id/sliderShadowDy"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:valueFrom="-30"
-                    android:valueTo="30"
-                    android:stepSize="0.5"
-                    android:value="4"
-                    app:labelBehavior="gone" />
-            </LinearLayout>
-        </LinearLayout>
-
+            android:valueFrom="0"
+            android:valueTo="120"
+            android:stepSize="1"
+            android:value="0"
+            app:labelBehavior="gone" />
     </LinearLayout>
 </LinearLayout>

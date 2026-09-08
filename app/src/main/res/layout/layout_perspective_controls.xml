@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Panel kontrol Transformasi Perspektif Warping untuk CanvasLayer / TextLayer.
-  Mendukung Matrix.setPolyToPoly (4 titik sudut) dengan preset dan reset.
+  Gaya kompak ala 3D Text: switch + tombol reset sebaris, strip preset cepat
+  horizontal dengan highlight preset aktif.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -9,35 +10,30 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="4dp"
     android:visibility="gone">
 
-    <!-- ── Header: Judul, Switch & Tombol Reset ── -->
+    <!-- ── Header: Switch & Tombol Reset sebaris ── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <TextView
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchPerspectiveEnabled"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Perspektif (3D Warp)"
-            android:textAppearance="?attr/textAppearanceSubtitle2"
-            android:textStyle="bold" />
-
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchPerspectiveEnabled"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp" />
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:checked="false" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnResetPerspective"
             style="@style/LightPanelTextButton"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="32dp"
             android:text="Reset"
             android:textSize="12sp"
             android:textColor="@color/brand_blue"
@@ -65,7 +61,7 @@
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="6dp"
             android:scrollbars="none">
 
             <LinearLayout
@@ -77,9 +73,20 @@
                     android:id="@+id/btnPresetFlat"
                     style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="34dp"
+                    android:layout_height="32dp"
                     android:layout_marginEnd="6dp"
-                    android:text="Datar (Flat)"
+                    android:text="Datar"
+                    android:textSize="11sp"
+                    android:paddingHorizontal="10dp"
+                    android:minWidth="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPresetSlightLeft"
+                    style="@style/LightPanelOutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:text="Halus Kiri"
                     android:textSize="11sp"
                     android:paddingHorizontal="10dp"
                     android:minWidth="0dp" />
@@ -88,7 +95,7 @@
                     android:id="@+id/btnPresetLeftWall"
                     style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="34dp"
+                    android:layout_height="32dp"
                     android:layout_marginEnd="6dp"
                     android:text="Tembok Kiri ◖"
                     android:textSize="11sp"
@@ -99,9 +106,20 @@
                     android:id="@+id/btnPresetRightWall"
                     style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="34dp"
+                    android:layout_height="32dp"
                     android:layout_marginEnd="6dp"
                     android:text="◗ Tembok Kanan"
+                    android:textSize="11sp"
+                    android:paddingHorizontal="10dp"
+                    android:minWidth="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPresetGentleTilt"
+                    style="@style/LightPanelOutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:text="Miring Halus"
                     android:textSize="11sp"
                     android:paddingHorizontal="10dp"
                     android:minWidth="0dp" />
@@ -110,9 +128,9 @@
                     android:id="@+id/btnPresetBillboard"
                     style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="34dp"
+                    android:layout_height="32dp"
                     android:layout_marginEnd="6dp"
-                    android:text="▲ Billboard Atas"
+                    android:text="▲ Billboard"
                     android:textSize="11sp"
                     android:paddingHorizontal="10dp"
                     android:minWidth="0dp" />
@@ -121,8 +139,8 @@
                     android:id="@+id/btnPresetFloor"
                     style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="34dp"
-                    android:text="▼ Lantai / Bawah"
+                    android:layout_height="32dp"
+                    android:text="▼ Lantai"
                     android:textSize="11sp"
                     android:paddingHorizontal="10dp"
                     android:minWidth="0dp" />

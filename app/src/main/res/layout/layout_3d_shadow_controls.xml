@@ -1,36 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Panel kontrol Inner Shadow untuk TextLayer.
-  Mengikuti gaya UI/UX 3D Text: slider berpasangan 2 kolom + baris color picker.
+  Panel kontrol 3D Shadow untuk TextLayer.
+  Mengikuti gaya UI/UX panel 3D Text Extrusion: switch + radio proyeksi +
+  slider berpasangan (2 kolom) + pemilih warna bayangan.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/innerShadowControlsPanel"
+    android:id="@+id/shadow3DControlsPanel"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="4dp"
     android:visibility="gone">
 
-    <!-- ── Toggle enable/disable ── -->
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchInnerShadowEnabled"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Inner Shadow"
-        android:textAppearance="?attr/textAppearanceBody2"
-        android:checked="false" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-    <!-- ── Group Kontrol Inner Shadow ── -->
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchShadow3DEnabled"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="3D Shadow"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:checked="false" />
+
+        <RadioGroup
+            android:id="@+id/rgShadow3DViewType"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.5"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <RadioButton
+                android:id="@+id/rbShadow3DOblique"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Oblique"
+                android:checked="true"
+                android:textSize="11sp" />
+
+            <RadioButton
+                android:id="@+id/rbShadow3DIsometric"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Isometric"
+                android:textSize="11sp" />
+        </RadioGroup>
+    </LinearLayout>
+
+    <!-- ── Group Kontrol 3D Shadow ── -->
     <LinearLayout
-        android:id="@+id/innerShadowSliderGroup"
+        android:id="@+id/shadow3DControlsGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginTop="2dp"
         android:visibility="gone">
 
-        <!-- Blur Radius & Opacity sebaris (2 kolom) -->
+        <!-- Depth & Angle sebaris (2 kolom) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -44,25 +79,26 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/tvInnerShadowRadiusLabel"
+                    android:id="@+id/tvShadow3DDepthLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Blur: 6"
+                    android:text="Depth: 12"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider
-                    android:id="@+id/sliderInnerShadowRadius"
+                    android:id="@+id/sliderShadow3DDepth"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:valueFrom="0"
-                    android:valueTo="40"
-                    android:stepSize="0.5"
-                    android:value="6"
+                    android:valueFrom="1"
+                    android:valueTo="50"
+                    android:stepSize="1"
+                    android:value="12"
                     app:labelBehavior="gone" />
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/shadow3DAngleContainer"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -70,26 +106,26 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/tvInnerShadowOpacityLabel"
+                    android:id="@+id/tvShadow3DAngleLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Opacity: 80%"
+                    android:text="Angle (45°)"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider
-                    android:id="@+id/sliderInnerShadowOpacity"
+                    android:id="@+id/sliderShadow3DAngle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:valueFrom="0"
-                    android:valueTo="1"
-                    android:stepSize="0.01"
-                    android:value="0.8"
+                    android:valueTo="360"
+                    android:stepSize="1"
+                    android:value="45"
                     app:labelBehavior="gone" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Offset X & Offset Y sebaris (2 kolom) -->
+        <!-- Blur & Opacity sebaris (2 kolom) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -103,19 +139,19 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/tvInnerShadowDxLabel"
+                    android:id="@+id/tvShadow3DBlurLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Offset X: 0"
+                    android:text="Blur: 0"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider
-                    android:id="@+id/sliderInnerShadowDx"
+                    android:id="@+id/sliderShadow3DBlur"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:valueFrom="-30"
-                    android:valueTo="30"
+                    android:valueFrom="0"
+                    android:valueTo="40"
                     android:stepSize="0.5"
                     android:value="0"
                     app:labelBehavior="gone" />
@@ -129,21 +165,21 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/tvInnerShadowDyLabel"
+                    android:id="@+id/tvShadow3DOpacityLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Offset Y: 4"
+                    android:text="Opacity: 60%"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider
-                    android:id="@+id/sliderInnerShadowDy"
+                    android:id="@+id/sliderShadow3DOpacity"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:valueFrom="-30"
-                    android:valueTo="30"
-                    android:stepSize="0.5"
-                    android:value="4"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:stepSize="0.01"
+                    android:value="0.6"
                     app:labelBehavior="gone" />
             </LinearLayout>
         </LinearLayout>
@@ -160,11 +196,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Color"
+                android:text="Shadow Color"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/chipInnerShadowColorPreview"
+                android:id="@+id/chipShadow3DColorPreview"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_marginStart="8dp"
@@ -176,19 +212,19 @@
                 android:focusable="true" />
 
             <TextView
-                android:id="@+id/tvInnerShadowColorValue"
+                android:id="@+id/tvShadow3DColorValue"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="6dp"
                 android:maxLines="1"
                 android:ellipsize="end"
-                android:text="#FF000000"
+                android:text="#B3000000"
                 android:textAppearance="?attr/textAppearanceCaption"
                 android:textColor="#1A1A2E" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPickInnerShadowColor"
+                android:id="@+id/btnPickShadow3DColor"
                 style="@style/LightPanelOutlinedButton"
                 android:layout_width="36dp"
                 android:layout_height="32dp"
@@ -200,4 +236,5 @@
         </LinearLayout>
 
     </LinearLayout>
+
 </LinearLayout>

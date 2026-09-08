@@ -63,6 +63,55 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
 
+                    <!-- Stroke / Outline -->
+                    <include
+                        layout="@layout/layout_stroke_controls"
+                        android:id="@+id/strokeControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Spacing (Letter / Line) -->
+                    <include
+                        layout="@layout/layout_spacing_controls"
+                        android:id="@+id/spacingControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Align (Perataan) -->
+                    <include
+                        layout="@layout/layout_align_controls"
+                        android:id="@+id/alignControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Background -->
+                    <include
+                        layout="@layout/layout_background_controls"
+                        android:id="@+id/backgroundControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Curve / Arc Text -->
+                    <include
+                        layout="@layout/layout_curve_controls"
+                        android:id="@+id/curveControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Style (Gaya Teks) -->
+                    <include
+                        layout="@layout/layout_style_controls"
+                        android:id="@+id/styleControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Mask (Masking Foto) -->
+                    <include
+                        layout="@layout/layout_mask_controls"
+                        android:id="@+id/maskControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
                     <!-- Inner Shadow -->
                     <include
                         layout="@layout/layout_inner_shadow_controls"
@@ -95,6 +144,20 @@
                     <include
                         layout="@layout/layout_extrude_controls"
                         android:id="@+id/extrudeControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- 3D Shadow -->
+                    <include
+                        layout="@layout/layout_3d_shadow_controls"
+                        android:id="@+id/shadow3DControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Reflection -->
+                    <include
+                        layout="@layout/layout_reflection_controls"
+                        android:id="@+id/reflectionControlsInclude"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
 

@@ -45,8 +45,7 @@ class TextPanelController(
     private val onEditTextRequested: (TextLayer) -> Unit,
     private val onFontRequested: (TextLayer) -> Unit,
     private val onCanvasChanged: () -> Unit,
-    private val onEffectSettingsOpenChanged: (Boolean) -> Unit,
-    private val onAlignSettingsOpenChanged: (Boolean) -> Unit
+    private val onEffectSettingsOpenChanged: (Boolean) -> Unit
 ) {
 
     private lateinit var gradientPickerAdapter: GradientPickerAdapter
@@ -70,14 +69,26 @@ class TextPanelController(
     // ── Effect Settings Page State ──────────────────────────────────────────────
     private var settingsSnapshot: com.flyerpix.editor.canvas.model.TextLayer? = null
     private var effectSettingsOpen = false
-    private var alignSettingsOpen = false
-    private var alignSettingsSnapshot: com.flyerpix.editor.canvas.history.CanvasStateSnapshot? = null
     private var textToolTagBeforeEffect = ""
     private var toolIsTextPage = false
-    private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_BLEND, TOOL_NEON)
+    private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_REFLECTION, TOOL_BLEND, TOOL_NEON, TOOL_STROKE, TOOL_LINE, TOOL_LETTER, TOOL_ALIGN, TOOL_BG, TOOL_CURVE, TOOL_STYLE, TOOL_MASK)
     private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncInnerShadowUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncEmbossUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncPerspectiveUIHook: ((com.flyerpix.editor.canvas.model.CanvasLayer) -> Unit)? = null
+    private var syncReflectionUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncBlendUIHook: ((com.flyerpix.editor.canvas.model.CanvasLayer) -> Unit)? = null
     private var rebuildExtrudePaletteHook: ((com.flyerpix.editor.canvas.model.TextLayer?) -> Unit)? = null
-    private var syncBlendButtonsHook: ((android.graphics.PorterDuff.Mode) -> Unit)? = null
+    private var syncShadow3DUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncNeonUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncShadowUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncStrokeUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncSpacingUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncAlignUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncBackgroundUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncCurveUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncStyleUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncMaskUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
 
     companion object {
         const val TOOL_STYLES       = "styles"
@@ -141,8 +152,6 @@ class TextPanelController(
         pixelCanvasView.onLayerSelectedListener = listener@{ layer ->
             val textLayer = layer as? TextLayer
 
-            if (alignSettingsOpen) return@listener
-            
             // Skip auto-switch saat initialization untuk mempertahankan menu default (Presets)
             if (!isInitializing && textLayer != null && !textLayer.isLocked) {
                 onShowMenu(R.id.nav_text)
@@ -162,14 +171,14 @@ class TextPanelController(
         initializeSizePanel()
         initializeOpacityPanel()
         initializeRotatePanel()
-        initializeStylePanel()
-        initializeAlignPanel()
+initializeStyleControls()
+        initializeAlignControls()
         initializeColorPanel()
-        initializeStrokePanel()
+        initializeStrokeControls()
         initializePaddingPanel()
-        initializeBackgroundPanel()
-        initializeReflectionPanel()
-        initializeMaskPanel()
+        initializeBackgroundControls()
+        initializeReflectionControls()
+initializeMaskControls()
         initializeTextStylesPanel()
 
         initializeShadowControls()
@@ -178,6 +187,7 @@ class TextPanelController(
         initializeGradientControls()
         initializeTextureControls()
         initializeExtrudeControls()
+        initialize3DShadowControls()
         initializeRotate3DControls()
         initializeCurveControls()
         initializePerspectiveControls()
@@ -213,9 +223,8 @@ class TextPanelController(
     // ────────────────────────────────────────────────────────────────────────
 
     /**
-     * Menginisialisasi panel kontrol Drop Shadow.
-     * Panel hanya muncul jika layer teks sedang dipilih.
-     * Semua slider beroperasi secara real-time tanpa perlu tombol Terapkan.
+     * Menginisialisasi panel kontrol Drop Shadow (gaya 3D Text).
+     * Termasuk pemilih warna, tombol reset, dan label dinamis.
      */
     private fun initializeShadowControls() {
         val b = binding.effectSettingsInclude.shadowControlsInclude
@@ -226,24 +235,75 @@ class TextPanelController(
         val sOpacity = b.sliderShadowOpacity
         val sDx = b.sliderShadowDx
         val sDy = b.sliderShadowDy
+        val tvRadius = b.tvShadowRadiusLabel
+        val tvOpacity = b.tvShadowOpacityLabel
+        val tvDx = b.tvShadowDxLabel
+        val tvDy = b.tvShadowDyLabel
+        val chipPreview = b.chipShadowColorPreview
+        val tvColorValue = b.tvShadowColorValue
+        val btnPick = b.btnPickShadowColor
+        val btnReset = b.btnResetShadow
 
-        // Tampilkan panel shadow hanya saat layer teks aktif dipilih
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is TextLayer) {
-                panel.visibility = View.VISIBLE
-                // Sinkronisasi state awal slider dengan nilai layer
-                switch.isChecked = layer.shadowEnabled
-                group.visibility = if (layer.shadowEnabled) View.VISIBLE else View.GONE
-                sRadius.value = layer.shadowRadius.coerceIn(0f, 40f)
-                sOpacity.value = layer.shadowOpacity.coerceIn(0f, 1f)
-                sDx.value = layer.shadowDx.coerceIn(-30f, 30f)
-                sDy.value = layer.shadowDy.coerceIn(-30f, 30f)
-            } else {
-                panel.visibility = View.GONE
-            }
+        fun setupColorPreview(layer: TextLayer?) {
+            val color = layer?.shadowColor ?: Color.BLACK
+            chipPreview.setCardBackgroundColor(color)
+            tvColorValue.text = String.format(Locale.US, "#%08X", color)
         }
+
+        fun openColorPicker() {
+            val layer = pixelCanvasView.selectedLayer as? TextLayer ?: return
+            com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                .newInstance(
+                    initialColor = layer.shadowColor,
+                    resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW_RESULT_KEY
+                )
+                .show(
+                    (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                )
+        }
+
+        fun syncUI(layer: TextLayer) {
+            panel.visibility = View.VISIBLE
+            switch.isChecked = layer.shadowEnabled
+            group.visibility = if (layer.shadowEnabled) View.VISIBLE else View.GONE
+            sRadius.value = layer.shadowRadius.coerceIn(0f, 40f)
+            sOpacity.value = layer.shadowOpacity.coerceIn(0f, 1f)
+            sDx.value = layer.shadowDx.coerceIn(-30f, 30f)
+            sDy.value = layer.shadowDy.coerceIn(-30f, 30f)
+            tvRadius.text = String.format(Locale.US, "Blur: %.1f px", layer.shadowRadius)
+            tvOpacity.text = String.format(Locale.US, "Opacity: %d%%", (layer.shadowOpacity * 100).toInt())
+            tvDx.text = String.format(Locale.US, "Offset X: %.1f px", layer.shadowDx)
+            tvDy.text = String.format(Locale.US, "Offset Y: %.1f px", layer.shadowDy)
+            setupColorPreview(layer)
+        }
+
+        syncShadowUIHook = { layer -> syncUI(layer) }
+
+        // Terima hasil pemilihan Shadow Color dari ColorPickerDialog
+        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+            .setFragmentResultListener(
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW_RESULT_KEY,
+                activity
+            ) { _, bundle ->
+                val isGradient = bundle.getBoolean(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
+                )
+                if (!isGradient) {
+                    val color = bundle.getInt(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                        Color.BLACK
+                    )
+                    applyToTextLayer { layer ->
+                        layer.shadowColor = color
+                    }
+                    setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
+                    pixelCanvasView.invalidate()
+                }
+            }
+
+        chipPreview.setOnClickListener { openColorPicker() }
+        btnPick.setOnClickListener { openColorPicker() }
 
         // Toggle enable/disable → tampilkan/sembunyikan slider group
         switch.setOnCheckedChangeListener { _, isChecked ->
@@ -251,18 +311,42 @@ class TextPanelController(
             applyToTextLayer { it.shadowEnabled = isChecked }
         }
 
-        // Real-time slider listener
+        // Real-time slider listener + label dinamis
         sRadius.addOnChangeListener { _, value, _ ->
+            tvRadius.text = String.format(Locale.US, "Blur: %.1f px", value)
             applyToTextLayer { it.shadowRadius = value }
         }
         sOpacity.addOnChangeListener { _, value, _ ->
+            tvOpacity.text = String.format(Locale.US, "Opacity: %d%%", (value * 100).toInt())
             applyToTextLayer { it.shadowOpacity = value }
         }
         sDx.addOnChangeListener { _, value, _ ->
+            tvDx.text = String.format(Locale.US, "Offset X: %.1f px", value)
             applyToTextLayer { it.shadowDx = value }
         }
         sDy.addOnChangeListener { _, value, _ ->
+            tvDy.text = String.format(Locale.US, "Offset Y: %.1f px", value)
             applyToTextLayer { it.shadowDy = value }
+        }
+
+        // Reset ke nilai default
+        btnReset.setOnClickListener {
+            switch.isChecked = false
+            group.visibility = View.GONE
+            sRadius.value = 8f
+            sOpacity.value = 0.6f
+            sDx.value = 4f
+            sDy.value = 4f
+            val black = Color.BLACK
+            applyToTextLayer { layer ->
+                layer.shadowEnabled = false
+                layer.shadowRadius = 8f
+                layer.shadowOpacity = 0.6f
+                layer.shadowDx = 4f
+                layer.shadowDy = 4f
+                layer.shadowColor = black
+            }
+            setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
         }
     }
 
@@ -284,19 +368,79 @@ class TextPanelController(
         val sOpacity = b.sliderInnerShadowOpacity
         val sDx = b.sliderInnerShadowDx
         val sDy = b.sliderInnerShadowDy
+        val tvRadius = b.tvInnerShadowRadiusLabel
+        val tvOpacity = b.tvInnerShadowOpacityLabel
+        val tvDx = b.tvInnerShadowDxLabel
+        val tvDy = b.tvInnerShadowDyLabel
+        val chipPreview = b.chipInnerShadowColorPreview
+        val tvValue = b.tvInnerShadowColorValue
+        val btnPick = b.btnPickInnerShadowColor
+
+        fun setupColorPreview(layer: TextLayer?) {
+            val color = layer?.innerShadowColor ?: Color.BLACK
+            chipPreview.setCardBackgroundColor(color)
+            tvValue.text = String.format(Locale.US, "#%08X", color)
+        }
+
+        fun openColorPicker() {
+            val layer = pixelCanvasView.selectedLayer as? TextLayer ?: return
+            com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                .newInstance(
+                    initialColor = layer.innerShadowColor,
+                    resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.INNER_SHADOW_RESULT_KEY
+                )
+                .show(
+                    (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                )
+        }
+
+        // Terima hasil pemilihan Inner Shadow Color dari ColorPickerDialog
+        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+            .setFragmentResultListener(
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.INNER_SHADOW_RESULT_KEY,
+                activity
+            ) { _, bundle ->
+                val isGradient = bundle.getBoolean(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
+                )
+                if (!isGradient) {
+                    val color = bundle.getInt(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                        Color.BLACK
+                    )
+                    applyToTextLayer { layer ->
+                        layer.innerShadowColor = color
+                    }
+                    setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
+                    pixelCanvasView.invalidate()
+                }
+            }
+
+        chipPreview.setOnClickListener { openColorPicker() }
+        btnPick.setOnClickListener { openColorPicker() }
+
+        fun syncUI(layer: TextLayer) {
+            panel.visibility = View.VISIBLE
+            switch.isChecked = layer.innerShadowEnabled
+            group.visibility = if (layer.innerShadowEnabled) View.VISIBLE else View.GONE
+            sRadius.value = layer.innerShadowRadius.coerceIn(0f, 40f)
+            tvRadius.text = "Blur: ${layer.innerShadowRadius}"
+            sOpacity.value = layer.innerShadowOpacity.coerceIn(0f, 1f)
+            tvOpacity.text = "Opacity: ${(layer.innerShadowOpacity * 100).toInt()}%"
+            sDx.value = layer.innerShadowDx.coerceIn(-30f, 30f)
+            tvDx.text = "Offset X: ${(layer.innerShadowDx * 10).toInt() / 10f}"
+            sDy.value = layer.innerShadowDy.coerceIn(-30f, 30f)
+            tvDy.text = "Offset Y: ${(layer.innerShadowDy * 10).toInt() / 10f}"
+            setupColorPreview(layer)
+        }
 
         // Perbarui state panel setiap kali layer teks baru dipilih
         val prevListener = pixelCanvasView.onLayerSelectedListener
         pixelCanvasView.onLayerSelectedListener = { layer ->
             prevListener?.invoke(layer)
             if (layer is TextLayer) {
-                panel.visibility = View.VISIBLE
-                switch.isChecked = layer.innerShadowEnabled
-                group.visibility = if (layer.innerShadowEnabled) View.VISIBLE else View.GONE
-                sRadius.value = layer.innerShadowRadius.coerceIn(0f, 40f)
-                sOpacity.value = layer.innerShadowOpacity.coerceIn(0f, 1f)
-                sDx.value = layer.innerShadowDx.coerceIn(-30f, 30f)
-                sDy.value = layer.innerShadowDy.coerceIn(-30f, 30f)
+                syncUI(layer)
             } else {
                 panel.visibility = View.GONE
             }
@@ -306,10 +450,25 @@ class TextPanelController(
             group.visibility = if (isChecked) View.VISIBLE else View.GONE
             applyToTextLayer { it.innerShadowEnabled = isChecked }
         }
-        sRadius.addOnChangeListener { _, v, _ -> applyToTextLayer { it.innerShadowRadius = v } }
-        sOpacity.addOnChangeListener { _, v, _ -> applyToTextLayer { it.innerShadowOpacity = v } }
-        sDx.addOnChangeListener { _, v, _ -> applyToTextLayer { it.innerShadowDx = v } }
-        sDy.addOnChangeListener { _, v, _ -> applyToTextLayer { it.innerShadowDy = v } }
+        sRadius.addOnChangeListener { _, v, _ ->
+            tvRadius.text = "Blur: ${v}"
+            applyToTextLayer { it.innerShadowRadius = v }
+        }
+        sOpacity.addOnChangeListener { _, v, _ ->
+            tvOpacity.text = "Opacity: ${(v * 100).toInt()}%"
+            applyToTextLayer { it.innerShadowOpacity = v }
+        }
+        sDx.addOnChangeListener { _, v, _ ->
+            tvDx.text = "Offset X: ${(v * 10).toInt() / 10f}"
+            applyToTextLayer { it.innerShadowDx = v }
+        }
+        sDy.addOnChangeListener { _, v, _ ->
+            tvDy.text = "Offset Y: ${(v * 10).toInt() / 10f}"
+            applyToTextLayer { it.innerShadowDy = v }
+        }
+
+        syncInnerShadowUIHook = { layer -> syncUI(layer) }
+        setupColorPreview(null)
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -331,34 +490,64 @@ class TextPanelController(
         val sSpecular = b.sliderEmbossSpecular
         val sBevel = b.sliderEmbossBevel
         val sIntensity = b.sliderEmbossIntensity
+        val tvAngle = b.tvEmbossAngleLabel
+        val tvAmbient = b.tvEmbossAmbientLabel
+        val tvSpecular = b.tvEmbossSpecularLabel
+        val tvBevel = b.tvEmbossBevelLabel
+        val tvIntensity = b.tvEmbossIntensityLabel
+
+        fun setupLabels(layer: TextLayer) {
+            tvAngle.text = "Light Angle (${layer.embossLightAngle.toInt()}°)"
+            tvAmbient.text = "Ambient: ${(layer.embossAmbient * 100).toInt() / 100f}"
+            tvSpecular.text = "Specular: ${(layer.embossSpecular * 10).toInt() / 10f}"
+            tvBevel.text = "Bevel: ${(layer.embossBevel * 10).toInt() / 10f}"
+            tvIntensity.text = "Intensity: ${(layer.embossIntensity * 100).toInt() / 100f}"
+        }
+
+        fun syncUI(layer: TextLayer) {
+            panel.visibility = View.VISIBLE
+            switch.isChecked = layer.embossEnabled
+            group.visibility = if (layer.embossEnabled) View.VISIBLE else View.GONE
+            sAngle.value = layer.embossLightAngle.coerceIn(0f, 360f)
+            sAmbient.value = layer.embossAmbient.coerceIn(0f, 1f)
+            sSpecular.value = layer.embossSpecular.coerceIn(0.1f, 20f)
+            sBevel.value = layer.embossBevel.coerceIn(0.5f, 12f)
+            sIntensity.value = layer.embossIntensity.coerceIn(0f, 2.5f)
+            setupLabels(layer)
+        }
+        syncEmbossUIHook = { layer -> syncUI(layer) }
 
         // Perbarui state panel setiap kali layer teks baru dipilih
         val prevListener = pixelCanvasView.onLayerSelectedListener
         pixelCanvasView.onLayerSelectedListener = { layer ->
             prevListener?.invoke(layer)
-            if (layer is TextLayer) {
-                panel.visibility = View.VISIBLE
-                switch.isChecked = layer.embossEnabled
-                group.visibility = if (layer.embossEnabled) View.VISIBLE else View.GONE
-                sAngle.value = layer.embossLightAngle.coerceIn(0f, 360f)
-                sAmbient.value = layer.embossAmbient.coerceIn(0f, 1f)
-                sSpecular.value = layer.embossSpecular.coerceIn(0.1f, 20f)
-                sBevel.value = layer.embossBevel.coerceIn(0.5f, 12f)
-                sIntensity.value = layer.embossIntensity.coerceIn(0f, 2.5f)
-            } else {
-                panel.visibility = View.GONE
-            }
+            if (layer is TextLayer) syncUI(layer) else panel.visibility = View.GONE
         }
 
         switch.setOnCheckedChangeListener { _, isChecked ->
             group.visibility = if (isChecked) View.VISIBLE else View.GONE
             applyToTextLayer { it.embossEnabled = isChecked }
         }
-        sAngle.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossLightAngle = v } }
-        sAmbient.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossAmbient = v } }
-        sSpecular.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossSpecular = v } }
-        sBevel.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossBevel = v } }
-        sIntensity.addOnChangeListener { _, v, _ -> applyToTextLayer { it.embossIntensity = v } }
+        sAngle.addOnChangeListener { _, v, _ ->
+            tvAngle.text = "Light Angle (${v.toInt()}°)"
+            applyToTextLayer { it.embossLightAngle = v }
+        }
+        sAmbient.addOnChangeListener { _, v, _ ->
+            tvAmbient.text = "Ambient: ${(v * 100).toInt() / 100f}"
+            applyToTextLayer { it.embossAmbient = v }
+        }
+        sSpecular.addOnChangeListener { _, v, _ ->
+            tvSpecular.text = "Specular: ${(v * 10).toInt() / 10f}"
+            applyToTextLayer { it.embossSpecular = v }
+        }
+        sBevel.addOnChangeListener { _, v, _ ->
+            tvBevel.text = "Bevel: ${(v * 10).toInt() / 10f}"
+            applyToTextLayer { it.embossBevel = v }
+        }
+        sIntensity.addOnChangeListener { _, v, _ ->
+            tvIntensity.text = "Intensity: ${(v * 100).toInt() / 100f}"
+            applyToTextLayer { it.embossIntensity = v }
+        }
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -744,6 +933,179 @@ class TextPanelController(
     }
 
     // ────────────────────────────────────────────────────────────────────────
+    // 3D SHADOW CONTROLS
+    // ────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Menginisialisasi panel kontrol 3D Shadow pada TextLayer.
+     * Mengikuti gaya UI/UX panel 3D Text Extrusion: mengatur ketebalan depth
+     * (1..50), tipe proyeksi (Oblique / Isometric), arah sudut oblique (0°..360°),
+     * kelembutan blur (0..40), kegelapan opacity, dan warna bayangan 3D.
+     */
+    private fun initialize3DShadowControls() {
+        val b = binding.effectSettingsInclude.shadow3DControlsInclude
+        val panel = b.root
+        val switch = b.switchShadow3DEnabled
+        val group = b.shadow3DControlsGroup
+        val rgType = b.rgShadow3DViewType
+        val rbOblique = b.rbShadow3DOblique
+        val rbIso = b.rbShadow3DIsometric
+        val sDepth = b.sliderShadow3DDepth
+        val tvDepth = b.tvShadow3DDepthLabel
+        val angleContainer = b.shadow3DAngleContainer
+        val sAngle = b.sliderShadow3DAngle
+        val tvAngle = b.tvShadow3DAngleLabel
+        val sBlur = b.sliderShadow3DBlur
+        val tvBlur = b.tvShadow3DBlurLabel
+        val sOpacity = b.sliderShadow3DOpacity
+        val tvOpacity = b.tvShadow3DOpacityLabel
+        val chipPreview = b.chipShadow3DColorPreview
+        val tvValue = b.tvShadow3DColorValue
+        val btnPick = b.btnPickShadow3DColor
+
+        fun setupColorPreview(layer: TextLayer?) {
+            val color = layer?.shadow3DColor ?: 0xB3000000.toInt()
+            chipPreview.setCardBackgroundColor(color)
+            tvValue.text = String.format(Locale.US, "#%08X", color)
+        }
+
+        fun openColorPicker() {
+            val layer = pixelCanvasView.selectedLayer as? TextLayer ?: return
+            com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                .newInstance(
+                    initialColor = layer.shadow3DColor,
+                    resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW3D_RESULT_KEY
+                )
+                .show(
+                    (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                )
+        }
+
+        // Terima hasil pemilihan Shadow Color dari ColorPickerDialog
+        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+            .setFragmentResultListener(
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW3D_RESULT_KEY,
+                activity
+            ) { _, bundle ->
+                val isGradient = bundle.getBoolean(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
+                )
+                if (!isGradient) {
+                    val color = bundle.getInt(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                        0xB3000000.toInt()
+                    )
+                    applyToTextLayer { layer ->
+                        layer.shadow3DColor = color
+                    }
+                    setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
+                    pixelCanvasView.invalidate()
+                }
+            }
+
+        chipPreview.setOnClickListener { openColorPicker() }
+        btnPick.setOnClickListener { openColorPicker() }
+
+        fun syncUI(layer: TextLayer) {
+            panel.visibility = View.VISIBLE
+            switch.isChecked = layer.shadow3DEnabled
+            group.visibility = if (layer.shadow3DEnabled) View.VISIBLE else View.GONE
+            rgType.visibility = if (layer.shadow3DEnabled) View.VISIBLE else View.GONE
+
+            if (layer.shadow3DViewType == ExtrudeViewType.ISOMETRIC) {
+                rbIso.isChecked = true
+                angleContainer.visibility = View.GONE
+            } else {
+                rbOblique.isChecked = true
+                angleContainer.visibility = View.VISIBLE
+            }
+
+            sDepth.value = layer.shadow3DDepth.coerceIn(1, 50).toFloat()
+            tvDepth.text = "Depth: ${layer.shadow3DDepth}"
+
+            sAngle.value = layer.shadow3DAngle.coerceIn(0f, 360f)
+            tvAngle.text = "Angle (${layer.shadow3DAngle.toInt()}°)"
+
+            sBlur.value = layer.shadow3DBlur.coerceIn(0f, 40f)
+            tvBlur.text = "Blur: ${Math.round(layer.shadow3DBlur * 10f) / 10f}"
+
+            sOpacity.value = layer.shadow3DOpacity.coerceIn(0f, 1f)
+            tvOpacity.text = "Opacity: ${(layer.shadow3DOpacity * 100).toInt()}%"
+
+            setupColorPreview(layer)
+        }
+
+        // Sinkronisasi saat layer teks aktif dipilih
+        val prevListener = pixelCanvasView.onLayerSelectedListener
+        pixelCanvasView.onLayerSelectedListener = { layer ->
+            prevListener?.invoke(layer)
+            if (layer is TextLayer) {
+                syncUI(layer)
+            } else {
+                panel.visibility = View.GONE
+            }
+        }
+
+        // Toggle Switch
+        switch.setOnCheckedChangeListener { _, isChecked ->
+            group.visibility = if (isChecked) View.VISIBLE else View.GONE
+            rgType.visibility = if (isChecked) View.VISIBLE else View.GONE
+            applyToTextLayer { layer ->
+                layer.shadow3DEnabled = isChecked
+            }
+        }
+
+        // RadioGroup Proyeksi
+        rgType.setOnCheckedChangeListener { _, checkedId ->
+            val isIso = checkedId == R.id.rbShadow3DIsometric
+            angleContainer.visibility = if (isIso) View.GONE else View.VISIBLE
+            applyToTextLayer { layer ->
+                layer.shadow3DViewType = if (isIso)
+                    ExtrudeViewType.ISOMETRIC
+                else
+                    ExtrudeViewType.OBLIQUE
+            }
+        }
+
+        // Slider Depth
+        sDepth.addOnChangeListener { _, value, _ ->
+            tvDepth.text = "Depth: ${value.toInt()}"
+            applyToTextLayer { layer ->
+                layer.shadow3DDepth = value.toInt()
+            }
+        }
+
+        // Slider Angle
+        sAngle.addOnChangeListener { _, value, _ ->
+            tvAngle.text = "Angle (${value.toInt()}°)"
+            applyToTextLayer { layer ->
+                layer.shadow3DAngle = value
+            }
+        }
+
+        // Slider Blur
+        sBlur.addOnChangeListener { _, value, _ ->
+            tvBlur.text = "Blur: ${Math.round(value * 10f) / 10f}"
+            applyToTextLayer { layer ->
+                layer.shadow3DBlur = value
+            }
+        }
+
+        // Slider Opacity
+        sOpacity.addOnChangeListener { _, value, _ ->
+            tvOpacity.text = "Opacity: ${(value * 100).toInt()}%"
+            applyToTextLayer { layer ->
+                layer.shadow3DOpacity = value
+            }
+        }
+
+        syncShadow3DUIHook = { layer -> syncUI(layer) }
+
+        setupColorPreview(null)
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
     // 3D ROTATE CONTROLS
     // ────────────────────────────────────────────────────────────────────────
 
@@ -828,16 +1190,18 @@ class TextPanelController(
      * Tombol preset (-100, -50, 0, +50, +100) mempercepat pemilihan kurva.
      */
     private fun initializeCurveControls() {
-        val b = binding.textPropertyPanelInclude.curveControlsInclude
+        val b = binding.effectSettingsInclude.curveControlsInclude
         val panel = b.root
         val tvLabel = b.tvCurveLabel
         val slider = b.sliderCurve
         val btnReset = b.btnResetCurve
-        val btnDown100 = b.btnCurveDown100
-        val btnDown50 = b.btnCurveDown50
-        val btnFlat = b.btnCurveFlat
-        val btnUp50 = b.btnCurveUp50
-        val btnUp100 = b.btnCurveUp100
+        val presets = listOf(
+            b.btnCurveDown100 to -100,
+            b.btnCurveDown50 to -50,
+            b.btnCurveFlat to 0,
+            b.btnCurveUp50 to 50,
+            b.btnCurveUp100 to 100
+        )
 
         fun curveLabel(v: Int): String = when {
             v == 0   -> "Curve: 0% (Flat)"
@@ -845,9 +1209,16 @@ class TextPanelController(
             else     -> "Curve: $v% ▼"
         }
 
+        fun setActive(btn: com.google.android.material.button.MaterialButton, active: Boolean) {
+            btn.isSelected = active
+            btn.setBackgroundColor(if (active) COLOR_ACTIVE else android.graphics.Color.TRANSPARENT)
+            btn.setTextColor(if (active) android.graphics.Color.WHITE else COLOR_GRAY)
+        }
+
         fun applyPreset(value: Int) {
             slider.value = value.coerceIn(-100, 100).toFloat()
             tvLabel.text = curveLabel(value)
+            for ((btn, pv) in presets) setActive(btn, pv == value)
             applyToTextLayer { layer -> layer.curvePercent = value }
         }
 
@@ -856,35 +1227,24 @@ class TextPanelController(
             val v = layer.curvePercent.coerceIn(-100, 100)
             slider.value = v.toFloat()
             tvLabel.text = curveLabel(v)
-        }
-
-        // Sinkronisasi saat layer teks aktif dipilih
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is TextLayer) {
-                syncUI(layer)
-            } else {
-                panel.visibility = View.GONE
-            }
+            for ((btn, pv) in presets) setActive(btn, pv == v)
         }
 
         // Slider perubahan nilai
         slider.addOnChangeListener { _, value, _ ->
             val v = value.toInt()
             tvLabel.text = curveLabel(v)
+            for ((btn, pv) in presets) setActive(btn, pv == v)
             applyToTextLayer { layer -> layer.curvePercent = v }
         }
 
         // Tombol preset
-        btnDown100.setOnClickListener { applyPreset(-100) }
-        btnDown50.setOnClickListener  { applyPreset(-50) }
-        btnFlat.setOnClickListener    { applyPreset(0) }
-        btnUp50.setOnClickListener    { applyPreset(50) }
-        btnUp100.setOnClickListener   { applyPreset(100) }
+        for ((btn, value) in presets) btn.setOnClickListener { applyPreset(value) }
 
         // Reset ke flat
         btnReset.setOnClickListener { applyPreset(0) }
+
+        syncCurveUIHook = { layer -> syncUI(layer) }
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -902,16 +1262,43 @@ class TextPanelController(
         val group = b.perspectiveControlsGroup
         val btnReset = b.btnResetPerspective
         val btnFlat = b.btnPresetFlat
+        val btnSlightLeft = b.btnPresetSlightLeft
         val btnLeft = b.btnPresetLeftWall
         val btnRight = b.btnPresetRightWall
+        val btnGentleTilt = b.btnPresetGentleTilt
         val btnBillboard = b.btnPresetBillboard
         val btnFloor = b.btnPresetFloor
+
+        val presets = listOf(
+            btnFlat        to com.flyerpix.editor.canvas.model.PerspectivePreset.FLAT,
+            btnSlightLeft  to com.flyerpix.editor.canvas.model.PerspectivePreset.SLIGHT_LEFT,
+            btnLeft        to com.flyerpix.editor.canvas.model.PerspectivePreset.LEFT_WALL,
+            btnRight       to com.flyerpix.editor.canvas.model.PerspectivePreset.RIGHT_WALL,
+            btnGentleTilt  to com.flyerpix.editor.canvas.model.PerspectivePreset.GENTLE_TILT,
+            btnBillboard   to com.flyerpix.editor.canvas.model.PerspectivePreset.TOP_BILLBOARD,
+            btnFloor       to com.flyerpix.editor.canvas.model.PerspectivePreset.FLOOR_TILT
+        )
+
+        // Sorot tombol preset yang nilainya saat ini sama dengan korner layer.
+        fun highlightActivePreset(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+            val corners = layer.perspectiveCorners
+            for ((btn, preset) in presets) {
+                val target = layer.perspectiveCornersFor(preset)
+                val active = corners.size == target.size &&
+                    corners.indices.all { kotlin.math.abs(corners[it] - target[it]) < 0.01f }
+                btn.isSelected = active
+                btn.setBackgroundColor(if (active) COLOR_ACTIVE else Color.TRANSPARENT)
+                btn.setTextColor(if (active) Color.WHITE else COLOR_GRAY)
+            }
+        }
 
         fun syncUI(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
             panel.visibility = View.VISIBLE
             switch.isChecked = layer.perspectiveEnabled
             group.visibility = if (layer.perspectiveEnabled) View.VISIBLE else View.GONE
+            highlightActivePreset(layer)
         }
+        syncPerspectiveUIHook = { layer -> syncUI(layer) }
 
         val prevListener = pixelCanvasView.onLayerSelectedListener
         pixelCanvasView.onLayerSelectedListener = { layer ->
@@ -937,21 +1324,21 @@ class TextPanelController(
             pixelCanvasView.selectedLayer?.let { layer ->
                 if (!layer.isLocked) {
                     layer.applyPerspectivePreset(preset)
+                    highlightActivePreset(layer)
                     pixelCanvasView.invalidate()
                 }
             }
         }
 
-        btnFlat.setOnClickListener { applyPreset(com.flyerpix.editor.canvas.model.PerspectivePreset.FLAT) }
-        btnLeft.setOnClickListener { applyPreset(com.flyerpix.editor.canvas.model.PerspectivePreset.LEFT_WALL) }
-        btnRight.setOnClickListener { applyPreset(com.flyerpix.editor.canvas.model.PerspectivePreset.RIGHT_WALL) }
-        btnBillboard.setOnClickListener { applyPreset(com.flyerpix.editor.canvas.model.PerspectivePreset.TOP_BILLBOARD) }
-        btnFloor.setOnClickListener { applyPreset(com.flyerpix.editor.canvas.model.PerspectivePreset.FLOOR_TILT) }
+        for ((btn, preset) in presets) {
+            btn.setOnClickListener { applyPreset(preset) }
+        }
 
         btnReset.setOnClickListener {
             pixelCanvasView.selectedLayer?.let { layer ->
                 if (!layer.isLocked) {
                     layer.resetPerspective()
+                    highlightActivePreset(layer)
                     pixelCanvasView.invalidate()
                 }
             }
@@ -975,7 +1362,7 @@ class TextPanelController(
      * TODO: Implement spacing controls jika ada di UI
      */
     private fun initializeSpacingControls() {
-        val b = binding.textPropertyPanelInclude.spacingControlsInclude
+        val b = binding.effectSettingsInclude.spacingControlsInclude
         val panel = b.root
         val tvLetterLabel = b.tvLetterSpacingLabel
         val tvLineLabel = b.tvLineSpacingLabel
@@ -1004,15 +1391,7 @@ class TextPanelController(
             tvLineLabel.text = formatLine(lineVal)
         }
 
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) {
-                syncUI(layer)
-            } else {
-                panel.visibility = View.GONE
-            }
-        }
+        syncSpacingUIHook = { layer -> syncUI(layer) }
 
         sLetter.addOnChangeListener { _, value, _ ->
             tvLetterLabel.text = formatLetter(value)
@@ -1099,6 +1478,28 @@ class TextPanelController(
         val btnDarken = b.btnBlendDarken
         val btnLighten = b.btnBlendLighten
         val btnAdd = b.btnBlendAdd
+        val btnHardLight = b.btnBlendHardLight
+        val btnSoftLight = b.btnBlendSoftLight
+        val btnColorBurn = b.btnBlendColorBurn
+        val btnColorDodge = b.btnBlendColorDodge
+        val btnDifference = b.btnBlendDifference
+        val btnExclusion = b.btnBlendExclusion
+
+        // Mode lanjutan (BlendMode) baru tersedia sejak API 29.
+        val extraButtons = if (android.os.Build.VERSION.SDK_INT >= 29) {
+            b.blendAdvancedRow.visibility = View.VISIBLE
+            listOf(
+                btnHardLight  to com.flyerpix.editor.canvas.model.ExtendedBlendMode.HARD_LIGHT,
+                btnSoftLight  to com.flyerpix.editor.canvas.model.ExtendedBlendMode.SOFT_LIGHT,
+                btnColorBurn  to com.flyerpix.editor.canvas.model.ExtendedBlendMode.COLOR_BURN,
+                btnColorDodge to com.flyerpix.editor.canvas.model.ExtendedBlendMode.COLOR_DODGE,
+                btnDifference to com.flyerpix.editor.canvas.model.ExtendedBlendMode.DIFFERENCE,
+                btnExclusion  to com.flyerpix.editor.canvas.model.ExtendedBlendMode.EXCLUSION
+            )
+        } else {
+            b.blendAdvancedRow.visibility = View.GONE
+            emptyList()
+        }
 
         val buttons = listOf(
             btnNormal to android.graphics.PorterDuff.Mode.SRC_OVER,
@@ -1121,26 +1522,39 @@ class TextPanelController(
             else                                      -> "Mode: ${mode.name}"
         }
 
-        fun updateButtonStates(currentMode: android.graphics.PorterDuff.Mode) {
-            tvDesc.text = descriptionFor(currentMode)
+        fun descForExtra(extra: com.flyerpix.editor.canvas.model.ExtendedBlendMode): String = when (extra) {
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.HARD_LIGHT -> "Hard Light: Gabungan Multiply & Screen, kontras lebih keras."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.SOFT_LIGHT  -> "Soft Light: Kontras lembut seperti cahaya menyebar."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.COLOR_BURN   -> "Burn: Menggelapkan background dengan kontras tinggi."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.COLOR_DODGE  -> "Dodge: Mencerahkan background dengan efek cahaya kuat."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.DIFFERENCE   -> "Difference: Selisih mutlak warna (efek inversi kontras)."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.EXCLUSION    -> "Exclusion: Mirip Difference namun kontras lebih lembut."
+        }
+
+        fun updateButtonStates(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+            val extra = layer.blendExtra
+            val mode = layer.blendMode
+            tvDesc.text = if (extra != null) descForExtra(extra) else descriptionFor(mode)
             val activeColor = 0xFF1769FF.toInt()
-            for ((btn, mode) in buttons) {
-                if (mode == currentMode) {
-                    btn.setBackgroundColor(activeColor)
-                    btn.setTextColor(Color.WHITE)
-                    btn.strokeWidth = 3
-                } else {
-                    btn.setBackgroundColor(Color.TRANSPARENT)
-                    btn.setTextColor(Color.LTGRAY)
-                    btn.strokeWidth = 1
-                }
+            for ((btn, m) in buttons) {
+                val active = extra == null && mode == m
+                btn.setBackgroundColor(if (active) activeColor else Color.TRANSPARENT)
+                btn.setTextColor(if (active) Color.WHITE else Color.LTGRAY)
+                btn.strokeWidth = if (active) 3 else 1
+            }
+            for ((btn, e) in extraButtons) {
+                val active = extra == e
+                btn.setBackgroundColor(if (active) activeColor else Color.TRANSPARENT)
+                btn.setTextColor(if (active) Color.WHITE else Color.LTGRAY)
+                btn.strokeWidth = if (active) 3 else 1
             }
         }
 
         fun syncUI(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
             panel.visibility = View.VISIBLE
-            updateButtonStates(layer.blendMode)
+            updateButtonStates(layer)
         }
+        syncBlendUIHook = { layer -> syncUI(layer) }
 
         val prevListener = pixelCanvasView.onLayerSelectedListener
         pixelCanvasView.onLayerSelectedListener = { layer ->
@@ -1156,7 +1570,19 @@ class TextPanelController(
             pixelCanvasView.selectedLayer?.let { layer ->
                 if (!layer.isLocked) {
                     layer.blendMode = mode
-                    updateButtonStates(mode)
+                    layer.blendExtra = null
+                    updateButtonStates(layer)
+                    pixelCanvasView.invalidate()
+                }
+            }
+        }
+
+        fun setExtraMode(extra: com.flyerpix.editor.canvas.model.ExtendedBlendMode) {
+            pixelCanvasView.selectedLayer?.let { layer ->
+                if (!layer.isLocked) {
+                    layer.blendMode = android.graphics.PorterDuff.Mode.SRC_OVER
+                    layer.blendExtra = extra
+                    updateButtonStates(layer)
                     pixelCanvasView.invalidate()
                 }
             }
@@ -1164,6 +1590,9 @@ class TextPanelController(
 
         for ((btn, mode) in buttons) {
             btn.setOnClickListener { setBlendMode(mode) }
+        }
+        for ((btn, extra) in extraButtons) {
+            btn.setOnClickListener { setExtraMode(extra) }
         }
 
         btnReset.setOnClickListener { setBlendMode(android.graphics.PorterDuff.Mode.SRC_OVER) }
@@ -1194,6 +1623,54 @@ class TextPanelController(
         val switchCore = b.switchNeonCore
         val tvRadius = b.tvNeonRadiusLabel
         val tvIntensity = b.tvNeonIntensityLabel
+        val tvColor = b.tvNeonColorValue
+        val chipPreview = b.chipNeonColorPreview
+        val btnPick = b.btnPickNeonColor
+        val btnReset = b.btnResetNeon
+
+        fun setupColorPreview(layer: TextLayer?) {
+            val color = layer?.neonColor ?: 0xFF00E5FF.toInt()
+            chipPreview.setCardBackgroundColor(color)
+            tvColor.text = String.format(Locale.US, "#%08X", color)
+        }
+
+        fun openColorPicker() {
+            val layer = pixelCanvasView.selectedLayer as? TextLayer ?: return
+            com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                .newInstance(
+                    initialColor = layer.neonColor,
+                    resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.NEON_RESULT_KEY
+                )
+                .show(
+                    (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                )
+        }
+
+        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+            .setFragmentResultListener(
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.NEON_RESULT_KEY,
+                activity
+            ) { _, bundle ->
+                val isGradient = bundle.getBoolean(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
+                )
+                if (!isGradient) {
+                    val color = bundle.getInt(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                        0xFF00E5FF.toInt()
+                    )
+                    applyToTextLayer { layer ->
+                        layer.neonColor = color
+                        layer.neonEnabled = true
+                    }
+                    setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
+                    pixelCanvasView.invalidate()
+                }
+            }
+
+        chipPreview.setOnClickListener { openColorPicker() }
+        btnPick.setOnClickListener { openColorPicker() }
 
         fun syncUI(layer: TextLayer?) {
             if (layer == null) {
@@ -1209,8 +1686,10 @@ class TextPanelController(
             switchCore.isChecked = layer.neonCoreEnabled
             tvRadius.text = "Glow Radius: ${(layer.neonRadius * 10).toInt() / 10f}"
             tvIntensity.text = "Intensity: ${(layer.neonIntensity * 100).toInt() / 100f}"
+            setupColorPreview(layer)
             eventsGated = false
         }
+        syncNeonUIHook = { layer -> syncUI(layer) }
 
         switch.setOnCheckedChangeListener { _, isChecked ->
             if (eventsGated) return@setOnCheckedChangeListener
@@ -1266,53 +1745,38 @@ class TextPanelController(
                     switch.isChecked = true
                     group.visibility = View.VISIBLE
                     eventsGated = false
+                    setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
                     onCanvasChanged()
                 }
             }
             row.addView(chip)
         }
 
-        syncBlendButtonsHook = { mode -> updateBlendButtonStates(mode) }
+        btnReset.setOnClickListener {
+            pixelCanvasView.selectedLayer?.let { layer ->
+                if (layer is TextLayer && !layer.isLocked) {
+                    layer.neonColor = 0xFF00E5FF.toInt()
+                    layer.neonRadius = 12f
+                    layer.neonIntensity = 1f
+                    layer.neonCoreEnabled = true
+                    layer.neonEnabled = true
+                    eventsGated = true
+                    switch.isChecked = true
+                    group.visibility = View.VISIBLE
+                    sRadius.value = layer.neonRadius
+                    sIntensity.value = layer.neonIntensity
+                    switchCore.isChecked = true
+                    eventsGated = false
+                    syncUI(layer)
+                    pixelCanvasView.invalidate()
+                }
+            }
+        }
 
         val prevListener = pixelCanvasView.onLayerSelectedListener
         pixelCanvasView.onLayerSelectedListener = { layer ->
             prevListener?.invoke(layer)
             syncUI(layer as? TextLayer)
-        }
-    }
-
-    private fun updateBlendButtonStates(currentMode: android.graphics.PorterDuff.Mode) {
-        val b = binding.effectSettingsInclude.blendControlsInclude
-        val tvDesc = b.tvBlendDescription
-        tvDesc.text = when (currentMode) {
-            android.graphics.PorterDuff.Mode.MULTIPLY -> "Multiply: Mengalikan warna (membuat teks lebih gelap dan menyatu)."
-            android.graphics.PorterDuff.Mode.SCREEN   -> "Screen: Membalikkan dan mengalikan (efek teks bersinar terang)."
-            android.graphics.PorterDuff.Mode.OVERLAY  -> "Overlay: Kombinasi Multiply dan Screen berdasarkan background."
-            android.graphics.PorterDuff.Mode.DARKEN   -> "Darken: Memilih piksel yang lebih gelap antara teks dan background."
-            android.graphics.PorterDuff.Mode.LIGHTEN  -> "Lighten: Memilih piksel yang lebih terang antara teks dan background."
-            android.graphics.PorterDuff.Mode.ADD      -> "Add: Menjumlahkan warna teks dan background (efek cahaya kuat)."
-            else                                      -> "Normal: Menampilkan warna layer standar menutupi background."
-        }
-        val activeColor = 0xFF1769FF.toInt()
-        val buttons = listOf(
-            b.btnBlendNormal to android.graphics.PorterDuff.Mode.SRC_OVER,
-            b.btnBlendMultiply to android.graphics.PorterDuff.Mode.MULTIPLY,
-            b.btnBlendScreen to android.graphics.PorterDuff.Mode.SCREEN,
-            b.btnBlendOverlay to android.graphics.PorterDuff.Mode.OVERLAY,
-            b.btnBlendDarken to android.graphics.PorterDuff.Mode.DARKEN,
-            b.btnBlendLighten to android.graphics.PorterDuff.Mode.LIGHTEN,
-            b.btnBlendAdd to android.graphics.PorterDuff.Mode.ADD
-        )
-        for ((btn, mode) in buttons) {
-            if (mode == currentMode) {
-                btn.setBackgroundColor(activeColor)
-                btn.setTextColor(android.graphics.Color.WHITE)
-                btn.strokeWidth = 3
-            } else {
-                btn.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                btn.setTextColor(android.graphics.Color.LTGRAY)
-                btn.strokeWidth = 1
-            }
         }
     }
 
@@ -1349,59 +1813,30 @@ class TextPanelController(
     private fun syncEffectUI(tag: String, layer: TextLayer?) {        if (layer == null) return
         val fs = binding.effectSettingsInclude
         when (tag) {
-            TOOL_SHADOW -> {
-                val c = fs.shadowControlsInclude
-                c.switchShadowEnabled.isChecked = layer.shadowEnabled
-                c.shadowSliderGroup.visibility = if (layer.shadowEnabled) View.VISIBLE else View.GONE
-                c.sliderShadowRadius.value = layer.shadowRadius.coerceIn(0f, 40f)
-                c.sliderShadowOpacity.value = layer.shadowOpacity.coerceIn(0f, 1f)
-                c.sliderShadowDx.value = layer.shadowDx.coerceIn(-30f, 30f)
-                c.sliderShadowDy.value = layer.shadowDy.coerceIn(-30f, 30f)
-            }
-            TOOL_INNER -> {
-                val c = fs.innerShadowControlsInclude
-                c.switchInnerShadowEnabled.isChecked = layer.innerShadowEnabled
-                c.innerShadowSliderGroup.visibility = if (layer.innerShadowEnabled) View.VISIBLE else View.GONE
-                c.sliderInnerShadowRadius.value = layer.innerShadowRadius.coerceIn(0f, 40f)
-                c.sliderInnerShadowOpacity.value = layer.innerShadowOpacity.coerceIn(0f, 1f)
-                c.sliderInnerShadowDx.value = layer.innerShadowDx.coerceIn(-30f, 30f)
-                c.sliderInnerShadowDy.value = layer.innerShadowDy.coerceIn(-30f, 30f)
-            }
-            TOOL_EMBOSS -> {
-                val c = fs.embossControlsInclude
-                c.switchEmbossEnabled.isChecked = layer.embossEnabled
-                c.embossSliderGroup.visibility = if (layer.embossEnabled) View.VISIBLE else View.GONE
-                c.sliderEmbossAngle.value = layer.embossLightAngle.coerceIn(0f, 360f)
-                c.sliderEmbossAmbient.value = layer.embossAmbient.coerceIn(0f, 1f)
-                c.sliderEmbossSpecular.value = layer.embossSpecular.coerceIn(0.1f, 20f)
-                c.sliderEmbossBevel.value = layer.embossBevel.coerceIn(0.5f, 12f)
-                c.sliderEmbossIntensity.value = layer.embossIntensity.coerceIn(0f, 2.5f)
-            }
+            TOOL_SHADOW -> syncShadowUIHook?.invoke(layer)
+            TOOL_STROKE -> syncStrokeUIHook?.invoke(layer)
+            TOOL_LINE, TOOL_LETTER -> syncSpacingUIHook?.invoke(layer)
+            TOOL_ALIGN -> syncAlignUIHook?.invoke(layer)
+            TOOL_BG -> syncBackgroundUIHook?.invoke(layer)
+            TOOL_CURVE -> syncCurveUIHook?.invoke(layer)
+            TOOL_STYLE -> syncStyleUIHook?.invoke(layer)
+            TOOL_MASK -> syncMaskUIHook?.invoke(layer)
+            TOOL_INNER -> syncInnerShadowUIHook?.invoke(layer)
+            TOOL_EMBOSS -> syncEmbossUIHook?.invoke(layer)
             TOOL_GRADIENT -> syncGradientUI(layer)
             TOOL_TEXTURE -> syncTextureUIHook?.invoke(layer)
             TOOL_3D_TEXT -> rebuildExtrudePaletteHook?.invoke(layer)
+            TOOL_3D_SHADOW -> syncShadow3DUIHook?.invoke(layer)
+            TOOL_REFLECTION -> syncReflectionUIHook?.invoke(layer)
             TOOL_3D_ROTATE -> {
                 val c = fs.rotate3DControlsInclude
                 c.sliderRotateX.value = layer.rotate3DX.coerceIn(-180f, 180f)
                 c.sliderRotateY.value = layer.rotate3DY.coerceIn(-180f, 180f)
                 c.sliderRotateZ.value = layer.rotate3DZ.coerceIn(-180f, 180f)
             }
-            TOOL_PERSPECTIVE -> {
-                val c = fs.perspectiveControlsInclude
-                c.switchPerspectiveEnabled.isChecked = layer.perspectiveEnabled
-                c.perspectiveControlsGroup.visibility = if (layer.perspectiveEnabled) View.VISIBLE else View.GONE
-            }
-            TOOL_BLEND -> updateBlendButtonStates(layer.blendMode)
-            TOOL_NEON -> {
-                val c = fs.neonControlsInclude
-                c.switchNeonEnabled.isChecked = layer.neonEnabled
-                c.neonControlsGroup.visibility = if (layer.neonEnabled) View.VISIBLE else View.GONE
-                c.sliderNeonRadius.value = layer.neonRadius.coerceIn(1f, 40f)
-                c.sliderNeonIntensity.value = layer.neonIntensity.coerceIn(0.1f, 2f)
-                c.switchNeonCore.isChecked = layer.neonCoreEnabled
-                c.tvNeonRadiusLabel.text = "Glow Radius: ${(layer.neonRadius * 10).toInt() / 10f}"
-                c.tvNeonIntensityLabel.text = "Intensity: ${(layer.neonIntensity * 100).toInt() / 100f}"
-            }
+            TOOL_PERSPECTIVE -> syncPerspectiveUIHook?.invoke(layer)
+            TOOL_BLEND -> syncBlendUIHook?.invoke(layer)
+            TOOL_NEON -> syncNeonUIHook?.invoke(layer)
         }
         val title = textToolLabels[tag] ?: "Effect Settings"
         binding.effectSettingsInclude.effectSettingsTitle.text = title
@@ -1470,6 +1905,7 @@ class TextPanelController(
             b.btnDeleteTexture.visibility = View.VISIBLE
             b.switchTextureEnabled.isChecked = true
             b.textureControlsGroup.visibility = View.VISIBLE
+            syncMaskUIHook?.invoke(curLayer)
         }
         showSnackbar("Tekstur foto berhasil diterapkan pada teks!")
     }
@@ -1496,7 +1932,7 @@ class TextPanelController(
         val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
         val hasEditor = layer != null && !layer.isLocked
 
-        binding.textEditorBar.visibility = if (isPageOpen && !effectSettingsOpen && !alignSettingsOpen) View.VISIBLE else View.GONE
+        binding.textEditorBar.visibility = if (isPageOpen && !effectSettingsOpen) View.VISIBLE else View.GONE
         updateEffectSettingsVisibility()
         binding.textPropertyPanelInclude.root.visibility =
             if (isPageOpen && hasEditor && activeTextToolTag.isNotEmpty() && activeTextToolTag !in complexEffectTags) View.VISIBLE else View.GONE
@@ -1631,17 +2067,49 @@ class TextPanelController(
         layer.extrudeGradient      = snapshot.extrudeGradient?.copy()
         layer.extrudeViewType      = snapshot.extrudeViewType
         layer.extrudeAngle         = snapshot.extrudeAngle
+        layer.shadow3DEnabled      = snapshot.shadow3DEnabled
+        layer.shadow3DDepth        = snapshot.shadow3DDepth
+        layer.shadow3DColor        = snapshot.shadow3DColor
+        layer.shadow3DViewType     = snapshot.shadow3DViewType
+        layer.shadow3DAngle        = snapshot.shadow3DAngle
+        layer.shadow3DBlur         = snapshot.shadow3DBlur
+        layer.shadow3DOpacity      = snapshot.shadow3DOpacity
+        layer.reflectionEnabled        = snapshot.reflectionEnabled
+        layer.reflectionOpacity        = snapshot.reflectionOpacity
+        layer.reflectionDistance       = snapshot.reflectionDistance
+        layer.reflectionFade           = snapshot.reflectionFade
         layer.rotate3DX            = snapshot.rotate3DX
         layer.rotate3DY            = snapshot.rotate3DY
         layer.rotate3DZ            = snapshot.rotate3DZ
         layer.perspectiveEnabled   = snapshot.perspectiveEnabled
         layer.perspectiveCorners   = snapshot.perspectiveCorners.clone()
         layer.blendMode            = snapshot.blendMode
+        layer.blendExtra           = snapshot.blendExtra
         layer.neonEnabled          = snapshot.neonEnabled
         layer.neonColor            = snapshot.neonColor
         layer.neonRadius           = snapshot.neonRadius
         layer.neonIntensity        = snapshot.neonIntensity
         layer.neonCoreEnabled      = snapshot.neonCoreEnabled
+        layer.strokeColor          = snapshot.strokeColor
+        layer.strokeWidth          = snapshot.strokeWidth
+        layer.letterSpacing        = snapshot.letterSpacing
+        layer.lineSpacing          = snapshot.lineSpacing
+        layer.alignment            = snapshot.alignment
+        layer.justifyEnabled       = snapshot.justifyEnabled
+        layer.wrapTextEnabled      = snapshot.wrapTextEnabled
+        layer.wrapWidth            = snapshot.wrapWidth
+        layer.bgEnabled            = snapshot.bgEnabled
+        layer.bgColor              = snapshot.bgColor
+        layer.bgOpacity            = snapshot.bgOpacity
+        layer.bgPadding            = snapshot.bgPadding
+        layer.bgCornerRadius       = snapshot.bgCornerRadius
+        layer.curvePercent         = snapshot.curvePercent
+        layer.isBold               = snapshot.isBold
+        layer.isItalic             = snapshot.isItalic
+        layer.isUnderline          = snapshot.isUnderline
+        layer.isStrikethrough      = snapshot.isStrikethrough
+        layer.typeface             = snapshot.typeface
+        layer.fontName             = snapshot.fontName
     }
 
     /**
@@ -1667,15 +2135,6 @@ private fun registerTextPanels() {
         textPanelViews[TOOL_COLOR]       = tp.colorPanel.root
         textPanelViews[TOOL_OPACITY]     = tp.opacityPanel.root
         textPanelViews[TOOL_ROTATE]      = tp.rotatePanel.root
-        textPanelViews[TOOL_MASK]        = tp.maskPanel.root
-        textPanelViews[TOOL_STYLE]       = tp.stylePanel.root
-        textPanelViews[TOOL_CURVE]       = tp.curveControlsInclude.root
-        textPanelViews[TOOL_BG]          = tp.backgroundPanel.root
-        textPanelViews[TOOL_ALIGN]       = tp.alignPanel.root
-        textPanelViews[TOOL_LETTER]      = tp.spacingControlsInclude.root
-        textPanelViews[TOOL_LINE]        = tp.spacingControlsInclude.root
-        textPanelViews[TOOL_STROKE]      = tp.strokePanel.root
-        textPanelViews[TOOL_REFLECTION]  = tp.reflectionPanel.root
 
         // Efek kompleks → halaman Effect Settings terpisah
         val fs = binding.effectSettingsInclude
@@ -1687,9 +2146,18 @@ private fun registerTextPanels() {
         textPanelViews[TOOL_PERSPECTIVE] = fs.perspectiveControlsInclude.root
         textPanelViews[TOOL_3D_ROTATE]   = fs.rotate3DControlsInclude.root
         textPanelViews[TOOL_3D_TEXT]     = fs.extrudeControlsInclude.root
-        textPanelViews[TOOL_3D_SHADOW]   = fs.shadowControlsInclude.root
+        textPanelViews[TOOL_3D_SHADOW]   = fs.shadow3DControlsInclude.root
+        textPanelViews[TOOL_REFLECTION]  = fs.reflectionControlsInclude.root
         textPanelViews[TOOL_BLEND]       = fs.blendControlsInclude.root
         textPanelViews[TOOL_NEON]        = fs.neonControlsInclude.root
+        textPanelViews[TOOL_LETTER]      = fs.spacingControlsInclude.root
+        textPanelViews[TOOL_LINE]        = fs.spacingControlsInclude.root
+        textPanelViews[TOOL_STROKE]      = fs.strokeControlsInclude.root
+        textPanelViews[TOOL_ALIGN]       = fs.alignControlsInclude.root
+        textPanelViews[TOOL_BG]          = fs.backgroundControlsInclude.root
+        textPanelViews[TOOL_CURVE]       = fs.curveControlsInclude.root
+        textPanelViews[TOOL_STYLE]       = fs.styleControlsInclude.root
+        textPanelViews[TOOL_MASK]        = fs.maskControlsInclude.root
     }
 
     private fun buildTextToolStrip() {
@@ -1822,10 +2290,6 @@ private fun registerTextPanels() {
 
     private fun selectTextTool(tag: String) {
         if (isInitializing) return
-        if (tag == TOOL_ALIGN) {
-            openAlignSettings()
-            return
-        }
         if (activeTextToolTag == tag) return
 
         // Routing untuk efek kompleks → buka halaman Effect Settings
@@ -1877,78 +2341,6 @@ private fun registerTextPanels() {
         for ((t, v) in textPanelViews) {
             v.visibility = if (t == activeTextToolTag) View.VISIBLE else View.GONE
         }
-    }
-
-    private fun openAlignSettings() {
-        val layer = pixelCanvasView.selectedLayer as? TextLayer
-        if (layer == null || layer.isLocked) {
-            showSnackbar("Pilih layer teks terlebih dahulu")
-            return
-        }
-        if (alignSettingsOpen) return
-
-        alignSettingsSnapshot = pixelCanvasView.captureCurrentState("Align")
-        alignSettingsOpen = true
-        activeTextToolTag = TOOL_ALIGN
-        binding.textEditorBar.visibility = View.GONE
-        for (v in textPanelViews.values) v.visibility = View.GONE
-        binding.alignSettingsInclude.alignControlsInclude.root.visibility = View.VISIBLE
-        binding.alignSettingsInclude.root.visibility = View.VISIBLE
-        val source = binding.textPropertyPanelInclude.alignPanel
-        val target = binding.alignSettingsInclude.alignControlsInclude
-        fun copyAlignButton(
-            sourceButton: com.google.android.material.button.MaterialButton,
-            targetButton: com.google.android.material.button.MaterialButton
-        ) {
-            val active = sourceButton.isSelected
-            targetButton.isSelected = active
-            targetButton.setBackgroundColor(if (active) COLOR_ACTIVE else android.graphics.Color.TRANSPARENT)
-            targetButton.iconTint = android.content.res.ColorStateList.valueOf(
-                if (active) android.graphics.Color.WHITE else COLOR_GRAY
-            )
-            targetButton.strokeWidth = if (active) 0 else 1
-        }
-        copyAlignButton(source.btnAlignLeft, target.btnAlignLeft)
-        copyAlignButton(source.btnAlignCenter, target.btnAlignCenter)
-        copyAlignButton(source.btnAlignRight, target.btnAlignRight)
-        copyAlignButton(source.btnAlignJustify, target.btnAlignJustify)
-        target.btnWrapText.isSelected = source.btnWrapText.isSelected
-        target.btnWrapText.setBackgroundColor(
-            if (source.btnWrapText.isSelected) COLOR_ACTIVE else android.graphics.Color.TRANSPARENT
-        )
-        target.btnWrapText.setTextColor(
-            if (source.btnWrapText.isSelected) android.graphics.Color.WHITE else COLOR_GRAY
-        )
-        // Wrap width is adjusted directly with the right-center handle on the
-        // canvas, keeping this page focused on alignment icons.
-        target.wrapHeader.visibility = View.GONE
-        target.wrapControlsGroup.visibility = View.GONE
-        onAlignSettingsOpenChanged(true)
-    }
-
-    fun isAlignSettingsOpen(): Boolean = alignSettingsOpen
-
-    fun applyAlignSettings() {
-        alignSettingsSnapshot?.let { pixelCanvasView.recordAction("Atur Align", it) }
-        closeAlignSettings()
-    }
-
-    fun cancelAlignSettings() {
-        val snapshot = alignSettingsSnapshot
-        if (snapshot != null) pixelCanvasView.restoreState(snapshot)
-        closeAlignSettings()
-    }
-
-    private fun closeAlignSettings() {
-        if (!alignSettingsOpen) return
-        alignSettingsOpen = false
-        alignSettingsSnapshot = null
-        binding.alignSettingsInclude.root.visibility = View.GONE
-        binding.alignSettingsInclude.alignControlsInclude.root.visibility = View.GONE
-        activeTextToolTag = ""
-        pixelCanvasView.invalidate()
-        onAlignSettingsOpenChanged(false)
-        refreshTextPageUI()
     }
 
     private fun clampPropertyPanelHeight() {
@@ -2295,17 +2687,21 @@ private fun registerTextPanels() {
 
     // ─── Panel: Gaya Teks (B / I / U / S + Font Weight) ────────────────────
 
-    private fun initializeStylePanel() {
-        val b = binding.textPropertyPanelInclude.stylePanel
+    private fun initializeStyleControls() {
+        val b = binding.effectSettingsInclude.styleControlsInclude
+        val panel = b.root
         val boldBtn = b.btnStyleBold
         val italicBtn = b.btnStyleItalic
         val underlineBtn = b.btnStyleUnderline
         val strikeBtn = b.btnStyleStrike
+        val btnReset = b.btnResetStyle
 
         fun setActive(btn: com.google.android.material.button.MaterialButton, active: Boolean) {
             btn.isSelected = active
             btn.setBackgroundColor(if (active) COLOR_ACTIVE else android.graphics.Color.TRANSPARENT)
-            btn.setTextColor(if (active) android.graphics.Color.WHITE else COLOR_GRAY)
+            val tint = if (active) android.graphics.Color.WHITE else COLOR_GRAY
+            btn.setTextColor(tint)
+            btn.iconTint = android.content.res.ColorStateList.valueOf(tint)
         }
 
         fun toggle(flag: String) {
@@ -2357,22 +2753,52 @@ private fun registerTextPanels() {
 
         for ((btn, w) in weightButtons) btn.setOnClickListener { applyWeight(w) }
 
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) {
-                setActive(boldBtn, layer.isBold)
-                setActive(italicBtn, layer.isItalic)
-                setActive(underlineBtn, layer.isUnderline)
-                setActive(strikeBtn, layer.isStrikethrough)
+        fun reset() {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (layer != null) {
+                pixelCanvasView.runRecordedAction("Reset Gaya Teks") {
+                    layer.isBold = false
+                    layer.isItalic = false
+                    layer.isUnderline = false
+                    layer.isStrikethrough = false
+                    val base = layer.typeface ?: android.graphics.Typeface.DEFAULT
+                    layer.typeface = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                        android.graphics.Typeface.create(base, 400, false)
+                    } else {
+                        android.graphics.Typeface.create(base, android.graphics.Typeface.NORMAL)
+                    }
+                }
             }
+            setActive(boldBtn, false)
+            setActive(italicBtn, false)
+            setActive(underlineBtn, false)
+            setActive(strikeBtn, false)
+            for ((btn, w) in weightButtons) setActive(btn, w == 400)
+            pixelCanvasView.invalidate()
+        }
+
+        btnReset.setOnClickListener { reset() }
+
+        syncStyleUIHook = { layer ->
+            panel.visibility = View.VISIBLE
+            setActive(boldBtn, layer.isBold)
+            setActive(italicBtn, layer.isItalic)
+            setActive(underlineBtn, layer.isUnderline)
+            setActive(strikeBtn, layer.isStrikethrough)
+            val weight = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                layer.typeface?.weight ?: 400
+            } else {
+                400
+            }
+            for ((btn, w) in weightButtons) setActive(btn, w == weight)
         }
     }
 
     // ─── Panel: Perataan Teks ──────────────────────────────────────────────
 
-    private fun initializeAlignPanel() {
-        val b = binding.textPropertyPanelInclude.alignPanel
+    private fun initializeAlignControls() {
+        val b = binding.effectSettingsInclude.alignControlsInclude
+        val panel = b.root
 
         fun setActive(btn: com.google.android.material.button.MaterialButton, active: Boolean) {
             btn.isSelected = active
@@ -2390,13 +2816,10 @@ private fun registerTextPanels() {
         }
 
         fun apply(align: android.text.Layout.Alignment, justify: Boolean) {
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
-            val update = {
+            applyToTextLayer { layer ->
                 layer.alignment = align
                 layer.justifyEnabled = justify
             }
-            if (alignSettingsOpen) update() else pixelCanvasView.runRecordedAction("Ubah Perataan Teks", update)
-            pixelCanvasView.invalidate()
         }
 
         b.btnAlignLeft.setOnClickListener {
@@ -2423,8 +2846,7 @@ private fun registerTextPanels() {
         // ── Wrap Text: pembungkusan baris pada lebar tetap ───────────────────
         var syncingWrap = false
 
-        fun syncWrap() {
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
+        fun syncWrap(layer: com.flyerpix.editor.canvas.model.TextLayer) {
             syncingWrap = true
             val enabled = layer.wrapTextEnabled
             setActiveText(b.btnWrapText, enabled)
@@ -2432,7 +2854,7 @@ private fun registerTextPanels() {
             if (layer.wrapWidth > 0f) {
                 val v = layer.wrapWidth.coerceIn(60f, 1600f)
                 b.sliderWrapWidth.value = v
-                b.tvWrapWidth.text = "Lebar: ${v.toInt()}"
+                b.tvWrapWidth.text = "Lebar: ${v.toInt()} px"
             }
             syncingWrap = false
         }
@@ -2440,16 +2862,13 @@ private fun registerTextPanels() {
         b.btnWrapText.setOnClickListener {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
                 ?: return@setOnClickListener
-            val enable = !layer.wrapTextEnabled
-            val update = {
-                layer.wrapTextEnabled = enable
-                if (enable && layer.wrapWidth <= 0f) {
-                    layer.wrapWidth = layer.measureNaturalWidth().coerceAtLeast(60f)
+            applyToTextLayer { target ->
+                target.wrapTextEnabled = !target.wrapTextEnabled
+                if (target.wrapTextEnabled && target.wrapWidth <= 0f) {
+                    target.wrapWidth = target.measureNaturalWidth().coerceAtLeast(60f)
                 }
             }
-            if (alignSettingsOpen) update() else pixelCanvasView.runRecordedAction("Wrap Teks", update)
-            pixelCanvasView.invalidate()
-            syncWrap()
+            syncWrap(layer)
         }
 
         b.sliderWrapWidth.addOnChangeListener { _, value, _ ->
@@ -2457,55 +2876,25 @@ private fun registerTextPanels() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
                 ?: return@addOnChangeListener
             if (!layer.wrapTextEnabled) return@addOnChangeListener
-            b.tvWrapWidth.text = "Lebar: ${value.toInt()}"
-            val update = {
-                layer.wrapWidth = value
-            }
-            if (alignSettingsOpen) update() else pixelCanvasView.runRecordedAction("Ubah Lebar Wrap", update)
-            pixelCanvasView.invalidate()
+            b.tvWrapWidth.text = "Lebar: ${value.toInt()} px"
+            applyToTextLayer { it.wrapWidth = value }
         }
 
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) {
-                val justify = layer.justifyEnabled
-                val align = layer.alignment
-                setActive(b.btnAlignJustify, justify)
-                when {
-                    !justify && align == android.text.Layout.Alignment.ALIGN_NORMAL -> { setActive(b.btnAlignLeft, true); setActive(b.btnAlignCenter, false); setActive(b.btnAlignRight, false) }
-                    align == android.text.Layout.Alignment.ALIGN_CENTER -> { setActive(b.btnAlignLeft, false); setActive(b.btnAlignCenter, true); setActive(b.btnAlignRight, false) }
-                    align == android.text.Layout.Alignment.ALIGN_OPPOSITE -> { setActive(b.btnAlignLeft, false); setActive(b.btnAlignCenter, false); setActive(b.btnAlignRight, true) }
-                    else -> { setActive(b.btnAlignLeft, false); setActive(b.btnAlignCenter, false); setActive(b.btnAlignRight, false) }
-                }
-                syncWrap()
+        fun syncUI(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+            panel.visibility = View.VISIBLE
+            val justify = layer.justifyEnabled
+            val align = layer.alignment
+            setActive(b.btnAlignJustify, justify)
+            when {
+                !justify && align == android.text.Layout.Alignment.ALIGN_NORMAL -> { setActive(b.btnAlignLeft, true); setActive(b.btnAlignCenter, false); setActive(b.btnAlignRight, false) }
+                align == android.text.Layout.Alignment.ALIGN_CENTER -> { setActive(b.btnAlignLeft, false); setActive(b.btnAlignCenter, true); setActive(b.btnAlignRight, false) }
+                align == android.text.Layout.Alignment.ALIGN_OPPOSITE -> { setActive(b.btnAlignLeft, false); setActive(b.btnAlignCenter, false); setActive(b.btnAlignRight, true) }
+                else -> { setActive(b.btnAlignLeft, false); setActive(b.btnAlignCenter, false); setActive(b.btnAlignRight, false) }
             }
+            syncWrap(layer)
         }
 
-        val page = binding.alignSettingsInclude
-        page.btnAlignApply.setOnClickListener { applyAlignSettings() }
-        page.btnAlignCancel.setOnClickListener { cancelAlignSettings() }
-        page.alignControlsInclude.btnAlignLeft.setOnClickListener {
-            b.btnAlignLeft.performClick()
-        }
-        page.alignControlsInclude.btnAlignCenter.setOnClickListener {
-            b.btnAlignCenter.performClick()
-        }
-        page.alignControlsInclude.btnAlignRight.setOnClickListener {
-            b.btnAlignRight.performClick()
-        }
-        page.alignControlsInclude.btnAlignJustify.setOnClickListener {
-            b.btnAlignJustify.performClick()
-        }
-        page.alignControlsInclude.btnWrapText.setOnClickListener {
-            b.btnWrapText.performClick()
-        }
-        page.alignControlsInclude.sliderWrapWidth.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) {
-                b.sliderWrapWidth.value = value
-                page.alignControlsInclude.tvWrapWidth.text = "Lebar: ${value.toInt()}"
-            }
-        }
+        syncAlignUIHook = { layer -> syncUI(layer) }
     }
 
     // ─── Panel: Warna Teks ─────────────────────────────────────────────────
@@ -2566,31 +2955,85 @@ private fun registerTextPanels() {
 
     private var lastStrokeWidth = 4f
 
-    private fun initializeStrokePanel() {
-        val b = binding.textPropertyPanelInclude.strokePanel
+    private fun initializeStrokeControls() {
+        val b = binding.effectSettingsInclude.strokeControlsInclude
+        val panel = b.root
+        val switch = b.switchStrokeEnabled
+        val group = b.strokeSliderGroup
+        val sWidth = b.sliderStrokeWidth
+        val sOpacity = b.sliderStrokeOpacity
+        val tvWidth = b.tvStrokeWidthLabel
+        val tvOpacity = b.tvStrokeOpacityLabel
+        val chipPreview = b.chipStrokeColorPreview
+        val tvColorValue = b.tvStrokeColorValue
+        val btnPick = b.btnPickStrokeColor
+        val btnReset = b.btnResetStroke
         var syncing = false
 
-        fun updateSwatch(color: Int) {
-            b.viewStrokeColorSwatch.backgroundTintList =
-                android.content.res.ColorStateList.valueOf(color)
+        fun setupColorPreview(layer: com.flyerpix.editor.canvas.model.TextLayer?) {
+            val color = layer?.strokeColor ?: Color.BLACK
+            chipPreview.setCardBackgroundColor(color)
+            tvColorValue.text = String.format(Locale.US, "#%08X", color)
+        }
+
+        fun openColorPicker() {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
+            com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                .newInstance(
+                    initialColor = layer.strokeColor,
+                    resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.STROKE_RESULT_KEY
+                )
+                .show(
+                    (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                )
         }
 
         fun sync(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+            panel.visibility = View.VISIBLE
             syncing = true
             val enabled = layer.strokeWidth > 0f
-            b.switchStrokeEnabled.isChecked = enabled
-            b.strokeSliderGroup.visibility = if (enabled) View.VISIBLE else View.GONE
-            b.sliderStrokeWidth.value = layer.strokeWidth.coerceIn(0f, 60f)
+            switch.isChecked = enabled
+            group.visibility = if (enabled) View.VISIBLE else View.GONE
+            sWidth.value = layer.strokeWidth.coerceIn(0f, 60f)
             val alpha = (layer.strokeColor ushr 24) and 0xFF
-            b.sliderStrokeOpacity.value = (alpha * 100f / 255f)
+            sOpacity.value = alpha * 100f / 255f
             syncing = false
-            updateSwatch(layer.strokeColor)
-            b.tvStrokeWidthLabel.text =
-                String.format(Locale.US, "Ketebalan: %.1f px", layer.strokeWidth)
-            b.tvStrokeOpacityLabel.text = "Opasitas: ${(alpha * 100 / 255)}%"
+            setupColorPreview(layer)
+            tvWidth.text = String.format(Locale.US, "Tebal: %.1f px", layer.strokeWidth)
+            tvOpacity.text = "Opasitas: ${(alpha * 100 / 255)}%"
         }
 
-        b.switchStrokeEnabled.setOnCheckedChangeListener { _, isChecked ->
+        syncStrokeUIHook = { layer -> sync(layer) }
+
+        // Terima hasil pemilihan Stroke Color dari ColorPickerDialog
+        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+            .setFragmentResultListener(
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.STROKE_RESULT_KEY,
+                activity
+            ) { _, bundle ->
+                val isGradient = bundle.getBoolean(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
+                )
+                if (!isGradient) {
+                    val color = bundle.getInt(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                        Color.BLACK
+                    )
+                    applyToTextLayer { layer ->
+                        val currentAlpha = (layer.strokeColor ushr 24) and 0xFF
+                        layer.strokeColor = (color and 0x00FFFFFF) or (currentAlpha shl 24)
+                    }
+                    val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+                    if (layer != null) sync(layer)
+                    pixelCanvasView.invalidate()
+                }
+            }
+
+        chipPreview.setOnClickListener { openColorPicker() }
+        btnPick.setOnClickListener { openColorPicker() }
+
+        switch.setOnCheckedChangeListener { _, isChecked ->
             applyToTextLayer { layer ->
                 if (isChecked) {
                     if (layer.strokeWidth <= 0f) layer.strokeWidth = lastStrokeWidth
@@ -2603,37 +3046,37 @@ private fun registerTextPanels() {
             if (layer != null) sync(layer)
         }
 
-        b.sliderStrokeWidth.addOnChangeListener { _, value, _ ->
+        sWidth.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            b.tvStrokeWidthLabel.text = String.format(Locale.US, "Ketebalan: %.1f px", value)
+            tvWidth.text = String.format(Locale.US, "Tebal: %.1f px", value)
             lastStrokeWidth = value
             applyToTextLayer { it.strokeWidth = value }
         }
 
-        b.sliderStrokeOpacity.addOnChangeListener { _, value, _ ->
+        sOpacity.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            b.tvStrokeOpacityLabel.text = "Opasitas: ${value.toInt()}%"
+            tvOpacity.text = "Opasitas: ${value.toInt()}%"
             applyToTextLayer { layer ->
                 val a = (value * 255 / 100).toInt()
                 layer.strokeColor = (layer.strokeColor and 0x00FFFFFF) or (a shl 24)
             }
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
-            if (layer != null) updateSwatch(layer.strokeColor)
+            if (layer != null) setupColorPreview(layer)
         }
 
-        b.viewStrokeColorSwatch.setOnClickListener {
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
-            showColorSwatchDialog("Warna Outline") { color ->
-                applyToTextLayer { it.strokeColor = color }
-                sync(layer)
-                pixelCanvasView.invalidate()
+        btnReset.setOnClickListener {
+            lastStrokeWidth = 4f
+            switch.isChecked = false
+            group.visibility = View.GONE
+            sWidth.value = 0f
+            sOpacity.value = 100f
+            tvWidth.text = "Tebal: 0.0 px"
+            tvOpacity.text = "Opasitas: 100%"
+            applyToTextLayer { layer ->
+                layer.strokeWidth = 0f
+                layer.strokeColor = Color.BLACK
             }
-        }
-
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) sync(layer)
+            setupColorPreview(pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer)
         }
     }
 
@@ -2726,140 +3169,321 @@ private fun registerTextPanels() {
 
     // ─── Panel: Background Teks ────────────────────────────────────────────
 
-    private fun initializeBackgroundPanel() {
-        val b = binding.textPropertyPanelInclude.backgroundPanel
+    private fun initializeBackgroundControls() {
+        val b = binding.effectSettingsInclude.backgroundControlsInclude
+        val panel = b.root
+        val switch = b.switchBgEnabled
+        val group = b.bgControlsGroup
+        val sOpacity = b.sliderBgOpacity
+        val sPadding = b.sliderBgPadding
+        val sCorner = b.sliderBgCornerRadius
+        val tvOpacity = b.tvBgOpacityLabel
+        val tvPadding = b.tvBgPadding
+        val tvCorner = b.tvBgCornerRadius
+        val chipPreview = b.chipBgColorPreview
+        val tvColorValue = b.tvBgColorValue
+        val btnPick = b.btnPickBgColor
+        val btnReset = b.btnResetBg
         var syncing = false
 
-        fun updateSwatch(color: Int) {
-            b.viewBgColorSwatch.backgroundTintList =
-                android.content.res.ColorStateList.valueOf(color)
+        fun setupColorPreview(layer: com.flyerpix.editor.canvas.model.TextLayer?) {
+            val color = layer?.bgColor ?: Color.BLACK
+            chipPreview.setCardBackgroundColor(color)
+            tvColorValue.text = String.format(Locale.US, "#%08X", color)
+        }
+
+        fun openColorPicker() {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
+            com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                .newInstance(
+                    initialColor = layer.bgColor,
+                    resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.BG_RESULT_KEY
+                )
+                .show(
+                    (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                )
         }
 
         fun sync(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+            panel.visibility = View.VISIBLE
             syncing = true
-            b.switchBgEnabled.isChecked = layer.bgEnabled
-            b.bgControlGroup.visibility = if (layer.bgEnabled) View.VISIBLE else View.GONE
-            b.sliderBgOpacity.value = (layer.bgOpacity * 100f).coerceIn(0f, 100f)
-            b.sliderBgPadding.value = layer.bgPadding.coerceIn(0f, 100f)
-            b.sliderBgCornerRadius.value = layer.bgCornerRadius.coerceIn(0f, 120f)
+            switch.isChecked = layer.bgEnabled
+            group.visibility = if (layer.bgEnabled) View.VISIBLE else View.GONE
+            sOpacity.value = (layer.bgOpacity * 100f).coerceIn(0f, 100f)
+            sPadding.value = layer.bgPadding.coerceIn(0f, 100f)
+            sCorner.value = layer.bgCornerRadius.coerceIn(0f, 120f)
             syncing = false
-            updateSwatch(layer.bgColor)
-            b.tvBgOpacityLabel.text = "Opasitas: ${(layer.bgOpacity * 100).toInt()}%"
-            b.tvBgPadding.text = String.format(Locale.US, "Padding Latar: %.0f px", layer.bgPadding)
-            b.tvBgCornerRadius.text = String.format(Locale.US, "Sudut Membulat: %.0f px", layer.bgCornerRadius)
+            setupColorPreview(layer)
+            tvOpacity.text = "Opasitas: ${(layer.bgOpacity * 100).toInt()}%"
+            tvPadding.text = String.format(Locale.US, "Padding: %.0f px", layer.bgPadding)
+            tvCorner.text = String.format(Locale.US, "Sudut Membulat: %.0f px", layer.bgCornerRadius)
         }
 
-        b.switchBgEnabled.setOnCheckedChangeListener { _, isChecked ->
-            b.bgControlGroup.visibility = if (isChecked) View.VISIBLE else View.GONE
+        syncBackgroundUIHook = { layer -> sync(layer) }
+
+        // Terima hasil pemilihan Background Color dari ColorPickerDialog
+        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+            .setFragmentResultListener(
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.BG_RESULT_KEY,
+                activity
+            ) { _, bundle ->
+                val isGradient = bundle.getBoolean(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
+                )
+                if (!isGradient) {
+                    val color = bundle.getInt(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                        Color.BLACK
+                    )
+                    applyToTextLayer { layer ->
+                        val currentAlpha = (layer.bgColor ushr 24) and 0xFF
+                        layer.bgColor = (color and 0x00FFFFFF) or (currentAlpha shl 24)
+                    }
+                    val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+                    if (layer != null) sync(layer)
+                    pixelCanvasView.invalidate()
+                }
+            }
+
+        chipPreview.setOnClickListener { openColorPicker() }
+        btnPick.setOnClickListener { openColorPicker() }
+
+        switch.setOnCheckedChangeListener { _, isChecked ->
+            group.visibility = if (isChecked) View.VISIBLE else View.GONE
             applyToTextLayer { it.bgEnabled = isChecked }
         }
 
-        b.sliderBgOpacity.addOnChangeListener { _, value, _ ->
+        sOpacity.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            b.tvBgOpacityLabel.text = "Opasitas: ${value.toInt()}%"
+            tvOpacity.text = "Opasitas: ${value.toInt()}%"
             applyToTextLayer { it.bgOpacity = value / 100f }
         }
 
-        b.sliderBgPadding.addOnChangeListener { _, value, _ ->
+        sPadding.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            b.tvBgPadding.text = String.format(Locale.US, "Padding Latar: %.0f px", value)
+            tvPadding.text = String.format(Locale.US, "Padding: %.0f px", value)
             applyToTextLayer { it.bgPadding = value }
         }
 
-        b.sliderBgCornerRadius.addOnChangeListener { _, value, _ ->
+        sCorner.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            b.tvBgCornerRadius.text = String.format(Locale.US, "Sudut Membulat: %.0f px", value)
+            tvCorner.text = String.format(Locale.US, "Sudut Membulat: %.0f px", value)
             applyToTextLayer { it.bgCornerRadius = value }
         }
 
-        b.viewBgColorSwatch.setOnClickListener {
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
-            showColorSwatchDialog("Warna Latar Teks") { color ->
-                applyToTextLayer { it.bgColor = color }
-                sync(layer)
-                pixelCanvasView.invalidate()
+        btnReset.setOnClickListener {
+            switch.isChecked = false
+            group.visibility = View.GONE
+            sOpacity.value = 100f
+            sPadding.value = 0f
+            sCorner.value = 0f
+            tvOpacity.text = "Opasitas: 100%"
+            tvPadding.text = "Padding: 0 px"
+            tvCorner.text = "Sudut Membulat: 0 px"
+            applyToTextLayer { layer ->
+                layer.bgEnabled = false
+                layer.bgOpacity = 1f
+                layer.bgPadding = 0f
+                layer.bgCornerRadius = 0f
+                layer.bgColor = Color.BLACK
             }
-        }
-
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) sync(layer)
+            setupColorPreview(pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer)
         }
     }
 
-    // ─── Panel: Refleksi ───────────────────────────────────────────────────
+    // ─── Efek: Reflection (Pantulan Teks) ──────────────────────────────────
 
-    private fun initializeReflectionPanel() {
-        val b = binding.textPropertyPanelInclude.reflectionPanel
-        var syncing = false
+    private fun initializeReflectionControls() {
+        val b = binding.effectSettingsInclude.reflectionControlsInclude
+        val panel = b.root
+        val switch = b.switchReflectionEnabled
+        val group = b.reflectionSliderGroup
+        val sOpacity = b.sliderReflectionOpacity
+        val sDistance = b.sliderReflectionDistance
+        val sFade = b.sliderReflectionFade
+        val tvOpacity = b.tvReflectionOpacity
+        val tvDistance = b.tvReflectionDistance
+        val tvFade = b.tvReflectionFade
+        val btnReset = b.btnResetReflection
 
-        fun sync(layer: com.flyerpix.editor.canvas.model.TextLayer) {
-            syncing = true
-            b.switchReflectionEnabled.isChecked = layer.reflectionEnabled
-            b.reflectionSliderGroup.visibility = if (layer.reflectionEnabled) View.VISIBLE else View.GONE
-            b.sliderReflectionOpacity.value = (layer.reflectionOpacity * 100f).coerceIn(0f, 100f)
-            b.sliderReflectionDistance.value = layer.reflectionDistance.coerceIn(0f, 200f)
-            b.sliderReflectionFade.value = (layer.reflectionFade * 100f).coerceIn(0f, 100f)
-            syncing = false
-            b.tvReflectionOpacity.text = "Opasitas: ${(layer.reflectionOpacity * 100).toInt()}%"
-            b.tvReflectionDistance.text = String.format(Locale.US, "Jarak: %.0f px", layer.reflectionDistance)
-            b.tvReflectionFade.text = "Memudar (Fade): ${(layer.reflectionFade * 100).toInt()}%"
+        fun updateLabels(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+            tvOpacity.text = "Opacity: ${(layer.reflectionOpacity * 100).toInt()}%"
+            tvDistance.text = String.format(Locale.US, "Jarak: %.0f px", layer.reflectionDistance)
+            tvFade.text = "Memudar (Fade): ${(layer.reflectionFade * 100).toInt()}%"
         }
 
-        b.switchReflectionEnabled.setOnCheckedChangeListener { _, isChecked ->
-            b.reflectionSliderGroup.visibility = if (isChecked) View.VISIBLE else View.GONE
-            applyToTextLayer { it.reflectionEnabled = isChecked }
+        fun syncUI(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+            panel.visibility = View.VISIBLE
+            switch.isChecked = layer.reflectionEnabled
+            group.visibility = if (layer.reflectionEnabled) View.VISIBLE else View.GONE
+            sOpacity.value = (layer.reflectionOpacity * 100f).coerceIn(0f, 100f)
+            sDistance.value = layer.reflectionDistance.coerceIn(0f, 200f)
+            sFade.value = (layer.reflectionFade * 100f).coerceIn(0f, 100f)
+            updateLabels(layer)
         }
-
-        b.sliderReflectionOpacity.addOnChangeListener { _, value, _ ->
-            if (syncing) return@addOnChangeListener
-            b.tvReflectionOpacity.text = "Opasitas: ${value.toInt()}%"
-            applyToTextLayer { it.reflectionOpacity = value / 100f }
-        }
-
-        b.sliderReflectionDistance.addOnChangeListener { _, value, _ ->
-            if (syncing) return@addOnChangeListener
-            b.tvReflectionDistance.text = String.format(Locale.US, "Jarak: %.0f px", value)
-            applyToTextLayer { it.reflectionDistance = value }
-        }
-
-        b.sliderReflectionFade.addOnChangeListener { _, value, _ ->
-            if (syncing) return@addOnChangeListener
-            b.tvReflectionFade.text = "Memudar (Fade): ${value.toInt()}%"
-            applyToTextLayer { it.reflectionFade = value / 100f }
-        }
+        syncReflectionUIHook = { layer -> syncUI(layer) }
 
         val prevListener = pixelCanvasView.onLayerSelectedListener
         pixelCanvasView.onLayerSelectedListener = { layer ->
             prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) sync(layer)
+            if (layer is com.flyerpix.editor.canvas.model.TextLayer) {
+                syncUI(layer)
+            } else {
+                panel.visibility = View.GONE
+            }
+        }
+
+        switch.setOnCheckedChangeListener { _, isChecked ->
+            group.visibility = if (isChecked) View.VISIBLE else View.GONE
+            applyToTextLayer { it.reflectionEnabled = isChecked }
+        }
+
+        sOpacity.addOnChangeListener { _, value, _ ->
+            tvOpacity.text = "Opacity: ${value.toInt()}%"
+            applyToTextLayer { it.reflectionOpacity = value / 100f }
+        }
+
+        sDistance.addOnChangeListener { _, value, _ ->
+            tvDistance.text = String.format(Locale.US, "Jarak: %.0f px", value)
+            applyToTextLayer { it.reflectionDistance = value }
+        }
+
+        sFade.addOnChangeListener { _, value, _ ->
+            tvFade.text = "Memudar (Fade): ${value.toInt()}%"
+            applyToTextLayer { it.reflectionFade = value / 100f }
+        }
+
+        btnReset.setOnClickListener {
+            pixelCanvasView.selectedLayer?.let { layer ->
+                if (layer is com.flyerpix.editor.canvas.model.TextLayer && !layer.isLocked) {
+                    layer.reflectionOpacity = 0.4f
+                    layer.reflectionDistance = 10f
+                    layer.reflectionFade = 0.5f
+                    layer.reflectionEnabled = true
+                    syncUI(layer)
+                    pixelCanvasView.invalidate()
+                }
+            }
         }
     }
 
     // ─── Panel: Masking (Foto di Dalam Teks) ───────────────────────────────
 
-    private fun initializeMaskPanel() {
-        val b = binding.textPropertyPanelInclude.maskPanel
+    private fun initializeMaskControls() {
+        val b = binding.effectSettingsInclude.maskControlsInclude
+        val panel = b.root
+        val switch = b.switchMaskEnabled
+        val group = b.maskControlsGroup
+        val imgThumb = b.imgMaskThumbnail
+        val btnSelect = b.btnSelectMask
+        val btnDelete = b.btnDeleteMask
+        val sScale = b.sliderMaskScale
+        val tvScale = b.tvMaskScaleLabel
+        val sRotation = b.sliderMaskRotation
+        val tvRotation = b.tvMaskRotationLabel
+        val btnReset = b.btnResetMask
+        var syncing = false
 
-        b.btnMaskSelectImage.setOnClickListener {
+        fun syncUI(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+            panel.visibility = View.VISIBLE
+            syncing = true
+            switch.isChecked = layer.textureEnabled
+            group.visibility = if (layer.textureEnabled) View.VISIBLE else View.GONE
+
+            if (layer.textureBitmap != null && !layer.textureBitmap!!.isRecycled) {
+                imgThumb.setImageBitmap(layer.textureBitmap)
+                btnSelect.text = "Ganti Foto"
+                btnDelete.visibility = View.VISIBLE
+            } else {
+                imgThumb.setImageResource(R.drawable.ic_sharp_photo_24px)
+                btnSelect.text = "Pilih dari Galeri"
+                btnDelete.visibility = View.GONE
+            }
+
+            sScale.value = layer.textureScale.coerceIn(0.1f, 3.0f)
+            tvScale.text = "Skala: ${(layer.textureScale * 100).toInt()}%"
+            sRotation.value = layer.textureRotation.coerceIn(0f, 360f)
+            tvRotation.text = "Rotasi: ${layer.textureRotation.toInt()}°"
+            syncing = false
+        }
+
+        // Sinkronkan kontrol Tekstur agar tetap selaras (berbagi field yang sama).
+        fun syncTexturePage() {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
+            binding.effectSettingsInclude.textureControlsInclude.run {
+                if (layer.textureBitmap != null && !layer.textureBitmap!!.isRecycled) {
+                    imgTextureThumbnail.setImageBitmap(layer.textureBitmap)
+                    btnSelectTexture.text = "Ganti Foto"
+                } else {
+                    imgTextureThumbnail.setImageResource(R.drawable.ic_sharp_photo_24px)
+                    btnSelectTexture.text = "Pilih dari Galeri"
+                }
+                btnDeleteTexture.visibility = if (layer.textureEnabled && layer.textureBitmap != null) View.VISIBLE else View.GONE
+                switchTextureEnabled.isChecked = layer.textureEnabled
+                textureControlsGroup.visibility = if (layer.textureEnabled) View.VISIBLE else View.GONE
+            }
+        }
+
+        syncMaskUIHook = { layer -> syncUI(layer) }
+
+        // Toggle Switch Aktif / Nonaktif
+        switch.setOnCheckedChangeListener { _, isChecked ->
+            group.visibility = if (isChecked) View.VISIBLE else View.GONE
+            applyToTextLayer { layer ->
+                layer.textureEnabled = isChecked
+                if (isChecked && layer.textureBitmap == null) {
+                    texturePickerLauncher?.launch("image/*")
+                }
+            }
+            syncTexturePage()
+        }
+
+        // Tombol Pilih Foto dari Galeri
+        btnSelect.setOnClickListener {
             texturePickerLauncher?.launch("image/*")
         }
 
-        b.btnMaskClear.setOnClickListener {
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
-            pixelCanvasView.runRecordedAction("Hapus Mask") {
+        // Tombol Hapus Mask
+        btnDelete.setOnClickListener {
+            applyToTextLayer { layer ->
                 layer.textureBitmap = null
                 layer.textureEnabled = false
             }
-            val t = binding.effectSettingsInclude.textureControlsInclude
-            t.imgTextureThumbnail.setImageDrawable(null)
-            t.btnSelectTexture.text = "Pilih Foto"
-            t.btnDeleteTexture.visibility = View.GONE
-            t.switchTextureEnabled.isChecked = false
-            t.textureControlsGroup.visibility = View.GONE
             pixelCanvasView.invalidate()
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (layer != null) syncUI(layer)
+            syncTexturePage()
             showSnackbar("Mask teks dihapus")
+        }
+
+        // Slider Skala Mask
+        sScale.addOnChangeListener { _, value, _ ->
+            if (syncing) return@addOnChangeListener
+            tvScale.text = "Skala: ${(value * 100).toInt()}%"
+            applyToTextLayer { it.textureScale = value }
+        }
+
+        // Slider Rotasi Mask
+        sRotation.addOnChangeListener { _, value, _ ->
+            if (syncing) return@addOnChangeListener
+            tvRotation.text = "Rotasi: ${value.toInt()}°"
+            applyToTextLayer { it.textureRotation = value }
+        }
+
+        // Reset Mask
+        btnReset.setOnClickListener {
+            applyToTextLayer { layer ->
+                layer.textureBitmap = null
+                layer.textureEnabled = false
+                layer.textureScale = 1.0f
+                layer.textureRotation = 0f
+            }
+            pixelCanvasView.invalidate()
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (layer != null) syncUI(layer)
+            syncTexturePage()
+            showSnackbar("Mask direset")
         }
     }
 
@@ -2997,48 +3621,6 @@ private fun registerTextPanels() {
         target.reflectionFade = style.reflectionFade
     }
 
-    private fun showColorSwatchDialog(title: String, onPick: (Int) -> Unit) {
-        val density = activity.resources.displayMetrics.density
-        val palette = intArrayOf(
-            0xFFFFFFFF.toInt(), 0xFF000000.toInt(), 0xFF757575.toInt(), 0xFFD32F2F.toInt(),
-            0xFFF57C00.toInt(), 0xFFFBC02D.toInt(), 0xFF388E3C.toInt(), 0xFF0288D1.toInt(),
-            0xFF1976D2.toInt(), 0xFF7B1FA2.toInt(), 0xFFC2185B.toInt(), 0xFF795548.toInt(),
-            0xFF9E9E9E.toInt(), 0xFF607D8B.toInt()
-        )
-        val row = LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER
-            setPadding((20 * density).toInt(), (16 * density).toInt(), (20 * density).toInt(), (4 * density).toInt())
-        }
-        for (c in palette) {
-            val sw = View(activity).apply {
-                val s = (34 * density).toInt()
-                layoutParams = LinearLayout.LayoutParams(s, s).apply { marginEnd = (8 * density).toInt() }
-                setBackgroundResource(R.drawable.bg_color_swatch)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(c)
-                isClickable = true
-                isFocusable = true
-            }
-            sw.setTag(c)
-            row.addView(sw)
-        }
-
-        val dialog = MaterialAlertDialogBuilder(activity, R.style.AppAlertDialog)
-            .setTitle(title)
-            .setView(row)
-            .setNegativeButton("Tutup", null)
-            .create()
-
-        for (i in 0 until row.childCount) {
-            val sw = row.getChildAt(i)
-            sw.setOnClickListener {
-                onPick(sw.tag as Int)
-                dialog.dismiss()
-            }
-        }
-        dialog.show()
-    }
-
     private fun hideKeyboard(view: View) {
         val imm = activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.hideSoftInputFromWindow(view.windowToken, 0)
@@ -3050,10 +3632,6 @@ private fun registerTextPanels() {
     }
 
     fun hideStripAndPanels() {
-        if (alignSettingsOpen) {
-            cancelAlignSettings()
-            return
-        }
         val wasOpen = effectSettingsOpen
         binding.textPropertyPanelInclude.root.visibility = View.GONE
         binding.textToolStripInclude.textToolStripScroll.visibility = View.GONE
