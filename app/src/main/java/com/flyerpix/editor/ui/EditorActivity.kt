@@ -749,6 +749,55 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         top.btnTopLayers.setOnClickListener {
             layerPanel.toggle()
         }
+
+        // ── Context-Aware Header: Show/Hide Badge & Edit/Delete Buttons ──
+        val prevLayerListener = pixelCanvasView.onLayerSelectedListener
+        pixelCanvasView.onLayerSelectedListener = { layer ->
+            prevLayerListener?.invoke(layer)
+            updateHeaderForLayer(layer)
+        }
+
+        // Initial state
+        updateHeaderForLayer(pixelCanvasView.selectedLayer)
+
+        // Edit Text button
+        top.btnTopEditText.setOnClickListener {
+            val textLayer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (textLayer != null) {
+                showEditTextDialog(textLayer)
+            }
+        }
+
+        // Delete Text button
+        top.btnTopDeleteText.setOnClickListener {
+            val textLayer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (textLayer != null) {
+                pixelCanvasView.runRecordedAction("Hapus Teks") {
+                    pixelCanvasView.removeLayer(textLayer)
+                }
+                pixelCanvasView.invalidate()
+                showSnackbar("Layer teks dihapus")
+            }
+        }
+    }
+
+    /**
+     * Update header badge & text edit buttons berdasarkan layer yang sedang dipilih
+     */
+    private fun updateHeaderForLayer(layer: com.flyerpix.editor.canvas.model.CanvasLayer?) {
+        val top = binding.topBarInclude
+
+        if (layer is com.flyerpix.editor.canvas.model.TextLayer) {
+            // Text editing mode: Show edit & delete buttons
+            top.tvPixelLabBadge.visibility = View.GONE
+            top.btnTopEditText.visibility = View.VISIBLE
+            top.btnTopDeleteText.visibility = View.VISIBLE
+        } else {
+            // Photo/default mode: Show FlyerPix badge
+            top.tvPixelLabBadge.visibility = View.VISIBLE
+            top.btnTopEditText.visibility = View.GONE
+            top.btnTopDeleteText.visibility = View.GONE
+        }
     }
 
     private fun showTopAddMenu(anchor: View) {
