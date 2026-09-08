@@ -711,9 +711,33 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         updateZoomLabel()
 
         top.btnTopZoom.setOnClickListener {
-            pixelCanvasView.resetZoom()
+            val expanded = top.tvTopZoomLabel.visibility != View.VISIBLE
+            val visibility = if (expanded) View.VISIBLE else View.GONE
+            top.btnTopZoomOut.visibility = visibility
+            top.tvTopZoomLabel.visibility = visibility
+            top.btnTopZoomIn.visibility = visibility
+            top.btnTopZoom.contentDescription = if (expanded) {
+                "Reset zoom ke 100 persen"
+            } else {
+                "Buka kontrol zoom"
+            }
+            if (expanded) {
+                updateZoomLabel()
+            } else {
+                pixelCanvasView.resetZoom()
+                updateZoomLabel()
+                showSnackbar("Zoom diatur ke 100%")
+            }
+        }
+
+        top.btnTopZoomOut.setOnClickListener {
+            pixelCanvasView.zoomOut()
             updateZoomLabel()
-            showSnackbar("Zoom diatur ke 100%")
+        }
+
+        top.btnTopZoomIn.setOnClickListener {
+            pixelCanvasView.zoomIn()
+            updateZoomLabel()
         }
 
         top.btnTopGrid.setOnClickListener {

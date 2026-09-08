@@ -14,8 +14,8 @@ import android.text.style.UnderlineSpan
 import android.text.style.StrikethroughSpan
 import android.view.LayoutInflater
 import android.widget.EditText
-import android.widget.PopupMenu
 import android.view.WindowManager
+import androidx.fragment.app.FragmentActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.flyerpix.editor.canvas.model.RichTextSpan
 import com.flyerpix.editor.R
@@ -38,14 +38,43 @@ class EditTextDialog(
 
     fun show(): Dialog {
         val binding = DialogEditTextBinding.inflate(LayoutInflater.from(context))
+        var savedSelectionStart = -1
+        var savedSelectionEnd = -1
+
+        fun rememberSelection() {
+            val start = binding.etTextInput.selectionStart
+            val end = binding.etTextInput.selectionEnd
+            if (start >= 0 && end > start) {
+                savedSelectionStart = start
+                savedSelectionEnd = end
+            }
+        }
+
+        fun selectionRange(): IntRange? {
+            rememberSelection()
+            return if (savedSelectionStart >= 0 && savedSelectionEnd > savedSelectionStart) {
+                savedSelectionStart until savedSelectionEnd
+            } else {
+                null
+            }
+        }
+
+        fun preserveSelectionOnClick(view: android.view.View) {
+            view.setOnTouchListener { _, event ->
+                if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) rememberSelection()
+                false
+            }
+            view.isFocusable = false
+            view.isFocusableInTouchMode = false
+        }
 
         // ===== Logika Formatting (Bold/Italic/Underline/Strikethrough) =====
 
         fun toggleStyle(style: Int) {
             val editable = binding.etTextInput.editableText
-            val start = binding.etTextInput.selectionStart
-            val end = binding.etTextInput.selectionEnd
-            if (start < 0 || end <= start) return
+            val range = selectionRange() ?: return
+            val start = range.first
+            val end = range.last + 1
 
             val sb = SpannableStringBuilder(editable)
             val spans = sb.getSpans(start, end, StyleSpan::class.java)
@@ -66,9 +95,9 @@ class EditTextDialog(
 
         fun toggleUnderline() {
             val editable = binding.etTextInput.editableText
-            val start = binding.etTextInput.selectionStart
-            val end = binding.etTextInput.selectionEnd
-            if (start < 0 || end <= start) return
+            val range = selectionRange() ?: return
+            val start = range.first
+            val end = range.last + 1
 
             val spans = editable.getSpans(start, end, UnderlineSpan::class.java)
             if (spans.isNotEmpty()) {
@@ -82,9 +111,9 @@ class EditTextDialog(
 
         fun toggleStrikethrough() {
             val editable = binding.etTextInput.editableText
-            val start = binding.etTextInput.selectionStart
-            val end = binding.etTextInput.selectionEnd
-            if (start < 0 || end <= start) return
+            val range = selectionRange() ?: return
+            val start = range.first
+            val end = range.last + 1
 
             val spans = editable.getSpans(start, end, StrikethroughSpan::class.java)
             if (spans.isNotEmpty()) {
@@ -112,46 +141,49 @@ class EditTextDialog(
         }
 
         fun extractSpans(editable: SpannableStringBuilder): List<RichTextSpan> {
+            if (editable.isEmpty()) return emptyList()
+            val boundaries = sortedSetOf(0, editable.length)
+            editable.getSpans(0, editable.length, Any::class.java).forEach { span ->
+                boundaries += editable.getSpanStart(span).coerceIn(0, editable.length)
+                boundaries += editable.getSpanEnd(span).coerceIn(0, editable.length)
+            }
+
             val result = mutableListOf<RichTextSpan>()
-            editable.getSpans(0, editable.length, StyleSpan::class.java).forEach { span ->
-                result += RichTextSpan(
-                    editable.getSpanStart(span),
-                    editable.getSpanEnd(span),
-                    isBold = span.style == Typeface.BOLD || span.style == Typeface.BOLD_ITALIC,
-                    isItalic = span.style == Typeface.ITALIC || span.style == Typeface.BOLD_ITALIC
+            val points = boundaries.toList()
+            for (index in 0 until points.lastIndex) {
+                val start = points[index]
+                val end = points[index + 1]
+                if (end <= start) continue
+                val probe = start.coerceAtMost(end - 1)
+                val style = editable.getSpans(probe, probe + 1, StyleSpan::class.java)
+                    .lastOrNull()
+                val color = editable.getSpans(probe, probe + 1, ForegroundColorSpan::class.java)
+                    .lastOrNull()?.foregroundColor
+                val size = editable.getSpans(probe, probe + 1, AbsoluteSizeSpan::class.java)
+                    .lastOrNull()?.size?.toFloat()
+                val span = RichTextSpan(
+                    start = start,
+                    end = end,
+                    color = color,
+                    textSize = size,
+                    isBold = style?.style == Typeface.BOLD || style?.style == Typeface.BOLD_ITALIC,
+                    isItalic = style?.style == Typeface.ITALIC || style?.style == Typeface.BOLD_ITALIC,
+                    isUnderline = editable.getSpans(probe, probe + 1, UnderlineSpan::class.java).isNotEmpty(),
+                    isStrikethrough = editable.getSpans(probe, probe + 1, StrikethroughSpan::class.java).isNotEmpty()
                 )
+                if (span.color != null || span.textSize != null || span.isBold || span.isItalic || span.isUnderline || span.isStrikethrough) {
+                    val previous = result.lastOrNull()
+                    if (previous != null && previous.end == span.start && previous.copy(start = 0, end = 0) == span.copy(start = 0, end = 0)) {
+                        result[result.lastIndex] = previous.copy(end = span.end)
+                    } else {
+                        result += span
+                    }
+                }
             }
-            editable.getSpans(0, editable.length, ForegroundColorSpan::class.java).forEach { span ->
-                result += RichTextSpan(
-                    editable.getSpanStart(span),
-                    editable.getSpanEnd(span),
-                    color = span.foregroundColor
-                )
-            }
-            editable.getSpans(0, editable.length, AbsoluteSizeSpan::class.java).forEach { span ->
-                result += RichTextSpan(
-                    editable.getSpanStart(span),
-                    editable.getSpanEnd(span),
-                    textSize = span.size.toFloat()
-                )
-            }
-            editable.getSpans(0, editable.length, UnderlineSpan::class.java).forEach { span ->
-                result += RichTextSpan(editable.getSpanStart(span), editable.getSpanEnd(span), isUnderline = true)
-            }
-            editable.getSpans(0, editable.length, StrikethroughSpan::class.java).forEach { span ->
-                result += RichTextSpan(editable.getSpanStart(span), editable.getSpanEnd(span), isStrikethrough = true)
-            }
-            return result.filter { it.end > it.start }
+            return result
         }
 
-        fun selectionRange(): IntRange? {
-            val start = binding.etTextInput.selectionStart
-            val end = binding.etTextInput.selectionEnd
-            return if (start >= 0 && end > start) start until end else null
-        }
-
-        fun applyColor(color: Int) {
-            val range = selectionRange() ?: return
+        fun applyColor(range: IntRange, color: Int) {
             binding.etTextInput.editableText.setSpan(
                 ForegroundColorSpan(color), range.first, range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
             )
@@ -199,6 +231,17 @@ class EditTextDialog(
         binding.btnItalic.setOnClickListener { toggleStyle(Typeface.ITALIC) }
         binding.btnUnderline.setOnClickListener { toggleUnderline() }
         binding.btnStrikethrough.setOnClickListener { toggleStrikethrough() }
+        listOf(
+            binding.btnBold,
+            binding.btnItalic,
+            binding.btnUnderline,
+            binding.btnStrikethrough,
+            binding.btnTextColor,
+            binding.btnTextSize,
+            binding.btnUppercase,
+            binding.btnCapitalize,
+            binding.btnLowercase
+        ).forEach(::preserveSelectionOnClick)
 
         binding.btnUppercase.setOnClickListener { applyTransformation { it.uppercase() } }
         binding.btnCapitalize.setOnClickListener {
@@ -209,24 +252,24 @@ class EditTextDialog(
             }
         }
         binding.btnLowercase.setOnClickListener { applyTransformation { it.lowercase() } }
-        binding.btnTextColor.setOnClickListener { anchor ->
-            PopupMenu(context, anchor).apply {
-                listOf(
-                    "Putih" to Color.WHITE,
-                    "Hitam" to Color.BLACK,
-                    "Biru" to 0xFF1769FF.toInt(),
-                    "Cyan" to 0xFF18C8F5.toInt(),
-                    "Oranye" to 0xFFFF9F2D.toInt(),
-                    "Merah" to 0xFFE53935.toInt()
-                ).forEachIndexed { index, (label, color) ->
-                    menu.add(0, index, index, label).setOnMenuItemClickListener {
-                        applyColor(color)
-                        true
-                    }
+        binding.btnTextColor.setOnClickListener {
+            val activity = context as? FragmentActivity ?: return@setOnClickListener
+            val range = selectionRange() ?: return@setOnClickListener
+            val fragmentManager = activity.supportFragmentManager
+            fragmentManager.setFragmentResultListener(
+                ColorPickerDialog.RICH_TEXT_RESULT_KEY,
+                activity
+            ) { _, bundle ->
+                if (!bundle.getBoolean(ColorPickerDialog.EXTRA_IS_GRADIENT, false)) {
+                    applyColor(range, bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE))
                 }
-            }.show()
+            }
+            ColorPickerDialog.newInstance(
+                initialColor = Color.WHITE,
+                resultKey = ColorPickerDialog.RICH_TEXT_RESULT_KEY
+            ).show(fragmentManager, ColorPickerDialog.TAG)
         }
-        binding.btnTextSize.setOnClickListener { anchor ->
+        binding.btnTextSize.setOnClickListener {
             val input = EditText(context).apply {
                 hint = "Ukuran px"
                 inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
@@ -280,6 +323,7 @@ class EditTextDialog(
                 // Post ke queue agar layout pass selesai dulu
                 binding.etTextInput.post {
                     binding.etTextInput.selectAll()
+                    rememberSelection()
                 }
             }
         }

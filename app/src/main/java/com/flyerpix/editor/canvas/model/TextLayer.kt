@@ -285,14 +285,16 @@ data class TextLayer(
 
     private fun styledText(paint: TextPaint): CharSequence {
         val content = if (text.isEmpty()) " " else text
-        if (richTextSpans.isEmpty() || paint.style != Paint.Style.FILL || paint.color != textColor) return content
+        if (richTextSpans.isEmpty() || paint.style != Paint.Style.FILL) return content
 
         val styled = SpannableString(content)
         richTextSpans.forEach { span ->
             val start = span.start.coerceIn(0, content.length)
             val end = span.end.coerceIn(start, content.length)
             if (end <= start) return@forEach
-            span.color?.let { styled.setSpan(ForegroundColorSpan(it), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+            if (paint.color == textColor) {
+                span.color?.let { styled.setSpan(ForegroundColorSpan(it), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+            }
             span.textSize?.let { styled.setSpan(AbsoluteSizeSpan(it.toInt().coerceAtLeast(1), false), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
             if (span.isBold && span.isItalic) styled.setSpan(StyleSpan(Typeface.BOLD_ITALIC), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             else if (span.isBold) styled.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -999,6 +1001,7 @@ data class TextLayer(
         y  = this.y + 30f,
         gradient = this.gradient?.copy(),
         extrudeGradient = this.extrudeGradient?.copy(),
+        richTextSpans = this.richTextSpans.map { it.copy() }.toMutableList(),
         textureBitmap = this.textureBitmap,
         perspectiveCorners = this.perspectiveCorners.clone(),
         blendMode = this.blendMode

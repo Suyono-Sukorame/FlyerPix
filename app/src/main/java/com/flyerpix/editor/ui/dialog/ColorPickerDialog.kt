@@ -108,6 +108,7 @@ class ColorPickerDialog : DialogFragment() {
         const val NEON_RESULT_KEY = "neon_color_picker_result"
         const val SHADOW_RESULT_KEY = "shadow_color_picker_result"
         const val STROKE_RESULT_KEY = "stroke_color_picker_result"
+        const val RICH_TEXT_RESULT_KEY = "rich_text_color_picker_result"
         const val BG_RESULT_KEY = "bg_color_picker_result"
         const val TEXT_RESULT_KEY = "text_color_picker_result"
         const val EXTRA_IS_GRADIENT = "is_gradient"
