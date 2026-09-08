@@ -1,11 +1,14 @@
 package com.flyerpix.editor.ui.controller
 
 import android.view.View
+import android.widget.PopupMenu
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
+import com.flyerpix.editor.canvas.model.CanvasLayer
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.flyerpix.editor.canvas.model.TextLayer
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 import com.flyerpix.editor.ui.adapter.AuthenticLayerAdapter
@@ -113,7 +116,14 @@ class LayerPanelController(
     private fun setupFooterButtons() {
         binding.viewLayerOverlayOutside.setOnClickListener { close() }
         binding.btnLayerToggleBatch.setOnClickListener { setBatchMode(true) }
-        binding.btnLayerMoveNormal.setOnClickListener { showSnackbar("Fitur geser lapisan: segera hadir") }
+        binding.btnLayerMoveNormal.setOnClickListener {
+            val selected = canvas.selectedLayer
+            if (selected == null || selected.isLocked) {
+                showSnackbar("Pilih lapisan yang tidak terkunci terlebih dahulu")
+            } else {
+                showMoveMenu(binding.btnLayerMoveNormal, listOf(selected))
+            }
+        }
 
         binding.btnLayerToFront.setOnClickListener {
             if (!canvas.bringSelectedLayerToFront()) showSnackbar("Pilih lapisan yang tidak terkunci terlebih dahulu")
@@ -130,21 +140,109 @@ class LayerPanelController(
             if (canvas.selectedLayer in checked) canvas.selectedLayer = canvas.layers.lastOrNull()
             canvas.recordAction("Hapus Lapisan Terpilih", snap)
             canvas.invalidate()
+            canvas.notifyLayersChanged()
             setBatchMode(false)
             adapter.submitLayers(canvas.layers, canvas.selectedLayer)
             showSnackbar("${checked.size} lapisan dihapus")
         }
         binding.btnBatchEdit.setOnClickListener {
-            val count = adapter.checkedCount()
-            if (count == 0) showSnackbar("Pilih lapisan terlebih dahulu")
-            else showSnackbar("Fitur atribut massal: segera hadir ($count lapisan dipilih)")
+            val checked = adapter.getCheckedLayers()
+            if (checked.isEmpty()) {
+                showSnackbar("Pilih lapisan terlebih dahulu")
+            } else {
+                showBatchAttributesDialog(checked)
+            }
         }
         binding.btnBatchMerge.setOnClickListener {
-            if (adapter.checkedCount() < 2) showSnackbar("Pilih minimal 2 lapisan untuk digabungkan")
-            else showSnackbar("Fitur Gabung Lapisan: akan diimplementasikan berikutnya")
+            val checked = adapter.getCheckedLayers()
+            if (checked.size < 2) {
+                showSnackbar("Pilih minimal 2 lapisan untuk digabungkan")
+                return@setOnClickListener
+            }
+
+            val merged = canvas.mergeLayers(checked)
+            if (merged == null) {
+                showSnackbar("Lapisan tidak dapat digabungkan")
+                return@setOnClickListener
+            }
+
+            setBatchMode(false)
+            adapter.submitLayers(canvas.layers, canvas.selectedLayer)
+            showSnackbar("${checked.size} lapisan berhasil digabungkan")
         }
         binding.btnBatchDone.setOnClickListener { setBatchMode(false) }
-        binding.btnBatchMove.setOnClickListener { showSnackbar("Fitur geser bersama: segera hadir") }
+        binding.btnBatchMove.setOnClickListener {
+            val checked = adapter.getCheckedLayers()
+            if (checked.isEmpty()) {
+                showSnackbar("Pilih lapisan yang ingin digeser terlebih dahulu")
+            } else {
+                showMoveMenu(binding.btnBatchMove, checked)
+            }
+        }
+    }
+
+    private fun showMoveMenu(anchor: View, selectedLayers: List<CanvasLayer>) {
+        val popup = PopupMenu(binding.root.context, anchor)
+        val step = 20f
+        popup.menu.add("Atas").setOnMenuItemClickListener {
+            moveSelectedLayers(selectedLayers, 0f, -step)
+            true
+        }
+        popup.menu.add("Bawah").setOnMenuItemClickListener {
+            moveSelectedLayers(selectedLayers, 0f, step)
+            true
+        }
+        popup.menu.add("Kiri").setOnMenuItemClickListener {
+            moveSelectedLayers(selectedLayers, -step, 0f)
+            true
+        }
+        popup.menu.add("Kanan").setOnMenuItemClickListener {
+            moveSelectedLayers(selectedLayers, step, 0f)
+            true
+        }
+        popup.show()
+    }
+
+    private fun moveSelectedLayers(selectedLayers: List<CanvasLayer>, dx: Float, dy: Float) {
+        val movedCount = canvas.moveLayersBy(selectedLayers, dx, dy)
+        adapter.submitLayers(canvas.layers, canvas.selectedLayer)
+        if (movedCount == 0) {
+            showSnackbar("Tidak ada lapisan yang dapat digeser")
+        } else {
+            showSnackbar("$movedCount lapisan digeser")
+        }
+    }
+
+    private fun showBatchAttributesDialog(selectedLayers: List<CanvasLayer>) {
+        val actions = arrayOf(
+            "Tampilkan semua",
+            "Sembunyikan semua",
+            "Buka kunci semua",
+            "Kunci semua"
+        )
+
+        MaterialAlertDialogBuilder(binding.root.context)
+            .setTitle("Atribut ${selectedLayers.size} lapisan")
+            .setItems(actions) { dialog, which ->
+                canvas.runRecordedAction("Ubah Atribut Massal") {
+                    when (which) {
+                        0 -> selectedLayers.forEach { it.isVisible = true }
+                        1 -> selectedLayers.forEach { it.isVisible = false }
+                        2 -> selectedLayers.forEach { it.isLocked = false }
+                        3 -> selectedLayers.forEach { it.isLocked = true }
+                    }
+                    if (canvas.selectedLayer in selectedLayers && canvas.selectedLayer?.isLocked == true) {
+                        canvas.selectedLayer = null
+                    }
+                    canvas.invalidate()
+                }
+                canvas.notifyLayersChanged()
+                adapter.submitLayers(canvas.layers, canvas.selectedLayer)
+                showSnackbar("Atribut ${selectedLayers.size} lapisan diperbarui")
+                dialog.dismiss()
+            }
+            .setNegativeButton("Batal", null)
+            .show()
     }
 
     private fun setupCanvasListeners() {

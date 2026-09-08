@@ -210,7 +210,7 @@ class PixelCanvasView @JvmOverloads constructor(
      */
     var onLayersChangedListener: (() -> Unit)? = null
 
-    private fun notifyLayersChanged() {
+    fun notifyLayersChanged() {
         onLayersChangedListener?.invoke()
     }
 
@@ -2313,6 +2313,24 @@ class PixelCanvasView @JvmOverloads constructor(
         }
         return removed
     }
+
+    fun moveLayersBy(layersToMove: Collection<CanvasLayer>, dx: Float, dy: Float): Int {
+        val movableLayers = layersToMove.filter { layers.contains(it) && !it.isLocked }
+        if (movableLayers.isEmpty()) return 0
+
+        val before = captureCurrentState("Geser Layer")
+        movableLayers.forEach { layer ->
+            layer.x += dx
+            layer.y += dy
+        }
+        invalidate()
+        recordAction("Geser Layer", before)
+        notifyLayersChanged()
+        return movableLayers.size
+    }
+
+    fun moveSelectedLayerBy(dx: Float, dy: Float): Boolean =
+        moveLayersBy(listOfNotNull(selectedLayer), dx, dy) > 0
 
     /**
      * Mengosongkan seluruh layer dari kanvas.

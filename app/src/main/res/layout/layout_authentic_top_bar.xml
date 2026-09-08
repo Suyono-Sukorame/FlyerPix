@@ -113,29 +113,11 @@
             app:tint="@android:color/white" />
 
         <ImageButton
-            android:id="@+id/btnTopZoomOut"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Zoom Keluar"
-            android:src="@drawable/ic_zoom_out_24px"
-            app:tint="@android:color/white" />
-
-        <ImageButton
             android:id="@+id/btnTopZoom"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Reset Zoom"
-            android:src="@drawable/ic_zoom_in_24px"
-            app:tint="@android:color/white" />
-
-        <ImageButton
-            android:id="@+id/btnTopZoomIn"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Zoom Masuk"
+            android:contentDescription="Atur zoom ke 100 persen"
             android:src="@drawable/ic_zoom_in_24px"
             app:tint="@android:color/white" />
 

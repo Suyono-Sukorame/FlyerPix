@@ -705,22 +705,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
         updateZoomLabel()
 
-        top.btnTopZoomOut.setOnClickListener {
-            pixelCanvasView.zoomOut()
-            updateZoomLabel()
-            showSnackbar("Zoom berkurang: ${(pixelCanvasView.zoomLevel * 100f).toInt()}%")
-        }
-
         top.btnTopZoom.setOnClickListener {
             pixelCanvasView.resetZoom()
             updateZoomLabel()
             showSnackbar("Zoom diatur ke 100%")
-        }
-
-        top.btnTopZoomIn.setOnClickListener {
-            pixelCanvasView.zoomIn()
-            updateZoomLabel()
-            showSnackbar("Zoom bertambah: ${(pixelCanvasView.zoomLevel * 100f).toInt()}%")
         }
 
         top.btnTopGrid.setOnClickListener {
