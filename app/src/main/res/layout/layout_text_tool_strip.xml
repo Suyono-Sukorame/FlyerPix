@@ -3,7 +3,7 @@
     android:id="@+id/textToolStripScroll"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#FFFFFF"
+    android:background="#FFFDF8"
     android:elevation="6dp"
     android:scrollbars="none"
     android:visibility="gone">
