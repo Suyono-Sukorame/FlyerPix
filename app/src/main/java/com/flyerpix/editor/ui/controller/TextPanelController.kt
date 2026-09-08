@@ -54,9 +54,11 @@ class TextPanelController(
 
     // ── Text Page State─────────────────────────────────────────────────────
     private val textToolItems = LinkedHashMap<String, ViewGroup>()
+    private val textCategoryItems = LinkedHashMap<String, TextView>()
     private val textPanelViews = LinkedHashMap<String, View>()
     private val savedTextStyles = LinkedHashMap<String, SavedTextStyle>()
     private var activeTextToolTag: String = ""
+    private var activeTextCategory: String = CATEGORY_BASIC
     private var maxPropertyPanelScrollH = 0
     var isPageOpen = false
     var pagePinnedByNav = false
@@ -101,6 +103,14 @@ class TextPanelController(
     private var syncStylesUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
 
     companion object {
+        private const val CATEGORY_BASIC = "basic"
+        private const val CATEGORY_LAYOUT = "layout"
+        private const val CATEGORY_TEXT = "text"
+        private const val CATEGORY_APPEARANCE = "appearance"
+        private const val CATEGORY_EFFECTS = "effects"
+        private const val CATEGORY_ADVANCED = "advanced"
+        private const val CATEGORY_LAYER = "layer"
+
         const val TOOL_STYLES       = "styles"
         const val TOOL_EDIT         = "edit"
         const val TOOL_DELETE       = "delete"
@@ -145,6 +155,7 @@ class TextPanelController(
      * Harus dipanggil setelah binding dan pixelCanvasView siap.
      */
     fun initialize() {
+        buildTextCategoryStrip()
         buildTextToolStrip()
         registerTextPanels()
 
@@ -1987,6 +1998,10 @@ initializeMaskControls()
         val hasEditor = layer != null && !layer.isLocked
 
         binding.textEditorBar.visibility = if (isPageOpen && !effectSettingsOpen) View.VISIBLE else View.GONE
+        binding.textCategoryStripInclude.root.visibility =
+            if (isPageOpen && !effectSettingsOpen) View.VISIBLE else View.GONE
+        updateTextCategorySelection()
+        updateVisibleTextTools()
         updateEffectSettingsVisibility()
         binding.textPropertyPanelInclude.root.visibility =
             if (isPageOpen && hasEditor && activeTextToolTag.isNotEmpty() && activeTextToolTag !in complexEffectTags) View.VISIBLE else View.GONE
@@ -2226,7 +2241,7 @@ private fun registerTextPanels() {
 
     private fun buildTextToolStrip() {
         val specs = listOf(
-            TextToolSpec(TOOL_STYLES,      "Styles",      R.drawable.ic_text_style_24px),
+            TextToolSpec(TOOL_STYLES,      "Saved Styles", R.drawable.ic_text_style_24px),
             TextToolSpec(TOOL_EDIT,        "Edit",        R.drawable.ic_edit_24px),
             TextToolSpec(TOOL_DELETE,      "Delete",      R.drawable.ic_delete_24px),
             TextToolSpec(TOOL_COPY,        "Copy",        R.drawable.ic_copy_24px),
@@ -2305,6 +2320,83 @@ private fun registerTextPanels() {
             layerParams.width = (52 * density).toInt()
             container.addView(item, layerParams)
             textToolItems[spec.tag] = item
+        }
+        updateVisibleTextTools()
+    }
+
+    private fun buildTextCategoryStrip() {
+        val categories = listOf(
+            CATEGORY_BASIC to "Basic",
+            CATEGORY_LAYOUT to "Layout",
+            CATEGORY_TEXT to "Text",
+            CATEGORY_APPEARANCE to "Appearance",
+            CATEGORY_EFFECTS to "Effects",
+            CATEGORY_ADVANCED to "Advanced",
+            CATEGORY_LAYER to "Layer"
+        )
+        val density = activity.resources.displayMetrics.density
+        val container = binding.textCategoryStripInclude.textCategoryContainer
+        container.removeAllViews()
+        textCategoryItems.clear()
+
+        for ((category, labelText) in categories) {
+            val label = TextView(activity).apply {
+                text = labelText
+                textSize = 11f
+                gravity = android.view.Gravity.CENTER
+                isClickable = true
+                isFocusable = true
+                setPadding(
+                    (14 * density).toInt(), (7 * density).toInt(),
+                    (14 * density).toInt(), (7 * density).toInt()
+                )
+                setBackgroundResource(R.drawable.bg_text_category_item)
+                setOnClickListener { selectTextCategory(category) }
+            }
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            params.setMargins((3 * density).toInt(), 0, (3 * density).toInt(), 0)
+            container.addView(label, params)
+            textCategoryItems[category] = label
+        }
+        updateTextCategorySelection()
+    }
+
+    private fun selectTextCategory(category: String) {
+        if (activeTextCategory == category) return
+        activeTextCategory = category
+        if (activeTextToolTag.isNotEmpty() && !isToolInCategory(activeTextToolTag, category)) {
+            deselectTextTool()
+        }
+        updateTextCategorySelection()
+        updateVisibleTextTools()
+    }
+
+    private fun updateTextCategorySelection() {
+        for ((category, item) in textCategoryItems) {
+            item.isSelected = category == activeTextCategory
+            item.setTextColor(if (item.isSelected) Color.WHITE else COLOR_GRAY)
+        }
+    }
+
+    private fun updateVisibleTextTools() {
+        for ((tag, item) in textToolItems) {
+            item.visibility = if (isToolInCategory(tag, activeTextCategory)) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun isToolInCategory(tag: String, category: String): Boolean {
+        return when (category) {
+            CATEGORY_BASIC -> tag in setOf(TOOL_EDIT, TOOL_FONT, TOOL_STYLE)
+            CATEGORY_LAYOUT -> tag in setOf(TOOL_POSITION, TOOL_REL_POS, TOOL_SIZE, TOOL_PADDING, TOOL_ROTATE, TOOL_ALIGN)
+            CATEGORY_TEXT -> tag in setOf(TOOL_LETTER, TOOL_LINE, TOOL_CURVE, TOOL_BG, TOOL_MASK)
+            CATEGORY_APPEARANCE -> tag in setOf(TOOL_COLOR, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_OPACITY, TOOL_STROKE)
+            CATEGORY_EFFECTS -> tag in setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_REFLECTION, TOOL_NEON)
+            CATEGORY_ADVANCED -> tag in setOf(TOOL_PERSPECTIVE, TOOL_3D_ROTATE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_BLEND)
+            CATEGORY_LAYER -> tag in setOf(TOOL_STYLES, TOOL_COPY, TOOL_FRONT, TOOL_BACK, TOOL_DELETE)
+            else -> false
         }
     }
 
@@ -3840,6 +3932,7 @@ private fun registerTextPanels() {
     fun hideStripAndPanels() {
         val wasOpen = effectSettingsOpen
         binding.textPropertyPanelInclude.root.visibility = View.GONE
+        binding.textCategoryStripInclude.root.visibility = View.GONE
         binding.textToolStripInclude.textToolStripScroll.visibility = View.GONE
         binding.effectSettingsInclude.root.visibility = View.GONE
         activeTextToolTag = ""

@@ -109,6 +109,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
+        <!-- Kategori tool teks agar strip utama tidak terlalu padat -->
+        <include
+                layout="@layout/layout_text_category_strip"
+                android:id="@+id/textCategoryStripInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
         <!-- Tool strip horizontal: ikon + label, scroll horizontal -->
         <include
                 layout="@layout/layout_text_tool_strip"
