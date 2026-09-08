@@ -14,6 +14,7 @@
 
 #include <jni.h>
 #include "filter_engine.h"
+#include "filter_optimization.h"
 #include "bitmap.h"
 #include "thread_pool.h"
 #include <android/bitmap.h>
@@ -142,9 +143,19 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeCreate(
     LOGD("Creating FilterEngine with %d threads", threadCount);
     
     try {
+        // Initialize runtime optimizer (auto-detects device characteristics)
+        OptimizationProfiler& optimizer = OptimizationProfiler::getInstance();
+        optimizer.initialize();
+        
         FilterEngine* engine = new FilterEngine();
+        
         if (threadCount > 0) {
             engine->setThreadCount(threadCount);
+        } else {
+            // Auto-detect optimal thread count from device profile
+            int optimal = optimizer.getProfile().optimal_thread_count;
+            LOGI("Auto-detected optimal thread count: %d", optimal);
+            engine->setThreadCount(optimal);
         }
         return reinterpret_cast<jlong>(engine);
     } catch (const std::exception& e) {
@@ -600,4 +611,25 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeIsSIMDEnabled(
         return engine->isSIMDEnabled() ? JNI_TRUE : JNI_FALSE;
     }
     return JNI_FALSE;
+}
+
+/**
+ * native String nativeGetOptimizationReport()
+ *
+ * Runs runtime auto-tuning (device detection, cache/bin cache benchmark)
+ * dan return optimization profile sebagai String untuk logging/reporting.
+ */
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_flyerpix_editor_filter_FilterEngine_nativeGetOptimizationReport(
+    JNIEnv* env,
+    jobject obj) {
+    
+    try {
+        OptimizationProfiler& optimizer = OptimizationProfiler::getInstance();
+        optimizer.autoTune();
+        return env->NewStringUTF(optimizer.generateReport());
+    } catch (const std::exception& e) {
+        LOGE("Optimization profiling failed: %s", e.what());
+        return env->NewStringUTF("Optimization profiling failed");
+    }
 }

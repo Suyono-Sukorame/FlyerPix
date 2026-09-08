@@ -31,8 +31,9 @@ FilterEngine::~FilterEngine() {
 Status FilterEngine::applyBlur(const Bitmap& src, Bitmap& dst, const BlurParams& params) {
     LOGD("Applying Gaussian blur (radius=%.1f, passes=%d)", params.radius, params.passes);
     
-    if (params.radius < 1.0f || params.radius > 50.0f) {
-        LOGE("Invalid blur radius: %.1f (valid range: 1-50)", params.radius);
+    // Kotlin wrapper clamps radius ke [0.5, 50.0] — native harus konsisten.
+    if (params.radius < 0.5f || params.radius > 50.0f) {
+        LOGE("Invalid blur radius: %.1f (valid range: 0.5-50)", params.radius);
         return Status::ERROR_INVALID_PARAM;
     }
     

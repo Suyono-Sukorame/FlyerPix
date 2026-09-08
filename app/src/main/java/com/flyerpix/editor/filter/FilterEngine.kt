@@ -40,7 +40,7 @@ class FilterEngine private constructor() {
         private const val TAG = "FilterEngine"
         
         init {
-            System.loadLibrary("flyerpix-native")
+            System.loadLibrary("flyerpix_engine")
         }
         
         /**
@@ -132,6 +132,23 @@ class FilterEngine private constructor() {
     fun isSIMDEnabled(): Boolean {
         checkNotDestroyed()
         return nativeIsSIMDEnabled()
+    }
+    
+    // ========================================================================
+    // Optimization Profiling
+    // ========================================================================
+    
+    /**
+     * Run runtime auto-tuning dan return optimization report
+     *
+     * Detects device characteristics (CPU cores, cache sizes) and
+     * tunes thread pool + SIMD settings untuk optimal performance.
+     *
+     * @return multi-line String berisi detected profile dan settings
+     */
+    fun getOptimizationReport(): String {
+        checkNotDestroyed()
+        return nativeGetOptimizationReport()
     }
     
     // ========================================================================
@@ -339,6 +356,8 @@ class FilterEngine private constructor() {
     private external fun nativeSetSIMDEnabled(enabled: Boolean)
     
     private external fun nativeIsSIMDEnabled(): Boolean
+    
+    private external fun nativeGetOptimizationReport(): String
     
     private external fun nativeApplyBlur(
         srcBitmap: Bitmap,

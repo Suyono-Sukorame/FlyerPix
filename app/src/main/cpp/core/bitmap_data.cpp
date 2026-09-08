@@ -43,6 +43,15 @@ Bitmap::Bitmap(const Bitmap& other)
 
 Bitmap& Bitmap::operator=(const Bitmap& other) {
     if (this != &other) {
+        if (!owns_buffer_) {
+            // Wrapped (external) buffer: copy pixels INTO it.
+            // Never reallocate or free an external/Android buffer here.
+            if (data_ && other.data_) {
+                size_t bytes = std::min(getBufferSize(), other.getBufferSize());
+                std::memcpy(data_.get(), other.data_.get(), bytes);
+            }
+            return *this;
+        }
         width_ = other.width_;
         height_ = other.height_;
         stride_ = other.stride_;
@@ -69,6 +78,15 @@ Bitmap::Bitmap(Bitmap&& other) noexcept
 
 Bitmap& Bitmap::operator=(Bitmap&& other) noexcept {
     if (this != &other) {
+        if (!owns_buffer_) {
+            // Wrapped (external) buffer: write other's pixels INTO it.
+            // Do not free the external/Android buffer, do not steal the pointer.
+            if (data_ && other.data_) {
+                size_t bytes = std::min(getBufferSize(), other.getBufferSize());
+                std::memcpy(data_.get(), other.data_.get(), bytes);
+            }
+            return *this;
+        }
         width_ = other.width_;
         height_ = other.height_;
         stride_ = other.stride_;
@@ -107,10 +125,11 @@ Bitmap::Bitmap(int width, int height, int stride, uint8_t* buffer, PixelFormat f
         // Normal case - allocate our own buffer
         allocate();
     } else {
-        // Wrap mode - point to external buffer without owning it
-        // We store the raw pointer and let destructor handle it based on owns_buffer_ flag
-        // Reset the unique_ptr to point to buffer without taking ownership
-        data_.release();  // Release any existing allocation
+        // Wrap mode - point to external buffer without owning it.
+        // Adopt the raw pointer. owns_buffer_==false makes every managed
+        // path (destructor, copy/move assignment) use release()/memcpy
+        // instead of delete[], so the external/Android buffer is never
+        // freed by this object.
         data_ = std::unique_ptr<uint8_t[]>(buffer);
     }
 }

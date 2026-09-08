@@ -79,6 +79,7 @@ set(FILTER_SOURCES
     filter/color_filter.cpp
     filter/emboss_filter.cpp
     filter/filter_utils.cpp
+    filter/filter_optimization.cpp
 )
 
 # ============================================================================

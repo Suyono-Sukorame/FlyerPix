@@ -53,6 +53,10 @@
 
         <activity android:name=".ui.StartActivity" android:screenOrientation="portrait" android:exported="false">
         </activity>
+
+        <!-- On-device FilterEngine test + benchmark activity (Week 5 integration) -->
+        <activity android:name=".test.FilterTestActivity" android:exported="true">
+        </activity>
     </application>
 
 </manifest>
