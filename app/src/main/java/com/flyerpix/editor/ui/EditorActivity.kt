@@ -697,8 +697,19 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             }
         }
 
+        top.btnTopZoomOut.setOnClickListener {
+            pixelCanvasView.zoomOut()
+            showSnackbar("Zoom berkurang: ${(pixelCanvasView.zoomLevel * 100f).toInt()}%")
+        }
+
         top.btnTopZoom.setOnClickListener {
-            showSnackbar("Gunakan dua jari (pinch) untuk memperbesar/memperkecil kanvas")
+            pixelCanvasView.resetZoom()
+            showSnackbar("Zoom diatur ke 100%")
+        }
+
+        top.btnTopZoomIn.setOnClickListener {
+            pixelCanvasView.zoomIn()
+            showSnackbar("Zoom bertambah: ${(pixelCanvasView.zoomLevel * 100f).toInt()}%")
         }
 
         top.btnTopGrid.setOnClickListener {

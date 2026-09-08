@@ -152,6 +152,26 @@ class PixelCanvasView @JvmOverloads constructor(
 
     private var textEditMode = false
 
+    private var canvasZoom = 1f
+    private val minCanvasZoom = 0.5f
+    private val maxCanvasZoom = 4f
+    private val zoomStep = 0.25f
+
+    val zoomLevel: Float
+        get() = canvasZoom
+
+    fun setCanvasZoom(zoom: Float) {
+        val clamped = zoom.coerceIn(minCanvasZoom, maxCanvasZoom)
+        if (canvasZoom != clamped) {
+            canvasZoom = clamped
+            invalidate()
+        }
+    }
+
+    fun zoomIn() = setCanvasZoom(canvasZoom + zoomStep)
+    fun zoomOut() = setCanvasZoom(canvasZoom - zoomStep)
+    fun resetZoom() = setCanvasZoom(1f)
+
     fun setTextEditMode(active: Boolean) {
         if (textEditMode != active) {
             textEditMode = active
@@ -1332,109 +1352,120 @@ class PixelCanvasView @JvmOverloads constructor(
         val profiling = profileEnabled
         if (profiling) pfFrameStart = System.nanoTime()
 
-        // Efek Filter (monokrom) dibungkus sebagai layer komposit di atas
-        // background, grid, dan seluruh layer (Prompt 51).
-        val tFilter = System.nanoTime()
-        val filterEffectLayer = beginFilterEffectLayer(canvas)
-        if (profiling) pfFilterMs += profileMark(tFilter)
+        val cx = width / 2f
+        val cy = height / 2f
+        val drawSave = canvas.save()
+        canvas.translate(cx, cy)
+        canvas.scale(canvasZoom, canvasZoom)
+        canvas.translate(-cx, -cy)
 
-        // Adjustment layer: brightness/contrast/saturation via ColorMatrix saveLayer
-        val tAdjust = System.nanoTime()
-        val adjPaint = buildAdjustmentPaint()
-        val adjSaveIndex = if (adjPaint != null) canvas.saveLayer(null, adjPaint) else -1
-        if (profiling) pfAdjustMs += profileMark(tAdjust)
+        try {
+            // Efek Filter (monokrom) dibungkus sebagai layer komposit di atas
+            // background, grid, dan seluruh layer (Prompt 51).
+            val tFilter = System.nanoTime()
+            val filterEffectLayer = beginFilterEffectLayer(canvas)
+            if (profiling) pfFilterMs += profileMark(tFilter)
 
-        // 1. Render background kanvas independen (Prompt 44)
-        drawBackgroundOnCanvas(canvas, vp)
+            // Adjustment layer: brightness/contrast/saturation via ColorMatrix saveLayer
+            val tAdjust = System.nanoTime()
+            val adjPaint = buildAdjustmentPaint()
+            val adjSaveIndex = if (adjPaint != null) canvas.saveLayer(null, adjPaint) else -1
+            if (profiling) pfAdjustMs += profileMark(tAdjust)
 
-        // 1b. Render kisi grid penjajaran jika diaktifkan (Prompt 30)
-        if (isGridEnabled) {
-            drawGridGuidelines(canvas, vp)
-        }
+            // 1. Render background kanvas independen (Prompt 44)
+            drawBackgroundOnCanvas(canvas, vp)
 
-        // 2. Render seluruh layer secara berurutan sesuai z-index jika isVisible bernilai true
-        val tLayers = System.nanoTime()
-        for (i in 0 until layers.size) {
-            val layer = layers[i]
-            if (layer.isVisible) {
-                if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
-                    renderPaint.applyLayerBlend(layer)
-                    val saveCount = canvas.saveLayer(null, renderPaint)
-                    layer.draw(canvas, renderPaint)
-                    canvas.restoreToCount(saveCount)
-                    renderPaint.clearBlend()
-                } else {
-                    renderPaint.clearBlend()
-                    val saveCount = canvas.save()
-                    layer.draw(canvas, renderPaint)
-                    canvas.restoreToCount(saveCount)
+            // 1b. Render kisi grid penjajaran jika diaktifkan (Prompt 30)
+            if (isGridEnabled) {
+                drawGridGuidelines(canvas, vp)
+            }
+
+            // 2. Render seluruh layer secara berurutan sesuai z-index jika isVisible bernilai true
+            val tLayers = System.nanoTime()
+            for (i in 0 until layers.size) {
+                val layer = layers[i]
+                if (layer.isVisible) {
+                    if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
+                        renderPaint.applyLayerBlend(layer)
+                        val saveCount = canvas.saveLayer(null, renderPaint)
+                        layer.draw(canvas, renderPaint)
+                        canvas.restoreToCount(saveCount)
+                        renderPaint.clearBlend()
+                    } else {
+                        renderPaint.clearBlend()
+                        val saveCount = canvas.save()
+                        layer.draw(canvas, renderPaint)
+                        canvas.restoreToCount(saveCount)
+                    }
                 }
             }
-        }
-        if (profiling) pfLayersMs += profileMark(tLayers)
+            if (profiling) pfLayersMs += profileMark(tLayers)
 
-        // 2b. Live preview goresan gambar bebas yang sedang aktif
-        if (freeDrawActive && freeDrawPoints.size >= 2) {
-            val path = android.graphics.Path()
-            path.moveTo(freeDrawPoints[0].first, freeDrawPoints[0].second)
-            for (p in freeDrawPoints) path.lineTo(p.first, p.second)
-            canvas.drawPath(path, freeDrawPaint)
-        }
-
-        // Tutup layer komposit filter bila aktif (Prompt 51).
-        endFilterEffectLayer(canvas, filterEffectLayer)
-
-        // Tutup adjustment layer (brightness/contrast/saturation)
-        if (adjSaveIndex >= 0) canvas.restoreToCount(adjSaveIndex)
-
-        // Blur overlay: snapshot konten, blur via native (NDK), gambar darinya
-        val blurRadius = adjustments[CanvasAdjustment.BLUR] ?: 0f
-        if (blurRadius > 0f) {
-            val tBlur = System.nanoTime()
-            drawNativeBlurOverlay(canvas, vp, blurRadius)
-            if (profiling) pfBlurMs += profileMark(tBlur)
-        }
-
-        // 2b. Render efek overlay non-destruktif (Noise, Vignette) di atas konten (Prompt 51).
-        // Saat blur aktif, noise+vignette sudah dibakar ke overlay blur (¼-res native),
-        // jadi di sini dilewati agar tidak digambar dua kali.
-        drawEffectsOverlay(canvas, vp, blurRadius > 0f)
-
-        // 3. Render Bounding Box seleksi garis putus-putus jika ada layer aktif (Prompt 25, 34)
-        selectedLayer?.let { layer ->
-            if (layer.isVisible && !layer.isLocked && !layer.perspectiveEnabled) {
-                drawSelectionBoundingBox(canvas, layer)
+            // 2b. Live preview goresan gambar bebas yang sedang aktif
+            if (freeDrawActive && freeDrawPoints.size >= 2) {
+                val path = android.graphics.Path()
+                path.moveTo(freeDrawPoints[0].first, freeDrawPoints[0].second)
+                for (p in freeDrawPoints) path.lineTo(p.first, p.second)
+                canvas.drawPath(path, freeDrawPaint)
             }
-        }
 
-        // 4. Render handle interaktif perspektif 4 titik sudut jika layer aktif mengaktifkan perspektif
-        selectedLayer?.let { layer ->
-            if (layer.isVisible && layer.perspectiveEnabled && !layer.isLocked) {
-                drawPerspectiveHandles(canvas, layer)
+            // Tutup layer komposit filter bila aktif (Prompt 51).
+            endFilterEffectLayer(canvas, filterEffectLayer)
+
+            // Tutup adjustment layer (brightness/contrast/saturation)
+            if (adjSaveIndex >= 0) canvas.restoreToCount(adjSaveIndex)
+
+            // Blur overlay: snapshot konten, blur via native (NDK), gambar darinya
+            val blurRadius = adjustments[CanvasAdjustment.BLUR] ?: 0f
+            if (blurRadius > 0f) {
+                val tBlur = System.nanoTime()
+                drawNativeBlurOverlay(canvas, vp, blurRadius)
+                if (profiling) pfBlurMs += profileMark(tBlur)
             }
-        }
 
-        // 5. Render garis panduan magnetik (Snap Guidelines) biru cyan saat layer mendekati tengah kanvas (Prompt 30)
-        if (isSnapGuideXVisible || isSnapGuideYVisible) {
-            drawSnapGuidelines(canvas, vp)
-        }
+            // 2b. Render efek overlay non-destruktif (Noise, Vignette) di atas konten (Prompt 51).
+            // Saat blur aktif, noise+vignette sudah dibakar ke overlay blur (¼-res native),
+            // jadi di sini dilewati agar tidak digambar dua kali.
+            drawEffectsOverlay(canvas, vp, blurRadius > 0f)
 
-        if (profiling) {
-            pfTotalMs += profileMark(pfFrameStart)
-            pfFrameCount++
-            if (pfFrameCount >= 30) {
-                Log.d(
-                    PROFILE_TAG,
-                    "frames=30 total=" + (pfTotalMs / 30 / 1_000_000) +
-                        "ms f-filter=" + (pfFilterMs / 30 / 1_000_000) +
-                        "ms f-adjust=" + (pfAdjustMs / 30 / 1_000_000) +
-                        "ms f-layers=" + (pfLayersMs / 30 / 1_000_000) +
-                        "ms f-blur=" + (pfBlurMs / 30 / 1_000_000) +
-                        "ms layers=" + layers.size
-                )
-                pfFilterMs = 0; pfAdjustMs = 0; pfLayersMs = 0; pfBlurMs = 0
-                pfTotalMs = 0; pfFrameCount = 0
+            // 3. Render Bounding Box seleksi garis putus-putus jika ada layer aktif (Prompt 25, 34)
+            selectedLayer?.let { layer ->
+                if (layer.isVisible && !layer.isLocked && !layer.perspectiveEnabled) {
+                    drawSelectionBoundingBox(canvas, layer)
+                }
             }
+
+            // 4. Render handle interaktif perspektif 4 titik sudut jika layer aktif mengaktifkan perspektif
+            selectedLayer?.let { layer ->
+                if (layer.isVisible && layer.perspectiveEnabled && !layer.isLocked) {
+                    drawPerspectiveHandles(canvas, layer)
+                }
+            }
+
+            // 5. Render garis panduan magnetik (Snap Guidelines) biru cyan saat layer mendekati tengah kanvas (Prompt 30)
+            if (isSnapGuideXVisible || isSnapGuideYVisible) {
+                drawSnapGuidelines(canvas, vp)
+            }
+
+            if (profiling) {
+                pfTotalMs += profileMark(pfFrameStart)
+                pfFrameCount++
+                if (pfFrameCount >= 30) {
+                    Log.d(
+                        PROFILE_TAG,
+                        "frames=30 total=" + (pfTotalMs / 30 / 1_000_000) +
+                            "ms f-filter=" + (pfFilterMs / 30 / 1_000_000) +
+                            "ms f-adjust=" + (pfAdjustMs / 30 / 1_000_000) +
+                            "ms f-layers=" + (pfLayersMs / 30 / 1_000_000) +
+                            "ms f-blur=" + (pfBlurMs / 30 / 1_000_000) +
+                            "ms layers=" + layers.size
+                    )
+                    pfFilterMs = 0; pfAdjustMs = 0; pfLayersMs = 0; pfBlurMs = 0
+                    pfTotalMs = 0; pfFrameCount = 0
+                }
+            }
+        } finally {
+            canvas.restoreToCount(drawSave)
         }
     }
 
@@ -2478,55 +2509,30 @@ class PixelCanvasView @JvmOverloads constructor(
         val bw = ceil(maxX - minX).toInt().coerceAtLeast(1)
         val bh = ceil(maxY - minY).toInt().coerceAtLeast(1)
 
-        // Buat bitmap
         val mergedBitmap = try {
-            bitmapFactory?.invoke(bw, bh)
-                ?: Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
-        } catch (_: Throwable) {
-            null
-        }
+            val bitmap = bitmapFactory?.invoke(bw, bh) ?: Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
+            val offscreenCanvas = Canvas(bitmap)
+            offscreenCanvas.translate(-minX, -minY)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
-        if (mergedBitmap != null) {
-            try {
-                val offscreenCanvas = Canvas(mergedBitmap)
-                offscreenCanvas.translate(-minX, -minY)
-                val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-
-                for (layer in sortedLayers) {
-                    if (!layer.isVisible) continue
-                    if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
-                        paint.applyLayerBlend(layer)
-                        val saveCount = offscreenCanvas.saveLayer(null, paint)
-                        layer.draw(offscreenCanvas, paint)
-                        offscreenCanvas.restoreToCount(saveCount)
-                        paint.clearBlend()
-                    } else {
-                        val saveCount = offscreenCanvas.save()
-                        layer.draw(offscreenCanvas, paint)
-                        offscreenCanvas.restoreToCount(saveCount)
-                    }
+            for (layer in sortedLayers) {
+                if (!layer.isVisible) continue
+                if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
+                    paint.applyLayerBlend(layer)
+                    val saveCount = offscreenCanvas.saveLayer(null, paint)
+                    layer.draw(offscreenCanvas, paint)
+                    offscreenCanvas.restoreToCount(saveCount)
+                    paint.clearBlend()
+                } else {
+                    val saveCount = offscreenCanvas.save()
+                    layer.draw(offscreenCanvas, paint)
+                    offscreenCanvas.restoreToCount(saveCount)
                 }
-            } catch (_: Throwable) {
-                // Ignore in headless test if Canvas stub throws
             }
-        }
-
-        val placeholderBitmap = mergedBitmap ?: try {
-            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+            bitmap
         } catch (_: Throwable) {
             null
-        } ?: run {
-            try {
-                val unsafeClass = Class.forName("sun.misc.Unsafe")
-                val field = unsafeClass.getDeclaredField("theUnsafe")
-                field.isAccessible = true
-                val unsafe = field.get(null)
-                val allocate = unsafe.javaClass.getMethod("allocateInstance", Class::class.java)
-                allocate.invoke(unsafe, Bitmap::class.java) as Bitmap
-            } catch (_: Throwable) {
-                Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-            }
-        }
+        } ?: return null
 
         val mergedLayer = ImageLayer(
             x = minX,
@@ -2534,7 +2540,7 @@ class PixelCanvasView @JvmOverloads constructor(
             scale = 1f,
             rotation = 0f,
             opacity = 255,
-            bitmap = placeholderBitmap,
+            bitmap = mergedBitmap,
             layerName = "Merged Layer"
         )
 
