@@ -4,7 +4,7 @@
     android:id="@+id/authenticTopBarContainer"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/brand_blue"
+    android:background="@color/header_primary"
     android:elevation="6dp"
     android:orientation="vertical">
 
@@ -74,7 +74,7 @@
         android:id="@+id/topBarRow2"
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:background="@color/header_secondary"
+        android:background="@color/header_primary"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="6dp">

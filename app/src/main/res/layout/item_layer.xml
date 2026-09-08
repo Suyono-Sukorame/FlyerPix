@@ -67,7 +67,7 @@
                 android:layout_height="match_parent"
                 android:padding="8dp"
                 android:src="@drawable/ic_text_fields_24px"
-                app:tint="@color/header_primary"
+                app:tint="@color/header_secondary"
                 android:contentDescription="Layer type preview icon" />
 
         </com.google.android.material.card.MaterialCardView>
