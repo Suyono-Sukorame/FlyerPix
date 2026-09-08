@@ -2508,9 +2508,11 @@ class PixelCanvasView @JvmOverloads constructor(
 
         val bw = ceil(maxX - minX).toInt().coerceAtLeast(1)
         val bh = ceil(maxY - minY).toInt().coerceAtLeast(1)
+        if (bw <= 0 || bh <= 0) return null
 
         val mergedBitmap = try {
             val bitmap = bitmapFactory?.invoke(bw, bh) ?: Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
+            if (bitmap.isRecycled || bitmap.width <= 0 || bitmap.height <= 0) return null
             val offscreenCanvas = Canvas(bitmap)
             offscreenCanvas.translate(-minX, -minY)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)

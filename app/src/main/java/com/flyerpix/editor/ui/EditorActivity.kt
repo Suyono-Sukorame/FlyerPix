@@ -697,18 +697,29 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             }
         }
 
+        fun updateZoomLabel() {
+            val percent = (pixelCanvasView.zoomLevel * 100f).toInt()
+            top.tvTopZoomLabel.text = "$percent%"
+            top.tvTopZoomLabel.alpha = if (percent == 100) 0.9f else 1f
+        }
+
+        updateZoomLabel()
+
         top.btnTopZoomOut.setOnClickListener {
             pixelCanvasView.zoomOut()
+            updateZoomLabel()
             showSnackbar("Zoom berkurang: ${(pixelCanvasView.zoomLevel * 100f).toInt()}%")
         }
 
         top.btnTopZoom.setOnClickListener {
             pixelCanvasView.resetZoom()
+            updateZoomLabel()
             showSnackbar("Zoom diatur ke 100%")
         }
 
         top.btnTopZoomIn.setOnClickListener {
             pixelCanvasView.zoomIn()
+            updateZoomLabel()
             showSnackbar("Zoom bertambah: ${(pixelCanvasView.zoomLevel * 100f).toInt()}%")
         }
 
