@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Relative Position Controls - Compact Symbol-Only Layout
-  Design: Input px + slider with +/- buttons, directional arrows, confirm/close buttons
+  Relative Position Controls - Compact Bottom Sheet Panel
+  Ultra-tight layout: Header + Input Row + Slider Row + Directional Row
+  Minimal vertical spacing, wrap_content height only
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -9,45 +10,33 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="8dp"
+    android:padding="6dp"
+    android:background="@color/panel_bg"
     android:visibility="gone">
 
-    <!-- Row 1: Input + Confirm/Close -->
+    <!-- Row 0: "Relative" Header + Confirm/Close (Right aligned) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="32dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="4dp">
 
-        <!-- Input Field: Move by _px -->
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Move by:"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:layout_marginEnd="4dp" />
-
-        <EditText
-            android:id="@+id/etRelMovePixels"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:inputType="numberSigned"
-            android:hint="px"
-            android:text="10"
-            android:textSize="12sp"
-            android:padding="6dp"
-            android:background="@drawable/bg_panel_input"
-            android:gravity="center" />
+            android:text="Relative"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/light_text_primary"
+            android:gravity="start" />
 
         <!-- Confirm Button (✓) -->
         <ImageButton
             android:id="@+id/btnRelConfirm"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="8dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:layout_marginEnd="4dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_check_24px"
@@ -58,8 +47,8 @@
         <!-- Close Button (✕) -->
         <ImageButton
             android:id="@+id/btnRelClose"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_sharp_clear_24px"
             android:contentDescription="Close"
@@ -67,19 +56,41 @@
             app:tint="@color/light_text_secondary" />
     </LinearLayout>
 
-    <!-- Row 2: Slider with +/- buttons -->
+    <!-- Row 1: Input Field + Minus/Plus Buttons for slider -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="32dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="2dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Move:"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="4dp" />
+
+        <EditText
+            android:id="@+id/etRelMovePixels"
+            android:layout_width="50dp"
+            android:layout_height="28dp"
+            android:inputType="numberSigned"
+            android:hint="px"
+            android:text="10"
+            android:textSize="10sp"
+            android:padding="4dp"
+            android:background="@drawable/bg_panel_input"
+            android:gravity="center"
+            android:layout_marginEnd="4dp" />
 
         <!-- Minus Button (-) -->
         <ImageButton
             android:id="@+id/btnRelMinus"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="2dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_sharp_remove_circle_outline"
             android:contentDescription="Decrease"
@@ -90,21 +101,23 @@
         <com.google.android.material.slider.Slider
             android:id="@+id/sliderRelMove"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="24dp"
             android:layout_weight="1"
-            android:layout_marginHorizontal="4dp"
+            android:layout_marginHorizontal="2dp"
             android:valueFrom="0"
             android:valueTo="200"
             android:stepSize="1"
             android:value="10"
             app:labelBehavior="gone"
-            app:haloRadius="8dp" />
+            app:haloRadius="6dp"
+            app:trackHeight="2dp" />
 
         <!-- Plus Button (+) -->
         <ImageButton
             android:id="@+id/btnRelPlus"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="2dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_add_24px"
             android:contentDescription="Increase"
@@ -112,19 +125,29 @@
             app:tint="@color/light_text_secondary" />
     </LinearLayout>
 
-    <!-- Row 3: Directional Controls -->
+    <!-- Row 2: Directional Controls (Ultra compact) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="32dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="4dp">
+        android:layout_marginBottom="0dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Move:"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="4dp"
+            android:visibility="invisible" />
 
         <!-- Left Arrow -->
         <ImageButton
             android:id="@+id/btnRelLeft"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginEnd="2dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_rotate_left_24px"
             android:contentDescription="Move Left"
@@ -134,9 +157,9 @@
         <!-- Right Arrow -->
         <ImageButton
             android:id="@+id/btnRelRight"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="4dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginEnd="2dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_rotate_right_24px"
             android:contentDescription="Move Right"
@@ -146,9 +169,9 @@
         <!-- Center Dot -->
         <ImageButton
             android:id="@+id/btnRelCenter"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="8dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginEnd="6dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_circle_24px"
             android:contentDescription="Center"
@@ -158,9 +181,9 @@
         <!-- Up Arrow -->
         <ImageButton
             android:id="@+id/btnRelUp"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="8dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginEnd="2dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_zoom_in_24px"
             android:contentDescription="Move Up"
@@ -170,9 +193,8 @@
         <!-- Down Arrow -->
         <ImageButton
             android:id="@+id/btnRelDown"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="4dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_zoom_out_24px"
             android:contentDescription="Move Down"
