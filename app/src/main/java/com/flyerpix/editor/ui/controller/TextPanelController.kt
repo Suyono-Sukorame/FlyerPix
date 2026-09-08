@@ -158,6 +158,7 @@ class TextPanelController(
         buildTextCategoryStrip()
         buildTextToolStrip()
         registerTextPanels()
+        configurePanelHeights()
 
         // Saat tinggi bar berubah (panel dibuka/ditutup/di-clamp), geser margin kanvas ke atas.
         binding.textEditorBar.addOnLayoutChangeListener { _, _, _, _, bottom, _, _, _, oldBottom ->
@@ -2501,7 +2502,7 @@ private fun registerTextPanels() {
 
     private fun clampPropertyPanelHeight() {
         if (maxPropertyPanelScrollH == 0) {
-            maxPropertyPanelScrollH = (activity.resources.displayMetrics.heightPixels * 0.08f).toInt()
+            maxPropertyPanelScrollH = (activity.resources.displayMetrics.heightPixels * 0.32f).toInt()
         }
         val scroll = binding.textPropertyPanelInclude.textPropertyPanelScroll
         scroll.post {
@@ -2513,6 +2514,20 @@ private fun registerTextPanels() {
                 scroll.requestLayout()
                 onCanvasChanged()
             }
+        }
+    }
+
+    private fun configurePanelHeights() {
+        binding.effectSettingsInclude.root.post {
+            val density = activity.resources.displayMetrics.density
+            val screenHeight = activity.resources.displayMetrics.heightPixels
+            val preferred = (screenHeight * 0.38f).toInt()
+            val minHeight = (180 * density).toInt()
+            val maxHeight = (360 * density).toInt()
+            binding.effectSettingsInclude.root.layoutParams =
+                binding.effectSettingsInclude.root.layoutParams.apply {
+                    height = preferred.coerceIn(minHeight, maxHeight)
+                }
         }
     }
 
@@ -2554,7 +2569,19 @@ private fun registerTextPanels() {
     private fun initializePositionControls() {
         val b = binding.effectSettingsInclude.positionControlsInclude
         val panel = b.root
+        val advancedButton = panel.findViewById<MaterialButton>(R.id.btnPositionAdvanced)
+        val fineControls = panel.findViewById<View>(R.id.positionFineControls)
+        val centerControls = panel.findViewById<View>(R.id.positionCenterControls)
         var syncing = false
+        var advancedOpen = false
+        fun setAdvancedOpen(open: Boolean) {
+            advancedOpen = open
+            fineControls.visibility = if (open) View.VISIBLE else View.GONE
+            centerControls.visibility = if (open) View.VISIBLE else View.GONE
+            advancedButton.text = if (open) "Sembunyikan lanjutan" else "Kontrol lanjutan"
+        }
+        setAdvancedOpen(false)
+        advancedButton.setOnClickListener { setAdvancedOpen(!advancedOpen) }
         val range = max(pixelCanvasView.width, pixelCanvasView.height).toFloat().coerceAtLeast(1000f)
         b.sliderPosX.valueFrom = -range
         b.sliderPosX.valueTo = range
@@ -2772,7 +2799,19 @@ private fun registerTextPanels() {
     private fun initializeSizeControls() {
         val b = binding.effectSettingsInclude.sizeControlsInclude
         val panel = b.root
+        val advancedButton = panel.findViewById<MaterialButton>(R.id.btnSizeAdvanced)
+        val advancedControls = panel.findViewById<View>(R.id.sizeScaleControls)
+        val advancedActions = panel.findViewById<View>(R.id.sizeActionControls)
         var syncing = false
+        var advancedOpen = false
+        fun setAdvancedOpen(open: Boolean) {
+            advancedOpen = open
+            advancedControls.visibility = if (open) View.VISIBLE else View.GONE
+            advancedActions.visibility = if (open) View.VISIBLE else View.GONE
+            advancedButton.text = if (open) "Sembunyikan skala" else "Kontrol skala lanjutan"
+        }
+        setAdvancedOpen(false)
+        advancedButton.setOnClickListener { setAdvancedOpen(!advancedOpen) }
 
         val presets = linkedMapOf(
             b.btnSizePreset24 to 24f,
@@ -2799,7 +2838,7 @@ private fun registerTextPanels() {
             b.sliderFontSize.value = layer.textSize.coerceIn(8f, 600f)
             b.sliderScaleXY.value = layer.scale.coerceIn(0.1f, 8f)
             syncing = false
-            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran: %.0f px", layer.textSize)
+            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran font: %.0f px", layer.textSize)
             b.tvScaleLabel.text = "${(layer.scale * 100).toInt()}%"
             refreshPresets(layer.textSize)
         }
@@ -2807,7 +2846,7 @@ private fun registerTextPanels() {
 
         b.sliderFontSize.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran: %.0f px", value)
+            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran font: %.0f px", value)
             refreshPresets(value)
             applyToTextLayer { it.textSize = value }
         }

@@ -39,6 +39,18 @@
             android:paddingHorizontal="8dp" />
     </LinearLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnPositionAdvanced"
+        style="@style/LightPanelTextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:layout_marginTop="2dp"
+        android:text="Kontrol lanjutan"
+        android:textSize="11sp"
+        android:textColor="@color/brand_blue"
+        android:minWidth="0dp"
+        android:paddingHorizontal="8dp" />
+
     <!-- Baris X -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -129,6 +141,7 @@
 
     <!-- Slider 2 kolom: Posisi X & Y (presisi halus) -->
     <LinearLayout
+        android:id="@+id/positionFineControls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
@@ -189,6 +202,7 @@
 
     <!-- Aksi Penempatan: Tengah H / V / Kanvas -->
     <LinearLayout
+        android:id="@+id/positionCenterControls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"

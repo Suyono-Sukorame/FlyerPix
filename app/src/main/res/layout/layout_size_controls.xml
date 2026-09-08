@@ -119,8 +119,21 @@
             android:textSize="10sp" />
     </LinearLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSizeAdvanced"
+        style="@style/LightPanelTextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:layout_marginTop="2dp"
+        android:text="Kontrol skala lanjutan"
+        android:textSize="11sp"
+        android:textColor="@color/brand_blue"
+        android:minWidth="0dp"
+        android:paddingHorizontal="8dp" />
+
     <!-- Slider 2 kolom: Ukuran Font & Skala -->
     <LinearLayout
+        android:id="@+id/sizeScaleControls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
@@ -138,7 +151,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Ukuran: 64 px"
+                android:text="Ukuran font: 64 px"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.slider.Slider
@@ -181,6 +194,7 @@
 
     <!-- Aksi: Sesuaikan Kanvas / Skala 100% -->
     <LinearLayout
+        android:id="@+id/sizeActionControls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
