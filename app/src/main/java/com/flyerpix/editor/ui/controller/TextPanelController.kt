@@ -3356,6 +3356,20 @@ private fun registerTextPanels() {
             setupColorPreview(layer)
             tvWidth.text = String.format(Locale.US, "Tebal: %.1f px", layer.strokeWidth)
             tvOpacity.text = "Opasitas: ${(alpha * 100 / 255)}%"
+            if (layer.strokeWidth > 0f) lastStrokeWidth = layer.strokeWidth
+        }
+
+        fun applyStrokeChange(actionName: String, block: (com.flyerpix.editor.canvas.model.TextLayer) -> Unit) {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (layer == null || layer.isLocked) {
+                showSnackbar("Pilih layer teks terlebih dahulu")
+                return
+            }
+            val before = pixelCanvasView.captureCurrentState(actionName)
+            block(layer)
+            pixelCanvasView.invalidate()
+            pixelCanvasView.recordAction(actionName, before)
+            onCanvasChanged()
         }
 
         syncStrokeUIHook = { layer -> sync(layer) }
@@ -3374,7 +3388,7 @@ private fun registerTextPanels() {
                         com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
                         Color.BLACK
                     )
-                    applyToTextLayer { layer ->
+                    applyStrokeChange("Ubah Warna Stroke") { layer ->
                         val currentAlpha = (layer.strokeColor ushr 24) and 0xFF
                         layer.strokeColor = (color and 0x00FFFFFF) or (currentAlpha shl 24)
                     }
@@ -3388,7 +3402,8 @@ private fun registerTextPanels() {
         btnPick.setOnClickListener { openColorPicker() }
 
         switch.setOnCheckedChangeListener { _, isChecked ->
-            applyToTextLayer { layer ->
+            if (syncing) return@setOnCheckedChangeListener
+            applyStrokeChange(if (isChecked) "Aktifkan Stroke" else "Nonaktifkan Stroke") { layer ->
                 if (isChecked) {
                     if (layer.strokeWidth <= 0f) layer.strokeWidth = lastStrokeWidth
                 } else {
@@ -3404,13 +3419,13 @@ private fun registerTextPanels() {
             if (syncing) return@addOnChangeListener
             tvWidth.text = String.format(Locale.US, "Tebal: %.1f px", value)
             lastStrokeWidth = value
-            applyToTextLayer { it.strokeWidth = value }
+            applyStrokeChange("Ubah Tebal Stroke") { it.strokeWidth = value }
         }
 
         sOpacity.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
             tvOpacity.text = "Opasitas: ${value.toInt()}%"
-            applyToTextLayer { layer ->
+            applyStrokeChange("Ubah Opasitas Stroke") { layer ->
                 val a = (value * 255 / 100).toInt()
                 layer.strokeColor = (layer.strokeColor and 0x00FFFFFF) or (a shl 24)
             }
@@ -3420,17 +3435,18 @@ private fun registerTextPanels() {
 
         btnReset.setOnClickListener {
             lastStrokeWidth = 4f
+            syncing = true
             switch.isChecked = false
-            group.visibility = View.GONE
             sWidth.value = 0f
             sOpacity.value = 100f
-            tvWidth.text = "Tebal: 0.0 px"
-            tvOpacity.text = "Opasitas: 100%"
-            applyToTextLayer { layer ->
+            syncing = false
+            group.visibility = View.GONE
+            applyStrokeChange("Reset Stroke") { layer ->
                 layer.strokeWidth = 0f
                 layer.strokeColor = Color.BLACK
             }
-            setupColorPreview(pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer)
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (layer != null) sync(layer)
         }
     }
 

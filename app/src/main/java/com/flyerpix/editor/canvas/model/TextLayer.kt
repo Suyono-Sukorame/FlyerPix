@@ -476,7 +476,12 @@ data class TextLayer(
         val bottom = top + bh
 
         val sc = canvas.saveLayer(-pad.toFloat(), textH, lw + pad.toFloat(), bottom, null)
-        canvas.drawBitmap(refBmp, -pad.toFloat(), top.toFloat(), Paint(Paint.ANTI_ALIAS_FLAG).apply { this.alpha = alpha })
+        canvas.drawBitmap(
+            refBmp,
+            -pad.toFloat(),
+            top.toFloat(),
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply { this.alpha = alpha }
+        )
 
         if (reflectionFade > 0f) {
             val fadePct = reflectionFade.coerceIn(0f, 1f)
@@ -636,7 +641,12 @@ data class TextLayer(
             bc.restore()
         }
 
-        canvas.drawBitmap(bmp, -pad.toFloat(), -pad.toFloat(), Paint(Paint.ANTI_ALIAS_FLAG))
+        canvas.drawBitmap(
+            bmp,
+            -pad.toFloat(),
+            -pad.toFloat(),
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        )
         bmp.recycle()
     }
 
@@ -668,6 +678,9 @@ data class TextLayer(
         val bw  = lw + pad * 2
         val bh  = lh + pad * 2
 
+        // Keep a solid text base so the relief never makes glyph interiors disappear.
+        layout.draw(canvas)
+
         // Offscreen software bitmap — EmbossMaskFilter bekerja di sini
         val bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
         val bmpCanvas = Canvas(bmp)  // Canvas ini adalah software-rendered
@@ -683,7 +696,8 @@ data class TextLayer(
 
         val embossPaint = buildMaskPaint().apply {
             color      = textColor
-            alpha      = opacity.coerceIn(0, 255)
+            // Blend the relief over the crisp base instead of replacing it.
+            alpha      = (opacity.coerceIn(0, 255) * 0.72f).roundToInt()
             if (textureEnabled && textureBitmap != null && !textureBitmap!!.isRecycled) {
                 shader = createTextureShader()
             } else if (gradientEnabled && gradient != null) {
@@ -703,7 +717,12 @@ data class TextLayer(
         createLayout(embossPaint).draw(bmpCanvas)
 
         // Blit offscreen bitmap ke canvas hardware utama
-        canvas.drawBitmap(bmp, -pad.toFloat(), -pad.toFloat(), Paint(Paint.ANTI_ALIAS_FLAG))
+        canvas.drawBitmap(
+            bmp,
+            -pad.toFloat(),
+            -pad.toFloat(),
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        )
         bmp.recycle()
     }
 
@@ -758,7 +777,12 @@ data class TextLayer(
             createLayout(corePaint).draw(bc)
         }
 
-        canvas.drawBitmap(bmp, -pad.toFloat(), -pad.toFloat(), Paint(Paint.ANTI_ALIAS_FLAG))
+        canvas.drawBitmap(
+            bmp,
+            -pad.toFloat(),
+            -pad.toFloat(),
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        )
         bmp.recycle()
     }
 
@@ -812,7 +836,7 @@ data class TextLayer(
         // Clip: hanya pertahankan shadow di mana Bitmap A (teks) ada
         Canvas(shadowBmp).drawBitmap(
             maskBmp, 0f, 0f,
-            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
                 xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
             }
         )
@@ -833,7 +857,7 @@ data class TextLayer(
         canvas.drawBitmap(
             shadowBmp,
             -pad.toFloat(), -pad.toFloat(),
-            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
                 xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
             }
         )
