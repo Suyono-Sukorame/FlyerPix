@@ -95,8 +95,8 @@
                 android:layout_marginStart="6dp"
                 android:minWidth="0dp"
                 android:padding="0dp"
-                android:text="+"
-                android:textSize="14sp" />
+                app:icon="@drawable/ic_add_24px"
+                app:iconSize="18dp" />
         </LinearLayout>
 
         <!-- Ketebalan & Opasitas sebaris (2 kolom) -->
