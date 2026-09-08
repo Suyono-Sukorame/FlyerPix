@@ -118,6 +118,7 @@ data class TextLayer(
     var extrudeEnabled: Boolean = false,
     var extrudeDepth: Int = 10,                 // 1 s/d 50
     var extrudeColor: Int = 0xFF333333.toInt(), // Warna sisi kedalaman 3D
+    var extrudeGradient: GradientColor? = null, // Gradasi sisi kedalaman 3D (menggantikan warna solid)
     var extrudeViewType: ExtrudeViewType = ExtrudeViewType.OBLIQUE,
     var extrudeAngle: Float = 45f,              // 0° - 360° arah kedalaman
     // ── 3D Rotate (Rotasi Sumbu X dan Y) ──────────────────────────────────
@@ -524,12 +525,19 @@ data class TextLayer(
     private fun draw3DExtrusion(canvas: Canvas, basePaint: TextPaint) {
         val (dirX, dirY) = getExtrudeVector()
         val depthPaint = TextPaint(basePaint).apply {
-            color = extrudeColor
             alpha = opacity.coerceIn(0, 255)
-            shader = null
             clearShadowLayer()
         }
         val depthLayout = createLayout(depthPaint)
+
+        val grad = extrudeGradient
+        if (grad != null) {
+            // Ukuran tumpukan depth didasarkan pada layout teks itu sendiri
+            depthPaint.shader = grad.createShader(depthLayout.width.toFloat(), depthLayout.height.toFloat())
+        } else {
+            depthPaint.color = extrudeColor
+            depthPaint.shader = null
+        }
 
         // Gambar bertumpuk dari lapisan terdalam (belakang) ke depan
         for (d in extrudeDepth downTo 1) {
@@ -845,6 +853,7 @@ data class TextLayer(
         x  = this.x + 30f,
         y  = this.y + 30f,
         gradient = this.gradient?.copy(),
+        extrudeGradient = this.extrudeGradient?.copy(),
         textureBitmap = this.textureBitmap,
         perspectiveCorners = this.perspectiveCorners.clone(),
         blendMode = this.blendMode

@@ -32,12 +32,14 @@ class ColorPickerDialog : DialogFragment() {
 
     private var initialColor: Int = 0xFFFFFFFF.toInt()
     private var initialGradient: GradientColor? = null
+    private var resultKey: String = RESULT_KEY
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NO_TITLE, R.style.AppAlertDialog)
         initialColor = arguments?.getInt(ARG_COLOR, 0xFFFFFFFF.toInt()) ?: 0xFFFFFFFF.toInt()
         initialGradient = @Suppress("DEPRECATION") (arguments?.getSerializable(ARG_GRADIENT) as? GradientColor)
+        resultKey = arguments?.getString(ARG_RESULT_KEY) ?: RESULT_KEY
     }
 
     override fun onCreateView(
@@ -77,7 +79,7 @@ class ColorPickerDialog : DialogFragment() {
                 @Suppress("DEPRECATION")
                 result.putSerializable(EXTRA_GRADIENT, currentFragment.getGradient())
             }
-            setFragmentResult(RESULT_KEY, result)
+            setFragmentResult(resultKey, result)
             dismiss()
         }
 
@@ -100,21 +102,25 @@ class ColorPickerDialog : DialogFragment() {
     companion object {
         const val TAG = "ColorPickerDialog"
         const val RESULT_KEY = "color_picker_result"
+        const val DEPTH_RESULT_KEY = "depth_color_picker_result"
         const val EXTRA_IS_GRADIENT = "is_gradient"
         const val EXTRA_COLOR = "selected_color"
         const val EXTRA_GRADIENT = "selected_gradient"
         private const val ARG_COLOR = "initial_color"
         private const val ARG_GRADIENT = "initial_gradient"
+        private const val ARG_RESULT_KEY = "result_key"
 
         fun newInstance(
             initialColor: Int = 0xFFFFFFFF.toInt(),
-            initialGradient: GradientColor? = null
+            initialGradient: GradientColor? = null,
+            resultKey: String = RESULT_KEY
         ): ColorPickerDialog {
             return ColorPickerDialog().apply {
                 arguments = Bundle().apply {
                     putInt(ARG_COLOR, initialColor)
                     @Suppress("DEPRECATION")
                     putSerializable(ARG_GRADIENT, initialGradient)
+                    putString(ARG_RESULT_KEY, resultKey)
                 }
             }
         }

@@ -151,6 +151,8 @@ data class LayerDto(
     val extrudeEnabled: Boolean? = null,
     val extrudeDepth: Int? = null,
     val extrudeColor: Int? = null,
+    /** Gradasi sisi kedalaman 3D; null = pakai [extrudeColor]. */
+    val extrudeGradient: GradientColorDto? = null,
     /** "OBLIQUE" | "ISOMETRIC" */
     val extrudeViewType: String? = null,
     val extrudeAngle: Float? = null,

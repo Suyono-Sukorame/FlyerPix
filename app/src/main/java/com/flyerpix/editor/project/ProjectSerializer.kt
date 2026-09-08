@@ -269,6 +269,7 @@ object ProjectSerializer {
         extrudeEnabled      = l.extrudeEnabled,
         extrudeDepth        = l.extrudeDepth,
         extrudeColor        = l.extrudeColor,
+        extrudeGradient     = l.extrudeGradient?.let { gradientToDto(it) },
         extrudeViewType     = l.extrudeViewType.name,
         extrudeAngle        = l.extrudeAngle,
         rotate3DX           = l.rotate3DX,
@@ -491,6 +492,7 @@ object ProjectSerializer {
                 extrudeEnabled     = dto.extrudeEnabled ?: false,
                 extrudeDepth       = dto.extrudeDepth ?: 10,
                 extrudeColor       = dto.extrudeColor ?: 0xFF333333.toInt(),
+                extrudeGradient    = dto.extrudeGradient?.let { gradientFromDto(it) },
                 extrudeViewType    = dto.extrudeViewType?.let {
                     try { ExtrudeViewType.valueOf(it) } catch (e: Exception) { ExtrudeViewType.OBLIQUE }
                 } ?: ExtrudeViewType.OBLIQUE,

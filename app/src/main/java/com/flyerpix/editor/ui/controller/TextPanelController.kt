@@ -600,42 +600,72 @@ class TextPanelController(
         val angleContainer = b.extrudeAngleContainer
         val sAngle = b.sliderExtrudeAngle
         val tvAngle = b.tvExtrudeAngleLabel
-        val llPalette = b.llDepthColorPalette
+        val chipPreview = b.chipDepthColorPreview
+        val tvValue = b.tvDepthColorValue
+        val btnPick = b.btnPickDepthColor
 
-        val depthColors = intArrayOf(
-            0xFF222222.toInt(), 0xFF444444.toInt(), 0xFF000000.toInt(),
-            0xFF1A237E.toInt(), 0xFF880E4F.toInt(), 0xFF3E2723.toInt(),
-            0xFF1B5E20.toInt(), 0xFFE65100.toInt(), 0xFF4A148C.toInt(),
-            0xFFB0BEC5.toInt()
-        )
-
-        fun setupColorPalette(currentLayer: TextLayer?) {
-            llPalette.removeAllViews()
-            val curColor = currentLayer?.extrudeColor ?: depthColors[0]
-            val dp36 = (36 * activity.resources.displayMetrics.density).toInt()
-            val margin = (4 * activity.resources.displayMetrics.density).toInt()
-
-            for (color in depthColors) {
-                val card = com.google.android.material.card.MaterialCardView(activity).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(dp36, dp36).apply {
-                        setMargins(margin, margin, margin, margin)
-                    }
-                    radius = dp36 / 2f
-                    setCardBackgroundColor(color)
-                    strokeWidth = if (color == curColor) 6 else 2
-                    strokeColor = if (color == curColor) Color.WHITE else 0x44FFFFFF.toInt()
-                    isClickable = true
-                    isFocusable = true
-                    setOnClickListener {
-                        applyToTextLayer { layer ->
-                            layer.extrudeColor = color
-                        }
-                        setupColorPalette(pixelCanvasView.selectedLayer as? TextLayer)
-                    }
-                }
-                llPalette.addView(card)
+        fun setupDepthColorPreview(layer: TextLayer?) {
+            val grad = layer?.extrudeGradient
+            if (grad != null) {
+                val first = grad.colors.firstOrNull() ?: 0xFF333333.toInt()
+                chipPreview.setCardBackgroundColor(first)
+                tvValue.text = "Grad: ${grad.name.ifBlank { grad.type.name }}"
+            } else {
+                val color = layer?.extrudeColor ?: 0xFF333333.toInt()
+                chipPreview.setCardBackgroundColor(color)
+                tvValue.text = String.format(Locale.US, "#%08X", color)
             }
         }
+
+        fun openDepthColorPicker() {
+            val layer = pixelCanvasView.selectedLayer as? TextLayer ?: return
+            com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                .newInstance(
+                    initialColor = layer.extrudeColor,
+                    initialGradient = layer.extrudeGradient,
+                    resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.DEPTH_RESULT_KEY
+                )
+                .show(
+                    (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                )
+        }
+
+        // Terima hasil pemilihan Depth Color / Gradient dari ColorPickerDialog
+        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+            .setFragmentResultListener(
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.DEPTH_RESULT_KEY,
+                activity
+            ) { _, bundle ->
+                val isGradient = bundle.getBoolean(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
+                )
+                if (isGradient) {
+                    @Suppress("DEPRECATION")
+                    val gradient = bundle.getSerializable(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_GRADIENT
+                    ) as? com.flyerpix.editor.canvas.model.GradientColor
+                    if (gradient != null) {
+                        applyToTextLayer { layer ->
+                            layer.extrudeGradient = gradient
+                        }
+                    }
+                } else {
+                    val color = bundle.getInt(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                        0xFF333333.toInt()
+                    )
+                    applyToTextLayer { layer ->
+                        layer.extrudeColor = color
+                        layer.extrudeGradient = null
+                    }
+                }
+                setupDepthColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
+                pixelCanvasView.invalidate()
+            }
+
+        chipPreview.setOnClickListener { openDepthColorPicker() }
+        btnPick.setOnClickListener { openDepthColorPicker() }
 
         fun syncUI(layer: TextLayer) {
             panel.visibility = View.VISIBLE
@@ -655,9 +685,9 @@ class TextPanelController(
             tvDepth.text = "Depth: ${layer.extrudeDepth}"
 
             sAngle.value = layer.extrudeAngle.coerceIn(0f, 360f)
-            tvAngle.text = "Depth Angle (${layer.extrudeAngle.toInt()}°)"
+            tvAngle.text = "Angle (${layer.extrudeAngle.toInt()}°)"
 
-            setupColorPalette(layer)
+            setupDepthColorPreview(layer)
         }
 
         // Sinkronisasi saat layer teks aktif dipilih
@@ -702,7 +732,7 @@ class TextPanelController(
 
         // Slider Angle
         sAngle.addOnChangeListener { _, value, _ ->
-            tvAngle.text = "Depth Angle (${value.toInt()}°)"
+            tvAngle.text = "Angle (${value.toInt()}°)"
             applyToTextLayer { layer ->
                 layer.extrudeAngle = value
             }
@@ -710,7 +740,7 @@ class TextPanelController(
 
         rebuildExtrudePaletteHook = { layer -> if (layer != null) syncUI(layer) }
 
-        setupColorPalette(null)
+        setupDepthColorPreview(null)
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -1598,6 +1628,7 @@ class TextPanelController(
         layer.extrudeEnabled       = snapshot.extrudeEnabled
         layer.extrudeDepth         = snapshot.extrudeDepth
         layer.extrudeColor         = snapshot.extrudeColor
+        layer.extrudeGradient      = snapshot.extrudeGradient?.copy()
         layer.extrudeViewType      = snapshot.extrudeViewType
         layer.extrudeAngle         = snapshot.extrudeAngle
         layer.rotate3DX            = snapshot.rotate3DX
@@ -2944,6 +2975,7 @@ private fun registerTextPanels() {
         target.extrudeEnabled = style.extrudeEnabled
         target.extrudeDepth = style.extrudeDepth
         target.extrudeColor = style.extrudeColor
+        target.extrudeGradient = style.extrudeGradient?.copy()
         target.extrudeViewType = style.extrudeViewType
         target.extrudeAngle = style.extrudeAngle
         target.rotate3DX = style.rotate3DX

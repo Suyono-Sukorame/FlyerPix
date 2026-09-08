@@ -59,6 +59,7 @@
                 android:layout_height="40dp"
                 android:minWidth="0dp"
                 android:text="B"
+                android:textColor="@color/brand_navy"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -69,6 +70,7 @@
                 android:layout_height="40dp"
                 android:minWidth="0dp"
                 android:text="I"
+                android:textColor="@color/brand_navy"
                 android:textSize="18sp"
                 android:textStyle="italic" />
 
@@ -79,6 +81,7 @@
                 android:layout_height="40dp"
                 android:minWidth="0dp"
                 android:text="U"
+                android:textColor="@color/brand_navy"
                 android:textSize="18sp" />
 
             <com.google.android.material.button.MaterialButton
@@ -88,8 +91,8 @@
                 android:layout_height="40dp"
                 android:minWidth="0dp"
                 android:text="S"
-                android:textSize="18sp"
-                android:textColor="#8A94A6" />
+                android:textColor="@color/brand_navy"
+                android:textSize="18sp" />
 
             <View
                 android:layout_width="1dp"
@@ -105,6 +108,7 @@
                 android:minWidth="0dp"
                 android:paddingHorizontal="10dp"
                 android:text="UPPERCASE"
+                android:textColor="@color/brand_navy"
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
@@ -116,6 +120,7 @@
                 android:minWidth="0dp"
                 android:paddingHorizontal="10dp"
                 android:text="Capitalize"
+                android:textColor="@color/brand_navy"
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
@@ -127,6 +132,7 @@
                 android:minWidth="0dp"
                 android:paddingHorizontal="10dp"
                 android:text="lowercase"
+                android:textColor="@color/brand_navy"
                 android:textSize="11sp"
                 android:textStyle="bold" />
         </LinearLayout>
