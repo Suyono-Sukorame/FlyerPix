@@ -2,4 +2,16 @@
 <resources>
     <dimen name="preset_color_size">36dp</dimen>
     <dimen name="preset_color_margin">3dp</dimen>
+
+    <!-- ===== Unified Panel Design System ===== -->
+    <dimen name="panel_elevation">8dp</dimen>
+    <dimen name="panel_min_height">52dp</dimen>
+    <dimen name="panel_max_height">260dp</dimen>
+    <dimen name="panel_tool_strip_height">52dp</dimen>
+    <dimen name="panel_handle_width">36dp</dimen>
+    <dimen name="panel_handle_height">4dp</dimen>
+    <dimen name="panel_corner_radius">16dp</dimen>
+    <dimen name="panel_header_height">44dp</dimen>
+    <dimen name="panel_horizontal_padding">12dp</dimen>
 </resources>
+

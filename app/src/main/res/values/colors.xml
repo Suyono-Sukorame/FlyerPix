@@ -37,4 +37,17 @@
     <color name="light_text_primary">#1A1A1A</color>
     <color name="light_text_secondary">#5F6B7A</color>
     <color name="light_text_tertiary">#8A94A6</color>
+
+    <!-- ===== Unified Panel Design System ===== -->
+    <!-- Digunakan oleh semua bottom panel: Text, Object, Canvas, Effect -->
+    <color name="panel_bg">#FFFFFF</color>
+    <color name="panel_bg_alt">#F4F6FA</color>
+    <color name="panel_handle">#D0D4DE</color>
+    <color name="panel_strip_bg">#F8FAFF</color>
+    <color name="panel_category_bg">#EEF1F8</color>
+    <color name="panel_divider">#E4E8F0</color>
+    <color name="panel_text_primary">#1A1A2E</color>
+    <color name="panel_text_secondary">#5F6B7A</color>
+    <color name="panel_icon_tint">#454F63</color>
+    <color name="panel_icon_active">#1769FF</color>
 </resources>

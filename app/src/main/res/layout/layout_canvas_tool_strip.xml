@@ -1,19 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<HorizontalScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/canvasToolStripScroll"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#FFFFFF"
-    android:elevation="6dp"
-    android:scrollbars="none">
+    android:orientation="vertical"
+    android:background="@color/panel_bg"
+    android:elevation="0dp">
 
-    <LinearLayout
-        android:id="@+id/canvasToolStripContainer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp" />
-</HorizontalScrollView>
+    <!-- Divider atas pemisah dari content panel -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/panel_divider" />
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/panel_tool_strip_height"
+        android:background="@color/panel_strip_bg"
+        android:scrollbars="none"
+        android:fillViewport="false">
+
+        <LinearLayout
+            android:id="@+id/canvasToolStripContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:gravity="center_vertical" />
+
+    </HorizontalScrollView>
+
+</LinearLayout>

@@ -99,6 +99,8 @@
             android:layout_marginBottom="56dp"
             android:maxHeight="560dp"
             android:orientation="vertical"
+            android:background="@drawable/bg_panel_bottom"
+            android:elevation="@dimen/panel_elevation"
             android:theme="@style/LightPanelTheme"
             android:visibility="gone">
 
@@ -136,11 +138,12 @@
     <LinearLayout
             android:id="@+id/objectMenuPanel"
             android:layout_width="match_parent"
-            android:layout_height="107dp"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/panel_min_height"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
-            android:background="#FFFFFF"
-            android:elevation="6dp"
+            android:background="@drawable/bg_panel_bottom"
+            android:elevation="@dimen/panel_elevation"
             android:orientation="vertical"
             android:theme="@style/LightPanelTheme"
             android:visibility="gone">
@@ -319,11 +322,12 @@
     <LinearLayout
             android:id="@+id/canvasMenuPanel"
             android:layout_width="match_parent"
-            android:layout_height="107dp"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/panel_min_height"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
-            android:background="#FFFFFF"
-            android:elevation="6dp"
+            android:background="@drawable/bg_panel_bottom"
+            android:elevation="@dimen/panel_elevation"
             android:orientation="vertical"
             android:theme="@style/LightPanelTheme"
             android:visibility="gone">
@@ -349,6 +353,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="8dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="6dp"
                 app:singleSelection="true"
                 app:selectionRequired="true"
                 xmlns:app="http://schemas.android.com/apk/res-auto">
@@ -518,11 +524,12 @@
     <LinearLayout
             android:id="@+id/effectsMenuPanel"
             android:layout_width="match_parent"
-            android:layout_height="107dp"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/panel_min_height"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
-            android:background="@color/light_surface"
-            android:elevation="6dp"
+            android:background="@drawable/bg_panel_bottom"
+            android:elevation="@dimen/panel_elevation"
             android:orientation="vertical"
             android:visibility="gone">
 
