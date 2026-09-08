@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Panel kontrol Gradient Fill untuk TextLayer.
-  Muncul di bottom sheet hanya saat layer teks aktif dipilih.
+  Gaya kompak ala 3D Text: switch + tombol reset sebaris,
+  selector tipe (Linear/Radial/Sweep), preset RecyclerView, dan slider sudut.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -9,17 +10,36 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="4dp"
     android:visibility="gone">
 
-    <!-- ── Toggle enable/disable ── -->
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchGradientEnabled"
+    <!-- ── Switch & Tombol Reset ── -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Gradient Fill"
-        android:textAppearance="?attr/textAppearanceBody2"
-        android:checked="false" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchGradientEnabled"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Gradient Fill"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:checked="false" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetGradient"
+            style="@style/LightPanelTextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="@color/brand_blue"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
 
     <!-- ── Group Kontrol Gradasi ── -->
     <LinearLayout
@@ -27,7 +47,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="2dp"
         android:visibility="gone">
 
         <!-- Selector Tipe Gradasi: Linear / Radial / Sweep -->
@@ -37,7 +57,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="4dp">
+            android:layout_marginTop="2dp">
 
             <RadioButton
                 android:id="@+id/rbLinear"
@@ -69,7 +89,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="4dp"
             android:layout_marginStart="4dp"
             android:text="Gradient Presets"
             android:textAppearance="?attr/textAppearanceCaption" />
@@ -80,23 +100,23 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:clipToPadding="false"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
-        <!-- Linear Gradient Angle -->
+        <!-- Linear Gradient Angle (2 kolom: label + slider) -->
         <LinearLayout
             android:id="@+id/gradientAngleContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginTop="6dp">
+            android:layout_marginTop="2dp">
 
             <TextView
                 android:id="@+id/tvAngleLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Gradient Angle (0°)"
+                android:text="Sudut: 0°"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.slider.Slider

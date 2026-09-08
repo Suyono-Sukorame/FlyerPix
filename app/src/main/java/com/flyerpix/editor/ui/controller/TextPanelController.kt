@@ -71,7 +71,7 @@ class TextPanelController(
     private var effectSettingsOpen = false
     private var textToolTagBeforeEffect = ""
     private var toolIsTextPage = false
-    private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_REFLECTION, TOOL_BLEND, TOOL_NEON, TOOL_STROKE, TOOL_LINE, TOOL_LETTER, TOOL_ALIGN, TOOL_BG, TOOL_CURVE, TOOL_STYLE, TOOL_MASK)
+    private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_REFLECTION, TOOL_BLEND, TOOL_NEON, TOOL_STROKE, TOOL_LINE, TOOL_LETTER, TOOL_ALIGN, TOOL_BG, TOOL_CURVE, TOOL_STYLE, TOOL_MASK, TOOL_OPACITY, TOOL_ROTATE, TOOL_COLOR, TOOL_PADDING)
     private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncInnerShadowUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncEmbossUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
@@ -89,6 +89,11 @@ class TextPanelController(
     private var syncCurveUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncStyleUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncMaskUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncRotateUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncOpacityUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncColorUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncPaddingUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var syncGradientUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
 
     companion object {
         const val TOOL_STYLES       = "styles"
@@ -169,13 +174,13 @@ class TextPanelController(
         initializePositionPanel()
         initializeRelativePositionPanel()
         initializeSizePanel()
-        initializeOpacityPanel()
-        initializeRotatePanel()
+initializeOpacityControls()
+initializeRotateControls()
 initializeStyleControls()
         initializeAlignControls()
-        initializeColorPanel()
+initializeColorControls()
         initializeStrokeControls()
-        initializePaddingPanel()
+initializePaddingControls()
         initializeBackgroundControls()
         initializeReflectionControls()
 initializeMaskControls()
@@ -572,6 +577,8 @@ initializeMaskControls()
         val angleContainer = b.gradientAngleContainer
         val tvAngleLabel = b.tvAngleLabel
         val sAngle = b.sliderGradientAngle
+        val btnReset = b.btnResetGradient
+        var syncing = false
 
         gradientPickerAdapter = GradientPickerAdapter { selectedPreset ->
             applyToTextLayer { layer ->
@@ -593,41 +600,42 @@ initializeMaskControls()
         }
         rvPresets.adapter = gradientPickerAdapter
 
-        // Sinkronisasi state saat layer teks dipilih
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is TextLayer) {
-                panel.visibility = View.VISIBLE
-                switch.isChecked = layer.gradientEnabled
-                group.visibility = if (layer.gradientEnabled) View.VISIBLE else View.GONE
-
-                val grad = layer.gradient
-                if (grad != null) {
-                    when (grad.type) {
-                        GradientType.LINEAR -> rbLinear.isChecked = true
-                        GradientType.RADIAL -> rbRadial.isChecked = true
-                        GradientType.SWEEP  -> rbSweep.isChecked = true
-                    }
-                    angleContainer.visibility = if (grad.type == GradientType.LINEAR)
-                        View.VISIBLE else View.GONE
-                    sAngle.value = grad.angle.coerceIn(0f, 360f)
-                    tvAngleLabel.text = "Gradient Angle (${grad.angle.toInt()}°)"
-                    gradientPickerAdapter.setSelectedPreset(grad)
-                } else {
-                    rbLinear.isChecked = true
-                    angleContainer.visibility = View.VISIBLE
-                    sAngle.value = 0f
-                    tvAngleLabel.text = "Gradient Angle (0°)"
-                    gradientPickerAdapter.setSelectedPreset(null)
-                }
-            } else {
+        fun syncUI(layer: TextLayer?) {
+            if (layer == null) {
                 panel.visibility = View.GONE
+                return
             }
+            panel.visibility = View.VISIBLE
+            syncing = true
+            switch.isChecked = layer.gradientEnabled
+            group.visibility = if (layer.gradientEnabled) View.VISIBLE else View.GONE
+
+            val grad = layer.gradient
+            if (grad != null) {
+                when (grad.type) {
+                    GradientType.LINEAR -> rbLinear.isChecked = true
+                    GradientType.RADIAL -> rbRadial.isChecked = true
+                    GradientType.SWEEP  -> rbSweep.isChecked = true
+                }
+                angleContainer.visibility = if (grad.type == GradientType.LINEAR)
+                    View.VISIBLE else View.GONE
+                sAngle.value = grad.angle.coerceIn(0f, 360f)
+                tvAngleLabel.text = "Sudut: ${grad.angle.toInt()}°"
+                gradientPickerAdapter.setSelectedPreset(grad)
+            } else {
+                rbLinear.isChecked = true
+                angleContainer.visibility = View.VISIBLE
+                sAngle.value = 0f
+                tvAngleLabel.text = "Sudut: 0°"
+                gradientPickerAdapter.setSelectedPreset(null)
+            }
+            syncing = false
         }
+        syncGradientUIHook = { layer -> syncUI(layer) }
 
         // Toggle Switch Enable / Disable
         switch.setOnCheckedChangeListener { _, isChecked ->
+            if (syncing) return@setOnCheckedChangeListener
             group.visibility = if (isChecked) View.VISIBLE else View.GONE
             applyToTextLayer { layer ->
                 layer.gradientEnabled = isChecked
@@ -641,6 +649,7 @@ initializeMaskControls()
 
         // RadioGroup Tipe Gradasi
         rgType.setOnCheckedChangeListener { _, checkedId ->
+            if (syncing) return@setOnCheckedChangeListener
             val newType = when (checkedId) {
                 R.id.rbRadial -> GradientType.RADIAL
                 R.id.rbSweep  -> GradientType.SWEEP
@@ -661,9 +670,27 @@ initializeMaskControls()
 
         // Slider Sudut Putar Gradasi Linier
         sAngle.addOnChangeListener { _, value, _ ->
-            tvAngleLabel.text = "Gradient Angle (${value.toInt()}°)"
+            if (syncing) return@addOnChangeListener
+            tvAngleLabel.text = "Sudut: ${value.toInt()}°"
             applyToTextLayer { layer ->
                 layer.gradient?.angle = value
+            }
+        }
+
+        // Reset gradasi ke kondisi awal (off, preset default)
+        btnReset.setOnClickListener {
+            syncing = true
+            switch.isChecked = false
+            group.visibility = View.GONE
+            rbLinear.isChecked = true
+            angleContainer.visibility = View.VISIBLE
+            sAngle.value = 0f
+            tvAngleLabel.text = "Sudut: 0°"
+            gradientPickerAdapter.setSelectedPreset(null)
+            syncing = false
+            applyToTextLayer { layer ->
+                layer.gradientEnabled = false
+                layer.gradient = GradientColor.PRESETS[0].copy(angle = 0f)
             }
         }
     }
@@ -689,9 +716,12 @@ initializeMaskControls()
         val tvScale = b.tvTextureScaleLabel
         val sRotation = b.sliderTextureRotation
         val tvRotation = b.tvTextureRotationLabel
+        val btnReset = b.btnResetTexture
+        var syncing = false
 
         fun syncUI(layer: TextLayer) {
             panel.visibility = View.VISIBLE
+            syncing = true
             switch.isChecked = layer.textureEnabled
             group.visibility = if (layer.textureEnabled) View.VISIBLE else View.GONE
 
@@ -706,24 +736,15 @@ initializeMaskControls()
             }
 
             sScale.value = layer.textureScale.coerceIn(0.1f, 3.0f)
-            tvScale.text = "Scale Texture (${(layer.textureScale * 100).toInt()}%)"
+            tvScale.text = "Skala: ${(layer.textureScale * 100).toInt()}%"
             sRotation.value = layer.textureRotation.coerceIn(0f, 360f)
-            tvRotation.text = "Rotate Texture (${layer.textureRotation.toInt()}°)"
-        }
-
-        // Sinkronisasi saat layer teks dipilih
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is TextLayer) {
-                syncUI(layer)
-            } else {
-                panel.visibility = View.GONE
-            }
+            tvRotation.text = "Rotasi: ${layer.textureRotation.toInt()}°"
+            syncing = false
         }
 
         // Toggle Switch Enable / Disable
         switch.setOnCheckedChangeListener { _, isChecked ->
+            if (syncing) return@setOnCheckedChangeListener
             group.visibility = if (isChecked) View.VISIBLE else View.GONE
             applyToTextLayer { layer ->
                 layer.textureEnabled = isChecked
@@ -731,6 +752,9 @@ initializeMaskControls()
                     texturePickerLauncher?.launch("image/*")
                 }
             }
+            val mask = binding.effectSettingsInclude.maskControlsInclude
+            mask.switchMaskEnabled.isChecked = isChecked
+            mask.maskControlsGroup.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
 
         // Tombol Pilih Foto dari Galeri
@@ -746,11 +770,15 @@ initializeMaskControls()
             }
             val curLayer = pixelCanvasView.selectedLayer as? TextLayer
             if (curLayer != null) syncUI(curLayer)
+            val mask = binding.effectSettingsInclude.maskControlsInclude
+            mask.switchMaskEnabled.isChecked = false
+            mask.maskControlsGroup.visibility = View.GONE
         }
 
         // Slider Skala Tekstur
         sScale.addOnChangeListener { _, value, _ ->
-            tvScale.text = "Scale Texture (${(value * 100).toInt()}%)"
+            if (syncing) return@addOnChangeListener
+            tvScale.text = "Skala: ${(value * 100).toInt()}%"
             applyToTextLayer { layer ->
                 layer.textureScale = value
             }
@@ -758,10 +786,34 @@ initializeMaskControls()
 
         // Slider Rotasi Tekstur
         sRotation.addOnChangeListener { _, value, _ ->
-            tvRotation.text = "Rotate Texture (${value.toInt()}°)"
+            if (syncing) return@addOnChangeListener
+            tvRotation.text = "Rotasi: ${value.toInt()}°"
             applyToTextLayer { layer ->
                 layer.textureRotation = value
             }
+        }
+
+        // Reset Tekstur
+        btnReset.setOnClickListener {
+            syncing = true
+            switch.isChecked = false
+            syncing = false
+            group.visibility = View.GONE
+            imgThumb.setImageResource(R.drawable.ic_sharp_photo_24px)
+            btnSelect.text = "Pilih dari Galeri"
+            btnDelete.visibility = View.GONE
+            applyToTextLayer { layer ->
+                layer.textureBitmap = null
+                layer.textureEnabled = false
+                layer.textureScale = 1.0f
+                layer.textureRotation = 0f
+            }
+            val curLayer = pixelCanvasView.selectedLayer as? TextLayer
+            if (curLayer != null) syncUI(curLayer)
+            val mask = binding.effectSettingsInclude.maskControlsInclude
+            mask.switchMaskEnabled.isChecked = false
+            mask.maskControlsGroup.visibility = View.GONE
+            showSnackbar("Tekstur direset")
         }
 
         syncTextureUIHook = { layer -> syncUI(layer) }
@@ -1781,33 +1833,6 @@ initializeMaskControls()
     }
 
     /**
-     * Sinkronkan kontrol Gradient dengan nilai layer.
-     */
-    private fun syncGradientUI(layer: TextLayer) {
-        val c = binding.effectSettingsInclude.gradientControlsInclude
-        c.switchGradientEnabled.isChecked = layer.gradientEnabled
-        c.gradientControlsGroup.visibility = if (layer.gradientEnabled) View.VISIBLE else View.GONE
-        val grad = layer.gradient
-        if (grad != null) {
-            when (grad.type) {
-                GradientType.LINEAR -> c.rbLinear.isChecked = true
-                GradientType.RADIAL -> c.rbRadial.isChecked = true
-                GradientType.SWEEP  -> c.rbSweep.isChecked = true
-            }
-            c.gradientAngleContainer.visibility = if (grad.type == GradientType.LINEAR) View.VISIBLE else View.GONE
-            c.sliderGradientAngle.value = grad.angle.coerceIn(0f, 360f)
-            c.tvAngleLabel.text = "Gradient Angle (${grad.angle.toInt()}°)"
-            gradientPickerAdapter.setSelectedPreset(grad)
-        } else {
-            c.rbLinear.isChecked = true
-            c.gradientAngleContainer.visibility = View.VISIBLE
-            c.sliderGradientAngle.value = 0f
-            c.tvAngleLabel.text = "Gradient Angle (0°)"
-            gradientPickerAdapter.setSelectedPreset(null)
-        }
-    }
-
-    /**
      * Sinkronkan UI kontrol efek aktif dengan nilai layer saat halaman dibuka.
      */
     private fun syncEffectUI(tag: String, layer: TextLayer?) {        if (layer == null) return
@@ -1821,9 +1846,13 @@ initializeMaskControls()
             TOOL_CURVE -> syncCurveUIHook?.invoke(layer)
             TOOL_STYLE -> syncStyleUIHook?.invoke(layer)
             TOOL_MASK -> syncMaskUIHook?.invoke(layer)
+            TOOL_OPACITY -> syncOpacityUIHook?.invoke(layer)
+            TOOL_ROTATE -> syncRotateUIHook?.invoke(layer)
+            TOOL_COLOR -> syncColorUIHook?.invoke(layer)
+            TOOL_PADDING -> syncPaddingUIHook?.invoke(layer)
             TOOL_INNER -> syncInnerShadowUIHook?.invoke(layer)
             TOOL_EMBOSS -> syncEmbossUIHook?.invoke(layer)
-            TOOL_GRADIENT -> syncGradientUI(layer)
+            TOOL_GRADIENT -> syncGradientUIHook?.invoke(layer)
             TOOL_TEXTURE -> syncTextureUIHook?.invoke(layer)
             TOOL_3D_TEXT -> rebuildExtrudePaletteHook?.invoke(layer)
             TOOL_3D_SHADOW -> syncShadow3DUIHook?.invoke(layer)
@@ -2110,6 +2139,12 @@ initializeMaskControls()
         layer.isStrikethrough      = snapshot.isStrikethrough
         layer.typeface             = snapshot.typeface
         layer.fontName             = snapshot.fontName
+        layer.opacity              = snapshot.opacity
+        layer.rotation             = snapshot.rotation
+        layer.paddingTop           = snapshot.paddingTop
+        layer.paddingBottom        = snapshot.paddingBottom
+        layer.paddingLeft          = snapshot.paddingLeft
+        layer.paddingRight         = snapshot.paddingRight
     }
 
     /**
@@ -2131,10 +2166,6 @@ private fun registerTextPanels() {
         textPanelViews[TOOL_POSITION]    = tp.positionPanel.root
         textPanelViews[TOOL_REL_POS]     = tp.relativePositionPanel.root
         textPanelViews[TOOL_SIZE]        = tp.sizePanel.root
-        textPanelViews[TOOL_PADDING]     = tp.paddingPanel.root
-        textPanelViews[TOOL_COLOR]       = tp.colorPanel.root
-        textPanelViews[TOOL_OPACITY]     = tp.opacityPanel.root
-        textPanelViews[TOOL_ROTATE]      = tp.rotatePanel.root
 
         // Efek kompleks → halaman Effect Settings terpisah
         val fs = binding.effectSettingsInclude
@@ -2158,6 +2189,10 @@ private fun registerTextPanels() {
         textPanelViews[TOOL_CURVE]       = fs.curveControlsInclude.root
         textPanelViews[TOOL_STYLE]       = fs.styleControlsInclude.root
         textPanelViews[TOOL_MASK]        = fs.maskControlsInclude.root
+        textPanelViews[TOOL_OPACITY]     = fs.opacityControlsInclude.root
+        textPanelViews[TOOL_ROTATE]      = fs.rotateControlsInclude.root
+        textPanelViews[TOOL_COLOR]       = fs.colorControlsInclude.root
+        textPanelViews[TOOL_PADDING]     = fs.paddingControlsInclude.root
     }
 
     private fun buildTextToolStrip() {
@@ -2616,73 +2651,105 @@ private fun registerTextPanels() {
 
     // ─── Panel: Opasitas ───────────────────────────────────────────────────
 
-    private fun initializeOpacityPanel() {
-        val b = binding.textPropertyPanelInclude.opacityPanel
+    private fun initializeOpacityControls() {
+        val b = binding.effectSettingsInclude.opacityControlsInclude
+        val panel = b.root
+        val slider = b.sliderOpacity
+        val tvLabel = b.tvOpacityLabel
+        val btnReset = b.btnResetOpacity
         var syncing = false
 
-        fun sync(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+        fun syncUI(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+            panel.visibility = View.VISIBLE
+            val pct = Math.round(layer.opacity.coerceIn(0, 255) * 100f / 255f).toFloat()
             syncing = true
-            b.sliderOpacity.value = (layer.opacity.coerceIn(0, 255) * 100f / 255f)
+            slider.value = pct
             syncing = false
-            b.tvOpacityLabel.text = "${(layer.opacity.coerceIn(0, 255) * 100 / 255)}%"
+            tvLabel.text = "${pct.toInt()}%"
         }
 
-        b.sliderOpacity.addOnChangeListener { _, value, _ ->
+        slider.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            b.tvOpacityLabel.text = "${value.toInt()}%"
+            tvLabel.text = "${value.toInt()}%"
             applyToTextLayer { it.opacity = (value * 255 / 100).toInt() }
         }
 
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) sync(layer)
+        btnReset.setOnClickListener {
+            syncing = true
+            slider.value = 100f
+            syncing = false
+            tvLabel.text = "100%"
+            applyToTextLayer { it.opacity = 255 }
         }
+
+        syncOpacityUIHook = { layer -> syncUI(layer) }
     }
 
     // ─── Panel: Rotasi ─────────────────────────────────────────────────────
 
-    private fun initializeRotatePanel() {
-        val b = binding.textPropertyPanelInclude.rotatePanel
+    private fun initializeRotateControls() {
+        val b = binding.effectSettingsInclude.rotateControlsInclude
+        val panel = b.root
+        val slider = b.sliderRotate
+        val tvLabel = b.tvRotateLabel
+        val btnReset = b.btnResetRotate
         var syncing = false
+        val presets = listOf(
+            b.btnRotateMinus90 to -90f,
+            b.btnRotateReset to 0f,
+            b.btnRotatePlus90 to 90f,
+            b.btnRotate180 to 180f
+        )
 
-        fun sync(layer: com.flyerpix.editor.canvas.model.TextLayer) {
-            val r = ((layer.rotation % 360f) + 360f) % 360f
-            syncing = true
-            b.sliderRotate.value = r
-            syncing = false
-            b.tvRotateLabel.text = "${r.toInt()}°"
+        fun normalize(v: Float): Float = ((v % 360f) + 360f) % 360f
+
+        fun setActive(btn: com.google.android.material.button.MaterialButton, active: Boolean) {
+            btn.isSelected = active
+            btn.setBackgroundColor(if (active) COLOR_ACTIVE else android.graphics.Color.TRANSPARENT)
+            btn.setTextColor(if (active) android.graphics.Color.WHITE else COLOR_GRAY)
         }
 
-        b.sliderRotate.addOnChangeListener { _, value, _ ->
+        fun syncUI(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+            panel.visibility = View.VISIBLE
+            val r = normalize(layer.rotation)
+            syncing = true
+            slider.value = r
+            syncing = false
+            tvLabel.text = "${r.toInt()}°"
+            for ((btn, pv) in presets) setActive(btn, pv == r)
+        }
+
+        slider.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            b.tvRotateLabel.text = "${value.toInt()}°"
-            applyToTextLayer { it.rotation = value }
+            val r = normalize(value)
+            tvLabel.text = "${r.toInt()}°"
+            for ((btn, pv) in presets) setActive(btn, pv == r)
+            applyToTextLayer { it.rotation = r }
+        }
+
+        fun applyPreset(value: Float) {
+            val r = normalize(value)
+            syncing = true
+            slider.value = r
+            syncing = false
+            tvLabel.text = "${r.toInt()}°"
+            for ((btn, pv) in presets) setActive(btn, pv == r)
+            applyToTextLayer { it.rotation = r }
         }
 
         fun rotateBy(delta: Float) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
             pixelCanvasView.runRecordedAction("Putar Teks") {
-                layer.rotation = (((layer.rotation + delta) % 360f) + 360f) % 360f
+                layer.rotation = normalize(layer.rotation + delta)
             }
-            sync(layer)
+            syncUI(layer)
             pixelCanvasView.invalidate()
         }
 
-        b.btnRotateMinus90.setOnClickListener { rotateBy(-90f) }
-        b.btnRotateReset.setOnClickListener {
-            applyToTextLayer { it.rotation = 0f }
-            val layer = pixelCanvasView.selectedLayer
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) sync(layer)
-            pixelCanvasView.invalidate()
-        }
-        b.btnRotatePlus90.setOnClickListener { rotateBy(90f) }
+        for ((btn, value) in presets) btn.setOnClickListener { applyPreset(value) }
+        btnReset.setOnClickListener { applyPreset(0f) }
 
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) sync(layer)
-        }
+        syncRotateUIHook = { layer -> syncUI(layer) }
     }
 
     // ─── Panel: Gaya Teks (B / I / U / S + Font Weight) ────────────────────
@@ -2899,15 +2966,38 @@ private fun registerTextPanels() {
 
     // ─── Panel: Warna Teks ─────────────────────────────────────────────────
 
-    private fun initializeColorPanel() {
-        val b = binding.textPropertyPanelInclude.colorPanel
+    private fun initializeColorControls() {
+        val b = binding.effectSettingsInclude.colorControlsInclude
+        val panel = b.root
         val density = activity.resources.displayMetrics.density
+        val chipPreview = b.chipColorPreview
+        val tvColorValue = b.tvColorValue
 
         val palette = intArrayOf(
             0xFFFFFFFF.toInt(), 0xFF000000.toInt(), 0xFF9E9E9E.toInt(), 0xFFD32F2F.toInt(),
             0xFFF57C00.toInt(), 0xFFFBC02D.toInt(), 0xFF388E3C.toInt(), 0xFF0288D1.toInt(),
             0xFF1976D2.toInt(), 0xFF7B1FA2.toInt(), 0xFFC2185B.toInt(), 0xFF607D8B.toInt()
         )
+
+        fun setupColorPreview(layer: com.flyerpix.editor.canvas.model.TextLayer?) {
+            val color = layer?.textColor ?: Color.WHITE
+            chipPreview.setCardBackgroundColor(color)
+            tvColorValue.text = String.format(Locale.US, "#%08X", color)
+        }
+
+        fun setSolidColor(color: Int) {
+            applyToTextLayer { layer ->
+                layer.textColor = color
+                layer.gradientEnabled = false
+                layer.textureEnabled = false
+            }
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (layer != null) {
+                setupColorPreview(layer)
+                syncGradientUIHook?.invoke(layer)
+            }
+            pixelCanvasView.invalidate()
+        }
 
         fun buildSwatches() {
             b.layoutColorSwatches.removeAllViews()
@@ -2920,34 +3010,53 @@ private fun registerTextPanels() {
                     setBackgroundResource(R.drawable.bg_color_swatch)
                     backgroundTintList = android.content.res.ColorStateList.valueOf(c)
                     isClickable = true
-                    setOnClickListener {
-                        applyToTextLayer { layer ->
-                            layer.textColor = c
-                            layer.gradientEnabled = false
-                            layer.textureEnabled = false
-                        }
-                        b.tvColorHex.text = String.format(Locale.US, "#%08X", c)
-                        b.tvColorHex.setTextColor(0xFF1A1A2E.toInt())
-                        b.btnColorPicker.iconTint = android.content.res.ColorStateList.valueOf(0xFF616161.toInt())
-                        pixelCanvasView.invalidate()
-                    }
+                    setOnClickListener { setSolidColor(c) }
                 }
                 b.layoutColorSwatches.addView(sw)
             }
         }
-        buildSwatches()
 
-        b.btnColorPicker.setOnClickListener { launchColorPicker() }
+        fun openColorPicker() {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
+            com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                .newInstance(
+                    initialColor = layer.textColor,
+                    resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.TEXT_RESULT_KEY
+                )
+                .show(
+                    (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                )
+        }
+
+        // Terima hasil pemilihan Warna Teks dari ColorPickerDialog
+        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+            .setFragmentResultListener(
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.TEXT_RESULT_KEY,
+                activity
+            ) { _, bundle ->
+                val isGradient = bundle.getBoolean(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
+                )
+                if (!isGradient) {
+                    val color = bundle.getInt(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                        Color.WHITE
+                    )
+                    setSolidColor(color)
+                }
+            }
+
+        chipPreview.setOnClickListener { openColorPicker() }
+        b.btnPickColor.setOnClickListener { openColorPicker() }
+        b.btnColorPicker.setOnClickListener { openColorPicker() }
         b.btnColorGradient.setOnClickListener { selectTextTool(TOOL_GRADIENT) }
 
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) {
-                b.tvColorHex.text = String.format(Locale.US, "#%08X", layer.textColor)
-                b.tvColorHex.setTextColor(0xFF1A1A2E.toInt())
-                b.btnColorPicker.iconTint = android.content.res.ColorStateList.valueOf(0xFF616161.toInt())
-            }
+        buildSwatches()
+
+        syncColorUIHook = { layer ->
+            panel.visibility = View.VISIBLE
+            setupColorPreview(layer)
         }
     }
 
@@ -3082,8 +3191,9 @@ private fun registerTextPanels() {
 
     // ─── Panel: Padding ────────────────────────────────────────────────────
 
-    private fun initializePaddingPanel() {
-        val b = binding.textPropertyPanelInclude.paddingPanel
+    private fun initializePaddingControls() {
+        val b = binding.effectSettingsInclude.paddingControlsInclude
+        val panel = b.root
         var syncing = false
 
         fun applyAll(value: Float) {
@@ -3109,7 +3219,8 @@ private fun registerTextPanels() {
             syncTexts(v, v, v, v)
         }
 
-        fun sync(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+        fun syncUI(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+            panel.visibility = View.VISIBLE
             syncing = true
             b.sliderPaddingTop.value = layer.paddingTop.coerceIn(0f, 200f)
             b.sliderPaddingBottom.value = layer.paddingBottom.coerceIn(0f, 200f)
@@ -3160,11 +3271,18 @@ private fun registerTextPanels() {
             }
         }
 
-        val prevListener = pixelCanvasView.onLayerSelectedListener
-        pixelCanvasView.onLayerSelectedListener = { layer ->
-            prevListener?.invoke(layer)
-            if (layer is com.flyerpix.editor.canvas.model.TextLayer) sync(layer)
+        b.btnResetPadding.setOnClickListener {
+            syncing = true
+            b.sliderPaddingTop.value = 0f
+            b.sliderPaddingBottom.value = 0f
+            b.sliderPaddingLeft.value = 0f
+            b.sliderPaddingRight.value = 0f
+            syncing = false
+            applyAll(0f)
+            syncTexts(0f, 0f, 0f, 0f)
         }
+
+        syncPaddingUIHook = { layer -> syncUI(layer) }
     }
 
     // ─── Panel: Background Teks ────────────────────────────────────────────

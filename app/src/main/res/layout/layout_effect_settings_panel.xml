@@ -112,6 +112,34 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
 
+                    <!-- Opacity -->
+                    <include
+                        layout="@layout/layout_opacity_controls"
+                        android:id="@+id/opacityControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Rotate -->
+                    <include
+                        layout="@layout/layout_rotate_controls"
+                        android:id="@+id/rotateControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Color (Warna Teks) -->
+                    <include
+                        layout="@layout/layout_color_controls"
+                        android:id="@+id/colorControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <!-- Padding -->
+                    <include
+                        layout="@layout/layout_padding_controls"
+                        android:id="@+id/paddingControlsInclude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
                     <!-- Inner Shadow -->
                     <include
                         layout="@layout/layout_inner_shadow_controls"

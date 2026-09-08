@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Panel kontrol Texture Masking untuk TextLayer.
+  Gaya kompak ala 3D Text: switch + tombol reset sebaris,
+  thumbnail + tombol Pilih/Hapus, slider berpasangan 2 kolom (Skala & Rotasi).
   Mengisi teks dengan foto dari galeri HP menggunakan BitmapShader.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -9,17 +11,36 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="4dp"
     android:visibility="gone">
 
-    <!-- ── Toggle enable/disable ── -->
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switchTextureEnabled"
+    <!-- ── Switch & Tombol Reset ── -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Texture Masking"
-        android:textAppearance="?attr/textAppearanceBody2"
-        android:checked="false" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchTextureEnabled"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Texture Masking"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:checked="false" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResetTexture"
+            style="@style/LightPanelTextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Reset"
+            android:textSize="12sp"
+            android:textColor="@color/brand_blue"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp" />
+    </LinearLayout>
 
     <!-- ── Group Kontrol Tekstur ── -->
     <LinearLayout
@@ -27,7 +48,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="2dp"
         android:visibility="gone">
 
         <!-- Baris Pemilihan Gambar & Preview Thumbnail -->
@@ -36,7 +57,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="6dp">
+            android:layout_marginTop="4dp">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="56dp"
@@ -82,45 +103,64 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Slider Scale Texture (10% - 300%) -->
-        <TextView
-            android:id="@+id/tvTextureScaleLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:layout_marginStart="4dp"
-            android:text="Scale Texture (100%)"
-            android:textAppearance="?attr/textAppearanceCaption" />
-
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderTextureScale"
+        <!-- Skala & Rotasi sebaris (2 kolom) -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:valueFrom="0.1"
-            android:valueTo="3.0"
-            android:stepSize="0.05"
-            android:value="1.0"
-            app:labelBehavior="gone" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <!-- Slider Rotate Texture (0° - 360°) -->
-        <TextView
-            android:id="@+id/tvTextureRotationLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginStart="4dp"
-            android:text="Rotate Texture (0°)"
-            android:textAppearance="?attr/textAppearanceCaption" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderTextureRotation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:valueFrom="0"
-            android:valueTo="360"
-            android:stepSize="1"
-            android:value="0"
-            app:labelBehavior="gone" />
+                <TextView
+                    android:id="@+id/tvTextureScaleLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="Skala: 100%"
+                    android:textAppearance="?attr/textAppearanceCaption" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderTextureScale"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0.1"
+                    android:valueTo="3.0"
+                    android:stepSize="0.05"
+                    android:value="1.0"
+                    app:labelBehavior="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvTextureRotationLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="Rotasi: 0°"
+                    android:textAppearance="?attr/textAppearanceCaption" />
+
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderTextureRotation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="0"
+                    android:valueTo="360"
+                    android:stepSize="1"
+                    android:value="0"
+                    app:labelBehavior="gone" />
+            </LinearLayout>
+        </LinearLayout>
 
     </LinearLayout>
 
