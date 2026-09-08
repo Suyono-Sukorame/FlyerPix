@@ -22,12 +22,14 @@ import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.bumptech.glide.Glide
 import com.flyerpix.editor.R
 import com.flyerpix.editor.editableimageview.EditableImageView
 import com.flyerpix.editor.editableimageview.EditorTool.PAINT
 import com.flyerpix.editor.editableimageview.EditorTool.FIGURE
+import kotlinx.coroutines.launch
 import com.flyerpix.editor.editableimageview.EditorTool.STICKER
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -87,11 +89,23 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private val texturePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
-            val bmp = textPanelController.decodeBitmapFromUri(uri)
-            if (bmp != null) {
-                textPanelController.applyTextureBitmap(bmp)
-            } else {
-                showSnackbar("Gagal memuat gambar tekstur.")
+            // Show loading indicator
+            showLoadingDialog("Memuat gambar tekstur...")
+            
+            lifecycleScope.launch {
+                try {
+                    val bmp = textPanelController.decodeBitmapFromUriAsync(uri, maxSize = 2048)
+                    dismissLoadingDialog()
+                    
+                    if (bmp != null) {
+                        textPanelController.applyTextureBitmap(bmp)
+                    } else {
+                        showSnackbar("Gagal memuat gambar tekstur.")
+                    }
+                } catch (e: Exception) {
+                    dismissLoadingDialog()
+                    showSnackbar("Error: ${e.message}")
+                }
             }
         }
     }
@@ -118,24 +132,46 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private val bgGalleryLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
-            val bmp = textPanelController.decodeBitmapFromUri(uri)
-            if (bmp != null) {
-                pixelCanvasView.setImageBackground(bmp)
-                showSnackbar("Gambar latar belakang berhasil diterapkan!")
-            } else {
-                showSnackbar("Gagal memuat gambar dari galeri.")
+            showLoadingDialog("Memuat gambar background...")
+            
+            lifecycleScope.launch {
+                try {
+                    val bmp = textPanelController.decodeBitmapFromUriAsync(uri, maxSize = 2048)
+                    dismissLoadingDialog()
+                    
+                    if (bmp != null) {
+                        pixelCanvasView.setImageBackground(bmp)
+                        showSnackbar("Gambar latar belakang berhasil diterapkan!")
+                    } else {
+                        showSnackbar("Gagal memuat gambar dari galeri.")
+                    }
+                } catch (e: Exception) {
+                    dismissLoadingDialog()
+                    showSnackbar("Error: ${e.message}")
+                }
             }
         }
     }
 
     private val bgCameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success: Boolean ->
         if (success && cameraPhotoUri != null) {
-            val bmp = textPanelController.decodeBitmapFromUri(cameraPhotoUri!!)
-            if (bmp != null) {
-                pixelCanvasView.setImageBackground(bmp)
-                showSnackbar("Foto kamera berhasil dijadikan latar belakang!")
-            } else {
-                showSnackbar("Gagal memuat foto dari kamera.")
+            showLoadingDialog("Memproses foto...")
+            
+            lifecycleScope.launch {
+                try {
+                    val bmp = textPanelController.decodeBitmapFromUriAsync(cameraPhotoUri!!, maxSize = 2048)
+                    dismissLoadingDialog()
+                    
+                    if (bmp != null) {
+                        pixelCanvasView.setImageBackground(bmp)
+                        showSnackbar("Foto kamera berhasil dijadikan latar belakang!")
+                    } else {
+                        showSnackbar("Gagal memuat foto dari kamera.")
+                    }
+                } catch (e: Exception) {
+                    dismissLoadingDialog()
+                    showSnackbar("Error: ${e.message}")
+                }
             }
         }
     }
@@ -144,11 +180,22 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private val preEditImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
-            val bmp = textPanelController.decodeBitmapFromUri(uri)
-            if (bmp != null) {
-                showImagePreEdit(bmp)
-            } else {
-                showSnackbar("Gagal memuat gambar dari galeri.")
+            showLoadingDialog("Memuat gambar...")
+            
+            lifecycleScope.launch {
+                try {
+                    val bmp = textPanelController.decodeBitmapFromUriAsync(uri, maxSize = 2048)
+                    dismissLoadingDialog()
+                    
+                    if (bmp != null) {
+                        showImagePreEdit(bmp)
+                    } else {
+                        showSnackbar("Gagal memuat gambar dari galeri.")
+                    }
+                } catch (e: Exception) {
+                    dismissLoadingDialog()
+                    showSnackbar("Error: ${e.message}")
+                }
             }
         }
     }
@@ -1088,6 +1135,24 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 if (saveMode) exitSaveMode()
             }
         }).show()
+    }
+
+    // ── Loading Dialog untuk async operations ───────────────────────────────
+    
+    private var loadingDialog: android.app.ProgressDialog? = null
+    
+    private fun showLoadingDialog(message: String) {
+        dismissLoadingDialog() // Dismiss any existing
+        loadingDialog = android.app.ProgressDialog(this).apply {
+            setMessage(message)
+            setCancelable(false)
+            show()
+        }
+    }
+    
+    private fun dismissLoadingDialog() {
+        loadingDialog?.dismiss()
+        loadingDialog = null
     }
 
     private fun initializeBottomSheetBehavior() {

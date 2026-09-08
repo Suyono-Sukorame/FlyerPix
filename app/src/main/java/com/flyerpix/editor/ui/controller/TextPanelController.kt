@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.view.View
 import androidx.activity.result.ActivityResultLauncher
+import androidx.lifecycle.lifecycleScope
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.canvas.model.ExtrudeViewType
@@ -25,8 +26,12 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.max
+
 
 /**
  * Controller untuk mengelola semua panel properti Text Layer (Shadow, Inner Shadow,
@@ -1928,16 +1933,78 @@ initializeMaskControls()
     }
 
     /**
-     * Decode Bitmap secara aman dari Uri galeri HP, dengan resolusi terkontrol
-     * dan format ARGB_8888 agar kompatibel dengan BitmapShader & Canvas software offscreen.
+     * Decode Bitmap secara aman dari Uri galeri HP dengan async background thread,
+     * resolusi terkontrol via downsampling, dan format ARGB_8888.
+     * 
+     * @param uri URI gambar dari galeri
+     * @param maxSize Ukuran maksimum dimensi (default 2048px untuk performa optimal)
+     * @return Bitmap yang sudah di-downsample atau null jika gagal
      */
+    suspend fun decodeBitmapFromUriAsync(uri: Uri, maxSize: Int = 2048): Bitmap? {
+        return withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    // Modern API: ImageDecoder dengan proper downsampling
+                    val source = ImageDecoder.createSource(activity.contentResolver, uri)
+                    ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                        val maxDim = kotlin.math.max(info.size.width, info.size.height)
+                        if (maxDim > maxSize) {
+                            decoder.setTargetSampleSize(maxDim / maxSize)
+                        }
+                    }
+                    // ImageDecoder already returns ARGB_8888, no need to copy
+                } else {
+                    // Legacy API: Manual downsampling dengan inSampleSize
+                    activity.contentResolver.openInputStream(uri)?.use { stream ->
+                        // Step 1: Decode bounds only untuk dapat dimensi
+                        val options = BitmapFactory.Options().apply {
+                            inJustDecodeBounds = true
+                        }
+                        BitmapFactory.decodeStream(stream, null, options)
+                        
+                        // Step 2: Calculate inSampleSize
+                        val maxDim = kotlin.math.max(options.outWidth, options.outHeight)
+                        val sampleSize = if (maxDim > maxSize) {
+                            var size = 1
+                            var dimension = maxDim
+                            while (dimension / 2 >= maxSize) {
+                                size *= 2
+                                dimension /= 2
+                            }
+                            size
+                        } else 1
+                        
+                        // Step 3: Decode actual bitmap dengan downsampling
+                        activity.contentResolver.openInputStream(uri)?.use { stream2 ->
+                            val finalOptions = BitmapFactory.Options().apply {
+                                inSampleSize = sampleSize
+                                inPreferredConfig = Bitmap.Config.ARGB_8888
+                                inJustDecodeBounds = false
+                            }
+                            BitmapFactory.decodeStream(stream2, null, finalOptions)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    /**
+     * Legacy synchronous method - deprecated, use decodeBitmapFromUriAsync instead
+     * Kept for backward compatibility
+     */
+    @Deprecated("Use decodeBitmapFromUriAsync for better performance")
     fun decodeBitmapFromUri(uri: Uri): Bitmap? {
         return try {
             val bmp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val source = ImageDecoder.createSource(activity.contentResolver, uri)
                 ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                     decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                    val maxDim = max(info.size.width, info.size.height)
+                    val maxDim = kotlin.math.max(info.size.width, info.size.height)
                     if (maxDim > 2048) {
                         decoder.setTargetSampleSize(maxDim / 2048)
                     }
