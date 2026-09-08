@@ -647,6 +647,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     private fun initializeAuthenticTopBar() {
         val top = binding.topBarInclude
 
+        // Apply stylish Impact font to FlyerPix badge
+        val badgeTypeface = android.graphics.Typeface.createFromAsset(assets, "fonts/impact.ttf")
+        top.tvPixelLabBadge.typeface = badgeTypeface
+
         top.btnTopAdd.setOnClickListener { v ->
             showTopAddMenu(v)
         }

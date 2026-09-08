@@ -87,8 +87,9 @@
             android:background="@drawable/bg_pixellab_badge"
             android:text="FlyerPix"
             android:textColor="@android:color/white"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.05" />
 
         <!-- Text Edit Mode: Edit Text Button (hidden by default) -->
         <ImageButton
