@@ -33,6 +33,7 @@ class FontController(
 
     private lateinit var fontPickerAdapter: FontPickerAdapter
     private var customFontLauncher: ActivityResultLauncher<String>? = null
+    private var folderFontLauncher: ActivityResultLauncher<Uri?>? = null
     private var fontDialog: Dialog? = null
     private var dialogPreview: android.widget.TextView? = null
     private var dialogRefresh: (() -> Unit)? = null
@@ -52,6 +53,13 @@ class FontController(
      */
     fun setCustomFontLauncher(launcher: ActivityResultLauncher<String>) {
         customFontLauncher = launcher
+    }
+
+    /**
+     * Set folder font launcher (OpenDocumentTree) dari Activity.
+     */
+    fun setFolderFontLauncher(launcher: ActivityResultLauncher<Uri?>) {
+        folderFontLauncher = launcher
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -163,6 +171,7 @@ class FontController(
             selectTab(it, { font -> FontManager.getRecentFonts().any { recent -> recent.name == font.name } }, "Recent")
         }
         dialogBinding.btnAddCustomFont.setOnClickListener { openCustomFontPicker() }
+        dialogBinding.btnAddCustomFontFolder.setOnClickListener { openFolderFontPicker() }
         dialogBinding.btnFontCancel.setOnClickListener {
             textLayer.typeface = originalTypeface
             pixelCanvasView.invalidate()
@@ -201,6 +210,9 @@ class FontController(
         binding.textPropertyPanelInclude.fontPanel.btnAddCustomFont.setOnClickListener {
             openCustomFontPicker()
         }
+        binding.textPropertyPanelInclude.fontPanel.btnAddCustomFontFolder.setOnClickListener {
+            openFolderFontPicker()
+        }
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -208,36 +220,72 @@ class FontController(
     // ────────────────────────────────────────────────────────────────────────
 
     /**
-     * Membuka file picker untuk memilih font custom (.ttf atau .otf).
+     * Membuka file picker untuk memilih satu atau lebih font custom (.ttf atau .otf).
      */
     private fun openCustomFontPicker() {
         customFontLauncher?.launch("font/*")
     }
 
     /**
-     * Memproses font custom yang dipilih dari file picker.
+     * Membuka folder picker (OpenDocumentTree) untuk mengimpor seluruh font dalam folder.
+     */
+    private fun openFolderFontPicker() {
+        folderFontLauncher?.launch(null)
+    }
+
+    /**
+     * Memproses satu atau lebih font custom yang dipilih dari file picker.
      * Method ini dipanggil dari Activity setelah customFontLauncher mengembalikan hasil.
      */
-    fun handleCustomFontResult(uri: Uri) {
-        val fontItem = FontManager.loadFontFromUri(activity, uri)
-        
-        if (fontItem != null) {
-            // Update adapter dengan daftar font terbaru
-            fontPickerAdapter.updateFonts(FontManager.getFonts())
-            dialogRefresh?.invoke()
-            fontPickerAdapter.setSelectedFont(fontItem.name)
-
-            // Terapkan langsung ke layer teks aktif jika ada
-            val selectedLayer = pixelCanvasView.selectedLayer as? TextLayer
-            if (selectedLayer != null) {
-                applyFont(selectedLayer, fontItem)
-            }
-            FontManager.recordRecent(activity, fontItem.name)
-            dialogPreview?.typeface = fontItem.typeface
-
-            showSnackbar("Font '${fontItem.name}' berhasil ditambahkan ke 'My Fonts'!")
+    fun handleCustomFontResults(uris: List<Uri>) {
+        val imported = FontManager.loadFontsFromUris(activity, uris)
+        onFontsImported(imported)
+        if (imported.isNotEmpty()) {
+            val last = imported.last()
+            fontPickerAdapter.setSelectedFont(last.name)
+            applyFontToSelectedLayer(last)
+            showSnackbar(
+                if (imported.size > 1) {
+                    "${imported.size} font berhasil ditambahkan ke 'My Fonts'!"
+                } else {
+                    "Font '${last.name}' berhasil ditambahkan ke 'My Fonts'!"
+                }
+            )
         } else {
             showSnackbar("Gagal memuat font. Pastikan file berformat .ttf atau .otf.")
+        }
+    }
+
+    /**
+     * Memproses seluruh font .ttf / .otf dalam folder yang dipilih.
+     * Nama font hasil import diberi prefix nama folder (mis. "FolderX - FontY").
+     */
+    fun handleFolderFontResult(folderUri: Uri) {
+        val imported = FontManager.loadFontsFromFolder(activity, folderUri)
+        if (imported > 0) {
+            onFontsImported(emptyList())
+            showSnackbar("$imported font berhasil diimpor dari folder ke 'My Fonts'!")
+        } else {
+            showSnackbar("Tidak ada font .ttf/.otf ditemukan di folder tersebut.")
+        }
+    }
+
+    /**
+     * Menyinkronkan UI (adapter + dialog) setelah sejumlah font berhasil diimpor.
+     */
+    private fun onFontsImported(imported: List<FontItem>) {
+        fontPickerAdapter.updateFonts(FontManager.getFonts())
+        dialogRefresh?.invoke()
+        if (imported.isNotEmpty()) {
+            FontManager.recordRecent(activity, imported.last().name)
+            dialogPreview?.typeface = imported.last().typeface
+        }
+    }
+
+    private fun applyFontToSelectedLayer(fontItem: FontItem) {
+        val selectedLayer = pixelCanvasView.selectedLayer as? TextLayer
+        if (selectedLayer != null) {
+            applyFont(selectedLayer, fontItem)
         }
     }
 

@@ -65,6 +65,7 @@
         android:layout_marginTop="6dp"
         android:layout_gravity="center_horizontal"
         android:text="#FFFFFFFF"
+        android:textColor="#1A1A2E"
         android:textAppearance="?attr/textAppearanceCaption"
         android:textStyle="bold" />
 </LinearLayout>

@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Typeface
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.documentfile.provider.DocumentFile
 import java.io.File
 import java.io.FileOutputStream
 
@@ -93,7 +94,59 @@ object FontManager {
      * @param uri URI file font yang dipilih dari SAF (Storage Access Framework)
      * @return [FontItem] jika berhasil dimuat, atau null jika gagal
      */
-    fun loadFontFromUri(context: Context, uri: Uri): FontItem? {
+    fun loadFontFromUri(context: Context, uri: Uri): FontItem? = importFontFromUri(context, uri, null)
+
+    /**
+     * Membaca dan membuat Typeface dari beberapa URI file .ttf / .otf sekaligus (multi-file),
+     * menyalinkan masing-masing ke internal storage, dan menyimpannya ke kategori "My Fonts".
+     *
+     * @param context Context aplikasi
+     * @param uris Daftar URI file font yang dipilih dari SAF
+     * @return Daftar [FontItem] yang berhasil dimuat (yang gagal dilewati)
+     */
+    fun loadFontsFromUris(context: Context, uris: List<Uri>): List<FontItem> {
+        val imported = mutableListOf<FontItem>()
+        for (uri in uris) {
+            importFontFromUri(context, uri, null)?.let { imported.add(it) }
+        }
+        return imported
+    }
+
+    /**
+     * Mengimpor seluruh font .ttf / .otf dari sebuah folder yang dipilih melalui
+     * Storage Access Framework (OpenDocumentTree). Setiap font diberi display name
+     * ber-prefix nama folder (mis. "FolderX - FontY") dan dikategorikan "My Fonts".
+     *
+     * @param context Context aplikasi
+     * @param folderUri URI folder (persisten) dari SAF
+     * @return Jumlah font yang berhasil diimpor
+     */
+    fun loadFontsFromFolder(context: Context, folderUri: Uri): Int {
+        val tree = DocumentFile.fromTreeUri(context, folderUri) ?: return 0
+        val folderName = tree.name ?: "Folder"
+        var imported = 0
+        for (doc in tree.listFiles()) {
+            if (!doc.isFile) continue
+            val name = doc.name ?: continue
+            val extension = name.substringAfterLast('.', "").lowercase()
+            if (extension !in setOf("ttf", "otf")) continue
+            if (importFontFromUri(context, doc.uri, "$folderName - ") != null) {
+                imported++
+            }
+        }
+        return imported
+    }
+
+    /**
+     * Implementasi inti impor satu file font (dipakai oleh import tunggal, multi-file, dan folder).
+     *
+     * @param namePrefix Jika tidak null, ditambahkan ke depan display name (untuk import folder).
+     */
+    private fun importFontFromUri(
+        context: Context,
+        uri: Uri,
+        namePrefix: String?
+    ): FontItem? {
         val sourceName = queryFileName(context, uri)
         val extension = sourceName?.substringAfterLast('.', "")?.lowercase()
         if (extension !in setOf("ttf", "otf")) return null
@@ -114,7 +167,7 @@ object FontManager {
             } ?: return null
 
             val typeface = Typeface.createFromFile(destFile)
-            val displayName = fileName.substringBeforeLast(".")
+            val displayName = (namePrefix ?: "") + fileName.substringBeforeLast(".")
                 .replace("_", " ")
                 .replace("-", " ")
                 .split(" ")

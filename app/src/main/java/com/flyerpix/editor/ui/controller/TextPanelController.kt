@@ -2507,7 +2507,8 @@ private fun registerTextPanels() {
                             layer.textureEnabled = false
                         }
                         b.tvColorHex.text = String.format(Locale.US, "#%08X", c)
-                        b.btnColorPicker.iconTint = android.content.res.ColorStateList.valueOf(c)
+                        b.tvColorHex.setTextColor(0xFF1A1A2E.toInt())
+                        b.btnColorPicker.iconTint = android.content.res.ColorStateList.valueOf(0xFF616161.toInt())
                         pixelCanvasView.invalidate()
                     }
                 }
@@ -2524,7 +2525,8 @@ private fun registerTextPanels() {
             prevListener?.invoke(layer)
             if (layer is com.flyerpix.editor.canvas.model.TextLayer) {
                 b.tvColorHex.text = String.format(Locale.US, "#%08X", layer.textColor)
-                b.btnColorPicker.iconTint = android.content.res.ColorStateList.valueOf(layer.textColor)
+                b.tvColorHex.setTextColor(0xFF1A1A2E.toInt())
+                b.btnColorPicker.iconTint = android.content.res.ColorStateList.valueOf(0xFF616161.toInt())
             }
         }
     }

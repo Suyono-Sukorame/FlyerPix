@@ -144,6 +144,15 @@
         android:paddingHorizontal="12dp">
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAddCustomFontFolder"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="+ Folder Font"
+            android:textColor="#1769FF"
+            android:textSize="11sp" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAddCustomFont"
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"

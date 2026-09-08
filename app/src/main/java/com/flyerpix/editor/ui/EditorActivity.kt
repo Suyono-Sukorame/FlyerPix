@@ -94,9 +94,19 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         }
     }
 
-    private val customFontLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+    private val customFontLauncher = registerForActivityResult(
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri>? ->
+        if (!uris.isNullOrEmpty()) {
+            fontController.handleCustomFontResults(uris)
+        }
+    }
+
+    private val folderFontLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
         if (uri != null) {
-            fontController.handleCustomFontResult(uri)
+            fontController.handleFolderFontResult(uri)
         }
     }
 
@@ -319,6 +329,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         )
         fontController.initialize()
         fontController.setCustomFontLauncher(customFontLauncher)
+        fontController.setFolderFontLauncher(folderFontLauncher)
 
         // Canvas Menu Controller - Mengelola menu canvas (background, size, dll)
         canvasMenuController = CanvasMenuController(
