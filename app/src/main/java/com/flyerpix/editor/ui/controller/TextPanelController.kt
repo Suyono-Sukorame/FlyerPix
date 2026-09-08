@@ -2289,7 +2289,7 @@ private fun registerTextPanels() {
                 gravity = android.view.Gravity.CENTER
                 isClickable = true
                 isFocusable = true
-                setBackgroundResource(R.drawable.bg_text_tool_item)
+                setBackgroundResource(R.drawable.bg_panel_tool_item)
                 setPadding(
                     (6 * density).toInt(), (6 * density).toInt(),
                     (6 * density).toInt(), (4 * density).toInt()

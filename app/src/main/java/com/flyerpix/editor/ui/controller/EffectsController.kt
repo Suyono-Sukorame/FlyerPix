@@ -33,8 +33,9 @@ class EffectsController(
         const val TOOL_EFFECTS  = "effects_effects"
         const val TOOL_BLUR     = "effects_blur"
 
-        const val COLOR_ACTIVE = 0xFF18C8F5.toInt()
-        const val COLOR_INACTIVE = 0xFF5F6B7A.toInt()
+        // Diseragamkan dengan Text dan Object: biru brand #1769FF (sebelumnya cyan #18C8F5)
+        const val COLOR_ACTIVE   = 0xFF1769FF.toInt()
+        const val COLOR_INACTIVE = 0xFF616161.toInt()
     }
 
     private val toolItems = LinkedHashMap<String, ViewGroup>()
@@ -76,7 +77,7 @@ class EffectsController(
                 orientation = LinearLayout.VERTICAL
                 gravity = android.view.Gravity.CENTER
                 isClickable = true; isFocusable = true
-                setBackgroundResource(R.drawable.bg_text_tool_item)
+                setBackgroundResource(R.drawable.bg_panel_tool_item)
                 setPadding((6*density).toInt(), (6*density).toInt(), (6*density).toInt(), (4*density).toInt())
                 setOnClickListener { onToolClicked(spec.tag) }
             }

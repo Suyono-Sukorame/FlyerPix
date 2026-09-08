@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Unified tool item background selector.
+  Digunakan oleh SEMUA panel tool strip: Text, Object, Canvas, Effect.
+  Menggantikan bg_text_tool_item dan bg_object_tool_item yang berbeda warnanya.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Terpilih / aktif: highlight biru brand yang konsisten -->
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#E8F0FE" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <!-- Sedang ditekan / ripple -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#DDEBFF" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <!-- Default: transparan -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+</selector>
