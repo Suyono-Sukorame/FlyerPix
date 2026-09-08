@@ -13,6 +13,7 @@
         android:id="@+id/topBarRow1"
         android:layout_width="match_parent"
         android:layout_height="48dp"
+        android:background="@color/header_primary"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="4dp">
@@ -73,7 +74,7 @@
         android:id="@+id/topBarRow2"
         android:layout_width="match_parent"
         android:layout_height="40dp"
-        android:background="@color/brand_violet"
+        android:background="@color/header_secondary"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="6dp">

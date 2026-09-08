@@ -50,4 +50,12 @@
     <color name="panel_text_secondary">#5F6B7A</color>
     <color name="panel_icon_tint">#454F63</color>
     <color name="panel_icon_active">#1769FF</color>
+
+    <!-- ===== Navigation Bar Colors ===== -->
+    <color name="nav_active">#1769FF</color>        <!-- Brand Blue - active item -->
+    <color name="nav_inactive">#B0B0B0</color>      <!-- Light Gray - inactive items -->
+
+    <!-- ===== Header Bar Colors ===== -->
+    <color name="header_primary">#1769FF</color>    <!-- Brand Blue - primary actions (top row) -->
+    <color name="header_secondary">#4A8EFF</color>  <!-- Light Blue - secondary actions (row 2) -->
 </resources>

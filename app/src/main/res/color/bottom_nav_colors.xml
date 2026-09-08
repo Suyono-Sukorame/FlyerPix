@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- FlyerPix Cyan -->
-    <item android:color="#18C8F5" android:state_checked="true" />
-    <!-- Gray 500 - unchanged -->
-    <item android:color="#9E9E9E" />
+    <!-- Brand Blue (Active) -->
+    <item android:color="@color/nav_active" android:state_checked="true" />
+    <!-- Light Gray (Inactive) -->
+    <item android:color="@color/nav_inactive" />
 </selector>
