@@ -48,6 +48,13 @@
             android:paddingHorizontal="8dp" />
     </LinearLayout>
 
+    <!-- Compose POC host for Padding controls -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/composePaddingControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone" />
+
     <!-- Atas & Bawah sebaris (2 kolom) -->
     <LinearLayout
         android:layout_width="match_parent"

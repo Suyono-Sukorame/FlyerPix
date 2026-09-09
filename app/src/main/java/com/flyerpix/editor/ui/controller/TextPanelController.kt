@@ -31,6 +31,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.max
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import com.flyerpix.editor.ui.compose.ColorControls
 
 
 /**
@@ -100,6 +103,9 @@ class TextPanelController(
     private var syncRotateUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncOpacityUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncColorUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
+    private var colorComposeHost: androidx.compose.ui.platform.ComposeView? = null
+    private var strokeComposeHost: androidx.compose.ui.platform.ComposeView? = null
+    private var paddingComposeHost: androidx.compose.ui.platform.ComposeView? = null
     private var syncPaddingUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncGradientUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncSizeUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
@@ -3353,10 +3359,29 @@ private fun registerTextPanels() {
 
         buildSwatches()
 
+        // Keep Compose host reference to update content when selected layer changes
+        val composeHost = panel.findViewById<ComposeView>(R.id.composeColorControls)
+        colorComposeHost = composeHost
+
         syncColorUIHook = { layer ->
             panel.visibility = View.VISIBLE
             setupColorPreview(layer)
+            // update Compose content to reflect current layer color
+            composeHost?.setContent {
+                ColorControls(
+                    initialColor = layer?.textColor ?: Color.WHITE,
+                    onColorSelected = { color -> setSolidColor(color) },
+                    onOpenColorPicker = { openColorPicker() },
+                    onOpenGradient = { selectTextTool(TOOL_GRADIENT) }
+                )
+            }
+            composeHost?.visibility = View.VISIBLE
+            panel.visibility = View.GONE
         }
+        // Ensure ViewCompositionStrategy is set
+        try {
+            composeHost?.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        } catch (_: Exception) {}
     }
 
     // ─── Panel: Stroke / Outline ───────────────────────────────────────────
@@ -3397,6 +3422,19 @@ private fun registerTextPanels() {
                 )
         }
 
+        fun applyStrokeChange(actionName: String, block: (com.flyerpix.editor.canvas.model.TextLayer) -> Unit) {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (layer == null || layer.isLocked) {
+                showSnackbar("Select a text layer first")
+                return
+            }
+            val before = pixelCanvasView.captureCurrentState(actionName)
+            block(layer)
+            pixelCanvasView.invalidate()
+            pixelCanvasView.recordAction(actionName, before)
+            onCanvasChanged()
+        }
+
         fun sync(layer: com.flyerpix.editor.canvas.model.TextLayer) {
             panel.visibility = View.VISIBLE
             syncing = true
@@ -3411,22 +3449,56 @@ private fun registerTextPanels() {
             tvWidth.text = String.format(Locale.US, "Width: %.1f px", layer.strokeWidth)
             tvOpacity.text = "Opacity: ${(alpha * 100 / 255)}%"
             if (layer.strokeWidth > 0f) lastStrokeWidth = layer.strokeWidth
-        }
-
-        fun applyStrokeChange(actionName: String, block: (com.flyerpix.editor.canvas.model.TextLayer) -> Unit) {
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
-            if (layer == null || layer.isLocked) {
-                showSnackbar("Select a text layer first")
-                return
-            }
-            val before = pixelCanvasView.captureCurrentState(actionName)
-            block(layer)
-            pixelCanvasView.invalidate()
-            pixelCanvasView.recordAction(actionName, before)
-            onCanvasChanged()
+            // update Compose host if present
+            try {
+                strokeComposeHost?.setContent {
+                    com.flyerpix.editor.ui.compose.StrokeControls(
+                        initialEnabled = enabled,
+                        initialWidth = layer.strokeWidth,
+                        initialOpacityPct = alpha * 100f / 255f,
+                        initialColor = layer.strokeColor,
+                        onEnabledChanged = { v ->
+                            if (v) applyStrokeChange("Enable Stroke") { tl -> tl.strokeWidth = lastStrokeWidth }
+                            else applyStrokeChange("Disable Stroke") { tl -> lastStrokeWidth = tl.strokeWidth; tl.strokeWidth = 0f }
+                        },
+                        onWidthChanged = { v -> applyStrokeChange("Change Stroke Width") { it.strokeWidth = v } },
+                        onOpacityChanged = { v -> applyStrokeChange("Change Stroke Opacity") { layer -> val a = (v * 255 / 100).toInt(); layer.strokeColor = (layer.strokeColor and 0x00FFFFFF) or (a shl 24) } },
+                        onPickColor = { openColorPicker() },
+                        onReset = { applyStrokeChange("Reset Stroke") { l -> l.strokeWidth = 0f; l.strokeColor = Color.BLACK } }
+                    )
+                }
+                strokeComposeHost?.visibility = View.VISIBLE
+                panel.visibility = View.GONE
+            } catch (_: Exception) {}
         }
 
         syncStrokeUIHook = { layer -> sync(layer) }
+
+        // Compose host setup
+        try {
+            val ch = panel.findViewById<androidx.compose.ui.platform.ComposeView>(R.id.composeStrokeControls)
+            strokeComposeHost = ch
+            ch?.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            // initialize content with current selection
+            val cur = (pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer)
+            if (cur != null) {
+                ch?.setContent {
+                    com.flyerpix.editor.ui.compose.StrokeControls(
+                        initialEnabled = cur.strokeWidth > 0f,
+                        initialWidth = cur.strokeWidth,
+                        initialOpacityPct = ((cur.strokeColor ushr 24) and 0xFF) * 100f / 255f,
+                        initialColor = cur.strokeColor,
+                        onEnabledChanged = { v -> if (v) applyStrokeChange("Enable Stroke") { it.strokeWidth = lastStrokeWidth } else applyStrokeChange("Disable Stroke") { lastStrokeWidth = it.strokeWidth; it.strokeWidth = 0f } },
+                        onWidthChanged = { v -> applyStrokeChange("Change Stroke Width") { it.strokeWidth = v } },
+                        onOpacityChanged = { v -> applyStrokeChange("Change Stroke Opacity") { layer -> val a = (v * 255 / 100).toInt(); layer.strokeColor = (layer.strokeColor and 0x00FFFFFF) or (a shl 24) } },
+                        onPickColor = { openColorPicker() },
+                        onReset = { applyStrokeChange("Reset Stroke") { l -> l.strokeWidth = 0f; l.strokeColor = Color.BLACK } }
+                    )
+                }
+                ch?.visibility = View.VISIBLE
+                panel.visibility = View.GONE
+            }
+        } catch (_: Exception) {}
 
         // Terima hasil pemilihan Stroke Color dari ColorPickerDialog
         (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
@@ -3598,6 +3670,34 @@ private fun registerTextPanels() {
         }
 
         syncPaddingUIHook = { layer -> syncUI(layer) }
+
+        // Compose host setup for Padding controls
+        try {
+            val ch = panel.findViewById<androidx.compose.ui.platform.ComposeView>(R.id.composePaddingControls)
+            paddingComposeHost = ch
+            ch?.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            val cur = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (cur != null) {
+                ch?.setContent {
+                    com.flyerpix.editor.ui.compose.PaddingControls(
+                        linked = cur.paddingTop == cur.paddingBottom && cur.paddingLeft == cur.paddingRight && cur.paddingTop == cur.paddingLeft,
+                        top = cur.paddingTop,
+                        bottom = cur.paddingBottom,
+                        left = cur.paddingLeft,
+                        right = cur.paddingRight,
+                        onLinkedChanged = { linked -> ch.post { b.chkPaddingLinked.isChecked = linked } },
+                        onTopChanged = { v -> applyToTextLayer { it.paddingTop = v } },
+                        onBottomChanged = { v -> applyToTextLayer { it.paddingBottom = v } },
+                        onLeftChanged = { v -> applyToTextLayer { it.paddingLeft = v } },
+                        onRightChanged = { v -> applyToTextLayer { it.paddingRight = v } },
+                        onApplyAll = { v -> applyAll(v) },
+                        onReset = { ch.post { b.btnResetPadding.performClick() } }
+                    )
+                }
+                ch?.visibility = View.VISIBLE
+                panel.visibility = View.GONE
+            }
+        } catch (_: Exception) {}
     }
 
     // ─── Panel: Background Teks ────────────────────────────────────────────

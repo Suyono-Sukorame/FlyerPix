@@ -6,6 +6,9 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import com.flyerpix.editor.ui.compose.ColorControls
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.canvas.model.CanvasLayer
@@ -65,6 +68,8 @@ class ObjectPanelController(
     private var effectSettingsOpen = false
     private var activeToolTag = ""
     private var toolBeforeEffect = ""
+    private var objectColorComposeHost: androidx.compose.ui.platform.ComposeView? = null
+    private var objectStrokeComposeHost: androidx.compose.ui.platform.ComposeView? = null
 
     fun isEffectSettingsOpen(): Boolean = effectSettingsOpen
 
@@ -416,6 +421,33 @@ class ObjectPanelController(
         }
         b.btnPickColor.setOnClickListener { launchFillColorPicker() }
         b.chipColorPreview.setOnClickListener { launchFillColorPicker() }
+
+        // Compose POC: host Compose ColorControls inside existing color panel
+        try {
+            val composeHost = b.root.findViewById<ComposeView>(R.id.composeColorControls)
+            objectColorComposeHost = composeHost
+            composeHost?.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            // initialize content based on current selection (if any)
+            val initial = fillColorOf(pixelCanvasView.selectedLayer ?: return)
+            composeHost?.setContent {
+                ColorControls(
+                    initialColor = initial,
+                    onColorSelected = { color -> applyToLayer { setFillColor(it, color) } },
+                    onOpenColorPicker = { launchFillColorPicker() },
+                    onOpenGradient = {
+                        val layer = pixelCanvasView.selectedLayer
+                        if (layer != null) {
+                            activeToolTag = OBJ_GRADIENT
+                            toolBeforeEffect = ""
+                            for (v in panelViews.values) v.visibility = View.GONE
+                            syncEffectUI(OBJ_GRADIENT, layer)
+                        }
+                    }
+                )
+            }
+            composeHost?.visibility = View.VISIBLE
+            b.root.visibility = View.GONE
+        } catch (_: Exception) {}
     }
 
     private fun launchFillColorPicker() {
@@ -431,6 +463,27 @@ class ObjectPanelController(
         val color = fillColorOf(layer)
         b.chipColorPreview.setCardBackgroundColor(color)
         b.tvColorValue.text = String.format(Locale.US, "#%08X", color)
+        // update Compose content when layer changes
+        try {
+            objectColorComposeHost?.setContent {
+                ColorControls(
+                    initialColor = color,
+                    onColorSelected = { c -> applyToLayer { setFillColor(it, c) } },
+                    onOpenColorPicker = { launchFillColorPicker() },
+                    onOpenGradient = {
+                        val l = pixelCanvasView.selectedLayer
+                        if (l != null) {
+                            activeToolTag = OBJ_GRADIENT
+                            toolBeforeEffect = ""
+                            for (v in panelViews.values) v.visibility = View.GONE
+                            syncEffectUI(OBJ_GRADIENT, l)
+                        }
+                    }
+                )
+            }
+            objectColorComposeHost?.visibility = View.VISIBLE
+            b.root.visibility = View.GONE
+        } catch (_: Exception) {}
         b.btnColorGradient.text = if (layer.gradientEnabled) "Gradient (Active)" else "Gradient"
     }
 
@@ -464,6 +517,24 @@ class ObjectPanelController(
             b.tvStrokeColorValue.text = String.format(Locale.US, "#%08X", strokeColorOf(l))
             b.switchStrokeEnabled.isChecked = strokeWidthOf(l) > 0f
             b.strokeSliderGroup.visibility = if (strokeWidthOf(l) > 0f) View.VISIBLE else View.GONE
+            // update compose host if present
+            try {
+                objectStrokeComposeHost?.setContent {
+                    com.flyerpix.editor.ui.compose.StrokeControls(
+                        initialEnabled = strokeWidthOf(l) > 0f,
+                        initialWidth = strokeWidthOf(l),
+                        initialOpacityPct = strokeOpacityPercent(l).toFloat(),
+                        initialColor = strokeColorOf(l),
+                        onEnabledChanged = { v -> if (v) applyToLayer { setStrokeWidth(it, 4f) } else applyToLayer { setStrokeWidth(it, 0f) } },
+                        onWidthChanged = { v -> applyToLayer { setStrokeWidth(it, v) } },
+                        onOpacityChanged = { v -> applyToLayer { l2 -> val a = (v * 255 / 100).toInt(); setStrokeColor(l2, (strokeColorOf(l2) and 0x00FFFFFF) or (a shl 24)) } },
+                        onPickColor = { launchStrokeColorPicker() },
+                        onReset = { applyToLayer { setStrokeWidth(it, 0f); setStrokeColor(it, Color.BLACK) } }
+                    )
+                }
+                objectStrokeComposeHost?.visibility = View.VISIBLE
+                b.root.visibility = View.GONE
+            } catch (_: Exception) {}
         }
 
         b.sliderStrokeWidth.addOnChangeListener { _, v, _ -> applyToLayer { setStrokeWidth(it, v) }; syncStrokeLabels() }
@@ -476,6 +547,30 @@ class ObjectPanelController(
         b.btnResetStroke.setOnClickListener { applyToLayer { setStrokeWidth(it, 0f) }; syncStrokeLabels() }
         b.btnPickStrokeColor.setOnClickListener { launchStrokeColorPicker() }
         b.chipStrokeColorPreview.setOnClickListener { launchStrokeColorPicker() }
+        // Compose host setup for stroke controls
+        try {
+            val ch = b.root.findViewById<androidx.compose.ui.platform.ComposeView>(com.flyerpix.editor.R.id.composeStrokeControls)
+            objectStrokeComposeHost = ch
+            ch?.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            val l = pixelCanvasView.selectedLayer
+            if (l != null) {
+                ch?.setContent {
+                    com.flyerpix.editor.ui.compose.StrokeControls(
+                        initialEnabled = strokeWidthOf(l) > 0f,
+                        initialWidth = strokeWidthOf(l),
+                        initialOpacityPct = strokeOpacityPercent(l).toFloat(),
+                        initialColor = strokeColorOf(l),
+                        onEnabledChanged = { v -> if (v) applyToLayer { setStrokeWidth(it, 4f) } else applyToLayer { setStrokeWidth(it, 0f) } },
+                        onWidthChanged = { v -> applyToLayer { setStrokeWidth(it, v) } },
+                        onOpacityChanged = { v -> applyToLayer { l2 -> val a = (v * 255 / 100).toInt(); setStrokeColor(l2, (strokeColorOf(l2) and 0x00FFFFFF) or (a shl 24)) } },
+                        onPickColor = { launchStrokeColorPicker() },
+                        onReset = { applyToLayer { setStrokeWidth(it, 0f); setStrokeColor(it, Color.BLACK) } }
+                    )
+                }
+                ch?.visibility = View.VISIBLE
+                b.root.visibility = View.GONE
+            }
+        } catch (_: Exception) {}
     }
 
     private fun strokeColorOf(l: CanvasLayer): Int = when (l) {

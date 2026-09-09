@@ -983,6 +983,16 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 
+                        <androidx.compose.ui.platform.ComposeView
+                                android:id="@+id/composeLayerList"
+                                android:layout_width="match_parent"
+                                android:layout_height="0dp"
+                                android:visibility="gone"
+                                app:layout_constraintTop_toTopOf="parent"
+                                app:layout_constraintBottom_toTopOf="@+id/layoutLayerFooter"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintEnd_toEndOf="parent" />
+
             <!-- Bilah Kontrol Bawah (Footer) Panel Layer (Prompt Revisi 4) -->
             <FrameLayout
                 android:id="@+id/layoutLayerFooter"

@@ -3,14 +3,14 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdk 33
+    compileSdk 34
     ndkVersion "27.0.12077973"
     namespace 'com.flyerpix.editor'
     
     defaultConfig {
         applicationId "com.flyerpix.editor"
         minSdkVersion 23
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode 3
         versionName "0.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -51,6 +51,10 @@ android {
     }
     buildFeatures {
         viewBinding true
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.3'
     }
 
     testOptions {
@@ -75,4 +79,10 @@ dependencies {
     implementation 'com.thebluealliance:spectrum:0.7.1'
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'com.google.zxing:core:3.5.2'
+    // Jetpack Compose (POC)
+    implementation 'androidx.activity:activity-compose:1.7.2'
+    implementation 'androidx.compose.ui:ui:1.5.3'
+    implementation 'androidx.compose.material:material:1.5.3'
+    implementation 'androidx.compose.ui:ui-tooling-preview:1.5.3'
+    debugImplementation 'androidx.compose.ui:ui-tooling:1.5.3'
 }

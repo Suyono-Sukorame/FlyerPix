@@ -44,6 +44,7 @@ class EditableImageView(context: Context, attrs: AttributeSet) : ImageFilterView
         myContext = MyContext(this)
         val gestureListener = GestureListener()
         gestureDetector = GestureDetector(getContext(), gestureListener)
+        gestureDetector.setOnDoubleTapListener(gestureListener)
         paint.strokeWidth = STROKE_WIDTH
         scaleDetector = ScaleGestureDetector(getContext(), ScaleListener())
     }
@@ -243,7 +244,7 @@ class EditableImageView(context: Context, attrs: AttributeSet) : ImageFilterView
             return true
         }
 
-        override fun onScroll(e1: MotionEvent, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+        override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
             if (!scaleDetector.isInProgress &&
                 ((editMode == EditorTool.FIGURE && figureMode != Figure.LINE) || editMode == EditorTool.STICKER) &&
                 editMode != EditorTool.PAINT
