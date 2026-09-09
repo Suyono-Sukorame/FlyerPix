@@ -448,6 +448,13 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         objectMenu.initialize()
         objectMenu.onDetailExpandedChanged = { setDetailExpanded(objectMenu.activeTag.isNotEmpty()) }
 
+        // Tap shape di kanvas (bukan drag) => navigasikan ke halaman Objek lalu buka Shape Settings
+        pixelCanvasView.onShapeTapRequested = { shape ->
+            binding.bottomNavigation.selectedItemId = R.id.nav_object
+            objectMenu.select(ObjectMenuController.OBJ_SHAPES)
+            shapePanelController.showShapeSettings(shape)
+        }
+
         // Object Panel Controller - Mengelola efek properti objek (Shape/Image/etc)
         objectPanelController = ObjectPanelController(
             this,
@@ -634,6 +641,11 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         if (pages.none { it.first == menuId }) return
         pages.forEach { (id, page) ->
             page.visibility = if (id == menuId) View.VISIBLE else View.GONE
+        }
+
+        // Tutup panel Shape Settings jika pindah ke halaman selain Objek
+        if (menuId != R.id.nav_object && ::shapePanelController.isInitialized) {
+            shapePanelController.hideShapeSettings()
         }
 
         textPanelController.isPageOpen = menuId == R.id.nav_text

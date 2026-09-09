@@ -82,7 +82,7 @@
     <!-- Scrollable Content Area -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:maxHeight="280dp"
         android:scrollbars="vertical"
         android:fillViewport="false">

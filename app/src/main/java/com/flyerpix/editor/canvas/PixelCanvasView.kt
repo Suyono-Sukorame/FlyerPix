@@ -150,6 +150,12 @@ class PixelCanvasView @JvmOverloads constructor(
      */
     var onLayerSelectedListener: ((CanvasLayer?) -> Unit)? = null
 
+    /**
+     * Dipanggil ketika user mengetuk (tap, bukan drag) sebuah ShapeLayer di kanvas.
+     * Dipakai untuk membuka panel pengaturan shape.
+     */
+    var onShapeTapRequested: ((ShapeLayer) -> Unit)? = null
+
     private var textEditMode = false
 
     private var canvasZoom = 1f
@@ -2267,6 +2273,15 @@ class PixelCanvasView @JvmOverloads constructor(
                         recordAction("Move / Transform", before)
                     }
                 }
+
+                // Tap (tanpa drag) pada ShapeLayer => minta buka panel pengaturan shape
+                if (event.actionMasked == MotionEvent.ACTION_UP && !hasTouchTransformed) {
+                    val selected = selectedLayer
+                    if (selected is ShapeLayer && !selected.isLocked) {
+                        onShapeTapRequested?.invoke(selected)
+                    }
+                }
+
                 touchStartState = null
                 hasTouchTransformed = false
 

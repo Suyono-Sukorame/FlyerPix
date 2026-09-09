@@ -140,7 +140,8 @@
             android:id="@+id/shapeSettingsPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom" />
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="56dp" />
 
     <!-- Halaman Objek: tool strip ikon + konten detail -->
     <LinearLayout

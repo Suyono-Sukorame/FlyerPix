@@ -172,8 +172,10 @@ class ShapePanelController(
         // Update UI dengan nilai shape saat ini
         updateUIFromShape(shape)
 
-        // Show panel
+        // Show panel, menggantikan halaman Objek agar tidak berhimpit
         binding.shapeSettingsPanel.root.visibility = View.VISIBLE
+        binding.objectMenuPanel.visibility = View.GONE
+        binding.effectSettingsInclude.root.visibility = View.GONE
 
         // Hide other panels
         hideOtherPanels()
@@ -184,6 +186,10 @@ class ShapePanelController(
      */
     fun hideShapeSettings() {
         binding.shapeSettingsPanel.root.visibility = View.GONE
+        // Kembalikan halaman Objek hanya jika masih berada di page Objek
+        if (binding.bottomNavigation.selectedItemId == R.id.nav_object) {
+            binding.objectMenuPanel.visibility = View.VISIBLE
+        }
         currentShape = null
         snapshotShape = null
     }
