@@ -137,6 +137,7 @@
     <!-- Shape Settings Panel -->
     <include
             layout="@layout/layout_shape_settings_panel"
+            android:id="@+id/shapeSettingsPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom" />

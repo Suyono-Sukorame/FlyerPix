@@ -18,7 +18,8 @@ import com.flyerpix.editor.ui.EditorActivity
 class ShapePanelController(
     private val activity: EditorActivity,
     private val binding: ActivityEditorBinding,
-    private val canvas: PixelCanvasView
+    private val canvas: PixelCanvasView,
+    private val showSnackbar: (String) -> Unit
 ) {
 
     private var currentShape: ShapeLayer? = null
@@ -29,7 +30,7 @@ class ShapePanelController(
     }
 
     private fun setupShapePanel() {
-        val panelRoot = binding.shapeSettingsPanel
+        val panelRoot = binding.shapeSettingsPanel.root
         
         // Apply Button
         panelRoot.findViewById<View>(R.id.btnApplyShape).setOnClickListener {
@@ -44,6 +45,7 @@ class ShapePanelController(
         // Corner Radius Slider
         setupSlider(
             panelRoot.findViewById(R.id.shapeCornerRadiusControl),
+            R.id.sliderLabelCorner, R.id.sliderValueCorner, R.id.sliderCorner,
             "Corner Radius",
             0f, 100f, 20f,
             onValueChange = { value ->
@@ -58,6 +60,7 @@ class ShapePanelController(
         // Opacity Slider
         setupSlider(
             panelRoot.findViewById(R.id.shapeOpacityControl),
+            R.id.sliderLabelOpacity, R.id.sliderValueOpacity, R.id.sliderOpacity,
             "Opacity",
             0f, 100f, 100f,
             onValueChange = { value ->
@@ -88,6 +91,7 @@ class ShapePanelController(
         // Stroke Width Slider
         setupSlider(
             panelRoot.findViewById(R.id.shapeStrokeWidthControl),
+            R.id.sliderLabelStroke, R.id.sliderValueStroke, R.id.sliderStroke,
             "Stroke Width",
             0f, 50f, 0f,
             onValueChange = { value ->
@@ -101,6 +105,7 @@ class ShapePanelController(
         // Stroke Opacity Slider
         setupSlider(
             panelRoot.findViewById(R.id.shapeStrokeOpacityControl),
+            R.id.sliderLabelStrokeOpacity, R.id.sliderValueStrokeOpacity, R.id.sliderStrokeOpacity,
             "Stroke Opacity",
             0f, 100f, 100f,
             onValueChange = { value ->
@@ -144,6 +149,7 @@ class ShapePanelController(
         // Blur Radius Slider
         setupSlider(
             panelRoot.findViewById(R.id.shapeBlurRadiusControl),
+            R.id.sliderLabelBlur, R.id.sliderValueBlur, R.id.sliderBlur,
             "Blur Radius",
             0f, 50f, 0f,
             onValueChange = { value ->
@@ -167,7 +173,7 @@ class ShapePanelController(
         updateUIFromShape(shape)
 
         // Show panel
-        binding.shapeSettingsPanel.visibility = View.VISIBLE
+        binding.shapeSettingsPanel.root.visibility = View.VISIBLE
 
         // Hide other panels
         hideOtherPanels()
@@ -177,28 +183,28 @@ class ShapePanelController(
      * Sembunyikan Shape Settings Panel
      */
     fun hideShapeSettings() {
-        binding.shapeSettingsPanel.visibility = View.GONE
+        binding.shapeSettingsPanel.root.visibility = View.GONE
         currentShape = null
         snapshotShape = null
     }
 
     private fun updateUIFromShape(shape: ShapeLayer) {
-        val panelRoot = binding.shapeSettingsPanel
+        val panelRoot = binding.shapeSettingsPanel.root
         
         // Corner Radius
-        setSliderValue(panelRoot.findViewById(R.id.shapeCornerRadiusControl), shape.cornerRadiusX)
+        setSliderValue(panelRoot.findViewById(R.id.shapeCornerRadiusControl), R.id.sliderValueCorner, R.id.sliderCorner, shape.cornerRadiusX)
 
         // Opacity
-        setSliderValue(panelRoot.findViewById(R.id.shapeOpacityControl), shape.opacity / 255f * 100f)
+        setSliderValue(panelRoot.findViewById(R.id.shapeOpacityControl), R.id.sliderValueOpacity, R.id.sliderOpacity, shape.opacity / 255f * 100f)
 
         // Fill Color
         updateColorPreview(panelRoot.findViewById(R.id.shapeColorPreview), shape.fillColor)
 
         // Stroke Width
-        setSliderValue(panelRoot.findViewById(R.id.shapeStrokeWidthControl), shape.strokeWidth)
+        setSliderValue(panelRoot.findViewById(R.id.shapeStrokeWidthControl), R.id.sliderValueStroke, R.id.sliderStroke, shape.strokeWidth)
 
         // Stroke Opacity
-        setSliderValue(panelRoot.findViewById(R.id.shapeStrokeOpacityControl), shape.strokeOpacity / 255f * 100f)
+        setSliderValue(panelRoot.findViewById(R.id.shapeStrokeOpacityControl), R.id.sliderValueStrokeOpacity, R.id.sliderStrokeOpacity, shape.strokeOpacity / 255f * 100f)
 
         // Stroke Color
         updateColorPreview(panelRoot.findViewById(R.id.shapeStrokeColorPreview), shape.strokeColor)
@@ -213,13 +219,13 @@ class ShapePanelController(
         panelRoot.findViewById<android.widget.RadioGroup>(R.id.rgShapeJoinStyle).check(joinRadioId)
 
         // Blur Radius
-        setSliderValue(panelRoot.findViewById(R.id.shapeBlurRadiusControl), shape.shadowRadius)
+        setSliderValue(panelRoot.findViewById(R.id.shapeBlurRadiusControl), R.id.sliderValueBlur, R.id.sliderBlur, shape.shadowRadius)
     }
 
     private fun applyShapeChanges() {
         // Changes already applied in real-time, just hide panel
         hideShapeSettings()
-        activity.showSnackbar("Shape updated")
+        showSnackbar("Shape updated")
     }
 
     private fun cancelShapeChanges() {
@@ -240,11 +246,11 @@ class ShapePanelController(
             }
         }
         hideShapeSettings()
-        activity.showSnackbar("Changes cancelled")
+        showSnackbar("Changes cancelled")
     }
 
     private fun hideOtherPanels() {
-        binding.effectSettingsPanel.visibility = View.GONE
+        binding.effectSettingsInclude.root.visibility = View.GONE
         // Add other panels to hide if needed
     }
 
@@ -254,15 +260,18 @@ class ShapePanelController(
 
     private fun setupSlider(
         controlView: View,
+        labelId: Int,
+        valueId: Int,
+        seekBarId: Int,
         label: String,
         min: Float,
         max: Float,
         initial: Float,
         onValueChange: (Float) -> Unit
     ) {
-        val labelTextView = controlView.findViewById<android.widget.TextView>(R.id.sliderLabel)
-        val valueTextView = controlView.findViewById<android.widget.TextView>(R.id.sliderValue)
-        val seekBar = controlView.findViewById<SeekBar>(R.id.slider)
+        val labelTextView = controlView.findViewById<android.widget.TextView>(labelId)
+        val valueTextView = controlView.findViewById<android.widget.TextView>(valueId)
+        val seekBar = controlView.findViewById<SeekBar>(seekBarId)
 
         labelTextView.text = label
         seekBar.max = ((max - min) * 10).toInt() // 0.1 precision
@@ -283,9 +292,9 @@ class ShapePanelController(
         })
     }
 
-    private fun setSliderValue(controlView: View, value: Float) {
-        val seekBar = controlView.findViewById<SeekBar>(R.id.slider)
-        val valueTextView = controlView.findViewById<android.widget.TextView>(R.id.sliderValue)
+    private fun setSliderValue(controlView: View, valueId: Int, seekBarId: Int, value: Float) {
+        val seekBar = controlView.findViewById<SeekBar>(seekBarId)
+        val valueTextView = controlView.findViewById<android.widget.TextView>(valueId)
         
         // Assume slider was set up with specific min/max, we need to calculate progress
         // For simplicity, we'll just set the text and progress based on common ranges

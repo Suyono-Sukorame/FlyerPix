@@ -421,7 +421,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         shapePanelController = ShapePanelController(
             this,
             binding,
-            pixelCanvasView
+            pixelCanvasView,
+            { showSnackbar(it) }
         )
 
         // Layer Panel Controller
