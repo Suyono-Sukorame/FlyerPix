@@ -25,7 +25,6 @@ class LayerPanelController(
     private var isBatchMode = false
     private lateinit var adapter: AuthenticLayerAdapter
     private var itemTouchHelper: ItemTouchHelper? = null
-    private var layerComposeHost: androidx.compose.ui.platform.ComposeView? = null
 
     fun initialize() {
         adapter = AuthenticLayerAdapter(
@@ -70,13 +69,6 @@ class LayerPanelController(
             layoutManager = LinearLayoutManager(binding.root.context)
             adapter = this@LayerPanelController.adapter
         }
-
-        // Compose host (POC) for layer list, shown if available. Hidden by default.
-        try {
-            val ch = binding.root.findViewById<androidx.compose.ui.platform.ComposeView>(R.id.composeLayerList)
-            layerComposeHost = ch
-            ch?.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        } catch (_: Exception) {}
 
         setupDragReorder()
         setupFooterButtons()
@@ -297,71 +289,6 @@ class LayerPanelController(
         overlay.alpha = 0f
         overlay.visibility = View.VISIBLE
         overlay.animate().alpha(1f).setDuration(200).start()
-
-        // If compose host present, render compose layer list and show it instead of RecyclerView
-        try {
-            val ch = layerComposeHost
-            if (ch != null) {
-                val showCompose = true
-                if (showCompose) {
-                    binding.rvAuthenticLayers.visibility = View.GONE
-                    ch.visibility = View.VISIBLE
-                    ch.setContent {
-                        val layers = canvas.layers.asReversed()
-                        val items = layers.map { l -> com.flyerpix.editor.ui.compose.LayerItem(l.id, when(l) {
-                            is com.flyerpix.editor.canvas.model.TextLayer -> if ((l as com.flyerpix.editor.canvas.model.TextLayer).text.isNotBlank()) (l as com.flyerpix.editor.canvas.model.TextLayer).text else "Empty Text"
-                            is com.flyerpix.editor.canvas.model.ImageLayer -> "Image"
-                            is com.flyerpix.editor.canvas.model.ShapeLayer -> "Shape"
-                            else -> "Layer"
-                        }, l.isVisible, l.isLocked) }
-
-                        com.flyerpix.editor.ui.compose.LayerList(
-                            items = items,
-                            onMoveUp = { item ->
-                                val l = canvas.layers.find { it.id == item.id } ?: return@LayerList
-                                val idx = canvas.layers.indexOf(l)
-                                if (idx < canvas.layers.size - 1) {
-                                    val snap = canvas.captureCurrentState("Change Layer Order")
-                                    java.util.Collections.swap(canvas.layers, idx, idx + 1)
-                                    canvas.recordAction("Change Layer Order", snap)
-                                    adapter.submitLayers(canvas.layers, canvas.selectedLayer)
-                                }
-                            },
-                            onMoveDown = { item ->
-                                val l = canvas.layers.find { it.id == item.id } ?: return@LayerList
-                                val idx = canvas.layers.indexOf(l)
-                                if (idx > 0) {
-                                    val snap = canvas.captureCurrentState("Change Layer Order")
-                                    java.util.Collections.swap(canvas.layers, idx, idx - 1)
-                                    canvas.recordAction("Change Layer Order", snap)
-                                    adapter.submitLayers(canvas.layers, canvas.selectedLayer)
-                                }
-                            },
-                            onToggleVisibility = { item ->
-                                val l = canvas.layers.find { it.id == item.id } ?: return@LayerList
-                                canvas.runRecordedAction(if (l.isVisible) "Hide Layer" else "Show Layer") { l.isVisible = !l.isVisible }
-                                adapter.submitLayers(canvas.layers, canvas.selectedLayer)
-                            },
-                            onToggleLock = { item ->
-                                val l = canvas.layers.find { it.id == item.id } ?: return@LayerList
-                                canvas.runRecordedAction(if (l.isLocked) "Unlock Layer" else "Lock Layer") { l.isLocked = !l.isLocked }
-                                adapter.submitLayers(canvas.layers, canvas.selectedLayer)
-                            },
-                            onSelect = { item ->
-                                val l = canvas.layers.find { it.id == item.id } ?: return@LayerList
-                                canvas.selectedLayer = l
-                                adapter.submitLayers(canvas.layers, canvas.selectedLayer)
-                            },
-                            onDelete = { item ->
-                                val l = canvas.layers.find { it.id == item.id } ?: return@LayerList
-                                canvas.layers.remove(l)
-                                adapter.submitLayers(canvas.layers, canvas.selectedLayer)
-                            }
-                        )
-                    }
-                }
-            }
-        } catch (_: Exception) {}
     }
 
     fun close() {
