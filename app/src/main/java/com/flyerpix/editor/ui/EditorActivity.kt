@@ -60,6 +60,7 @@ import com.flyerpix.editor.ui.controller.EffectsController
 import com.flyerpix.editor.ui.controller.FontController
 import com.flyerpix.editor.ui.controller.TemplateController
 import com.flyerpix.editor.ui.controller.CanvasToolsController
+import com.flyerpix.editor.ui.controller.ShapePanelController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
@@ -85,6 +86,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     private lateinit var fontController: FontController
     private lateinit var templateController: TemplateController
     private lateinit var canvasToolsController: CanvasToolsController
+    private lateinit var shapePanelController: ShapePanelController
 
 
     private val texturePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -415,6 +417,13 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         // ke menu Text tidak menimpa menu Presets saat pertama membuka aplikasi.
         pixelCanvasView.post { textPanelController.finishInitialization() }
 
+        // Shape Panel Controller - Mengelola Shape Settings panel (Initialize first)
+        shapePanelController = ShapePanelController(
+            this,
+            binding,
+            pixelCanvasView
+        )
+
         // Layer Panel Controller
         layerPanel = LayerPanelController(
             binding,
@@ -432,7 +441,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             { showSnackbar(it) },
             onGalleryRequested = { preEditImageLauncher.launch("image/*") },
             onCameraRequested = { checkCameraPermissionForBackground() },
-            onPanelChanged = { updateCanvasCardMargin() }
+            onPanelChanged = { updateCanvasCardMargin() },
+            onShapeCreated = { shape -> shapePanelController.showShapeSettings(shape) }
         )
         objectMenu.initialize()
         objectMenu.onDetailExpandedChanged = { setDetailExpanded(objectMenu.activeTag.isNotEmpty()) }

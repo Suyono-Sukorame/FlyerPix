@@ -1,0 +1,471 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shape Settings Panel - Panel pengaturan Shape yang compact dengan full-width
+  Muncul setelah Shape dibuat/dipilih, menyediakan kontrol:
+  - Corner Radius, Opacity, Fill (Solid/Gradient)
+  - Stroke Width, Stroke Opacity, Stroke Color/Gradient
+  - Join Style (Miter/Bevel/Round), Blur Radius
+  Header: Apply ✓ dan Cancel ✕ di kanan
+  Panel max height ~280dp dengan vertical scrolling
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/shapeSettingsPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_panel_bottom"
+    android:elevation="@dimen/panel_elevation"
+    android:theme="@style/LightPanelTheme"
+    android:visibility="gone">
+
+    <!-- Drag Handle Bar -->
+    <View
+        android:layout_width="@dimen/panel_handle_width"
+        android:layout_height="@dimen/panel_handle_height"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="2dp"
+        android:background="@color/panel_handle" />
+
+    <!-- Header: Shape Settings + Apply/Cancel -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/panel_header_height"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="8dp">
+
+        <!-- Brand Accent Bar -->
+        <View
+            android:layout_width="4dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="10dp"
+            android:background="@color/brand_blue" />
+
+        <TextView
+            android:id="@+id/shapeSettingsTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Shape Settings"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/panel_text_primary"
+            android:gravity="center_vertical" />
+
+        <!-- Apply Button ✓ -->
+        <ImageButton
+            android:id="@+id/btnApplyShape"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_check_24px"
+            android:contentDescription="Apply"
+            android:scaleType="centerInside"
+            android:tint="@color/brand_blue" />
+
+        <!-- Cancel Button ✕ -->
+        <ImageButton
+            android:id="@+id/btnCancelShape"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_sharp_clear_24px"
+            android:contentDescription="Cancel"
+            android:scaleType="centerInside"
+            android:tint="@color/panel_text_secondary" />
+    </LinearLayout>
+
+    <!-- Scrollable Content Area -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:maxHeight="280dp"
+        android:scrollbars="vertical"
+        android:fillViewport="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="12dp">
+
+            <!-- Corner Radius Slider -->
+            <LinearLayout
+                android:id="@+id/shapeCornerRadiusControl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp">
+                
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    
+                    <TextView
+                        android:id="@+id/sliderLabel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Corner Radius"
+                        android:textSize="12sp"
+                        android:textColor="@color/panel_text_secondary" />
+                    
+                    <TextView
+                        android:id="@+id/sliderValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="20"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/panel_text_primary" />
+                </LinearLayout>
+                
+                <SeekBar
+                    android:id="@+id/slider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:max="100" />
+            </LinearLayout>
+
+            <!-- Opacity Slider -->
+            <LinearLayout
+                android:id="@+id/shapeOpacityControl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp">
+                
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Opacity"
+                        android:textSize="12sp"
+                        android:textColor="@color/panel_text_secondary" />
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="100"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/panel_text_primary" />
+                </LinearLayout>
+                
+                <SeekBar
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:max="100" />
+            </LinearLayout>
+
+            <!-- Fill Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="4dp"
+                android:text="Fill"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/panel_text_primary" />
+
+            <!-- Fill Color Picker Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Color"
+                    android:textSize="12sp"
+                    android:textColor="@color/panel_text_secondary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnShapeFillColor"
+                    style="@style/LightPanelOutlinedButton"
+                    android:layout_width="60dp"
+                    android:layout_height="36dp"
+                    android:text="Solid"
+                    android:textSize="11sp"
+                    android:minWidth="0dp"
+                    android:padding="0dp" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/shapeColorPreview"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="8dp"
+                    app:cardCornerRadius="4dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="#CCCCCC"
+                    android:clickable="true"
+                    android:focusable="true">
+                    
+                    <View
+                        android:id="@+id/shapeColorPreviewInner"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#FFFFFF" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Fill Gradient Toggle -->
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchShapeFillGradient"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Enable Gradient Fill"
+                android:textSize="12sp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Stroke Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="4dp"
+                android:text="Stroke"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/panel_text_primary" />
+
+            <!-- Stroke Width Slider -->
+            <LinearLayout
+                android:id="@+id/shapeStrokeWidthControl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="4dp">
+                
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Stroke Width"
+                        android:textSize="12sp"
+                        android:textColor="@color/panel_text_secondary" />
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/panel_text_primary" />
+                </LinearLayout>
+                
+                <SeekBar
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:max="50" />
+            </LinearLayout>
+
+            <!-- Stroke Opacity Slider -->
+            <LinearLayout
+                android:id="@+id/shapeStrokeOpacityControl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp">
+                
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Stroke Opacity"
+                        android:textSize="12sp"
+                        android:textColor="@color/panel_text_secondary" />
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="100"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/panel_text_primary" />
+                </LinearLayout>
+                
+                <SeekBar
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:max="100" />
+            </LinearLayout>
+
+            <!-- Stroke Color Picker Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Stroke Color"
+                    android:textSize="12sp"
+                    android:textColor="@color/panel_text_secondary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnShapeStrokeColor"
+                    style="@style/LightPanelOutlinedButton"
+                    android:layout_width="60dp"
+                    android:layout_height="36dp"
+                    android:text="Solid"
+                    android:textSize="11sp"
+                    android:minWidth="0dp"
+                    android:padding="0dp" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/shapeStrokeColorPreview"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="8dp"
+                    app:cardCornerRadius="4dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="#CCCCCC"
+                    android:clickable="true"
+                    android:focusable="true">
+                    
+                    <View
+                        android:id="@+id/shapeStrokeColorPreviewInner"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#000000" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Stroke Gradient Toggle -->
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchShapeStrokeGradient"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Enable Gradient Stroke"
+                android:textSize="12sp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Join Style Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="4dp"
+                android:text="Corner/Join Style"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/panel_text_primary" />
+
+            <RadioGroup
+                android:id="@+id/rgShapeJoinStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <RadioButton
+                    android:id="@+id/rbJoinMiter"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Miter"
+                    android:textSize="11sp"
+                    android:checked="true" />
+
+                <RadioButton
+                    android:id="@+id/rbJoinBevel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Bevel"
+                    android:textSize="11sp" />
+
+                <RadioButton
+                    android:id="@+id/rbJoinRound"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Round"
+                    android:textSize="11sp" />
+            </RadioGroup>
+
+            <!-- Blur Radius Slider -->
+            <LinearLayout
+                android:id="@+id/shapeBlurRadiusControl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp">
+                
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Blur Radius"
+                        android:textSize="12sp"
+                        android:textColor="@color/panel_text_secondary" />
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/panel_text_primary" />
+                </LinearLayout>
+                
+                <SeekBar
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:max="50" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

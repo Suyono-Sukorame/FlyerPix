@@ -15,7 +15,8 @@ class ObjectMenuController(
     private val showSnackbar: (String) -> Unit,
     private val onGalleryRequested: () -> Unit,
     private val onCameraRequested: () -> Unit,
-    private val onPanelChanged: () -> Unit = {}
+    private val onPanelChanged: () -> Unit = {},
+    private val onShapeCreated: ((com.flyerpix.editor.canvas.model.ShapeLayer) -> Unit)? = null
 ) {
     companion object {
         // Object-only creation tools: fitur pembuatan/penambahan layer objek.
@@ -189,7 +190,12 @@ class ObjectMenuController(
                 text = label; textSize = 20f
                 layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply { setMargins(margin, margin, margin, margin) }
                 setPadding(0, 0, 0, 0); minWidth = 0; minimumWidth = 0
-                setOnClickListener { canvas.addShapeLayer(type); showSnackbar("Shape ditambahkan") }
+                setOnClickListener {
+                    val shape = canvas.addShapeLayer(type)
+                    canvas.selectedLayer = shape // Auto select shape
+                    showSnackbar("Shape ${type.name} dibuat")
+                    onShapeCreated?.invoke(shape) // Notify controller to show settings
+                }
             }
             binding.llShapeRow.addView(btn)
         }

@@ -134,6 +134,13 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom" />
 
+    <!-- Shape Settings Panel -->
+    <include
+            layout="@layout/layout_shape_settings_panel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom" />
+
     <!-- Halaman Objek: tool strip ikon + konten detail -->
     <LinearLayout
             android:id="@+id/objectMenuPanel"

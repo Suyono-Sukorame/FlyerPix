@@ -52,6 +52,8 @@ data class ShapeLayer(
     var fillColor: Int = Color.WHITE,
     var strokeColor: Int = Color.BLACK,
     var strokeWidth: Float = 0f,
+    var strokeOpacity: Int = 255, // Stroke opacity terpisah dari layer opacity
+    var strokeJoin: Paint.Join = Paint.Join.MITER, // MITER, BEVEL, ROUND
     // ── Rounded Rectangle ──────────────────────────────────────────────────
     var cornerRadiusX: Float = 20f,
     var cornerRadiusY: Float = 20f,
@@ -205,8 +207,9 @@ data class ShapeLayer(
         if (strokeWidth > 0f) {
             paint.style = Paint.Style.STROKE
             paint.color = strokeColor
-            paint.alpha = opacity.coerceIn(0, 255)
+            paint.alpha = strokeOpacity.coerceIn(0, 255) // Gunakan stroke opacity terpisah
             paint.strokeWidth = strokeWidth
+            paint.strokeJoin = strokeJoin // Apply join style
             canvas.drawPath(path, paint)
         }
 
