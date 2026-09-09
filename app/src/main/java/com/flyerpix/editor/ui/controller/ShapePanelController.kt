@@ -169,6 +169,13 @@ class ShapePanelController(
         currentShape = shape
         snapshotShape = shape.copy() // Backup untuk Cancel
 
+        // Tinggi panel hanya 20% dari tinggi layar agar objek di kanvas tetap terlihat
+        val panel = binding.shapeSettingsPanel.root
+        val targetHeight = (activity.resources.displayMetrics.heightPixels * 0.20f).toInt()
+        if (panel.layoutParams.height != targetHeight) {
+            panel.layoutParams = panel.layoutParams.apply { height = targetHeight }
+        }
+
         // Update UI dengan nilai shape saat ini
         updateUIFromShape(shape)
 
