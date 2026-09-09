@@ -197,7 +197,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="8dp"
-                    android:text="📷 Galeri"
+                    android:text="📷 Gallery"
                     app:strokeColor="#444444" />
 
             <com.google.android.material.button.MaterialButton
@@ -206,7 +206,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="📸 Kamera"
+                    android:text="📸 Camera"
                     app:strokeColor="#444444" />
         </LinearLayout>
 
@@ -247,7 +247,7 @@
             <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Geser jari di kanvas untuk menggambar bebas. Goresan tersimpan otomatis."
+                    android:text="Drag on the canvas to draw freely. Strokes are saved automatically."
                     android:textColor="#666666"
                     android:textSize="12sp"
                     android:paddingBottom="8dp" />
@@ -257,7 +257,7 @@
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="✏️ Mulai Gambar Bebas"
+                    android:text="✏️ Start Free Draw"
                     app:strokeColor="#444444" />
         </LinearLayout>
 
@@ -274,7 +274,7 @@
             <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Tambahkan kurva Bézier preset ke tengah kanvas. Geser/putar/ubah skala seperti layer lain."
+                    android:text="Add a preset Bézier curve to the center of the canvas. Drag/rotate/scale like any other layer."
                     android:textColor="#666666"
                     android:textSize="12sp"
                     android:paddingBottom="8dp" />
@@ -284,7 +284,7 @@
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="➕ Tambah Kurva Bézier"
+                    android:text="➕ Add Bézier Curve"
                     app:strokeColor="#444444" />
         </LinearLayout>
 
@@ -301,7 +301,7 @@
             <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Tambahkan panah lurus ke tengah kanvas. Geser/putar/ubah skala seperti layer lain."
+                    android:text="Add a straight arrow to the center of the canvas. Drag/rotate/scale like any other layer."
                     android:textColor="#666666"
                     android:textSize="12sp"
                     android:paddingBottom="8dp" />
@@ -311,7 +311,7 @@
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="➡️ Tambah Panah"
+                    android:text="➡️ Add Arrow"
                     app:strokeColor="#444444" />
         </LinearLayout>
 
@@ -372,28 +372,28 @@
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Transparan" />
+                    android:text="Transparent" />
 
             <com.google.android.material.chip.Chip
                     android:id="@+id/chipBgSolid"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Warna" />
+                    android:text="Color" />
 
             <com.google.android.material.chip.Chip
                     android:id="@+id/chipBgGradient"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Gradasi" />
+                    android:text="Gradient" />
 
             <com.google.android.material.chip.Chip
                     android:id="@+id/chipBgImage"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Gambar" />
+                    android:text="Image" />
         </com.google.android.material.chip.ChipGroup>
 
         <!-- Mode: Transparan -->
@@ -408,7 +408,7 @@
             <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Latar transparan (pola kotak-kotak)."
+                    android:text="Transparent background (checkerboard pattern)."
                     android:textColor="#666666"
                     android:textSize="12sp" />
         </LinearLayout>
@@ -472,7 +472,7 @@
                     android:layout_gravity="end"
                     android:minWidth="0dp"
                     android:paddingHorizontal="12dp"
-                    android:text="Custom gradasi…"
+                    android:text="Custom gradient…"
                     android:textColor="@color/brand_blue"
                     android:textSize="12sp" />
         </LinearLayout>
@@ -495,7 +495,7 @@
                     android:layout_height="wrap_content"
                     android:minWidth="0dp"
                     android:paddingHorizontal="8dp"
-                    android:text="Galeri"
+                    android:text="Gallery"
                     android:textSize="12sp" />
 
             <com.google.android.material.button.MaterialButton
@@ -505,7 +505,7 @@
                     android:layout_height="wrap_content"
                     android:minWidth="0dp"
                     android:paddingHorizontal="8dp"
-                    android:text="Kamera"
+                    android:text="Camera"
                     android:textSize="12sp" />
 
             <com.google.android.material.button.MaterialButton
@@ -515,7 +515,7 @@
                     android:layout_height="wrap_content"
                     android:minWidth="0dp"
                     android:paddingHorizontal="8dp"
-                    android:text="Bersihkan"
+                    android:text="Clear"
                     android:textColor="#E53935"
                     android:textSize="12sp" />
         </LinearLayout>
@@ -690,7 +690,7 @@
                         style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Monokrom"
+                        android:text="Monochrome"
                         android:textColor="@color/effect_chip_text"
                         app:checkedIconVisible="false"
                         app:chipBackgroundColor="@color/effect_chip_bg"
@@ -767,7 +767,7 @@
                 android:layout_height="36dp"
                 android:minWidth="0dp"
                 android:paddingHorizontal="10dp"
-                android:text="Batal"
+                android:text="Cancel"
                 android:textColor="#E53935"
                 android:textSize="13sp" />
 
@@ -784,7 +784,7 @@
                 android:layout_height="36dp"
                 android:minWidth="0dp"
                 android:paddingHorizontal="10dp"
-                android:text="Potong"
+                android:text="Crop"
                 android:textColor="#00E676"
                 android:textSize="13sp" />
     </LinearLayout>
@@ -1015,7 +1015,7 @@
                         android:layout_centerVertical="true"
                         android:layout_marginStart="10dp"
                         android:background="@drawable/bg_circle_footer_white"
-                        android:contentDescription="Mode Seleksi Lapisan"
+                        android:contentDescription="Layer Select Mode"
                         android:elevation="2dp"
                         android:padding="7dp"
                         android:scaleType="fitCenter"
@@ -1029,7 +1029,7 @@
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
                         android:background="@drawable/bg_layer_footer_pill_green"
-                        android:contentDescription="Geser Lapisan"
+                        android:contentDescription="Drag Layer"
                         android:padding="6dp"
                         android:scaleType="fitCenter"
                         android:src="@drawable/ic_move_pad_24px" />
@@ -1043,7 +1043,7 @@
                         android:layout_marginEnd="8dp"
                         android:layout_centerVertical="true"
                         android:background="@drawable/bg_circle_footer_white"
-                        android:contentDescription="Pindahkan Lapisan ke Depan"
+                        android:contentDescription="Move Layer Forward"
                         android:elevation="2dp"
                         android:enabled="false"
                         android:padding="7dp"
@@ -1059,7 +1059,7 @@
                         android:layout_marginEnd="8dp"
                         android:layout_centerVertical="true"
                         android:background="@drawable/bg_circle_footer_white"
-                        android:contentDescription="Pindahkan Lapisan ke Belakang"
+                        android:contentDescription="Move Layer Backward"
                         android:elevation="2dp"
                         android:enabled="false"
                         android:padding="7dp"
@@ -1086,7 +1086,7 @@
                         android:layout_height="32dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_circle_footer_white"
-                        android:contentDescription="Hapus Lapisan Terpilih"
+                        android:contentDescription="Delete Selected Layer"
                         android:elevation="2dp"
                         android:padding="6dp"
                         android:scaleType="fitCenter"
@@ -1104,7 +1104,7 @@
                         android:layout_height="32dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_circle_footer_white"
-                        android:contentDescription="Atribut Lapisan"
+                        android:contentDescription="Layer Attributes"
                         android:elevation="2dp"
                         android:padding="6dp"
                         android:scaleType="fitCenter"
@@ -1121,7 +1121,7 @@
                         android:layout_height="32dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_circle_footer_white"
-                        android:contentDescription="Gabungkan Lapisan"
+                        android:contentDescription="Merge Layers"
                         android:elevation="2dp"
                         android:padding="6dp"
                         android:scaleType="fitCenter"
@@ -1138,7 +1138,7 @@
                         android:layout_height="32dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_circle_footer_white"
-                        android:contentDescription="Selesai Mode Seleksi"
+                        android:contentDescription="Finish Select Mode"
                         android:elevation="2dp"
                         android:padding="6dp"
                         android:scaleType="fitCenter"
@@ -1154,7 +1154,7 @@
                         android:layout_width="36dp"
                         android:layout_height="32dp"
                         android:background="@drawable/bg_layer_footer_pill_green"
-                        android:contentDescription="Geser Lapisan Bersama"
+                        android:contentDescription="Drag Layers Together"
                         android:padding="5dp"
                         android:scaleType="fitCenter"
                         android:src="@drawable/ic_move_pad_24px" />

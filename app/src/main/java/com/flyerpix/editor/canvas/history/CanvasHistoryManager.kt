@@ -15,7 +15,7 @@ data class CanvasStateSnapshot(
     val canvasWidth: Int = 1080,
     val canvasHeight: Int = 1080,
     val selectedLayerIndex: Int? = null,
-    val actionName: String = "Aksi Kanvas",
+    val actionName: String = "Canvas Change",
     val timestamp: Long = System.currentTimeMillis()
 ) {
     companion object {
@@ -25,7 +25,7 @@ data class CanvasStateSnapshot(
             canvasWidth: Int,
             canvasHeight: Int,
             selectedLayer: CanvasLayer? = null,
-            actionName: String = "Aksi Kanvas"
+            actionName: String = "Canvas Change"
         ): CanvasStateSnapshot {
             val clonedLayers = layers.map { it.cloneLayer() }
             val selIndex = if (selectedLayer != null) {

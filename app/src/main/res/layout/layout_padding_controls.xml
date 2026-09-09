@@ -23,7 +23,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Padding Teks"
+            android:text="Text Padding"
             android:textAppearance="?attr/textAppearanceSubtitle2"
             android:textStyle="bold" />
 
@@ -31,7 +31,7 @@
             android:id="@+id/chkPaddingLinked"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Terhubung"
+            android:text="Connected"
             android:textSize="11sp"
             android:checked="true" />
 
@@ -67,7 +67,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Atas: 0 px"
+                android:text="Top: 0 px"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.slider.Slider
@@ -93,7 +93,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Bawah: 0 px"
+                android:text="Bottom: 0 px"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.slider.Slider
@@ -126,7 +126,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Kiri: 0 px"
+                android:text="Left: 0 px"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.slider.Slider
@@ -152,7 +152,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Kanan: 0 px"
+                android:text="Right: 0 px"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.slider.Slider

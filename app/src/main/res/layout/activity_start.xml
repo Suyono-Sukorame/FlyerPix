@@ -26,13 +26,13 @@
             app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintVertical_bias="0.757"
             android:id="@+id/linearLayout">
         <Button
-                android:text="Kamera"
+                android:text="Camera"
                 app:icon="@drawable/ic_sharp_photo_camera_24px"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" tools:layout_editor_absoluteY="367dp"
                 tools:layout_editor_absoluteX="64dp" android:id="@+id/cameraButton" android:layout_marginEnd="8dp"/>
         <Button
-                android:text="Galeri"
+                android:text="Gallery"
                 app:icon="@drawable/ic_sharp_photo_24px"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" android:id="@+id/galleryButton" android:layout_weight="1"

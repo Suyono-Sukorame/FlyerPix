@@ -23,7 +23,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Posisi"
+            android:text="Position"
             android:textAppearance="?attr/textAppearanceSubtitle2"
             android:textStyle="bold" />
 
@@ -45,7 +45,7 @@
         android:layout_width="wrap_content"
         android:layout_height="32dp"
         android:layout_marginTop="2dp"
-        android:text="Kontrol lanjutan"
+        android:text="Advanced controls"
         android:textSize="11sp"
         android:textColor="@color/brand_blue"
         android:minWidth="0dp"
@@ -92,7 +92,7 @@
             android:src="@drawable/ic_add_circle_outline"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:tint="#616161"
-            android:contentDescription="Tambah X" />
+            android:contentDescription="Add X" />
     </LinearLayout>
 
     <!-- Baris Y -->
@@ -136,7 +136,7 @@
             android:src="@drawable/ic_add_circle_outline"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:tint="#616161"
-            android:contentDescription="Tambah Y" />
+            android:contentDescription="Add Y" />
     </LinearLayout>
 
     <!-- Slider 2 kolom: Posisi X & Y (presisi halus) -->
@@ -218,7 +218,7 @@
             android:layout_marginEnd="4dp"
             android:minWidth="0dp"
             android:paddingHorizontal="4dp"
-            android:text="Tengah H"
+            android:text="Center H"
             android:textSize="10sp" />
 
         <com.google.android.material.button.MaterialButton
@@ -230,7 +230,7 @@
             android:layout_marginEnd="4dp"
             android:minWidth="0dp"
             android:paddingHorizontal="4dp"
-            android:text="Tengah V"
+            android:text="Center V"
             android:textSize="10sp" />
 
         <com.google.android.material.button.MaterialButton
@@ -241,7 +241,7 @@
             android:layout_weight="1"
             android:minWidth="0dp"
             android:paddingHorizontal="4dp"
-            android:text="Tengah Kanvas"
+            android:text="Center Canvas"
             android:textSize="10sp" />
     </LinearLayout>
 </LinearLayout>

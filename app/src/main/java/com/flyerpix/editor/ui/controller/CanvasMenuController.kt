@@ -283,7 +283,7 @@ class CanvasMenuController(
 
         binding.btnBgClearImage.setOnClickListener {
             pixelCanvasView.clearImageBackground()
-            showSnackbar("Gambar latar belakang dihapus")
+            showSnackbar("Background image removed")
         }
     }
 

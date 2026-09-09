@@ -37,7 +37,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:text="Latar Belakang Kanvas"
+        android:text="Canvas Background"
         android:textColor="@color/light_text_primary"
         android:textSize="17sp"
         android:textStyle="bold"
@@ -84,7 +84,7 @@
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Transparan"
+            android:text="Transparent"
             android:textColor="@color/light_text_primary"
             app:chipBackgroundColor="@color/light_chip" />
 
@@ -93,7 +93,7 @@
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Warna Solid"
+            android:text="Solid Color"
             android:textColor="@color/light_text_primary"
             app:chipBackgroundColor="@color/light_chip" />
 
@@ -102,7 +102,7 @@
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Gradasi"
+            android:text="Gradient"
             android:textColor="@color/light_text_primary"
             app:chipBackgroundColor="@color/light_chip" />
 
@@ -111,7 +111,7 @@
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Gambar"
+            android:text="Image"
             android:textColor="@color/light_text_primary"
             app:chipBackgroundColor="@color/light_chip" />
     </com.google.android.material.chip.ChipGroup>
@@ -132,7 +132,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🏁 Kanvas Transparan Aktif"
+            android:text="🏁 Transparent Canvas Active"
             android:textColor="#1769FF"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -141,7 +141,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Latar belakang kanvas menjadi tembus pandang (checkerboard). Sangat cocok untuk membuat stiker, logo, atau gambar transparan dengan format ekspor PNG."
+            android:text="Canvas background becomes transparent (checkerboard). Ideal for making stickers, logos, or transparent images exported as PNG."
             android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
     </LinearLayout>
@@ -160,7 +160,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pilihan Warna Cepat:"
+            android:text="Quick Color Picks:"
             android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
 
@@ -184,7 +184,7 @@
             android:layout_width="wrap_content"
             android:layout_height="40dp"
             android:layout_marginTop="12dp"
-            android:text="+ Pilih Warna Kustom (HSV / Hex)"
+            android:text="+ Pick Custom Color (HSV / Hex)"
             android:textColor="#1769FF"
             android:textSize="12sp"
             app:cornerRadius="8dp"
@@ -205,7 +205,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Preset Gradasi Profesional:"
+            android:text="Professional Gradient Presets:"
             android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
 
@@ -266,7 +266,7 @@
                 android:id="@+id/tvBgAngleLabel"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:text="Sudut (0°)"
+                android:text="Angle (0°)"
                 android:textColor="@color/light_text_secondary"
                 android:textSize="12sp" />
 
@@ -290,7 +290,7 @@
             android:layout_width="wrap_content"
             android:layout_height="40dp"
             android:layout_marginTop="8dp"
-            android:text="+ Buat Gradasi Kustom"
+            android:text="+ Create Custom Gradient"
             android:textColor="#1769FF"
             android:textSize="12sp"
             app:cornerRadius="8dp"
@@ -311,7 +311,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Sumber Gambar:"
+            android:text="Image Source:"
             android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
 
@@ -328,7 +328,7 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="6dp"
-                android:text="Dari Galeri"
+                android:text="From Gallery"
                 android:textColor="#1769FF"
                 android:textSize="13sp"
                 app:cornerRadius="8dp"
@@ -343,7 +343,7 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:layout_marginStart="6dp"
-                android:text="Dari Kamera"
+                android:text="From Camera"
                 android:textColor="#1769FF"
                 android:textSize="13sp"
                 app:cornerRadius="8dp"
@@ -356,7 +356,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Gambar akan otomatis di-crop/fill menyesuaikan rasio aspek kanvas aktif."
+            android:text="The image will be automatically cropped/filled to fit the canvas aspect ratio."
             android:textColor="@color/light_text_tertiary"
             android:textSize="12sp" />
 
@@ -366,7 +366,7 @@
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:layout_marginTop="6dp"
-            android:text="Hapus Gambar Latar"
+            android:text="Remove Background Image"
             android:textColor="#E53935"
             android:textSize="12sp"
             android:visibility="gone" />

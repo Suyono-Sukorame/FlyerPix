@@ -246,13 +246,13 @@ class FontController(
             applyFontToSelectedLayer(last)
             showSnackbar(
                 if (imported.size > 1) {
-                    "${imported.size} font berhasil ditambahkan ke 'My Fonts'!"
+                    "${imported.size} fonts added to 'My Fonts'!"
                 } else {
-                    "Font '${last.name}' berhasil ditambahkan ke 'My Fonts'!"
+                    "Font '${last.name}' added to 'My Fonts'!"
                 }
             )
         } else {
-            showSnackbar("Gagal memuat font. Pastikan file berformat .ttf atau .otf.")
+            showSnackbar("Failed to load font. Make sure the file is .ttf or .otf format.")
         }
     }
 
@@ -264,9 +264,9 @@ class FontController(
         val imported = FontManager.loadFontsFromFolder(activity, folderUri)
         if (imported > 0) {
             onFontsImported(emptyList())
-            showSnackbar("$imported font berhasil diimpor dari folder ke 'My Fonts'!")
+            showSnackbar("$imported fonts imported from folder to 'My Fonts'!")
         } else {
-            showSnackbar("Tidak ada font .ttf/.otf ditemukan di folder tersebut.")
+            showSnackbar("No .ttf/.otf fonts found in that folder.")
         }
     }
 
@@ -349,7 +349,7 @@ class FontController(
             val layer = pixelCanvasView.selectedLayer as? TextLayer
             if (layer != null) applyFont(layer, defaultFont)
             fontPickerAdapter.setSelectedFont(defaultFont.name)
-            showSnackbar("Font direset ke ${defaultFont.name}")
+            showSnackbar("Font reset to ${defaultFont.name}")
         }
     }
 }

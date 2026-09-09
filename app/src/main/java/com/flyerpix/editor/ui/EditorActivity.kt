@@ -92,7 +92,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     private val texturePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             // Show loading indicator
-            showLoadingDialog("Memuat gambar tekstur...")
+            showLoadingDialog("Loading texture image...")
             
             lifecycleScope.launch {
                 try {
@@ -102,7 +102,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                     if (bmp != null) {
                         textPanelController.applyTextureBitmap(bmp)
                     } else {
-                        showSnackbar("Gagal memuat gambar tekstur.")
+                        showSnackbar("Failed to load texture image.")
                     }
                 } catch (e: Exception) {
                     dismissLoadingDialog()
@@ -134,7 +134,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private val bgGalleryLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
-            showLoadingDialog("Memuat gambar background...")
+            showLoadingDialog("Loading background image...")
             
             lifecycleScope.launch {
                 try {
@@ -143,9 +143,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                     
                     if (bmp != null) {
                         pixelCanvasView.setImageBackground(bmp)
-                        showSnackbar("Gambar latar belakang berhasil diterapkan!")
+                        showSnackbar("Background image applied successfully!")
                     } else {
-                        showSnackbar("Gagal memuat gambar dari galeri.")
+                        showSnackbar("Failed to load image from gallery.")
                     }
                 } catch (e: Exception) {
                     dismissLoadingDialog()
@@ -157,7 +157,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private val bgCameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success: Boolean ->
         if (success && cameraPhotoUri != null) {
-            showLoadingDialog("Memproses foto...")
+            showLoadingDialog("Processing photo...")
             
             lifecycleScope.launch {
                 try {
@@ -166,9 +166,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                     
                     if (bmp != null) {
                         pixelCanvasView.setImageBackground(bmp)
-                        showSnackbar("Foto kamera berhasil dijadikan latar belakang!")
+                        showSnackbar("Camera photo applied as background!")
                     } else {
-                        showSnackbar("Gagal memuat foto dari kamera.")
+                        showSnackbar("Failed to load camera photo.")
                     }
                 } catch (e: Exception) {
                     dismissLoadingDialog()
@@ -182,7 +182,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private val preEditImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
-            showLoadingDialog("Memuat gambar...")
+            showLoadingDialog("Loading image...")
             
             lifecycleScope.launch {
                 try {
@@ -192,7 +192,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                     if (bmp != null) {
                         showImagePreEdit(bmp)
                     } else {
-                        showSnackbar("Gagal memuat gambar dari galeri.")
+                        showSnackbar("Failed to load image from gallery.")
                     }
                 } catch (e: Exception) {
                     dismissLoadingDialog()
@@ -206,7 +206,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         ImagePreEditDialog.show(supportFragmentManager, bitmap) { result ->
             if (result != null) {
                 addImageAsLayer(result)
-                showSnackbar("Gambar berhasil ditambahkan!")
+                showSnackbar("Image added successfully!")
             }
         }
     }
@@ -220,7 +220,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         if (bmpW > viewW * 0.9f || bmpH > viewH * 0.9f) {
             scale = min((viewW * 0.9f) / bmpW, (viewH * 0.9f) / bmpH)
         }
-        val layer = ImageLayer(bitmap = bitmap, scale = scale, layerName = "Gambar")
+        val layer = ImageLayer(bitmap = bitmap, scale = scale, layerName = "Image")
         layer.x = (viewW - bmpW * scale) / 2f
         layer.y = (viewH - bmpH * scale) / 2f
         pixelCanvasView.addLayer(layer)
@@ -496,7 +496,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             textLayer.text,
             textLayer.richTextSpans
         ) { newText, spans ->
-            pixelCanvasView.runRecordedAction("Ubah Teks") {
+            pixelCanvasView.runRecordedAction("Edit Text") {
                 textLayer.text = newText
                 textLayer.richTextSpans = spans.toMutableList()
             }
@@ -561,7 +561,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         binding.motionLayout.getConstraintSet(R.id.start)?.setDimensionRatio(R.id.canvasCard, ratio)
         binding.motionLayout.getConstraintSet(R.id.end)?.setDimensionRatio(R.id.canvasCard, ratio)
         binding.motionLayout.requestLayout()
-        Snackbar.make(binding.parentLayout, "Ukuran kanvas diubah ke $width × $height px ($ratio)", Snackbar.LENGTH_SHORT).show()
+        Snackbar.make(binding.parentLayout, "Canvas size changed to $width × $height px ($ratio)", Snackbar.LENGTH_SHORT).show()
     }
 
     override fun onBackPressed() {
@@ -654,7 +654,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 if (unlocked != null) {
                     pixelCanvasView.selectedLayer = unlocked
                 } else {
-                    showSnackbar("Tambahkan layer teks dahulu via + Tambah → Teks")
+                    showSnackbar("Add a text layer first via + Add → Text")
                 }
             }
             textPanelController.refreshUI()
@@ -724,7 +724,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         top.btnTopQuotes.setOnClickListener {
             com.flyerpix.editor.ui.dialog.QuotesDialog.show(supportFragmentManager) { quote ->
                 pixelCanvasView.addTextLayer(quote)
-                showSnackbar("Kutipan berhasil ditambahkan!")
+                showSnackbar("Quote added successfully!")
             }
         }
 
@@ -749,18 +749,18 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         top.btnTopUndo.setOnClickListener {
             val success = pixelCanvasView.undo()
             if (success) {
-                showSnackbar("Tindakan dibatalkan (Undo)")
+                showSnackbar("Action undone (Undo)")
             } else {
-                showSnackbar("Tidak ada riwayat untuk di-undo")
+                showSnackbar("No history to undo")
             }
         }
 
         top.btnTopRedo.setOnClickListener {
             val success = pixelCanvasView.redo()
             if (success) {
-                showSnackbar("Tindakan diulangi (Redo)")
+                showSnackbar("Action redone (Redo)")
             } else {
-                showSnackbar("Tidak ada riwayat untuk di-redo")
+                showSnackbar("No history to redo")
             }
         }
 
@@ -779,16 +779,16 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             top.tvTopZoomLabel.visibility = visibility
             top.btnTopZoomIn.visibility = visibility
             top.btnTopZoom.contentDescription = if (expanded) {
-                "Reset zoom ke 100 persen"
+                "Reset zoom to 100 percent"
             } else {
-                "Buka kontrol zoom"
+                "Show zoom controls"
             }
             if (expanded) {
                 updateZoomLabel()
             } else {
                 pixelCanvasView.resetZoom()
                 updateZoomLabel()
-                showSnackbar("Zoom diatur ke 100%")
+                showSnackbar("Zoom set to 100%")
             }
         }
 
@@ -805,7 +805,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         top.btnTopGrid.setOnClickListener {
             pixelCanvasView.isGridEnabled = !pixelCanvasView.isGridEnabled
             pixelCanvasView.invalidate()
-            showSnackbar(if (pixelCanvasView.isGridEnabled) "Grid panduan aktif" else "Grid panduan dinonaktifkan")
+            showSnackbar(if (pixelCanvasView.isGridEnabled) "Guide grid enabled" else "Guide grid disabled")
         }
 
         top.btnTopLayers.setOnClickListener {
@@ -831,11 +831,11 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         top.btnTopDeleteText.setOnClickListener {
             val textLayer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
             if (textLayer != null) {
-                pixelCanvasView.runRecordedAction("Hapus Teks") {
+                pixelCanvasView.runRecordedAction("Delete Text") {
                     pixelCanvasView.removeLayer(textLayer)
                 }
                 pixelCanvasView.invalidate()
-                showSnackbar("Layer teks dihapus")
+                showSnackbar("Text layer deleted")
             }
         }
     }
@@ -865,14 +865,14 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     private fun showTextEditMenu(anchor: View) {
         val textLayer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
         if (textLayer == null) {
-            showSnackbar("Tidak ada text layer yang dipilih")
+            showSnackbar("No text layer selected")
             return
         }
 
         val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
 
         // Editing Operations
-        popup.menu.add(0, 1, 0, "Edit Teks")
+        popup.menu.add(0, 1, 0, "Edit Text")
         popup.menu.add(0, 2, 1, "Copy")
         popup.menu.add(0, 3, 2, "Size")
         popup.menu.add(0, 4, 3, "Rotate")
@@ -891,24 +891,24 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 }
                 2 -> {
                     // Copy text layer
-                    pixelCanvasView.runRecordedAction("Copy Teks") {
+                    pixelCanvasView.runRecordedAction("Copy Text") {
                         val copiedLayer = textLayer.copyLayer() as com.flyerpix.editor.canvas.model.TextLayer
                         copiedLayer.x += 30f
                         copiedLayer.y += 30f
                         pixelCanvasView.addLayer(copiedLayer)
                     }
                     pixelCanvasView.invalidate()
-                    showSnackbar("Text layer di-copy")
+                    showSnackbar("Text layer copied")
                 }
                 3 -> {
                     // Size - switch to text panel
                     binding.bottomNavigation.selectedItemId = R.id.nav_text
-                    showSnackbar("Sesuaikan ukuran teks dengan slider di panel Text")
+                    showSnackbar("Adjust text size with the slider in the Text panel")
                 }
                 4 -> {
                     // Rotate - switch to text panel
                     binding.bottomNavigation.selectedItemId = R.id.nav_text
-                    showSnackbar("Sesuaikan rotasi teks dengan slider di panel Text")
+                    showSnackbar("Adjust text rotation with the slider in the Text panel")
                 }
                 5 -> {
                     // Alignment menu
@@ -917,23 +917,23 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 6 -> {
                     // Color - switch to text panel
                     binding.bottomNavigation.selectedItemId = R.id.nav_text
-                    showSnackbar("Pilih warna teks di panel Text")
+                    showSnackbar("Choose text color in the Text panel")
                 }
                 7 -> {
                     // To Front
-                    pixelCanvasView.runRecordedAction("Bawa ke Depan") {
+                    pixelCanvasView.runRecordedAction("Bring to Front") {
                         pixelCanvasView.bringLayerToFront(textLayer)
                     }
                     pixelCanvasView.invalidate()
-                    showSnackbar("Layer di-bawa ke depan")
+                    showSnackbar("Layer brought to front")
                 }
                 8 -> {
                     // To Back
-                    pixelCanvasView.runRecordedAction("Kirim ke Belakang") {
+                    pixelCanvasView.runRecordedAction("Send to Back") {
                         pixelCanvasView.sendLayerToBack(textLayer)
                     }
                     pixelCanvasView.invalidate()
-                    showSnackbar("Layer di-kirim ke belakang")
+                    showSnackbar("Layer sent to back")
                 }
             }
             true
@@ -971,12 +971,12 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private fun showTopAddMenu(anchor: View) {
         val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
-        popup.menu.add(0, 1, 0, "Teks")
-        popup.menu.add(0, 2, 1, "Tanggal Sekarang")
-        popup.menu.add(0, 3, 2, "Stiker")
-        popup.menu.add(0, 4, 3, "Bentuk")
-        popup.menu.add(0, 5, 4, "Dari Galeri")
-        popup.menu.add(0, 6, 5, "Gambar Bebas")
+        popup.menu.add(0, 1, 0, "Text")
+        popup.menu.add(0, 2, 1, "Today's Date")
+        popup.menu.add(0, 3, 2, "Sticker")
+        popup.menu.add(0, 4, 3, "Shape")
+        popup.menu.add(0, 5, 4, "From Gallery")
+        popup.menu.add(0, 6, 5, "Free Draw")
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -987,13 +987,16 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 }
                 3 -> {
                     binding.bottomNavigation.selectedItemId = R.id.nav_object
+                    objectMenu.select(ObjectMenuController.OBJ_STICKER)
                 }
                 4 -> {
-                    showSnackbar("Menu Bentuk hadir lewat halaman Objek pada rilis berikutnya")
+                    binding.bottomNavigation.selectedItemId = R.id.nav_object
+                    objectMenu.select(ObjectMenuController.OBJ_SHAPES)
                 }
                 5 -> preEditImageLauncher.launch("image/*")
                 6 -> {
-                    showSnackbar("Gambar Bebas hadir lewat halaman Objek pada rilis berikutnya")
+                    binding.bottomNavigation.selectedItemId = R.id.nav_object
+                    objectMenu.select(ObjectMenuController.OBJ_DRAW)
                 }
             }
             true
@@ -1003,9 +1006,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private fun showTopSaveMenu(anchor: View) {
         val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
-        popup.menu.add(0, 1, 0, "Simpan sebagai Proyek")
-        popup.menu.add(0, 2, 1, "Simpan sebagai Gambar")
-        popup.menu.add(0, 3, 2, "Buka Proyek (.plp)")
+        popup.menu.add(0, 1, 0, "Save as Project")
+        popup.menu.add(0, 2, 1, "Save as Image")
+        popup.menu.add(0, 3, 2, "Open Project (.plp)")
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -1024,14 +1027,14 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     private fun showTopOverflowMenu(anchor: View) {
         val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
-        popup.menu.add(0, 1, 0, "Gunakan gambar dari galeri")
-        popup.menu.add(0, 2, 1, "Gunakan gambar dari kamera")
-        popup.menu.add(0, 3, 2, "Ekspor gambar")
-        popup.menu.add(0, 4, 3, "Ukuran gambar")
-        popup.menu.add(0, 5, 4, "Latar belakang")
-        popup.menu.add(0, 6, 5, "Bersihkan kanvas")
-        popup.menu.add(0, 7, 6, "Simpan Proyek")
-        popup.menu.add(0, 8, 7, "Buka Proyek (.plp)")
+        popup.menu.add(0, 1, 0, "Use image from gallery")
+        popup.menu.add(0, 2, 1, "Use image from camera")
+        popup.menu.add(0, 3, 2, "Export image")
+        popup.menu.add(0, 4, 3, "Image size")
+        popup.menu.add(0, 5, 4, "Background")
+        popup.menu.add(0, 6, 5, "Clear canvas")
+        popup.menu.add(0, 7, 6, "Save Project")
+        popup.menu.add(0, 8, 7, "Open Project (.plp)")
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -1332,7 +1335,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             }
         }
 
-        android.util.Log.d("FlyerPixProfile", "StressTest mode=$mode memulai dengan $layerCount layer")
+        android.util.Log.d("FlyerPixProfile", "StressTest mode=$mode starting with $layerCount layers")
         val jiggle = readSystemProperty("debug.flyerpix_stressjiggle") == "1"
         val jiggleLayer = if (jiggle) pixelCanvasView.layers.firstOrNull() else null
         var frames = 0
@@ -1350,7 +1353,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 if (elapsed < 6) binding.pixelCanvasView.postOnAnimation(this) else {
                     android.util.Log.d(
                         "FlyerPixProfile",
-                        "StressTest selesai: $frames frame dalam ${elapsed}s, layers=${pixelCanvasView.layers.size}, blurRebuilds=${pixelCanvasView.blurRebuildCount}"
+                        "StressTest finished: $frames frames in ${elapsed}s, layers=${pixelCanvasView.layers.size}, blurRebuilds=${pixelCanvasView.blurRebuildCount}"
                     )
                 }
             }

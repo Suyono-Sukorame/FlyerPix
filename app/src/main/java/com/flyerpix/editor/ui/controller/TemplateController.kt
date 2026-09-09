@@ -64,7 +64,7 @@ class TemplateController(
             pixelCanvasView.runWithLayerSelectSuppressed {
                 preset.applyToCanvas(pixelCanvasView)
             }
-            showSnackbar("Preset '${preset.title}' diterapkan")
+            showSnackbar("Preset '${preset.title}' applied")
         }
     }
 
@@ -124,7 +124,7 @@ class TemplateController(
         if (preset != null) {
             handlePresetClick(preset)
         } else {
-            showSnackbar("Template '$title' tidak ditemukan")
+            showSnackbar("Template '$title' not found")
         }
     }
 
@@ -136,7 +136,7 @@ class TemplateController(
             pixelCanvasView.clearLayers()
             TemplatePreset.applyDefaultPixelLabState(pixelCanvasView)
         }
-        showSnackbar("Template default diterapkan")
+        showSnackbar("Default template applied")
     }
 
     /**
@@ -151,6 +151,6 @@ class TemplateController(
      */
     fun clearAndShowTemplates() {
         pixelCanvasView.clearLayers()
-        showSnackbar("Canvas dibersihkan")
+        showSnackbar("Canvas cleared")
     }
 }

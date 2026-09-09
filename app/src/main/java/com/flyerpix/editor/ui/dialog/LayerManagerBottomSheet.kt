@@ -171,9 +171,9 @@ class LayerManagerBottomSheet : BottomSheetDialogFragment() {
         adapter.onMergeSelectionChanged = { count ->
             binding.btnExecuteMerge.isEnabled = (count >= 2)
             binding.tvMergeCountStatus.text = if (count == 0) {
-                "Pilih minimal 2 layer"
+                "Select at least 2 layers"
             } else {
-                "$count layer terpilih"
+                "$count layer(s) selected"
             }
         }
     }
@@ -188,7 +188,7 @@ class LayerManagerBottomSheet : BottomSheetDialogFragment() {
             if (enabled) 0xFF18C8F5.toInt() else 0xFFAAAAAA.toInt()
         )
         if (enabled) {
-            binding.tvMergeCountStatus.text = "Pilih minimal 2 layer"
+            binding.tvMergeCountStatus.text = "Select at least 2 layers"
             binding.btnExecuteMerge.isEnabled = false
         }
     }
@@ -206,7 +206,7 @@ class LayerManagerBottomSheet : BottomSheetDialogFragment() {
             setMergeMode(false)
             refreshLayers()
             context?.let { ctx ->
-                Toast.makeText(ctx, "${selected.size} layer berhasil digabungkan!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(ctx, "${selected.size} layer(s) merged!", Toast.LENGTH_SHORT).show()
             }
             return true
         }

@@ -135,7 +135,7 @@ class ObjectPanelController(
     private fun onToolClicked(tag: String) {
         val layer = pixelCanvasView.selectedLayer
         if (layer == null || layer.isLocked || layer is TextLayer) {
-            showSnackbar("Pilih objek (shape/gambar/sticker/dll) terlebih dahulu")
+            showSnackbar("Select an object (shape/image/sticker/etc.) first")
             return
         }
         openEffectSettings(tag)
@@ -240,7 +240,7 @@ class ObjectPanelController(
     private fun applyToLayer(block: (CanvasLayer) -> Unit) {
         val layer = pixelCanvasView.selectedLayer
         if (layer == null || layer is TextLayer || layer.isLocked) return
-        pixelCanvasView.runRecordedAction("Ubah Properti Objek") { block(layer) }
+        pixelCanvasView.runRecordedAction("Change Object Properties") { block(layer) }
         pixelCanvasView.invalidate()
     }
 
@@ -431,7 +431,7 @@ class ObjectPanelController(
         val color = fillColorOf(layer)
         b.chipColorPreview.setCardBackgroundColor(color)
         b.tvColorValue.text = String.format(Locale.US, "#%08X", color)
-        b.btnColorGradient.text = if (layer.gradientEnabled) "Gradasi (Aktif)" else "Gradasi"
+        b.btnColorGradient.text = if (layer.gradientEnabled) "Gradient (Active)" else "Gradient"
     }
 
     private fun fillColorOf(l: CanvasLayer): Int = when (l) {

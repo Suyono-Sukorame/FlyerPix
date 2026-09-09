@@ -157,12 +157,12 @@ class ImageSizeDialog private constructor(
             val heightVal = binding.etHeight.text.toString().toIntOrNull() ?: 0
 
             if (widthVal < 50 || heightVal < 50) {
-                Toast.makeText(context, "Ukuran minimal kanvas adalah 50 × 50 piksel", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Minimum canvas size is 50 × 50 pixels", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             if (widthVal > 8192 || heightVal > 8192) {
-                Toast.makeText(context, "Ukuran maksimal kanvas adalah 8192 × 8192 piksel", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Maximum canvas size is 8192 × 8192 pixels", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -183,7 +183,7 @@ class ImageSizeDialog private constructor(
     private fun updateRatioBadge(binding: DialogImageSizeBinding, w: Int, h: Int) {
         if (w > 0 && h > 0) {
             val ratioText = CanvasSizePreset.formatAspectRatio(w, h)
-            binding.tvAspectRatioBadge.text = "Rasio: $ratioText"
+            binding.tvAspectRatioBadge.text = "Ratio: $ratioText"
             binding.tvAspectRatioBadge.visibility = View.VISIBLE
         } else {
             binding.tvAspectRatioBadge.visibility = View.GONE

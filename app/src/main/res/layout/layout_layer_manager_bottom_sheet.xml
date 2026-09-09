@@ -37,7 +37,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:text="Pengelola Lapisan"
+        android:text="Layer Manager"
         android:textColor="@color/light_text_primary"
         android:textSize="17sp"
         android:textStyle="bold"
@@ -71,7 +71,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/ic_merge_type_24px"
         app:tint="@color/header_secondary"
-        android:contentDescription="Mode Gabungkan Layer"
+        android:contentDescription="Merge Layer Mode"
         app:layout_constraintEnd_toStartOf="@id/btnCloseBottomSheet"
         app:layout_constraintTop_toTopOf="@id/tvHeaderTitle"
         app:layout_constraintBottom_toBottomOf="@id/tvHeaderTitle" />
@@ -124,7 +124,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Belum ada layer di kanvas"
+            android:text="No layers on the canvas yet"
             android:textColor="@color/light_text_secondary"
             android:textSize="14sp" />
     </LinearLayout>
@@ -166,7 +166,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Pilih minimal 2 layer"
+            android:text="Select at least 2 layers"
             android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
 
@@ -175,7 +175,7 @@
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="40dp"
-            android:text="Batal"
+            android:text="Cancel"
             android:textColor="@color/light_text_secondary"
             android:textSize="13sp" />
 
@@ -185,7 +185,7 @@
             android:layout_width="wrap_content"
             android:layout_height="40dp"
             android:layout_marginStart="8dp"
-            android:text="Gabungkan"
+            android:text="Merge"
             android:textSize="13sp"
             android:textColor="@android:color/black"
             app:backgroundTint="#18C8F5"

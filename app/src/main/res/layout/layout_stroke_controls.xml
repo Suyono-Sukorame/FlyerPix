@@ -60,7 +60,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Warna"
+                android:text="Color"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.card.MaterialCardView
@@ -117,7 +117,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Tebal: 0 px"
+                    android:text="Width: 0 px"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider
@@ -143,7 +143,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Opasitas: 100%"
+                    android:text="Opacity: 100%"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider

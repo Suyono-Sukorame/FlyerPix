@@ -271,17 +271,17 @@ class EditTextDialog(
         }
         binding.btnTextSize.setOnClickListener {
             val input = EditText(context).apply {
-                hint = "Ukuran px"
+                hint = "Size in px"
                 inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
                 setSingleLine(true)
             }
             MaterialAlertDialogBuilder(context)
-                .setTitle("Ukuran teks terseleksi")
+                .setTitle("Selected text size")
                 .setView(input)
-                .setPositiveButton("Terapkan") { _, _ ->
+                .setPositiveButton("Apply") { _, _ ->
                     input.text.toString().toFloatOrNull()?.toInt()?.coerceIn(8, 512)?.let(::applySize)
                 }
-                .setNegativeButton("Batal", null)
+                .setNegativeButton("Cancel", null)
                 .show()
         }
 

@@ -61,8 +61,8 @@ class ExportController(
                     if (uri != null) {
                         val (w, h) = if (customW != null && customH != null) Pair(customW, customH)
                         else quality.calculateDimensions(canvas.canvasWidth, canvas.canvasHeight)
-                        showSnackbar("Gambar berhasil disimpan ke Galeri (${w} × ${h} px)!")
-                    } else showSnackbar("Gagal mengekspor gambar ke Galeri")
+                        showSnackbar("Image saved to Gallery (${w} × ${h} px)!")
+                    } else showSnackbar("Failed to export image to Gallery")
                 }
             },
             onShareRequested = { quality, format, customW, customH ->
@@ -93,10 +93,10 @@ class ExportController(
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 mainHandler.post {
-                    activity.startActivity(Intent.createChooser(intent, "Bagikan Gambar PixelLab"))
+                    activity.startActivity(Intent.createChooser(intent, "Share PixelLab Image"))
                 }
             } catch (e: Exception) {
-                mainHandler.post { showSnackbar("Gagal membagikan gambar: ${e.localizedMessage}") }
+                mainHandler.post { showSnackbar("Failed to share image: ${e.localizedMessage}") }
             }
         }
     }
@@ -108,7 +108,7 @@ class ExportController(
             defaultProjectName = currentProjectName
         ) { savedName, _ ->
             currentProjectName = savedName
-            showSnackbar("Proyek '$savedName' berhasil disimpan!")
+            showSnackbar("Project '$savedName' saved successfully!")
         }
     }
 
@@ -130,16 +130,16 @@ class ExportController(
         }
         canvas.importProjectSnapshot(project)
         updateCanvasAspectRatio(project.canvasWidth, project.canvasHeight)
-        showSnackbar("Proyek '${project.projectName}' berhasil dimuat!")
+        showSnackbar("Project '${project.projectName}' loaded successfully!")
     }
 
     fun importProjectFromUri(uri: Uri) {
         try {
             val json = activity.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
-            if (json.isNullOrBlank()) { showSnackbar("File proyek kosong atau tidak dapat dibaca"); return }
+            if (json.isNullOrBlank()) { showSnackbar("Project file is empty or unreadable"); return }
             loadProject(ProjectSerializer.deserialize(json))
         } catch (e: Exception) {
-            showSnackbar("Gagal memuat file proyek: ${e.localizedMessage}")
+            showSnackbar("Failed to load project file: ${e.localizedMessage}")
         }
     }
 

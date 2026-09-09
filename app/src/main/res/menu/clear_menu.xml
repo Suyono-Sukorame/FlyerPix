@@ -4,31 +4,31 @@
             android:id="@+id/action_background"
             android:icon="@drawable/ic_sharp_palette_24px"
             app:showAsAction="ifRoom"
-            android:title="Latar Belakang">
+            android:title="Background">
     </item>
     <item
             android:id="@+id/action_image_size"
             android:icon="@drawable/ic_aspect_ratio_24px"
             app:showAsAction="ifRoom"
-            android:title="Ukuran Gambar">
+            android:title="Image Size">
     </item>
     <item
             android:id="@+id/action_layers"
             android:icon="@drawable/ic_layers_24px"
             app:showAsAction="always"
-            android:title="Lapisan">
+            android:title="Layers">
     </item>
     <item
             android:id="@+id/action_save_project"
             android:icon="@drawable/ic_sharp_save_24px"
             app:showAsAction="never"
-            android:title="Simpan Proyek">
+            android:title="Save Project">
     </item>
     <item
             android:id="@+id/action_open_project"
             android:icon="@drawable/ic_nav_presets_24px"
             app:showAsAction="never"
-            android:title="Buka Proyek">
+            android:title="Open Project">
     </item>
     <item
             android:id="@+id/clear"

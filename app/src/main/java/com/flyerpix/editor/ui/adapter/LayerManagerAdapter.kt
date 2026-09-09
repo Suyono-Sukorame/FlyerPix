@@ -155,19 +155,19 @@ class LayerManagerAdapter(
             when (layer) {
                 is TextLayer -> {
                     binding.ivLayerTypeIcon.setImageResource(R.drawable.ic_text_fields_24px)
-                    binding.tvLayerName.text = if (layer.text.isNotBlank()) layer.text else "Teks Kosong"
-                    binding.tvLayerDetails.text = "Teks • Ukuran ${layer.textSize.toInt()}sp • ${layer.getBlendModeName()}"
+                    binding.tvLayerName.text = if (layer.text.isNotBlank()) layer.text else "Empty Text"
+                    binding.tvLayerDetails.text = "Text • Size ${layer.textSize.toInt()}sp • ${layer.getBlendModeName()}"
                 }
                 is ImageLayer -> {
                     binding.ivLayerTypeIcon.setImageResource(R.drawable.ic_sharp_photo_24px)
                     binding.tvLayerName.text = layer.layerName
                     val (w, h) = layer.getUnwarpedDimensions()
-                    binding.tvLayerDetails.text = "Gambar • ${w.toInt()}×${h.toInt()}px • ${layer.getBlendModeName()}"
+                    binding.tvLayerDetails.text = "Image • ${w.toInt()}×${h.toInt()}px • ${layer.getBlendModeName()}"
                 }
                 else -> {
                     binding.ivLayerTypeIcon.setImageResource(R.drawable.ic_sharp_crop_square_24px)
                     binding.tvLayerName.text = "Layer #${layer.id.take(4)}"
-                    binding.tvLayerDetails.text = "Lapisan • ${layer.getBlendModeName()}"
+                    binding.tvLayerDetails.text = "Layer • ${layer.getBlendModeName()}"
                 }
             }
 

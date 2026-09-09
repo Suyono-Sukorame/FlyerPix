@@ -135,11 +135,11 @@ class AuthenticLayerAdapter(
 
             // 1. Judul Layer
             binding.tvLayerTitle.text = when (layer) {
-                is TextLayer -> if (layer.text.isNotBlank()) layer.text else "Teks Kosong"
-                is ImageLayer -> "Gambar"
-                is ShapeLayer -> "Bentuk (${layer.shapeType.name.lowercase().replace('_', ' ')})"
-                is StickerLayer -> "Stiker"
-                else -> "Lapisan"
+                is TextLayer -> if (layer.text.isNotBlank()) layer.text else "Empty Text"
+                is ImageLayer -> "Image"
+                is ShapeLayer -> "Shape (${layer.shapeType.name.lowercase().replace('_', ' ')})"
+                is StickerLayer -> "Sticker"
+                else -> "Layer"
             }
 
             // 2. Tampilkan Grid 2x2 atau Checkbox sesuai mode

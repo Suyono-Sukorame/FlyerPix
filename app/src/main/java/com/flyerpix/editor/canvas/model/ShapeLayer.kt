@@ -49,7 +49,9 @@ data class ShapeLayer(
     var width: Float = 200f,
     var height: Float = 200f,
     // ── Fill & Stroke ──────────────────────────────────────────────────────
-    var fillColor: Int = Color.WHITE,
+    // fillColor default biru (bukan putih) agar shape baru selalu terlihat
+    // di atas kanvas berlatarbelakang putih.
+    var fillColor: Int = 0xFF1769FF.toInt(),
     var strokeColor: Int = Color.BLACK,
     var strokeWidth: Float = 0f,
     var strokeOpacity: Int = 255, // Stroke opacity terpisah dari layer opacity
@@ -88,7 +90,7 @@ data class ShapeLayer(
     // Path builders
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun buildPath(): Path {
+    internal fun buildPath(): Path {
         return when (shapeType) {
             ShapeType.RECTANGLE        -> buildRectanglePath()
             ShapeType.ROUNDED_RECTANGLE -> buildRoundedRectanglePath()

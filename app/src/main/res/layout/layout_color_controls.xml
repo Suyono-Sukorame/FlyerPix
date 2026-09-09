@@ -17,7 +17,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="4dp"
-        android:text="Warna Teks"
+        android:text="Text Color"
         android:textAppearance="?attr/textAppearanceSubtitle2"
         android:textStyle="bold" />
 
@@ -33,7 +33,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
-            android:text="Warna"
+            android:text="Color"
             android:textAppearance="?attr/textAppearanceCaption" />
 
         <com.google.android.material.card.MaterialCardView
@@ -102,7 +102,7 @@
             android:layout_height="40dp"
             android:layout_weight="1"
             android:layout_marginEnd="4dp"
-            android:text="Pilih Warna"
+            android:text="Pick Color"
             android:textSize="11sp"
             app:icon="@drawable/ic_sharp_palette_24px"
             app:iconSize="16dp" />
@@ -113,7 +113,7 @@
             android:layout_width="0dp"
             android:layout_height="40dp"
             android:layout_weight="1"
-            android:text="Gradasi"
+            android:text="Gradient"
             android:textSize="11sp" />
     </LinearLayout>
 

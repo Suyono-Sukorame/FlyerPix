@@ -32,7 +32,7 @@
             style="@style/LightPanelTextButton"
             android:layout_width="wrap_content"
             android:layout_height="32dp"
-            android:text="Hapus Semua"
+            android:text="Delete All"
             android:textSize="12sp"
             android:textColor="@color/brand_blue"
             android:minWidth="0dp"
@@ -44,7 +44,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:layout_marginStart="4dp"
-        android:text="Simpan tampilan teks saat ini lalu terapkan kembali ke teks lain."
+        android:text="Save the current text look and apply it back to other text."
         android:textAppearance="?attr/textAppearanceCaption"
         android:textColor="#888888" />
 
@@ -61,7 +61,7 @@
             android:layout_height="40dp"
             android:layout_weight="1"
             android:background="@drawable/bg_panel_input"
-            android:hint="Nama style"
+            android:hint="Style name"
             android:paddingHorizontal="10dp"
             android:textSize="13sp" />
 
@@ -72,7 +72,7 @@
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
             android:minWidth="0dp"
-            android:contentDescription="Simpan Style"
+            android:contentDescription="Save Style"
             app:icon="@drawable/ic_sharp_save_24px"
             app:iconSize="18dp" />
     </LinearLayout>

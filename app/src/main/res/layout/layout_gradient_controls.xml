@@ -116,7 +116,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Sudut: 0°"
+                android:text="Angle: 0°"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.slider.Slider

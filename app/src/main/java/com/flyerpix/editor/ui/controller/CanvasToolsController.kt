@@ -235,7 +235,7 @@ class CanvasToolsController(
                 if (gradient != null) {
                     val currentLayer = pixelCanvasView.selectedLayer
                     if (currentLayer is com.flyerpix.editor.canvas.model.TextLayer && !currentLayer.isLocked) {
-                        pixelCanvasView.runRecordedAction("Ubah Gradien Teks") {
+                        pixelCanvasView.runRecordedAction("Change Text Gradient") {
                             currentLayer.gradient = gradient
                             currentLayer.gradientEnabled = true
                         }
@@ -251,7 +251,7 @@ class CanvasToolsController(
                 )
                 val layer = pixelCanvasView.selectedLayer
                 if (layer != null) {
-                    pixelCanvasView.runRecordedAction("Ubah Warna Layer") {
+                    pixelCanvasView.runRecordedAction("Change Layer Color") {
                         when (layer) {
                             is com.flyerpix.editor.canvas.model.TextLayer -> {
                                 if (!layer.isLocked) layer.textColor = color

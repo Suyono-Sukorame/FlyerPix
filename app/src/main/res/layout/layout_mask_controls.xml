@@ -26,7 +26,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Masking Foto"
+            android:text="Photo Masking"
             android:textAppearance="?attr/textAppearanceBody2"
             android:checked="false" />
 
@@ -87,7 +87,7 @@
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Pilih dari Galeri"
+                    android:text="Choose from Gallery"
                     android:textSize="12sp"
                     app:cornerRadius="8dp" />
 
@@ -96,7 +96,7 @@
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
-                    android:text="Hapus Mask"
+                    android:text="Remove Mask"
                     android:textColor="#D32F2F"
                     android:textSize="11sp"
                     android:visibility="gone" />
@@ -121,7 +121,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Skala: 100%"
+                    android:text="Scale: 100%"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider
@@ -147,7 +147,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Rotasi: 0°"
+                    android:text="Rotation: 0°"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider

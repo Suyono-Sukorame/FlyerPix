@@ -50,9 +50,9 @@ class QuotesDialog : DialogFragment() {
         }
 
         return MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Pilih Kutipan (Quotes)")
+            .setTitle("Choose a Quote")
             .setView(listView)
-            .setNegativeButton("Tutup", null)
+            .setNegativeButton("Close", null)
             .create()
     }
 

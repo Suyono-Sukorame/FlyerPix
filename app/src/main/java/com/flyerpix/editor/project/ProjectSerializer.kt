@@ -86,7 +86,7 @@ object ProjectSerializer {
      * @throws IllegalArgumentException jika format file tidak valid.
      */
     fun loadProject(file: File): ProjectModel {
-        if (!file.exists()) throw IOException("File tidak ditemukan: ${file.absolutePath}")
+        if (!file.exists()) throw IOException("File not found: ${file.absolutePath}")
         val json = file.readText(Charsets.UTF_8)
         return deserialize(json)
     }
@@ -132,14 +132,14 @@ object ProjectSerializer {
         val dto = try {
             gson.fromJson(json, ProjectDto::class.java)
         } catch (e: JsonSyntaxException) {
-            throw IllegalArgumentException("Format file .plp tidak valid: ${e.message}", e)
-        } ?: throw IllegalArgumentException("File .plp kosong atau tidak dapat dibaca.")
+            throw IllegalArgumentException("Invalid .plp file format: ${e.message}", e)
+        } ?: throw IllegalArgumentException(".plp file is empty or unreadable.")
 
         if (dto.schemaVersion > SCHEMA_VERSION) {
             throw IllegalArgumentException(
-                "File .plp menggunakan versi schema ${dto.schemaVersion}, " +
-                "tetapi aplikasi ini hanya mendukung hingga versi $SCHEMA_VERSION. " +
-                "Silakan perbarui aplikasi."
+                "This .plp file uses schema version ${dto.schemaVersion}, " +
+                "but this app only supports up to version $SCHEMA_VERSION. " +
+                "Please update the app."
             )
         }
         return fromDto(dto)
@@ -187,7 +187,7 @@ object ProjectSerializer {
         is ArrowLayer   -> arrowLayerToDto(layer)
         is PenLayer     -> penLayerToDto(layer)
         else            -> throw IllegalArgumentException(
-            "Tipe layer tidak dikenali: ${layer::class.simpleName}"
+            "Unknown layer type: ${layer::class.simpleName}"
         )
     }
 
@@ -558,7 +558,7 @@ object ProjectSerializer {
 
             "IMAGE" -> {
                 val bitmap = dto.bitmapBase64?.let { base64ToBitmap(it) }
-                    ?: throw IllegalArgumentException("ImageLayer tanpa bitmapBase64")
+                    ?: throw IllegalArgumentException("ImageLayer without bitmapBase64")
                 ImageLayer(
                     id                 = dto.id,
                     x                  = dto.x,
@@ -578,7 +578,7 @@ object ProjectSerializer {
 
             "STICKER" -> {
                 val bitmap = dto.bitmapBase64?.let { base64ToBitmap(it) }
-                    ?: throw IllegalArgumentException("StickerLayer tanpa bitmapBase64")
+                    ?: throw IllegalArgumentException("StickerLayer without bitmapBase64")
                 StickerLayer(
                     id                 = dto.id,
                     x                  = dto.x,
@@ -686,7 +686,7 @@ object ProjectSerializer {
                 blendMode          = blendMode
             )
 
-            else -> throw IllegalArgumentException("Tipe layer tidak dikenali: '${dto.type}'")
+            else -> throw IllegalArgumentException("Unknown layer type: '${dto.type}'")
         }.also { it.blendExtra = blendExtraFromString(dto.blendExtra) }
     }
 

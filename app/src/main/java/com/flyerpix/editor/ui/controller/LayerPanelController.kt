@@ -34,14 +34,14 @@ class LayerPanelController(
                 adapter.submitLayers(canvas.layers, canvas.selectedLayer)
             },
             onToggleVisibility = { layer ->
-                canvas.runRecordedAction(if (layer.isVisible) "Sembunyikan Layer" else "Tampilkan Layer") {
+                canvas.runRecordedAction(if (layer.isVisible) "Hide Layer" else "Show Layer") {
                     layer.isVisible = !layer.isVisible
                 }
                 canvas.invalidate()
                 adapter.submitLayers(canvas.layers, canvas.selectedLayer)
             },
             onToggleLock = { layer ->
-                canvas.runRecordedAction(if (layer.isLocked) "Buka Kunci Layer" else "Kunci Layer") {
+                canvas.runRecordedAction(if (layer.isLocked) "Unlock Layer" else "Lock Layer") {
                     layer.isLocked = !layer.isLocked
                     if (layer.isLocked && canvas.selectedLayer == layer) canvas.selectedLayer = null
                 }
@@ -53,13 +53,13 @@ class LayerPanelController(
                 else {
                     canvas.selectedLayer = layer
                     canvas.invalidate()
-                    showSnackbar("Lapisan dipilih")
+                    showSnackbar("Layer selected")
                 }
             },
             onDeleteLayer = { layer ->
                 canvas.removeLayer(layer)
                 adapter.submitLayers(canvas.layers, canvas.selectedLayer)
-                showSnackbar("Lapisan dihapus")
+                showSnackbar("Layer deleted")
             },
             onStartDrag = { vh -> itemTouchHelper?.startDrag(vh) },
             onCheckedChange = { _, _ -> }
@@ -83,7 +83,7 @@ class LayerPanelController(
             override fun onSelectedChanged(vh: RecyclerView.ViewHolder?, actionState: Int) {
                 super.onSelectedChanged(vh, actionState)
                 if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
-                    dragSnapshot = canvas.captureCurrentState("Ubah Urutan Lapisan")
+                    dragSnapshot = canvas.captureCurrentState("Change Layer Order")
                     hasMoved = false
                 }
             }
@@ -104,7 +104,7 @@ class LayerPanelController(
                 super.clearView(rv, vh)
                 val snap = dragSnapshot
                 if (hasMoved && snap != null) {
-                    canvas.recordAction("Ubah Urutan Lapisan", snap)
+                    canvas.recordAction("Change Layer Order", snap)
                     dragSnapshot = null
                     hasMoved = false
                 }
@@ -119,36 +119,36 @@ class LayerPanelController(
         binding.btnLayerMoveNormal.setOnClickListener {
             val selected = canvas.selectedLayer
             if (selected == null || selected.isLocked) {
-                showSnackbar("Pilih lapisan yang tidak terkunci terlebih dahulu")
+                showSnackbar("Select an unlocked layer first")
             } else {
                 showMoveMenu(binding.btnLayerMoveNormal, listOf(selected))
             }
         }
 
         binding.btnLayerToFront.setOnClickListener {
-            if (!canvas.bringSelectedLayerToFront()) showSnackbar("Pilih lapisan yang tidak terkunci terlebih dahulu")
+            if (!canvas.bringSelectedLayerToFront()) showSnackbar("Select an unlocked layer first")
         }
         binding.btnLayerToBack.setOnClickListener {
-            if (!canvas.sendSelectedLayerToBack()) showSnackbar("Pilih lapisan yang tidak terkunci terlebih dahulu")
+            if (!canvas.sendSelectedLayerToBack()) showSnackbar("Select an unlocked layer first")
         }
 
         binding.btnBatchDelete.setOnClickListener {
             val checked = adapter.getCheckedLayers()
-            if (checked.isEmpty()) { showSnackbar("Pilih lapisan yang ingin dihapus terlebih dahulu"); return@setOnClickListener }
-            val snap = canvas.captureCurrentState("Hapus Lapisan Terpilih")
+            if (checked.isEmpty()) { showSnackbar("Select layers to delete first"); return@setOnClickListener }
+            val snap = canvas.captureCurrentState("Delete Selected Layers")
             checked.forEach { canvas.layers.remove(it) }
             if (canvas.selectedLayer in checked) canvas.selectedLayer = canvas.layers.lastOrNull()
-            canvas.recordAction("Hapus Lapisan Terpilih", snap)
+            canvas.recordAction("Delete Selected Layers", snap)
             canvas.invalidate()
             canvas.notifyLayersChanged()
             setBatchMode(false)
             adapter.submitLayers(canvas.layers, canvas.selectedLayer)
-            showSnackbar("${checked.size} lapisan dihapus")
+            showSnackbar("${checked.size} layers deleted")
         }
         binding.btnBatchEdit.setOnClickListener {
             val checked = adapter.getCheckedLayers()
             if (checked.isEmpty()) {
-                showSnackbar("Pilih lapisan terlebih dahulu")
+                showSnackbar("Select layers first")
             } else {
                 showBatchAttributesDialog(checked)
             }
@@ -156,25 +156,25 @@ class LayerPanelController(
         binding.btnBatchMerge.setOnClickListener {
             val checked = adapter.getCheckedLayers()
             if (checked.size < 2) {
-                showSnackbar("Pilih minimal 2 lapisan untuk digabungkan")
+                showSnackbar("Select at least 2 layers to merge")
                 return@setOnClickListener
             }
 
             val merged = canvas.mergeLayers(checked)
             if (merged == null) {
-                showSnackbar("Lapisan tidak dapat digabungkan")
+                showSnackbar("Layers cannot be merged")
                 return@setOnClickListener
             }
 
             setBatchMode(false)
             adapter.submitLayers(canvas.layers, canvas.selectedLayer)
-            showSnackbar("${checked.size} lapisan berhasil digabungkan")
+            showSnackbar("${checked.size} layers merged")
         }
         binding.btnBatchDone.setOnClickListener { setBatchMode(false) }
         binding.btnBatchMove.setOnClickListener {
             val checked = adapter.getCheckedLayers()
             if (checked.isEmpty()) {
-                showSnackbar("Pilih lapisan yang ingin digeser terlebih dahulu")
+                showSnackbar("Select layers to move first")
             } else {
                 showMoveMenu(binding.btnBatchMove, checked)
             }
@@ -184,19 +184,19 @@ class LayerPanelController(
     private fun showMoveMenu(anchor: View, selectedLayers: List<CanvasLayer>) {
         val popup = PopupMenu(binding.root.context, anchor)
         val step = 20f
-        popup.menu.add("Atas").setOnMenuItemClickListener {
+        popup.menu.add("Up").setOnMenuItemClickListener {
             moveSelectedLayers(selectedLayers, 0f, -step)
             true
         }
-        popup.menu.add("Bawah").setOnMenuItemClickListener {
+        popup.menu.add("Down").setOnMenuItemClickListener {
             moveSelectedLayers(selectedLayers, 0f, step)
             true
         }
-        popup.menu.add("Kiri").setOnMenuItemClickListener {
+        popup.menu.add("Left").setOnMenuItemClickListener {
             moveSelectedLayers(selectedLayers, -step, 0f)
             true
         }
-        popup.menu.add("Kanan").setOnMenuItemClickListener {
+        popup.menu.add("Right").setOnMenuItemClickListener {
             moveSelectedLayers(selectedLayers, step, 0f)
             true
         }
@@ -207,24 +207,24 @@ class LayerPanelController(
         val movedCount = canvas.moveLayersBy(selectedLayers, dx, dy)
         adapter.submitLayers(canvas.layers, canvas.selectedLayer)
         if (movedCount == 0) {
-            showSnackbar("Tidak ada lapisan yang dapat digeser")
+            showSnackbar("No layers can be moved")
         } else {
-            showSnackbar("$movedCount lapisan digeser")
+            showSnackbar("$movedCount layers moved")
         }
     }
 
     private fun showBatchAttributesDialog(selectedLayers: List<CanvasLayer>) {
         val actions = arrayOf(
-            "Tampilkan semua",
-            "Sembunyikan semua",
-            "Buka kunci semua",
-            "Kunci semua"
+            "Show all",
+            "Hide all",
+            "Unlock all",
+            "Lock all"
         )
 
         MaterialAlertDialogBuilder(binding.root.context)
-            .setTitle("Atribut ${selectedLayers.size} lapisan")
+            .setTitle("Attributes of ${selectedLayers.size} layers")
             .setItems(actions) { dialog, which ->
-                canvas.runRecordedAction("Ubah Atribut Massal") {
+                canvas.runRecordedAction("Change Attributes (Batch)") {
                     when (which) {
                         0 -> selectedLayers.forEach { it.isVisible = true }
                         1 -> selectedLayers.forEach { it.isVisible = false }
@@ -238,10 +238,10 @@ class LayerPanelController(
                 }
                 canvas.notifyLayersChanged()
                 adapter.submitLayers(canvas.layers, canvas.selectedLayer)
-                showSnackbar("Atribut ${selectedLayers.size} lapisan diperbarui")
+                showSnackbar("Attributes of ${selectedLayers.size} layers updated")
                 dialog.dismiss()
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton("Cancel", null)
             .show()
     }
 

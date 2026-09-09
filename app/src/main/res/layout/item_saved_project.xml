@@ -71,7 +71,7 @@
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Hapus Proyek"
+            android:contentDescription="Delete Project"
             android:src="@drawable/ic_delete_24px"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"

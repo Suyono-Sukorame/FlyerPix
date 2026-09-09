@@ -20,7 +20,7 @@
             android:layout_height="32dp"
             android:src="@drawable/ic_aspect_ratio_24px"
             app:tint="#1976D2"
-            android:contentDescription="Icon Ukuran Gambar" />
+            android:contentDescription="Image Size Icon" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -32,7 +32,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Ukuran Gambar"
+                android:text="Image Size"
                 android:textColor="#212121"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -51,7 +51,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:text="Pilih preset atau tentukan ukuran custom."
+        android:text="Pick a preset or set a custom size."
         android:textColor="#9E9E9E"
         android:textSize="13sp" />
 
@@ -65,7 +65,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Preset Ukuran Standar"
+        android:text="Standard Size Presets"
         android:textColor="#1976D2"
         android:textSize="12sp"
         android:textStyle="bold" />
@@ -171,7 +171,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Ukuran Custom"
+        android:text="Custom Size"
         android:textColor="#1976D2"
         android:textSize="12sp"
         android:textStyle="bold" />
@@ -270,7 +270,7 @@
             android:id="@+id/cbLockAspectRatio"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Kunci Rasio"
+            android:text="Lock Ratio"
             android:textColor="#424242"
             android:textSize="12sp"
             app:buttonTint="#1976D2" />
@@ -290,7 +290,7 @@
             android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:paddingHorizontal="16dp"
-            android:text="Batal"
+            android:text="Cancel"
             android:textColor="#757575"
             android:textSize="14sp"
             android:textStyle="bold" />
@@ -302,7 +302,7 @@
             android:layout_height="48dp"
             android:layout_marginStart="12dp"
             android:paddingHorizontal="24dp"
-            android:text="Terapkan"
+            android:text="Apply"
             android:textColor="@android:color/white"
             android:textSize="14sp"
             android:textStyle="bold"

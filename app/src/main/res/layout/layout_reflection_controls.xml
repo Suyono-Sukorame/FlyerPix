@@ -93,7 +93,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
-                    android:text="Jarak: 10 px"
+                    android:text="Distance: 10 px"
                     android:textAppearance="?attr/textAppearanceCaption" />
 
                 <com.google.android.material.slider.Slider
@@ -114,7 +114,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
-            android:text="Memudar (Fade): 50%"
+            android:text="Fade: 50%"
             android:textAppearance="?attr/textAppearanceCaption" />
 
         <com.google.android.material.slider.Slider

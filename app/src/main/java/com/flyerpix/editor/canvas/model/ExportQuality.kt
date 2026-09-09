@@ -11,8 +11,8 @@ enum class ExportFormat(
     val compressFormat: Bitmap.CompressFormat,
     val displayName: String
 ) {
-    PNG("png", "image/png", Bitmap.CompressFormat.PNG, "PNG (Mendukung Transparansi)"),
-    JPEG("jpg", "image/jpeg", Bitmap.CompressFormat.JPEG, "JPEG (Kompresi Ringan)")
+    PNG("png", "image/png", Bitmap.CompressFormat.PNG, "PNG (Supports Transparency)"),
+    JPEG("jpg", "image/jpeg", Bitmap.CompressFormat.JPEG, "JPEG (Light Compression)")
 }
 
 /**
@@ -26,12 +26,12 @@ enum class ExportQuality(
     val scaleMultiplier: Float,
     val description: String
 ) {
-    DEFAULT("Default", 1.0f, "Resolusi Asli Kanvas"),
-    LOW("Low (0.5x)", 0.5f, "Ukuran file kecil"),
-    MEDIUM("Medium (0.75x)", 0.75f, "Kualitas standar"),
-    HIGH("High (1.5x)", 1.5f, "Kualitas tinggi tajam"),
-    VERY_HIGH("Very High (2.0x)", 2.0f, "Kualitas sangat tajam (2K)"),
-    ULTRA_HD("Ultra HD / 4K (4.0x)", 4.0f, "Maksimum Ultra HD 4K");
+    DEFAULT("Default", 1.0f, "Original Canvas Resolution"),
+    LOW("Low (0.5x)", 0.5f, "Small file size"),
+    MEDIUM("Medium (0.75x)", 0.75f, "Standard quality"),
+    HIGH("High (1.5x)", 1.5f, "Sharp high quality"),
+    VERY_HIGH("Very High (2.0x)", 2.0f, "Very sharp quality (2K)"),
+    ULTRA_HD("Ultra HD / 4K (4.0x)", 4.0f, "Maximum Ultra HD 4K");
 
     /**
      * Menghitung lebar dan tinggi resolusi target berdasarkan resolusi logika kanvas saat ini.

@@ -239,7 +239,7 @@ class PixelCanvasView @JvmOverloads constructor(
     /**
      * Menangkap snapshot state kanvas saat ini (Prompt 50).
      */
-    fun captureCurrentState(actionName: String = "Perubahan Kanvas"): CanvasStateSnapshot {
+    fun captureCurrentState(actionName: String = "Canvas Change"): CanvasStateSnapshot {
         val currentLayers = layers ?: emptyList()
         val currentBg = canvasBackground ?: CanvasBackground()
         return CanvasStateSnapshot.capture(
@@ -373,7 +373,7 @@ class PixelCanvasView @JvmOverloads constructor(
      * Mengubah latar belakang kanvas menjadi transparan (checkerboard pattern) (Prompt 44).
      */
     fun setTransparentBackground() {
-        runRecordedAction("Ubah Latar Transparan") {
+        runRecordedAction("Set Transparent Background") {
             canvasBackground = CanvasBackground(
                 mode = CanvasBackgroundMode.TRANSPARENT,
                 solidColor = canvasBackground.solidColor,
@@ -386,7 +386,7 @@ class PixelCanvasView @JvmOverloads constructor(
      * Mengubah latar belakang kanvas menjadi warna solid tertentu (Prompt 44).
      */
     fun setColorBackground(color: Int) {
-        runRecordedAction("Ubah Warna Latar") {
+        runRecordedAction("Change Background Color") {
             canvasBackground = CanvasBackground(
                 mode = CanvasBackgroundMode.SOLID_COLOR,
                 solidColor = color,
@@ -399,7 +399,7 @@ class PixelCanvasView @JvmOverloads constructor(
      * Mengubah latar belakang kanvas menjadi gradasi warna tertentu (Prompt 44).
      */
     fun setGradientBackground(gradient: GradientColor) {
-        runRecordedAction("Ubah Gradasi Latar") {
+        runRecordedAction("Change Gradient Background") {
             canvasBackground = CanvasBackground(
                 mode = CanvasBackgroundMode.GRADIENT,
                 solidColor = canvasBackground.solidColor,
@@ -415,7 +415,7 @@ class PixelCanvasView @JvmOverloads constructor(
      * @param bitmap Bitmap gambar dari Galeri atau Kamera.
      */
     fun setImageBackground(bitmap: Bitmap) {
-        runRecordedAction("Ubah Gambar Latar") {
+        runRecordedAction("Change Image Background") {
             canvasBackground = CanvasBackground(
                 mode = CanvasBackgroundMode.IMAGE,
                 solidColor = canvasBackground.solidColor,
@@ -429,7 +429,7 @@ class PixelCanvasView @JvmOverloads constructor(
      * Menghapus gambar latar belakang dan mengembalikan ke warna solid terakhir (Prompt 45).
      */
     fun clearImageBackground() {
-        runRecordedAction("Hapus Gambar Latar") {
+        runRecordedAction("Remove Image Background") {
             canvasBackground = CanvasBackground(
                 mode = CanvasBackgroundMode.SOLID_COLOR,
                 solidColor = canvasBackground.solidColor,
@@ -647,7 +647,7 @@ class PixelCanvasView @JvmOverloads constructor(
         val newCanvasH = cropLogicalBottom - cropLogicalTop
         if (newCanvasW <= 0 || newCanvasH <= 0) return
 
-        runRecordedAction("Crop Kanvas") {
+        runRecordedAction("Crop Canvas") {
             // Offset perpindahan viewport (dalam viewport pixels)
             val vpOffsetX = cropLogicalLeft / scaleX
             val vpOffsetY = cropLogicalTop / scaleY
@@ -1921,7 +1921,7 @@ class PixelCanvasView @JvmOverloads constructor(
         }
 
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-            touchStartState = captureCurrentState("Transformasi Layer")
+            touchStartState = captureCurrentState("Transform Layer")
             hasTouchTransformed = false
         }
 
@@ -1944,7 +1944,7 @@ class PixelCanvasView @JvmOverloads constructor(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     if (hasTouchTransformed) {
                         touchStartState?.let { before ->
-                            recordAction("Ubah Posisi / Transformasi", before)
+                            recordAction("Move / Transform", before)
                         }
                     }
                     touchStartState = null
@@ -1996,7 +1996,7 @@ class PixelCanvasView @JvmOverloads constructor(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     if (hasTouchTransformed) {
                         touchStartState?.let { before ->
-                            recordAction("Ubah Lebar Wrap Teks", before)
+                            recordAction("Change Text Wrap Width", before)
                         }
                     }
                     touchStartState = null
@@ -2028,7 +2028,7 @@ class PixelCanvasView @JvmOverloads constructor(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     if (hasTouchTransformed) {
                         touchStartState?.let { before ->
-                            recordAction("Ubah Posisi / Transformasi", before)
+                            recordAction("Move / Transform", before)
                         }
                     }
                     touchStartState = null
@@ -2056,7 +2056,7 @@ class PixelCanvasView @JvmOverloads constructor(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     if (hasTouchTransformed) {
                         touchStartState?.let { before ->
-                            recordAction("Ubah Posisi / Transformasi", before)
+                            recordAction("Move / Transform", before)
                         }
                     }
                     touchStartState = null
@@ -2264,7 +2264,7 @@ class PixelCanvasView @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (hasTouchTransformed) {
                     touchStartState?.let { before ->
-                        recordAction("Ubah Posisi / Transformasi", before)
+                        recordAction("Move / Transform", before)
                     }
                 }
                 touchStartState = null
@@ -2289,7 +2289,7 @@ class PixelCanvasView @JvmOverloads constructor(
      * Menambahkan layer baru ke tumpukan teratas (z-index tertinggi).
      */
     fun addLayer(layer: CanvasLayer) {
-        runRecordedAction("Tambah Layer") {
+        runRecordedAction("Add Layer") {
             layers.add(layer)
             selectedLayer = layer
             invalidate()
@@ -2301,14 +2301,14 @@ class PixelCanvasView @JvmOverloads constructor(
      * Menghapus layer tertentu dari daftar.
      */
     fun removeLayer(layer: CanvasLayer): Boolean {
-        val before = captureCurrentState("Hapus Layer")
+        val before = captureCurrentState("Delete Layer")
         val removed = layers.remove(layer)
         if (removed) {
             if (selectedLayer == layer) {
                 selectedLayer = layers.lastOrNull()
             }
             invalidate()
-            recordAction("Hapus Layer", before)
+            recordAction("Delete Layer", before)
             notifyLayersChanged()
         }
         return removed
@@ -2318,13 +2318,13 @@ class PixelCanvasView @JvmOverloads constructor(
         val movableLayers = layersToMove.filter { layers.contains(it) && !it.isLocked }
         if (movableLayers.isEmpty()) return 0
 
-        val before = captureCurrentState("Geser Layer")
+        val before = captureCurrentState("Move Layer")
         movableLayers.forEach { layer ->
             layer.x += dx
             layer.y += dy
         }
         invalidate()
-        recordAction("Geser Layer", before)
+        recordAction("Move Layer", before)
         notifyLayersChanged()
         return movableLayers.size
     }
@@ -2337,7 +2337,7 @@ class PixelCanvasView @JvmOverloads constructor(
      */
     fun clearLayers() {
         if (layers.isEmpty()) return
-        runRecordedAction("Bersihkan Kanvas") {
+        runRecordedAction("Clear Canvas") {
             layers.clear()
             selectedLayer = null
             invalidate()
@@ -2354,12 +2354,12 @@ class PixelCanvasView @JvmOverloads constructor(
     fun deleteSelectedLayer(): Boolean {
         val layer = selectedLayer ?: return false
         if (layer.isLocked) return false
-        val before = captureCurrentState("Hapus Layer")
+        val before = captureCurrentState("Delete Layer")
         val removed = layers.remove(layer)
         if (removed) {
             selectedLayer = null
             invalidate()
-            recordAction("Hapus Layer", before)
+            recordAction("Delete Layer", before)
             notifyLayersChanged()
         }
         return removed
@@ -2376,7 +2376,7 @@ class PixelCanvasView @JvmOverloads constructor(
         val layer = selectedLayer ?: return null
         if (layer.isLocked) return null
 
-        val before = captureCurrentState("Duplikasi Layer")
+        val before = captureCurrentState("Duplicate Layer")
         val cloned = layer.copyLayer()
         cloned.x = layer.x + 30f
         cloned.y = layer.y + 30f
@@ -2384,7 +2384,7 @@ class PixelCanvasView @JvmOverloads constructor(
         layers.add(cloned)
         selectedLayer = cloned
         invalidate()
-        recordAction("Duplikasi Layer", before)
+        recordAction("Duplicate Layer", before)
         notifyLayersChanged()
         return cloned
     }
@@ -2402,7 +2402,7 @@ class PixelCanvasView @JvmOverloads constructor(
             invalidate()
             return true
         }
-        runRecordedAction("Pindah ke Depan") {
+        runRecordedAction("Bring to Front") {
             layers.removeAt(index)
             layers.add(layer)
             selectedLayer = layer
@@ -2425,7 +2425,7 @@ class PixelCanvasView @JvmOverloads constructor(
             invalidate()
             return true
         }
-        runRecordedAction("Pindah ke Belakang") {
+        runRecordedAction("Send to Back") {
             layers.removeAt(index)
             layers.add(0, layer)
             selectedLayer = layer
@@ -2505,7 +2505,7 @@ class PixelCanvasView @JvmOverloads constructor(
         val validLayers = layersToMerge.filter { layers.contains(it) }
         if (validLayers.size < 2) return null
 
-        val before = captureCurrentState("Gabung Layer")
+        val before = captureCurrentState("Merge Layers")
 
         // Urutkan berdasarkan urutan kemunculan di kanvas (z-index)
         val sortedLayers = validLayers.sortedBy { layers.indexOf(it) }
@@ -2576,7 +2576,7 @@ class PixelCanvasView @JvmOverloads constructor(
 
         selectedLayer = mergedLayer
         invalidate()
-        recordAction("Gabung Layer", before)
+        recordAction("Merge Layers", before)
         notifyLayersChanged()
         return mergedLayer
     }

@@ -25,7 +25,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Perspektif (3D Warp)"
+            android:text="Perspective (3D Warp)"
             android:textAppearance="?attr/textAppearanceBody2"
             android:checked="false" />
 
@@ -53,7 +53,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Geser 4 titik sudut handle pada kanvas untuk menyesuaikan bidang miring."
+            android:text="Drag the 4 corner handles on the canvas to adjust the warp plane."
             android:textAppearance="?attr/textAppearanceCaption"
             android:textColor="#5F6368" />
 
@@ -75,7 +75,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
                     android:layout_marginEnd="6dp"
-                    android:text="Datar"
+                    android:text="Flat"
                     android:textSize="11sp"
                     android:paddingHorizontal="10dp"
                     android:minWidth="0dp" />
@@ -86,7 +86,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
                     android:layout_marginEnd="6dp"
-                    android:text="Halus Kiri"
+                    android:text="Smooth Left"
                     android:textSize="11sp"
                     android:paddingHorizontal="10dp"
                     android:minWidth="0dp" />
@@ -97,7 +97,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
                     android:layout_marginEnd="6dp"
-                    android:text="Tembok Kiri ◖"
+                    android:text="◖ Left Wall"
                     android:textSize="11sp"
                     android:paddingHorizontal="10dp"
                     android:minWidth="0dp" />
@@ -108,7 +108,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
                     android:layout_marginEnd="6dp"
-                    android:text="◗ Tembok Kanan"
+                    android:text="◗ Right Wall"
                     android:textSize="11sp"
                     android:paddingHorizontal="10dp"
                     android:minWidth="0dp" />
@@ -119,7 +119,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
                     android:layout_marginEnd="6dp"
-                    android:text="Miring Halus"
+                    android:text="Smooth Italic"
                     android:textSize="11sp"
                     android:paddingHorizontal="10dp"
                     android:minWidth="0dp" />
@@ -140,7 +140,7 @@
                     style="@style/LightPanelOutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
-                    android:text="▼ Lantai"
+                    android:text="▼ Floor"
                     android:textSize="11sp"
                     android:paddingHorizontal="10dp"
                     android:minWidth="0dp" />

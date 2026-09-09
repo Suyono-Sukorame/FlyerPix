@@ -29,19 +29,19 @@ class SaveProjectDialog(
             defaultProjectName
         } else {
             val existingCount = ProjectSerializer.listProjects(context).size
-            "Proyek_${existingCount + 1}"
+            "Project_${existingCount + 1}"
         }
 
         binding.etProjectName.setText(initialName)
         binding.etProjectName.setSelection(initialName.length)
 
         val dialog = MaterialAlertDialogBuilder(context, R.style.AppAlertDialog)
-            .setTitle("Simpan sebagai Proyek")
+            .setTitle("Save as Project")
             .setView(binding.root)
             .setNegativeButton(R.string.btn_cancel) { d, _ ->
                 d.dismiss()
             }
-            .setPositiveButton("Simpan", null) // listener di-override di bawah agar tidak langsung dismiss jika nama kosong
+            .setPositiveButton("Save", null) // listener di-override di bawah agar tidak langsung dismiss jika nama kosong
             .create()
 
         dialog.setOnShowListener {
@@ -49,7 +49,7 @@ class SaveProjectDialog(
             positiveBtn.setOnClickListener {
                 val inputName = binding.etProjectName.text?.toString()?.trim().orEmpty()
                 if (inputName.isBlank()) {
-                    binding.tilProjectName.error = "Nama proyek tidak boleh kosong"
+                    binding.tilProjectName.error = "Project name cannot be empty"
                     return@setOnClickListener
                 }
                 binding.tilProjectName.error = null
@@ -64,12 +64,12 @@ class SaveProjectDialog(
                 if (targetFile.exists()) {
                     // Konfirmasi overwrite
                     MaterialAlertDialogBuilder(context, R.style.AppAlertDialog)
-                        .setTitle("Timpa Proyek?")
-                        .setMessage("Proyek dengan nama '$inputName' sudah ada. Apakah Anda ingin menimpanya?")
-                        .setPositiveButton("Timpa") { _, _ ->
+                        .setTitle("Overwrite Project?")
+                        .setMessage("A project named '$inputName' already exists. Do you want to overwrite it?")
+                        .setPositiveButton("Overwrite") { _, _ ->
                             performSave(inputName, dialog)
                         }
-                        .setNegativeButton("Batal", null)
+                        .setNegativeButton("Cancel", null)
                         .show()
                 } else {
                     performSave(inputName, dialog)
@@ -92,8 +92,8 @@ class SaveProjectDialog(
             dialog.dismiss()
         } catch (e: Exception) {
             MaterialAlertDialogBuilder(context, R.style.AppAlertDialog)
-                .setTitle("Gagal Menyimpan")
-                .setMessage("Terjadi kesalahan saat menyimpan proyek: ${e.localizedMessage}")
+                .setTitle("Save Failed")
+                .setMessage("An error occurred while saving the project: ${e.localizedMessage}")
                 .setPositiveButton("OK", null)
                 .show()
         }

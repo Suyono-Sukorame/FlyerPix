@@ -25,7 +25,7 @@
             android:layout_width="28dp"
             android:layout_height="36dp"
             android:layout_marginStart="4dp"
-            android:contentDescription="Geser urutan lapisan"
+            android:contentDescription="Reorder layer"
             android:padding="5dp"
             android:src="@drawable/ic_dots_drag_24px"
             app:tint="#616161" />
@@ -39,7 +39,7 @@
             android:background="#EEEEEE"
             android:padding="2dp"
             android:scaleType="fitCenter"
-            android:contentDescription="Pratinjau lapisan" />
+            android:contentDescription="Layer preview" />
 
         <!-- 2. Teks Nama / Pratinjau Lapisan -->
         <TextView
@@ -83,7 +83,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="?attr/selectableItemBackground"
-                    android:contentDescription="Kunci Lapisan"
+                    android:contentDescription="Lock Layer"
                     android:padding="6dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_lock_24px"
@@ -100,7 +100,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="?attr/selectableItemBackground"
-                    android:contentDescription="Ubah Lapisan"
+                    android:contentDescription="Edit Layer"
                     android:padding="6dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_edit_box_24px"
@@ -127,7 +127,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="?attr/selectableItemBackground"
-                    android:contentDescription="Sembunyikan Lapisan"
+                    android:contentDescription="Hide Layer"
                     android:padding="6dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_visibility_24px"
@@ -144,7 +144,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="?attr/selectableItemBackground"
-                    android:contentDescription="Hapus Lapisan"
+                    android:contentDescription="Delete Layer"
                     android:padding="6dp"
                     android:scaleType="fitCenter"
                     android:src="@drawable/ic_delete_24px"

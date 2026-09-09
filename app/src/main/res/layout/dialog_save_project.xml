@@ -13,7 +13,7 @@
         android:id="@+id/tvSaveSubtitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Seluruh konfigurasi kanvas dan lapisan akan disimpan dalam format .plp"
+        android:text="All canvas and layer configuration will be saved in the .plp format"
         android:textColor="@color/light_text_secondary"
         android:textSize="13sp"
         android:layout_marginBottom="16dp" />
@@ -23,7 +23,7 @@
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Nama Proyek"
+        android:hint="Project Name"
         app:boxStrokeColor="#18C8F5"
         app:hintTextColor="#18C8F5">
 

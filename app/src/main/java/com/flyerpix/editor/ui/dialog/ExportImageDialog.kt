@@ -39,7 +39,7 @@ class ExportImageDialog(
             "High 1.5x (${(canvasWidth * 1.5f).toInt()} × ${(canvasHeight * 1.5f).toInt()} px)",
             "Very High 2.0x (${(canvasWidth * 2.0f).toInt()} × ${(canvasHeight * 2.0f).toInt()} px)",
             "Ultra HD / 4K 4.0x (${(canvasWidth * 4.0f).toInt().coerceAtMost(8192)} × ${(canvasHeight * 4.0f).toInt().coerceAtMost(8192)} px)",
-            "Kustom (Ukuran Manual)"
+            "Custom (Manual Size)"
         )
 
         val spinnerAdapter = ArrayAdapter(
@@ -62,11 +62,11 @@ class ExportImageDialog(
             if (isCustom) {
                 val customW = binding.etCustomWidth.text?.toString()?.toIntOrNull() ?: canvasWidth
                 val customH = binding.etCustomHeight.text?.toString()?.toIntOrNull() ?: canvasHeight
-                binding.tvResolutionPreview.text = "Resolusi Target: $customW × $customH px (${selectedFormat.name})"
+                binding.tvResolutionPreview.text = "Target Resolution: $customW × $customH px (${selectedFormat.name})"
             } else {
                 val (w, h) = selectedQuality.calculateDimensions(canvasWidth, canvasHeight)
                 val badge = if (selectedQuality == ExportQuality.ULTRA_HD) " • Ultra HD / 4K" else ""
-                binding.tvResolutionPreview.text = "Resolusi Target: $w × $h px$badge (${selectedFormat.name})"
+                binding.tvResolutionPreview.text = "Target Resolution: $w × $h px$badge (${selectedFormat.name})"
             }
         }
 
@@ -101,13 +101,13 @@ class ExportImageDialog(
 
         val dialog = MaterialAlertDialogBuilder(context, R.style.AppAlertDialog)
             .setView(binding.root)
-            .setPositiveButton("Simpan ke Galeri") { d, _ ->
+            .setPositiveButton("Save to Gallery") { d, _ ->
                 val customW = if (isCustom) binding.etCustomWidth.text?.toString()?.toIntOrNull() else null
                 val customH = if (isCustom) binding.etCustomHeight.text?.toString()?.toIntOrNull() else null
                 onExportToGallery(selectedQuality, selectedFormat, customW, customH)
                 d.dismiss()
             }
-            .setNeutralButton("Bagikan") { d, _ ->
+            .setNeutralButton("Share") { d, _ ->
                 val customW = if (isCustom) binding.etCustomWidth.text?.toString()?.toIntOrNull() else null
                 val customH = if (isCustom) binding.etCustomHeight.text?.toString()?.toIntOrNull() else null
                 onShareRequested(selectedQuality, selectedFormat, customW, customH)

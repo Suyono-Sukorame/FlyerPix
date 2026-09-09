@@ -42,7 +42,7 @@
             android:paddingHorizontal="0dp"
             app:icon="@drawable/ic_align_center_24"
             app:iconSize="18dp"
-            android:contentDescription="Tengah" />
+            android:contentDescription="Center" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAlignRight"
@@ -83,7 +83,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="4dp"
-            android:text="Pembungkusan Teks"
+            android:text="Text Wrapping"
             android:textAppearance="?attr/textAppearanceCaption" />
 
         <com.google.android.material.button.MaterialButton
@@ -95,7 +95,7 @@
             android:paddingHorizontal="12dp"
             android:text="Wrap"
             android:textSize="12sp"
-            android:contentDescription="Aktifkan pembungkusan teks" />
+            android:contentDescription="Enable text wrapping" />
     </LinearLayout>
 
     <LinearLayout
@@ -110,7 +110,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
-            android:text="Lebar: 600 px"
+            android:text="Width: 600 px"
             android:textAppearance="?attr/textAppearanceCaption" />
 
         <com.google.android.material.slider.Slider

@@ -90,49 +90,49 @@ data class CanvasSizePreset(
                 name = "Custom",
                 width = 1080,
                 height = 1080,
-                description = "Tentukan ukuran lebar & tinggi kustom bebas"
+                description = "Set any custom width & height"
             ),
             CanvasSizePreset(
-                name = "Persegi 1:1 (Instagram / Profil)",
+                name = "Square 1:1 (Instagram / Profile)",
                 width = 1080,
                 height = 1080,
-                description = "Format feed Instagram, avatar profil WhatsApp/IG"
+                description = "Instagram feed format, WhatsApp/IG profile avatar"
             ),
             CanvasSizePreset(
                 name = "Instagram Post (4:5)",
                 width = 1080,
                 height = 1350,
-                description = "Post gambar Instagram feed format portrait"
+                description = "Instagram feed image post, portrait format"
             ),
             CanvasSizePreset(
                 name = "YouTube Thumbnail (16:9)",
                 width = 1280,
                 height = 720,
-                description = "Sampul video standar YouTube resolusi HD 720p"
+                description = "Standard YouTube video thumbnail, HD 720p"
             ),
             CanvasSizePreset(
                 name = "YouTube Channel Banner",
                 width = 2560,
                 height = 1440,
-                description = "Header latar belakang banner saluran YouTube (16:9)"
+                description = "YouTube channel banner header background (16:9)"
             ),
             CanvasSizePreset(
                 name = "Facebook Cover",
                 width = 820,
                 height = 312,
-                description = "Foto sampul header halaman / grup Facebook"
+                description = "Cover photo for Facebook page / group header"
             ),
             CanvasSizePreset(
                 name = "Twitter / X Header",
                 width = 1500,
                 height = 500,
-                description = "Banner header profil akun Twitter/X (3:1)"
+                description = "Twitter/X account profile header banner (3:1)"
             ),
             CanvasSizePreset(
                 name = "Instagram Story / TikTok (9:16)",
                 width = 1080,
                 height = 1920,
-                description = "Video pendek vertikal Story, Reels, TikTok (9:16)"
+                description = "Vertical short video for Story, Reels, TikTok (9:16)"
             )
         )
     }

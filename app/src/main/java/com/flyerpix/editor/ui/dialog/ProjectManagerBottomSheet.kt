@@ -72,7 +72,7 @@ class ProjectManagerBottomSheet : BottomSheetDialogFragment() {
 
         adapter.updateItems(items)
 
-        binding.tvProjectCountBadge.text = "${items.size} Proyek"
+        binding.tvProjectCountBadge.text = "${items.size} Project(s)"
         if (items.isEmpty()) {
             binding.rvSavedProjects.visibility = View.GONE
             binding.layoutEmptyState.visibility = View.VISIBLE
@@ -90,8 +90,8 @@ class ProjectManagerBottomSheet : BottomSheetDialogFragment() {
         } catch (e: Exception) {
             val ctx = context ?: return
             MaterialAlertDialogBuilder(ctx, R.style.AppAlertDialog)
-                .setTitle("Gagal Membuka Proyek")
-                .setMessage("File proyek tidak dapat dimuat: ${e.localizedMessage}")
+                .setTitle("Failed to Open Project")
+                .setMessage("Project file could not be loaded: ${e.localizedMessage}")
                 .setPositiveButton("OK", null)
                 .show()
         }
@@ -100,15 +100,15 @@ class ProjectManagerBottomSheet : BottomSheetDialogFragment() {
     private fun confirmDeleteProject(file: File) {
         val ctx = context ?: return
         MaterialAlertDialogBuilder(ctx, R.style.AppAlertDialog)
-            .setTitle("Hapus Proyek?")
-            .setMessage("Apakah Anda yakin ingin menghapus proyek '${file.nameWithoutExtension}'?")
-            .setPositiveButton("Hapus") { _, _ ->
+            .setTitle("Delete Project?")
+            .setMessage("Are you sure you want to delete project '${file.nameWithoutExtension}'?")
+            .setPositiveButton("Delete") { _, _ ->
                 val deleted = file.delete()
                 if (deleted) {
-                    Toast.makeText(ctx, "Proyek dihapus", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Project deleted", Toast.LENGTH_SHORT).show()
                     loadProjects()
                 } else {
-                    Toast.makeText(ctx, "Gagal menghapus file proyek", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Failed to delete project file", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton(R.string.btn_cancel, null)

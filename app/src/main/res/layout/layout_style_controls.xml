@@ -24,7 +24,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Gaya Teks"
+            android:text="Text Style"
             android:textAppearance="?attr/textAppearanceSubtitle2"
             android:textStyle="bold" />
 
@@ -106,7 +106,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:layout_marginStart="4dp"
-        android:text="Ketebalan Font (Weight)"
+        android:text="Font Weight"
         android:textAppearance="?attr/textAppearanceCaption" />
 
     <!-- Baris 1: Thin / Light -->

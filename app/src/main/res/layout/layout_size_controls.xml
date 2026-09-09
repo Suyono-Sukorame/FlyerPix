@@ -23,7 +23,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Ukuran"
+            android:text="Size"
             android:textAppearance="?attr/textAppearanceSubtitle2"
             android:textStyle="bold" />
 
@@ -125,7 +125,7 @@
         android:layout_width="wrap_content"
         android:layout_height="32dp"
         android:layout_marginTop="2dp"
-        android:text="Kontrol skala lanjutan"
+        android:text="Advanced scale controls"
         android:textSize="11sp"
         android:textColor="@color/brand_blue"
         android:minWidth="0dp"
@@ -151,7 +151,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Ukuran font: 64 px"
+                android:text="Font size: 64 px"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.slider.Slider
@@ -177,7 +177,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="Skala: 100%"
+                android:text="Scale: 100%"
                 android:textAppearance="?attr/textAppearanceCaption" />
 
             <com.google.android.material.slider.Slider
@@ -210,7 +210,7 @@
             android:layout_marginEnd="4dp"
             android:minWidth="0dp"
             android:paddingHorizontal="4dp"
-            android:text="Sesuaikan Kanvas"
+            android:text="Adjust Canvas"
             android:textSize="10sp" />
 
         <com.google.android.material.button.MaterialButton
@@ -221,7 +221,7 @@
             android:layout_weight="1"
             android:minWidth="0dp"
             android:paddingHorizontal="4dp"
-            android:text="Skala 100%"
+            android:text="Scale 100%"
             android:textSize="10sp" />
     </LinearLayout>
 </LinearLayout>

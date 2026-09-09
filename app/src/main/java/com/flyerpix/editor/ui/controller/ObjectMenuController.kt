@@ -1,10 +1,18 @@
 package com.flyerpix.editor.ui.controller
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
+import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
+import com.flyerpix.editor.canvas.model.ShapeLayer
 import com.flyerpix.editor.canvas.model.ShapeType
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 
@@ -64,11 +72,11 @@ class ObjectMenuController(
         binding.btnObjStartDraw.setOnClickListener { toggleFreeDrawMode() }
         binding.btnObjAddBezier.setOnClickListener {
             canvas.addPenLayer()
-            showSnackbar("Kurva Bézier ditambahkan")
+            showSnackbar("Bézier curve added")
         }
         binding.btnObjAddArrow.setOnClickListener {
             canvas.addArrowLayer()
-            showSnackbar("Panah ditambahkan")
+            showSnackbar("Arrow added")
         }
     }
 
@@ -162,12 +170,12 @@ class ObjectMenuController(
         canvas.freeDrawEnabled = enabled
         canvas.onFreeDrawStart = { syncDrawButton() }
         syncDrawButton()
-        showSnackbar(if (enabled) "Mode Gambar Bebas aktif. Geser di kanvas." else "Mode Gambar Bebas dimatikan")
+        showSnackbar(if (enabled) "Free Draw mode on. Drag on the canvas." else "Free Draw mode off")
     }
 
     fun syncDrawButton() {
         val enabled = canvas.freeDrawEnabled
-        binding.btnObjStartDraw.text = if (enabled) "🛑 Selesai Menggambar" else "✏️ Mulai Gambar Bebas"
+        binding.btnObjStartDraw.text = if (enabled) "🛑 Finish Drawing" else "✏️ Start Free Draw"
         binding.btnObjStartDraw.setStrokeColor(
             android.content.res.ColorStateList.valueOf(if (enabled) 0xFF2E7D32.toInt() else 0xFF444444.toInt())
         )
@@ -175,29 +183,57 @@ class ObjectMenuController(
 
     private fun buildShapeRow() {
         val shapes = listOf(
-            "■" to ShapeType.RECTANGLE, "●" to ShapeType.CIRCLE,
-            "▲" to ShapeType.TRIANGLE,  "★" to ShapeType.STAR,
-            "▢" to ShapeType.ROUNDED_RECTANGLE
+            ShapeType.RECTANGLE, ShapeType.CIRCLE, ShapeType.TRIANGLE,
+            ShapeType.STAR, ShapeType.ROUNDED_RECTANGLE
         )
         val density = context.resources.displayMetrics.density
         val size = (48 * density).toInt()
         val margin = (6 * density).toInt()
         binding.llShapeRow.removeAllViews()
-        for ((label, type) in shapes) {
-            val btn = com.google.android.material.button.MaterialButton(
-                context, null, com.google.android.material.R.attr.materialButtonOutlinedStyle
-            ).apply {
-                text = label; textSize = 20f
-                layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply { setMargins(margin, margin, margin, margin) }
-                setPadding(0, 0, 0, 0); minWidth = 0; minimumWidth = 0
+        for (type in shapes) {
+            val tile = FrameLayout(context).apply {
+                layoutParams = LinearLayout.LayoutParams(size, size).apply { setMargins(margin, margin, margin, margin) }
+                setBackgroundResource(R.drawable.bg_shape_preview)
+                isClickable = true
+                isFocusable = true
                 setOnClickListener {
                     val shape = canvas.addShapeLayer(type)
                     canvas.selectedLayer = shape // Auto select shape
-                    showSnackbar("Shape ${type.name} dibuat")
+                    showSnackbar("Shape ${type.name} created")
                     onShapeCreated?.invoke(shape) // Notify controller to show settings
                 }
             }
-            binding.llShapeRow.addView(btn)
+            tile.addView(ImageView(context).apply {
+                setImageDrawable(buildShapeIcon(type, size))
+                layoutParams = FrameLayout.LayoutParams(size, size, Gravity.CENTER)
+            })
+            binding.llShapeRow.addView(tile)
         }
+    }
+
+    /**
+     * Gambar preview shape (fill + stroke) ke dalam Bitmap menggunakan builder
+     * path yang sama dengan rendering kanvas, sehingga preview selalu WYSIWYG.
+     */
+    private fun buildShapeIcon(type: ShapeType, sizePx: Int): BitmapDrawable {
+        val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val inset = sizePx * 0.15f
+        val side = sizePx - 2 * inset
+        val model = ShapeLayer(shapeType = type, width = side, height = side)
+        val path = model.buildPath()
+        c.translate(inset, inset)
+        val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF1769FF.toInt()
+            style = Paint.Style.FILL
+        }
+        val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF0D47A1.toInt()
+            style = Paint.Style.STROKE
+            strokeWidth = (side * 0.05f).coerceAtLeast(1.5f)
+        }
+        c.drawPath(path, fill)
+        c.drawPath(path, stroke)
+        return BitmapDrawable(context.resources, bmp)
     }
 }

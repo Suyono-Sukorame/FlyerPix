@@ -642,13 +642,13 @@ initializeMaskControls()
                 angleContainer.visibility = if (grad.type == GradientType.LINEAR)
                     View.VISIBLE else View.GONE
                 sAngle.value = grad.angle.coerceIn(0f, 360f)
-                tvAngleLabel.text = "Sudut: ${grad.angle.toInt()}°"
+                tvAngleLabel.text = "Angle: ${grad.angle.toInt()}°"
                 gradientPickerAdapter.setSelectedPreset(grad)
             } else {
                 rbLinear.isChecked = true
                 angleContainer.visibility = View.VISIBLE
                 sAngle.value = 0f
-                tvAngleLabel.text = "Sudut: 0°"
+tvAngleLabel.text = "Angle: 0°"
                 gradientPickerAdapter.setSelectedPreset(null)
             }
             syncing = false
@@ -693,7 +693,7 @@ initializeMaskControls()
         // Slider Sudut Putar Gradasi Linier
         sAngle.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            tvAngleLabel.text = "Sudut: ${value.toInt()}°"
+            tvAngleLabel.text = "Angle: ${value.toInt()}°"
             applyToTextLayer { layer ->
                 layer.gradient?.angle = value
             }
@@ -707,7 +707,7 @@ initializeMaskControls()
             rbLinear.isChecked = true
             angleContainer.visibility = View.VISIBLE
             sAngle.value = 0f
-            tvAngleLabel.text = "Sudut: 0°"
+            tvAngleLabel.text = "Angle: 0°"
             gradientPickerAdapter.setSelectedPreset(null)
             syncing = false
             applyToTextLayer { layer ->
@@ -749,18 +749,18 @@ initializeMaskControls()
 
             if (layer.textureBitmap != null && !layer.textureBitmap!!.isRecycled) {
                 imgThumb.setImageBitmap(layer.textureBitmap)
-                btnSelect.text = "Ganti Foto"
+                btnSelect.text = "Change Photo"
                 btnDelete.visibility = View.VISIBLE
             } else {
                 imgThumb.setImageResource(R.drawable.ic_sharp_photo_24px)
-                btnSelect.text = "Pilih dari Galeri"
+                btnSelect.text = "Choose from Gallery"
                 btnDelete.visibility = View.GONE
             }
 
             sScale.value = layer.textureScale.coerceIn(0.1f, 3.0f)
-            tvScale.text = "Skala: ${(layer.textureScale * 100).toInt()}%"
+            tvScale.text = "Scale: ${(layer.textureScale * 100).toInt()}%"
             sRotation.value = layer.textureRotation.coerceIn(0f, 360f)
-            tvRotation.text = "Rotasi: ${layer.textureRotation.toInt()}°"
+            tvRotation.text = "Rotation: ${layer.textureRotation.toInt()}°"
             syncing = false
         }
 
@@ -800,7 +800,7 @@ initializeMaskControls()
         // Slider Skala Tekstur
         sScale.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            tvScale.text = "Skala: ${(value * 100).toInt()}%"
+            tvScale.text = "Scale: ${(value * 100).toInt()}%"
             applyToTextLayer { layer ->
                 layer.textureScale = value
             }
@@ -809,7 +809,7 @@ initializeMaskControls()
         // Slider Rotasi Tekstur
         sRotation.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            tvRotation.text = "Rotasi: ${value.toInt()}°"
+            tvRotation.text = "Rotation: ${value.toInt()}°"
             applyToTextLayer { layer ->
                 layer.textureRotation = value
             }
@@ -822,7 +822,7 @@ initializeMaskControls()
             syncing = false
             group.visibility = View.GONE
             imgThumb.setImageResource(R.drawable.ic_sharp_photo_24px)
-            btnSelect.text = "Pilih dari Galeri"
+            btnSelect.text = "Choose from Gallery"
             btnDelete.visibility = View.GONE
             applyToTextLayer { layer ->
                 layer.textureBitmap = null
@@ -835,7 +835,7 @@ initializeMaskControls()
             val mask = binding.effectSettingsInclude.maskControlsInclude
             mask.switchMaskEnabled.isChecked = false
             mask.maskControlsGroup.visibility = View.GONE
-            showSnackbar("Tekstur direset")
+            showSnackbar("Texture reset")
         }
 
         syncTextureUIHook = { layer -> syncUI(layer) }
@@ -1452,8 +1452,8 @@ initializeMaskControls()
         val btnLineMedium = b.btnLineMedium
         val btnLineWide = b.btnLineWide
 
-        fun formatLetter(v: Float) = String.format(Locale.US, "Spasi Huruf: %.2f", v)
-        fun formatLine(v: Float) = String.format(Locale.US, "Spasi Baris: %.0f px", v)
+        fun formatLetter(v: Float) = String.format(Locale.US, "Letter Spacing: %.2f", v)
+        fun formatLine(v: Float) = String.format(Locale.US, "Line Spacing: %.0f px", v)
 
         fun syncUI(layer: com.flyerpix.editor.canvas.model.TextLayer) {
             panel.visibility = View.VISIBLE
@@ -1586,23 +1586,23 @@ initializeMaskControls()
         )
 
         fun descriptionFor(mode: android.graphics.PorterDuff.Mode): String = when (mode) {
-            android.graphics.PorterDuff.Mode.SRC_OVER -> "Normal: Menampilkan warna layer standar menutupi background."
-            android.graphics.PorterDuff.Mode.MULTIPLY -> "Multiply: Mengalikan warna (membuat teks lebih gelap dan menyatu)."
-            android.graphics.PorterDuff.Mode.SCREEN   -> "Screen: Membalikkan dan mengalikan (efek teks bersinar terang)."
-            android.graphics.PorterDuff.Mode.OVERLAY  -> "Overlay: Kombinasi Multiply dan Screen berdasarkan background."
-            android.graphics.PorterDuff.Mode.DARKEN   -> "Darken: Memilih piksel yang lebih gelap antara teks dan background."
-            android.graphics.PorterDuff.Mode.LIGHTEN  -> "Lighten: Memilih piksel yang lebih terang antara teks dan background."
-            android.graphics.PorterDuff.Mode.ADD      -> "Add: Menjumlahkan warna teks dan background (efek cahaya kuat)."
+            android.graphics.PorterDuff.Mode.SRC_OVER -> "Normal: Shows the layer's standard color over the background."
+            android.graphics.PorterDuff.Mode.MULTIPLY -> "Multiply: Multiplies colors (darker text that blends in)."
+            android.graphics.PorterDuff.Mode.SCREEN   -> "Screen: Inverts and multiplies (makes text glow brightly)."
+            android.graphics.PorterDuff.Mode.OVERLAY  -> "Overlay: Combines Multiply and Screen based on the background."
+            android.graphics.PorterDuff.Mode.DARKEN   -> "Darken: Keeps the darker pixels of text and background."
+            android.graphics.PorterDuff.Mode.LIGHTEN  -> "Lighten: Keeps the brighter pixels of text and background."
+            android.graphics.PorterDuff.Mode.ADD      -> "Add: Adds text and background colors (strong light effect)."
             else                                      -> "Mode: ${mode.name}"
         }
 
         fun descForExtra(extra: com.flyerpix.editor.canvas.model.ExtendedBlendMode): String = when (extra) {
-            com.flyerpix.editor.canvas.model.ExtendedBlendMode.HARD_LIGHT -> "Hard Light: Gabungan Multiply & Screen, kontras lebih keras."
-            com.flyerpix.editor.canvas.model.ExtendedBlendMode.SOFT_LIGHT  -> "Soft Light: Kontras lembut seperti cahaya menyebar."
-            com.flyerpix.editor.canvas.model.ExtendedBlendMode.COLOR_BURN   -> "Burn: Menggelapkan background dengan kontras tinggi."
-            com.flyerpix.editor.canvas.model.ExtendedBlendMode.COLOR_DODGE  -> "Dodge: Mencerahkan background dengan efek cahaya kuat."
-            com.flyerpix.editor.canvas.model.ExtendedBlendMode.DIFFERENCE   -> "Difference: Selisih mutlak warna (efek inversi kontras)."
-            com.flyerpix.editor.canvas.model.ExtendedBlendMode.EXCLUSION    -> "Exclusion: Mirip Difference namun kontras lebih lembut."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.HARD_LIGHT -> "Hard Light: Combines Multiply & Screen, harsher contrast."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.SOFT_LIGHT  -> "Soft Light: Soft contrast like diffused light."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.COLOR_BURN   -> "Burn: Darkens the background with high contrast."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.COLOR_DODGE  -> "Dodge: Brightens the background with a strong light effect."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.DIFFERENCE   -> "Difference: Absolute color difference (inverts contrast)."
+            com.flyerpix.editor.canvas.model.ExtendedBlendMode.EXCLUSION    -> "Exclusion: Similar to Difference but with softer contrast."
         }
 
         fun updateButtonStates(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
@@ -2034,13 +2034,13 @@ initializeMaskControls()
         if (curLayer != null) {
             val b = binding.effectSettingsInclude.textureControlsInclude
             b.imgTextureThumbnail.setImageBitmap(bitmap)
-            b.btnSelectTexture.text = "Ganti Foto"
+            b.btnSelectTexture.text = "Change Photo"
             b.btnDeleteTexture.visibility = View.VISIBLE
             b.switchTextureEnabled.isChecked = true
             b.textureControlsGroup.visibility = View.VISIBLE
             syncMaskUIHook?.invoke(curLayer)
         }
-        showSnackbar("Tekstur foto berhasil diterapkan pada teks!")
+        showSnackbar("Photo texture applied to text!")
     }
 
 
@@ -2112,7 +2112,7 @@ initializeMaskControls()
     fun openEffectSettings(tag: String) {
         val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
         if (layer == null || layer.isLocked) {
-            showSnackbar("Pilih layer teks terlebih dahulu")
+            showSnackbar("Select a text layer first")
             return
         }
         if (tag !in complexEffectTags) {
@@ -2471,7 +2471,7 @@ private fun registerTextPanels() {
     private fun onTextToolClicked(tag: String) {
         val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
         if (layer == null || layer.isLocked) {
-            showSnackbar("Pilih layer teks terlebih dahulu")
+            showSnackbar("Select a text layer first")
             return
         }
         if (tag == activeTextToolTag && tag != TOOL_EDIT) {
@@ -2486,22 +2486,22 @@ private fun registerTextPanels() {
             }
             TOOL_DELETE -> {
                 val ok = pixelCanvasView.deleteSelectedLayer()
-                showSnackbar(if (ok) "Lapisan teks dihapus" else "Tidak ada lapisan yang dipilih")
+                showSnackbar(if (ok) "Text layer deleted" else "No layer selected")
                 return
             }
             TOOL_COPY -> {
                 val copy = pixelCanvasView.duplicateSelectedLayer()
-                showSnackbar(if (copy != null) "Lapisan teks digandakan" else "Gagal menggandakan lapisan")
+                showSnackbar(if (copy != null) "Text layer duplicated" else "Failed to duplicate layer")
                 return
             }
             TOOL_FRONT -> {
                 pixelCanvasView.bringSelectedLayerToFront()
-                showSnackbar("Layer dipindahkan ke posisi paling atas")
+                showSnackbar("Layer moved to front")
                 return
             }
             TOOL_BACK -> {
                 pixelCanvasView.sendSelectedLayerToBack()
-                showSnackbar("Layer dipindahkan ke posisi paling belakang")
+                showSnackbar("Layer moved to back")
                 return
             }
             TOOL_FONT -> {
@@ -2645,7 +2645,7 @@ private fun registerTextPanels() {
             advancedOpen = open
             fineControls.visibility = if (open) View.VISIBLE else View.GONE
             centerControls.visibility = if (open) View.VISIBLE else View.GONE
-            advancedButton.text = if (open) "Sembunyikan lanjutan" else "Kontrol lanjutan"
+            advancedButton.text = if (open) "Hide advanced" else "Advanced controls"
         }
         setAdvancedOpen(false)
         advancedButton.setOnClickListener { setAdvancedOpen(!advancedOpen) }
@@ -2669,7 +2669,7 @@ private fun registerTextPanels() {
         fun commitX() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
             val v = b.editPosX.text.toString().toFloatOrNull() ?: return
-            pixelCanvasView.runRecordedAction("Atur Posisi X") { layer.x = v }
+            pixelCanvasView.runRecordedAction("Set Position X") { layer.x = v }
             pixelCanvasView.invalidate()
             refreshAll(layer)
         }
@@ -2677,7 +2677,7 @@ private fun registerTextPanels() {
         fun commitY() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
             val v = b.editPosY.text.toString().toFloatOrNull() ?: return
-            pixelCanvasView.runRecordedAction("Atur Posisi Y") { layer.y = v }
+            pixelCanvasView.runRecordedAction("Set Position Y") { layer.y = v }
             pixelCanvasView.invalidate()
             refreshAll(layer)
         }
@@ -2689,14 +2689,14 @@ private fun registerTextPanels() {
 
         fun nudgeX(delta: Float) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
-            pixelCanvasView.runRecordedAction("Pindah X") { layer.x += delta }
+            pixelCanvasView.runRecordedAction("Move X") { layer.x += delta }
             pixelCanvasView.invalidate()
             refreshAll(layer)
         }
 
         fun nudgeY(delta: Float) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
-            pixelCanvasView.runRecordedAction("Pindah Y") { layer.y += delta }
+            pixelCanvasView.runRecordedAction("Move Y") { layer.y += delta }
             pixelCanvasView.invalidate()
             refreshAll(layer)
         }
@@ -2710,7 +2710,7 @@ private fun registerTextPanels() {
             if (syncing) return@addOnChangeListener
             b.tvPosXLabel.text = String.format(Locale.US, "X: %.0f px", value)
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@addOnChangeListener
-            pixelCanvasView.runRecordedAction("Atur Posisi X") { layer.x = value }
+            pixelCanvasView.runRecordedAction("Set Position X") { layer.x = value }
             pixelCanvasView.invalidate()
         }
 
@@ -2718,14 +2718,14 @@ private fun registerTextPanels() {
             if (syncing) return@addOnChangeListener
             b.tvPosYLabel.text = String.format(Locale.US, "Y: %.0f px", value)
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@addOnChangeListener
-            pixelCanvasView.runRecordedAction("Atur Posisi Y") { layer.y = value }
+            pixelCanvasView.runRecordedAction("Set Position Y") { layer.y = value }
             pixelCanvasView.invalidate()
         }
 
         fun center(horizontal: Boolean, vertical: Boolean) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
             val (lw, lh) = layer.getUnwarpedDimensions()
-            pixelCanvasView.runRecordedAction("Tengah Kanvas") {
+            pixelCanvasView.runRecordedAction("Center on Canvas") {
                 if (horizontal) layer.x = (pixelCanvasView.width - lw * layer.scale) / 2f
                 if (vertical) layer.y = (pixelCanvasView.height - lh * layer.scale) / 2f
             }
@@ -2739,7 +2739,7 @@ private fun registerTextPanels() {
 
         b.btnResetPosition.setOnClickListener {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
-            pixelCanvasView.runRecordedAction("Reset Posisi") {
+            pixelCanvasView.runRecordedAction("Reset Position") {
                 layer.x = 0f
                 layer.y = 0f
             }
@@ -2862,7 +2862,7 @@ private fun registerTextPanels() {
             advancedOpen = open
             advancedControls.visibility = if (open) View.VISIBLE else View.GONE
             advancedActions.visibility = if (open) View.VISIBLE else View.GONE
-            advancedButton.text = if (open) "Sembunyikan skala" else "Kontrol skala lanjutan"
+            advancedButton.text = if (open) "Hide scale" else "Advanced scale controls"
         }
         setAdvancedOpen(false)
         advancedButton.setOnClickListener { setAdvancedOpen(!advancedOpen) }
@@ -2892,7 +2892,7 @@ private fun registerTextPanels() {
             b.sliderFontSize.value = layer.textSize.coerceIn(8f, 600f)
             b.sliderScaleXY.value = layer.scale.coerceIn(0.1f, 8f)
             syncing = false
-            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran font: %.0f px", layer.textSize)
+            b.tvSizeLabel.text = String.format(Locale.US, "Font size: %.0f px", layer.textSize)
             b.tvScaleLabel.text = "${(layer.scale * 100).toInt()}%"
             refreshPresets(layer.textSize)
         }
@@ -2900,7 +2900,7 @@ private fun registerTextPanels() {
 
         b.sliderFontSize.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran font: %.0f px", value)
+            b.tvSizeLabel.text = String.format(Locale.US, "Font size: %.0f px", value)
             refreshPresets(value)
             applyToTextLayer { it.textSize = value }
         }
@@ -2915,7 +2915,7 @@ private fun registerTextPanels() {
             syncing = true
             b.sliderFontSize.value = value.coerceIn(8f, 600f)
             syncing = false
-            b.tvSizeLabel.text = String.format(Locale.US, "Ukuran: %.0f px", value)
+            b.tvSizeLabel.text = String.format(Locale.US, "Size: %.0f px", value)
             refreshPresets(value)
             applyToTextLayer { it.textSize = value }
         }
@@ -2942,7 +2942,7 @@ private fun registerTextPanels() {
                 pixelCanvasView.width / lw,
                 pixelCanvasView.height / lh * 0.9f
             )
-            pixelCanvasView.runRecordedAction("Sesuaikan Kanvas") { layer.scale = s.coerceAtLeast(0.01f) }
+            pixelCanvasView.runRecordedAction("Fit to Canvas") { layer.scale = s.coerceAtLeast(0.01f) }
             syncUI(layer)
             pixelCanvasView.invalidate()
         }
@@ -3038,7 +3038,7 @@ private fun registerTextPanels() {
 
         fun rotateBy(delta: Float) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
-            pixelCanvasView.runRecordedAction("Putar Teks") {
+            pixelCanvasView.runRecordedAction("Rotate Text") {
                 layer.rotation = normalize(layer.rotation + delta)
             }
             syncUI(layer)
@@ -3072,7 +3072,7 @@ private fun registerTextPanels() {
 
         fun toggle(flag: String) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
-            pixelCanvasView.runRecordedAction("Ubah Gaya Teks") {
+            pixelCanvasView.runRecordedAction("Change Text Style") {
                 when (flag) {
                     "B" -> layer.isBold = !layer.isBold
                     "I" -> layer.isItalic = !layer.isItalic
@@ -3105,7 +3105,7 @@ private fun registerTextPanels() {
 
         fun applyWeight(weight: Int) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
-            pixelCanvasView.runRecordedAction("Ubah Ketebalan Font") {
+            pixelCanvasView.runRecordedAction("Change Font Weight") {
                 val base = layer.typeface ?: android.graphics.Typeface.DEFAULT
                 layer.typeface = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                     android.graphics.Typeface.create(base, weight, layer.isItalic)
@@ -3122,7 +3122,7 @@ private fun registerTextPanels() {
         fun reset() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
             if (layer != null) {
-                pixelCanvasView.runRecordedAction("Reset Gaya Teks") {
+                pixelCanvasView.runRecordedAction("Reset Text Style") {
                     layer.isBold = false
                     layer.isItalic = false
                     layer.isUnderline = false
@@ -3220,7 +3220,7 @@ private fun registerTextPanels() {
             if (layer.wrapWidth > 0f) {
                 val v = layer.wrapWidth.coerceIn(60f, 1600f)
                 b.sliderWrapWidth.value = v
-                b.tvWrapWidth.text = "Lebar: ${v.toInt()} px"
+                b.tvWrapWidth.text = "Width: ${v.toInt()} px"
             }
             syncingWrap = false
         }
@@ -3242,7 +3242,7 @@ private fun registerTextPanels() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
                 ?: return@addOnChangeListener
             if (!layer.wrapTextEnabled) return@addOnChangeListener
-            b.tvWrapWidth.text = "Lebar: ${value.toInt()} px"
+            b.tvWrapWidth.text = "Width: ${value.toInt()} px"
             applyToTextLayer { it.wrapWidth = value }
         }
 
@@ -3408,15 +3408,15 @@ private fun registerTextPanels() {
             sOpacity.value = alpha * 100f / 255f
             syncing = false
             setupColorPreview(layer)
-            tvWidth.text = String.format(Locale.US, "Tebal: %.1f px", layer.strokeWidth)
-            tvOpacity.text = "Opasitas: ${(alpha * 100 / 255)}%"
+            tvWidth.text = String.format(Locale.US, "Width: %.1f px", layer.strokeWidth)
+            tvOpacity.text = "Opacity: ${(alpha * 100 / 255)}%"
             if (layer.strokeWidth > 0f) lastStrokeWidth = layer.strokeWidth
         }
 
         fun applyStrokeChange(actionName: String, block: (com.flyerpix.editor.canvas.model.TextLayer) -> Unit) {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
             if (layer == null || layer.isLocked) {
-                showSnackbar("Pilih layer teks terlebih dahulu")
+                showSnackbar("Select a text layer first")
                 return
             }
             val before = pixelCanvasView.captureCurrentState(actionName)
@@ -3442,7 +3442,7 @@ private fun registerTextPanels() {
                         com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
                         Color.BLACK
                     )
-                    applyStrokeChange("Ubah Warna Stroke") { layer ->
+                    applyStrokeChange("Change Stroke Color") { layer ->
                         val currentAlpha = (layer.strokeColor ushr 24) and 0xFF
                         layer.strokeColor = (color and 0x00FFFFFF) or (currentAlpha shl 24)
                     }
@@ -3457,7 +3457,7 @@ private fun registerTextPanels() {
 
         switch.setOnCheckedChangeListener { _, isChecked ->
             if (syncing) return@setOnCheckedChangeListener
-            applyStrokeChange(if (isChecked) "Aktifkan Stroke" else "Nonaktifkan Stroke") { layer ->
+            applyStrokeChange(if (isChecked) "Enable Stroke" else "Disable Stroke") { layer ->
                 if (isChecked) {
                     if (layer.strokeWidth <= 0f) layer.strokeWidth = lastStrokeWidth
                 } else {
@@ -3471,15 +3471,15 @@ private fun registerTextPanels() {
 
         sWidth.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            tvWidth.text = String.format(Locale.US, "Tebal: %.1f px", value)
+            tvWidth.text = String.format(Locale.US, "Width: %.1f px", value)
             lastStrokeWidth = value
-            applyStrokeChange("Ubah Tebal Stroke") { it.strokeWidth = value }
+            applyStrokeChange("Change Stroke Width") { it.strokeWidth = value }
         }
 
         sOpacity.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            tvOpacity.text = "Opasitas: ${value.toInt()}%"
-            applyStrokeChange("Ubah Opasitas Stroke") { layer ->
+            tvOpacity.text = "Opacity: ${value.toInt()}%"
+            applyStrokeChange("Change Stroke Opacity") { layer ->
                 val a = (value * 255 / 100).toInt()
                 layer.strokeColor = (layer.strokeColor and 0x00FFFFFF) or (a shl 24)
             }
@@ -3516,10 +3516,10 @@ private fun registerTextPanels() {
         }
 
         fun syncTexts(top: Float, bottom: Float, left: Float, right: Float) {
-            b.tvPaddingTop.text = String.format(Locale.US, "Atas: %.0f px", top)
-            b.tvPaddingBottom.text = String.format(Locale.US, "Bawah: %.0f px", bottom)
-            b.tvPaddingLeft.text = String.format(Locale.US, "Kiri: %.0f px", left)
-            b.tvPaddingRight.text = String.format(Locale.US, "Kanan: %.0f px", right)
+            b.tvPaddingTop.text = String.format(Locale.US, "Top: %.0f px", top)
+            b.tvPaddingBottom.text = String.format(Locale.US, "Bottom: %.0f px", bottom)
+            b.tvPaddingLeft.text = String.format(Locale.US, "Left: %.0f px", left)
+            b.tvPaddingRight.text = String.format(Locale.US, "Right: %.0f px", right)
         }
 
         fun setLinked() {
@@ -3648,9 +3648,9 @@ private fun registerTextPanels() {
             sCorner.value = layer.bgCornerRadius.coerceIn(0f, 120f)
             syncing = false
             setupColorPreview(layer)
-            tvOpacity.text = "Opasitas: ${(layer.bgOpacity * 100).toInt()}%"
+            tvOpacity.text = "Opacity: ${(layer.bgOpacity * 100).toInt()}%"
             tvPadding.text = String.format(Locale.US, "Padding: %.0f px", layer.bgPadding)
-            tvCorner.text = String.format(Locale.US, "Sudut Membulat: %.0f px", layer.bgCornerRadius)
+            tvCorner.text = String.format(Locale.US, "Corner Radius: %.0f px", layer.bgCornerRadius)
         }
 
         syncBackgroundUIHook = { layer -> sync(layer) }
@@ -3689,7 +3689,7 @@ private fun registerTextPanels() {
 
         sOpacity.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            tvOpacity.text = "Opasitas: ${value.toInt()}%"
+            tvOpacity.text = "Opacity: ${value.toInt()}%"
             applyToTextLayer { it.bgOpacity = value / 100f }
         }
 
@@ -3701,7 +3701,7 @@ private fun registerTextPanels() {
 
         sCorner.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            tvCorner.text = String.format(Locale.US, "Sudut Membulat: %.0f px", value)
+            tvCorner.text = String.format(Locale.US, "Corner Radius: %.0f px", value)
             applyToTextLayer { it.bgCornerRadius = value }
         }
 
@@ -3711,9 +3711,9 @@ private fun registerTextPanels() {
             sOpacity.value = 100f
             sPadding.value = 0f
             sCorner.value = 0f
-            tvOpacity.text = "Opasitas: 100%"
+            tvOpacity.text = "Opacity: 100%"
             tvPadding.text = "Padding: 0 px"
-            tvCorner.text = "Sudut Membulat: 0 px"
+            tvCorner.text = "Corner Radius: 0 px"
             applyToTextLayer { layer ->
                 layer.bgEnabled = false
                 layer.bgOpacity = 1f
@@ -3742,8 +3742,8 @@ private fun registerTextPanels() {
 
         fun updateLabels(layer: com.flyerpix.editor.canvas.model.TextLayer) {
             tvOpacity.text = "Opacity: ${(layer.reflectionOpacity * 100).toInt()}%"
-            tvDistance.text = String.format(Locale.US, "Jarak: %.0f px", layer.reflectionDistance)
-            tvFade.text = "Memudar (Fade): ${(layer.reflectionFade * 100).toInt()}%"
+            tvDistance.text = String.format(Locale.US, "Distance: %.0f px", layer.reflectionDistance)
+            tvFade.text = "Fade: ${(layer.reflectionFade * 100).toInt()}%"
         }
 
         fun syncUI(layer: com.flyerpix.editor.canvas.model.TextLayer) {
@@ -3778,12 +3778,12 @@ private fun registerTextPanels() {
         }
 
         sDistance.addOnChangeListener { _, value, _ ->
-            tvDistance.text = String.format(Locale.US, "Jarak: %.0f px", value)
+            tvDistance.text = String.format(Locale.US, "Distance: %.0f px", value)
             applyToTextLayer { it.reflectionDistance = value }
         }
 
         sFade.addOnChangeListener { _, value, _ ->
-            tvFade.text = "Memudar (Fade): ${value.toInt()}%"
+            tvFade.text = "Fade: ${value.toInt()}%"
             applyToTextLayer { it.reflectionFade = value / 100f }
         }
 
@@ -3826,18 +3826,18 @@ private fun registerTextPanels() {
 
             if (layer.textureBitmap != null && !layer.textureBitmap!!.isRecycled) {
                 imgThumb.setImageBitmap(layer.textureBitmap)
-                btnSelect.text = "Ganti Foto"
+                btnSelect.text = "Change Photo"
                 btnDelete.visibility = View.VISIBLE
             } else {
                 imgThumb.setImageResource(R.drawable.ic_sharp_photo_24px)
-                btnSelect.text = "Pilih dari Galeri"
+                btnSelect.text = "Choose from Gallery"
                 btnDelete.visibility = View.GONE
             }
 
             sScale.value = layer.textureScale.coerceIn(0.1f, 3.0f)
-            tvScale.text = "Skala: ${(layer.textureScale * 100).toInt()}%"
+            tvScale.text = "Scale: ${(layer.textureScale * 100).toInt()}%"
             sRotation.value = layer.textureRotation.coerceIn(0f, 360f)
-            tvRotation.text = "Rotasi: ${layer.textureRotation.toInt()}°"
+            tvRotation.text = "Rotation: ${layer.textureRotation.toInt()}°"
             syncing = false
         }
 
@@ -3847,10 +3847,10 @@ private fun registerTextPanels() {
             binding.effectSettingsInclude.textureControlsInclude.run {
                 if (layer.textureBitmap != null && !layer.textureBitmap!!.isRecycled) {
                     imgTextureThumbnail.setImageBitmap(layer.textureBitmap)
-                    btnSelectTexture.text = "Ganti Foto"
+                    btnSelectTexture.text = "Change Photo"
                 } else {
                     imgTextureThumbnail.setImageResource(R.drawable.ic_sharp_photo_24px)
-                    btnSelectTexture.text = "Pilih dari Galeri"
+                    btnSelectTexture.text = "Choose from Gallery"
                 }
                 btnDeleteTexture.visibility = if (layer.textureEnabled && layer.textureBitmap != null) View.VISIBLE else View.GONE
                 switchTextureEnabled.isChecked = layer.textureEnabled
@@ -3887,20 +3887,20 @@ private fun registerTextPanels() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
             if (layer != null) syncUI(layer)
             syncTexturePage()
-            showSnackbar("Mask teks dihapus")
+            showSnackbar("Text mask removed")
         }
 
         // Slider Skala Mask
         sScale.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            tvScale.text = "Skala: ${(value * 100).toInt()}%"
+            tvScale.text = "Scale: ${(value * 100).toInt()}%"
             applyToTextLayer { it.textureScale = value }
         }
 
         // Slider Rotasi Mask
         sRotation.addOnChangeListener { _, value, _ ->
             if (syncing) return@addOnChangeListener
-            tvRotation.text = "Rotasi: ${value.toInt()}°"
+            tvRotation.text = "Rotation: ${value.toInt()}°"
             applyToTextLayer { it.textureRotation = value }
         }
 
@@ -3916,7 +3916,7 @@ private fun registerTextPanels() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
             if (layer != null) syncUI(layer)
             syncTexturePage()
-            showSnackbar("Mask direset")
+            showSnackbar("Mask reset")
         }
     }
 
@@ -3952,26 +3952,26 @@ private fun registerTextPanels() {
                 chip.setOnClickListener {
                     val target = pixelCanvasView.selectedLayer as? TextLayer
                     if (target == null || target.isLocked) {
-                        showSnackbar("Pilih layer teks terlebih dahulu")
+                        showSnackbar("Select a text layer first")
                         return@setOnClickListener
                     }
-                    pixelCanvasView.runRecordedAction("Terapkan Style") {
+                    pixelCanvasView.runRecordedAction("Apply Style") {
                         style.applyTo(target)
                     }
                     pixelCanvasView.invalidate()
-                    showSnackbar("Style '$name' diterapkan")
+                    showSnackbar("Style '$name' applied")
                 }
                 chip.setOnLongClickListener {
                     MaterialAlertDialogBuilder(activity)
-                        .setTitle("Hapus Style")
-                        .setMessage("Hapus style '$name'?")
-                        .setPositiveButton("Hapus") { _, _ ->
+                        .setTitle("Delete Style")
+                        .setMessage("Delete style '$name'?")
+                        .setPositiveButton("Delete") { _, _ ->
                             savedTextStyles.remove(name)
                             TextStyleStorage.save(activity, savedTextStyles)
                             rebuildChips()
-                            showSnackbar("Style '$name' dihapus")
+                            showSnackbar("Style '$name' deleted")
                         }
-                        .setNegativeButton("Batal", null)
+                        .setNegativeButton("Cancel", null)
                         .show()
                     true
                 }
@@ -3988,11 +3988,11 @@ private fun registerTextPanels() {
             val name = b.editStyleName.text?.toString()?.trim()
             val layer = pixelCanvasView.selectedLayer as? TextLayer
             if (name.isNullOrEmpty()) {
-                showSnackbar("Tulis nama style terlebih dahulu")
+                showSnackbar("Enter a style name first")
                 return@setOnClickListener
             }
             if (layer == null || layer.isLocked) {
-                showSnackbar("Pilih layer teks terlebih dahulu")
+                showSnackbar("Select a text layer first")
                 return@setOnClickListener
             }
             savedTextStyles[name] = SavedTextStyle.fromLayer(layer)
@@ -4000,24 +4000,24 @@ private fun registerTextPanels() {
             b.editStyleName.setText("")
             rebuildChips()
             hideKeyboard(b.editStyleName)
-            showSnackbar("Style '$name' berhasil disimpan")
+            showSnackbar("Style '$name' saved")
         }
 
         b.btnStylesClearAll.setOnClickListener {
             if (savedTextStyles.isEmpty()) {
-                showSnackbar("Belum ada style tersimpan")
+                showSnackbar("No saved styles yet")
                 return@setOnClickListener
             }
             MaterialAlertDialogBuilder(activity)
-                .setTitle("Hapus Semua Style")
-                .setMessage("Semua style tersimpan akan dihapus permanen.")
-                .setPositiveButton("Hapus") { _, _ ->
+                .setTitle("Delete All Styles")
+                .setMessage("All saved styles will be permanently deleted.")
+                .setPositiveButton("Delete") { _, _ ->
                     savedTextStyles.clear()
                     TextStyleStorage.save(activity, savedTextStyles)
                     rebuildChips()
-                    showSnackbar("Semua style dihapus")
+                    showSnackbar("All styles deleted")
                 }
-                .setNegativeButton("Batal", null)
+                .setNegativeButton("Cancel", null)
                 .show()
         }
 
