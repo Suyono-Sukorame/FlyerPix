@@ -61,6 +61,7 @@ import com.flyerpix.editor.ui.controller.FontController
 import com.flyerpix.editor.ui.controller.TemplateController
 import com.flyerpix.editor.ui.controller.CanvasToolsController
 import com.flyerpix.editor.ui.controller.ShapePanelController
+import com.flyerpix.editor.ui.controller.PanelHeightManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
@@ -349,13 +350,14 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 val density = resources.displayMetrics.density
                 val offset = (56 * density).toInt()
                 animateNavTranslation(if (effectSettingsOpen) offset else 0)
+                val collapsedH = (107 * density).toInt()
                 if (effectSettingsOpen) {
                     listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
-                        .forEach { it.animateLayoutHeight((107 * density).toInt()) }
+                        .forEach { it.animateLayoutHeight(collapsedH) }
                 } else {
                     listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
                         .forEach {
-                            it.animateLayoutHeight((107 * density).toInt())
+                            it.animateLayoutHeight(collapsedH)
                             it.animateLayoutMarginBottom((56 * density).toInt())
                         }
                 }
@@ -465,13 +467,14 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 val density = resources.displayMetrics.density
                 val offset = (56 * density).toInt()
                 animateNavTranslation(if (effectSettingsOpen) offset else 0)
+                val collapsedH = (107 * density).toInt()
                 if (effectSettingsOpen) {
                     listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
-                        .forEach { it.animateLayoutHeight((107 * density).toInt()) }
+                        .forEach { it.animateLayoutHeight(collapsedH) }
                 } else {
                     listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
                         .forEach {
-                            it.animateLayoutHeight((107 * density).toInt())
+                            it.animateLayoutHeight(collapsedH)
                             it.animateLayoutMarginBottom((56 * density).toInt())
                         }
                 }
@@ -1201,8 +1204,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     // ═══════════════════════════════════════════════════════════════════════
 
     // ────────────────────────────────────────────────────────────────────────
-    // DETAIL EXPAND: menyembunyikan bottom nav saat detail dibuka agar
-    // jendela konten lebih lebar, dan memunculkannya kembali saat ditutup.
+    // DETAIL EXPAND: memperluas panel detail halaman menu; bottom nav dihindari
+    // dengan menggesernya keluar saat detail dibuka. Tinggi panel dihitung dari
+    // ruang kosong di bawah canvas (PanelHeightManager) agar tidak menutupinya.
     // ────────────────────────────────────────────────────────────────────────
 
     private var navTranslationAnimator: android.animation.ValueAnimator? = null
@@ -1213,12 +1217,12 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
      * bottom nav saat `expanded == true`; kembali normal saat `false`.
      *
      * Panel tertutup:   tinggi 107dp, marginBottom 56dp (di atas nav).
-     * Panel terbuka:    tinggi 163dp, marginBottom 0dp (nav disembunyikan).
+     * Panel terbuka:    tinggi dari ruang bawah canvas, marginBottom 0dp
+     *                   (nav disembunyikan).
      */
     private fun setDetailExpanded(expanded: Boolean) {
         val density = resources.displayMetrics.density
         val collapsedH = (107 * density).toInt()
-        val expandedH = (163 * density).toInt()
         val collapsedMargin = (56 * density).toInt()
 
         if (!expanded) {
@@ -1238,6 +1242,20 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             R.id.nav_canvas -> binding.canvasMenuPanel
             R.id.nav_effects -> binding.effectsMenuPanel
             else -> return
+        }
+
+        // Tinggi expanded dihitung dinamis dari ruang kosong di bawah canvas
+        // (PanelHeightManager), sehingga detail TIDAK menutupi canvas. Minimum
+        // tidak di bawah tinggi collapsed agar tool strip tetap utuh.
+        val expandedH = activePanel.let {
+            val space = PanelHeightManager.anchorBottomInRoot(binding.parentLayout, 0) -
+                PanelHeightManager.bottomInRoot(binding.canvasCard, binding.parentLayout)
+            PanelHeightManager.safeDetailHeight(
+                availableBelowCanvasPx = space,
+                canvasHeightPx = pixelCanvasView.height,
+                screenHeightPx = resources.displayMetrics.heightPixels,
+                density = density,
+            ).let { if (it >= collapsedH) it else collapsedH }
         }
 
         val navOffset = (56 * density).toInt()

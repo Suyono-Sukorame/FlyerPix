@@ -46,7 +46,7 @@
                 android:layout_marginStart="0dp"
                 android:layout_marginEnd="0dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginBottom="56dp">
+                android:layout_marginBottom="96dp">
 
             <com.flyerpix.editor.canvas.PixelCanvasView
                     android:id="@+id/pixelCanvasView"
@@ -126,13 +126,40 @@
                 android:layout_height="wrap_content" />
     </LinearLayout>
 
-    <!-- Child editor efek: sibling agar Text menu benar-benar dapat disembunyikan -->
-    <include
-            layout="@layout/layout_effect_settings_panel"
-            android:id="@+id/effectSettingsInclude"
+    <!-- Detail panel khusus efek: berdiri sendiri agar tidak ikut menu lain dan tidak menutup canvas terlalu banyak -->
+    <FrameLayout
+            android:id="@+id/detailSettingsHost"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom" />
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="56dp"
+            android:background="@android:color/transparent">
+
+        <include
+                layout="@layout/layout_effect_settings_panel"
+                android:id="@+id/effectSettingsInclude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+    </FrameLayout>
+
+        <!-- Compose host untuk detail 3D: berdiri sendiri agar tidak ikut menu umum dan tidak menutup canvas terlalu lebar -->
+        <FrameLayout
+                android:id="@+id/composeThreeDSheetContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:layout_marginBottom="56dp"
+                android:visibility="gone"
+                android:background="@android:color/transparent"
+                app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
+
+            <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/composeThreeDDetail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent" />
+
+        </FrameLayout>
 
     <!-- Shape Settings Panel -->
     <include

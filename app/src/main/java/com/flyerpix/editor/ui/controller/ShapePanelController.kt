@@ -31,14 +31,14 @@ class ShapePanelController(
 
     private fun setupShapePanel() {
         val panelRoot = binding.shapeSettingsPanel.root
-        
-        // Apply Button
-        panelRoot.findViewById<View>(R.id.btnApplyShape).setOnClickListener {
+
+        // Apply Button (header DetailPanel)
+        (panelRoot as? com.flyerpix.editor.ui.view.DetailPanel)?.applyButton?.setOnClickListener {
             applyShapeChanges()
         }
 
-        // Cancel Button
-        panelRoot.findViewById<View>(R.id.btnCancelShape).setOnClickListener {
+        // Cancel Button (header DetailPanel)
+        (panelRoot as? com.flyerpix.editor.ui.view.DetailPanel)?.cancelButton?.setOnClickListener {
             cancelShapeChanges()
         }
 
@@ -169,12 +169,19 @@ class ShapePanelController(
         currentShape = shape
         snapshotShape = shape.copy() // Backup untuk Cancel
 
-        // Tinggi panel hanya 20% dari tinggi layar agar objek di kanvas tetap terlihat
+        // Tinggi panel dihitung dari ruang kosong di bawah canvas agar objek di
+        // kanvas tetap terlihat (aturan PanelHeightManager: 60% canvas / cap 50%
+        // layar), anchor bawah 56dp di atas bottom nav.
+        val density = PanelHeightManager.densityOf(activity.resources)
         val panel = binding.shapeSettingsPanel.root
-        val targetHeight = (activity.resources.displayMetrics.heightPixels * 0.20f).toInt()
-        if (panel.layoutParams.height != targetHeight) {
-            panel.layoutParams = panel.layoutParams.apply { height = targetHeight }
-        }
+        PanelHeightManager.applyCanvasAwareHeight(
+            panel = panel,
+            root = binding.parentLayout,
+            canvasCard = binding.canvasCard,
+            bottomMarginPx = (56 * density).toInt(),
+            screenHeightPx = PanelHeightManager.screenHeightPx(activity.resources),
+            density = density,
+        )
 
         // Update UI dengan nilai shape saat ini
         updateUIFromShape(shape)

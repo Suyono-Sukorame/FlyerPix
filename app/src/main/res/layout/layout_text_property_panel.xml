@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<!--
+  Text Property Panel (UX ala PixelLab): panel properti kontekstual yang tampil
+  di dalam textEditorBar sesuai tool yang dipilih pada strip.
+
+  Memakai komponen reusable DetailPanel (view_detail_panel.xml). Tombol ✓/✕
+  pada header disembunyikan karena panel ini hanya menampilkan kontrol (tanpa
+  aksi apply/cancel); area konten diisi include panel_font.
+  Tinggi area konten dikelola PanelHeightManager agar tidak menutupi canvas.
+-->
+<com.flyerpix.editor.ui.view.DetailPanel xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/textPropertyPanel"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -8,79 +16,9 @@
     android:background="@color/panel_bg"
     android:visibility="gone">
 
-    <!-- Drag Handle Bar — petunjuk visual bahwa panel bisa di-scroll/geser -->
-    <View
-        android:layout_width="@dimen/panel_handle_width"
-        android:layout_height="@dimen/panel_handle_height"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="4dp"
-        android:background="@color/panel_handle" />
+    <!-- Font -->
+    <include
+        layout="@layout/panel_font"
+        android:id="@+id/fontPanel" />
 
-    <!-- Header panel: ikon tool aktif + judul tool -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/panel_header_height"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
-
-        <!-- Indikator dot warna brand sebagai aksen -->
-        <View
-            android:layout_width="4dp"
-            android:layout_height="16dp"
-            android:layout_marginEnd="10dp"
-            android:background="@color/brand_blue" />
-
-        <TextView
-            android:id="@+id/textPropertyPanelTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:text="Tool"
-            android:textColor="@color/panel_text_primary"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.02" />
-    </LinearLayout>
-
-    <!-- Divider bawah header -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/panel_divider" />
-
-    <ScrollView
-        android:id="@+id/textPropertyPanelScroll"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fillViewport="true"
-        android:scrollbars="none"
-        android:maxHeight="220dp"
-        android:fadeScrollbars="false">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <!-- ── Tahap 1: Panel Baru ────────────────────────────────────── -->
-
-            <!-- Color / Padding / Position / Relative / Size / Styles
-                 dipindah ke halaman Effect Settings -->
-
-            <!-- Font -->
-            <include
-                layout="@layout/panel_font"
-            android:id="@+id/fontPanel" />
-
-            <!-- ── Efek Kompleks dipindah ke Effect Settings Page ───────── -->
-            <!-- (Shadow, Inner, Emboss, Gradient, Texture, 3D Text, 3D Rotate,
-                 Perspective, Blend, Neon, Stroke, Spacing, Curve, Style, Mask,
-                 Align, Background, Color, Padding, Rotate, Opacity → layout_effect_settings_panel.xml) -->
-        </LinearLayout>
-    </ScrollView>
-</LinearLayout>
+</com.flyerpix.editor.ui.view.DetailPanel>

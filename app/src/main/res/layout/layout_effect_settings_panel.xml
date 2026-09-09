@@ -2,12 +2,13 @@
 <!--
   Effect Settings Page (UX ala PixelLab): halaman khusus yang mengambil alih
   area tool strip + panel properti saat pengguna mengedit efek kompleks.
-  Layout: Vertikal full-width.
-  Header: drag handle + judul efek + ikon ✓ (terapkan) dan ✕ (batal) di kanan.
-  Kontrol: full-width scroll area, slider tidak lagi sempit.
+
+  Panel: memakai komponen reusable DetailPanel (view_detail_panel.xml).
+  Seluruh include kontrol di bawah ini otomatis ditempatkan oleh DetailPanel
+  ke area konten scrollable-nya (lewat view_detail_panel.xml).
+  Tinggi panel dikelola PanelHeightManager agar tidak menutupi canvas.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<com.flyerpix.editor.ui.view.DetailPanel xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/effectSettingsPanel"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -17,280 +18,193 @@
     android:theme="@style/LightPanelTheme"
     android:visibility="gone">
 
-    <!-- Drag Handle Bar -->
-    <View
-        android:layout_width="@dimen/panel_handle_width"
-        android:layout_height="@dimen/panel_handle_height"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="4dp"
-        android:background="@color/panel_handle" />
-
-    <!-- Header: judul efek di kiri, Apply + Cancel di kanan -->
-    <LinearLayout
+    <!-- Position -->
+    <include
+        layout="@layout/layout_position_controls"
+        android:id="@+id/positionControlsInclude"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/panel_header_height"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="8dp">
+        android:layout_height="wrap_content" />
 
-        <!-- Aksen brand bar -->
-        <View
-            android:layout_width="4dp"
-            android:layout_height="16dp"
-            android:layout_marginEnd="10dp"
-            android:background="@color/brand_blue" />
-
-        <TextView
-            android:id="@+id/effectSettingsTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center_vertical"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:text="Effect Settings"
-            android:textColor="@color/panel_text_primary"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.02" />
-
-        <!-- Tombol Terapkan (✓) -->
-        <ImageButton
-            android:id="@+id/btnEffectApply"
-            style="?attr/selectableItemBackgroundBorderless"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="2dp"
-            android:src="@drawable/ic_check_24px"
-            app:tint="@color/panel_icon_active"
-            android:contentDescription="Apply settings" />
-
-        <!-- Tombol Batal (✕) -->
-        <ImageButton
-            android:id="@+id/btnEffectCancel"
-            style="?attr/selectableItemBackgroundBorderless"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_sharp_clear_24px"
-            app:tint="#E53935"
-            android:contentDescription="Cancel / exit" />
-    </LinearLayout>
-
-    <!-- Divider bawah header -->
-    <View
+    <!-- Relative Position -->
+    <include
+        layout="@layout/layout_relative_position_controls"
+        android:id="@+id/relativePositionControlsInclude"
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/panel_divider" />
+        android:layout_height="wrap_content" />
 
-    <!-- Area Kontrol: full-width, scrollable vertikal -->
-    <ScrollView
-        android:id="@+id/effectSettingsScroll"
+    <!-- Size -->
+    <include
+        layout="@layout/layout_size_controls"
+        android:id="@+id/sizeControlsInclude"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fillViewport="true"
-        android:scrollbars="none"
-        android:fadeScrollbars="false"
-        android:maxHeight="@dimen/panel_max_height">
+        android:layout_height="wrap_content" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@color/panel_bg_alt"
-            android:paddingBottom="8dp">
+    <!-- Styles (Tersimpan) -->
+    <include
+        layout="@layout/layout_styles_controls"
+        android:id="@+id/stylesControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Position -->
-            <include
-                layout="@layout/layout_position_controls"
-                android:id="@+id/positionControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Drop Shadow -->
+    <include
+        layout="@layout/layout_shadow_controls"
+        android:id="@+id/shadowControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Relative Position -->
-            <include
-                layout="@layout/layout_relative_position_controls"
-                android:id="@+id/relativePositionControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Stroke / Outline -->
+    <include
+        layout="@layout/layout_stroke_controls"
+        android:id="@+id/strokeControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Size -->
-            <include
-                layout="@layout/layout_size_controls"
-                android:id="@+id/sizeControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Spacing (Letter / Line) -->
+    <include
+        layout="@layout/layout_spacing_controls"
+        android:id="@+id/spacingControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Styles (Tersimpan) -->
-            <include
-                layout="@layout/layout_styles_controls"
-                android:id="@+id/stylesControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Align (Perataan) -->
+    <include
+        layout="@layout/layout_align_controls"
+        android:id="@+id/alignControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Drop Shadow -->
-            <include
-                layout="@layout/layout_shadow_controls"
-                android:id="@+id/shadowControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Background -->
+    <include
+        layout="@layout/layout_background_controls"
+        android:id="@+id/backgroundControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Stroke / Outline -->
-            <include
-                layout="@layout/layout_stroke_controls"
-                android:id="@+id/strokeControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Curve / Arc Text -->
+    <include
+        layout="@layout/layout_curve_controls"
+        android:id="@+id/curveControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Spacing (Letter / Line) -->
-            <include
-                layout="@layout/layout_spacing_controls"
-                android:id="@+id/spacingControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Style (Gaya Teks) -->
+    <include
+        layout="@layout/layout_style_controls"
+        android:id="@+id/styleControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Align (Perataan) -->
-            <include
-                layout="@layout/layout_align_controls"
-                android:id="@+id/alignControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Mask (Masking Foto) -->
+    <include
+        layout="@layout/layout_mask_controls"
+        android:id="@+id/maskControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Background -->
-            <include
-                layout="@layout/layout_background_controls"
-                android:id="@+id/backgroundControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Opacity -->
+    <include
+        layout="@layout/layout_opacity_controls"
+        android:id="@+id/opacityControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Curve / Arc Text -->
-            <include
-                layout="@layout/layout_curve_controls"
-                android:id="@+id/curveControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Rotate -->
+    <include
+        layout="@layout/layout_rotate_controls"
+        android:id="@+id/rotateControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Style (Gaya Teks) -->
-            <include
-                layout="@layout/layout_style_controls"
-                android:id="@+id/styleControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Color (Warna Teks) -->
+    <include
+        layout="@layout/layout_color_controls"
+        android:id="@+id/colorControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Mask (Masking Foto) -->
-            <include
-                layout="@layout/layout_mask_controls"
-                android:id="@+id/maskControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Padding -->
+    <include
+        layout="@layout/layout_padding_controls"
+        android:id="@+id/paddingControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Opacity -->
-            <include
-                layout="@layout/layout_opacity_controls"
-                android:id="@+id/opacityControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Inner Shadow -->
+    <include
+        layout="@layout/layout_inner_shadow_controls"
+        android:id="@+id/innerShadowControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Rotate -->
-            <include
-                layout="@layout/layout_rotate_controls"
-                android:id="@+id/rotateControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Emboss / Bevel -->
+    <include
+        layout="@layout/layout_emboss_controls"
+        android:id="@+id/embossControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Color (Warna Teks) -->
-            <include
-                layout="@layout/layout_color_controls"
-                android:id="@+id/colorControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Gradient Fill -->
+    <include
+        layout="@layout/layout_gradient_controls"
+        android:id="@+id/gradientControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Padding -->
-            <include
-                layout="@layout/layout_padding_controls"
-                android:id="@+id/paddingControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Texture Masking -->
+    <include
+        layout="@layout/layout_texture_controls"
+        android:id="@+id/textureControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Inner Shadow -->
-            <include
-                layout="@layout/layout_inner_shadow_controls"
-                android:id="@+id/innerShadowControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- 3D Text Extrusion -->
+    <include
+        layout="@layout/layout_extrude_controls"
+        android:id="@+id/extrudeControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Emboss / Bevel -->
-            <include
-                layout="@layout/layout_emboss_controls"
-                android:id="@+id/embossControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- 3D Shadow -->
+    <include
+        layout="@layout/layout_3d_shadow_controls"
+        android:id="@+id/shadow3DControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Gradient Fill -->
-            <include
-                layout="@layout/layout_gradient_controls"
-                android:id="@+id/gradientControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Reflection -->
+    <include
+        layout="@layout/layout_reflection_controls"
+        android:id="@+id/reflectionControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Texture Masking -->
-            <include
-                layout="@layout/layout_texture_controls"
-                android:id="@+id/textureControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- 3D Rotate -->
+    <include
+        layout="@layout/layout_3d_rotate_controls"
+        android:id="@+id/rotate3DControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- 3D Text Extrusion -->
-            <include
-                layout="@layout/layout_extrude_controls"
-                android:id="@+id/extrudeControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Perspective Warping -->
+    <include
+        layout="@layout/layout_perspective_controls"
+        android:id="@+id/perspectiveControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- 3D Shadow -->
-            <include
-                layout="@layout/layout_3d_shadow_controls"
-                android:id="@+id/shadow3DControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Blending Mode -->
+    <include
+        layout="@layout/layout_blend_controls"
+        android:id="@+id/blendControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- Reflection -->
-            <include
-                layout="@layout/layout_reflection_controls"
-                android:id="@+id/reflectionControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- Neon / Glow -->
+    <include
+        layout="@layout/layout_neon_controls"
+        android:id="@+id/neonControlsInclude"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-            <!-- 3D Rotate -->
-            <include
-                layout="@layout/layout_3d_rotate_controls"
-                android:id="@+id/rotate3DControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <!-- Perspective Warping -->
-            <include
-                layout="@layout/layout_perspective_controls"
-                android:id="@+id/perspectiveControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <!-- Blending Mode -->
-            <include
-                layout="@layout/layout_blend_controls"
-                android:id="@+id/blendControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <!-- Neon / Glow -->
-            <include
-                layout="@layout/layout_neon_controls"
-                android:id="@+id/neonControlsInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-        </LinearLayout>
-    </ScrollView>
-
-</LinearLayout>
+</com.flyerpix.editor.ui.view.DetailPanel>

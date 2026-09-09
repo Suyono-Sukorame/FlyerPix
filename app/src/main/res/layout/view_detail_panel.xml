@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shell reusable untuk SEMUA halaman detail menu (Effect Settings, Shape Settings,
+  Text Property, dst).
+
+  Struktur:
+    - drag handle (petunjuk bisa digeser/di-scroll)
+    - header: judul (kiri) + tombol ✓ (Apply) dan ✕ (Cancel) opsional (kanan)
+    - divider
+    - area konten scrollable (isi otomatis diisi oleh DetailPanel dari child XML)
+
+  Dipakai via:
+    <com.flyerpix.editor.ui.view.DetailPanel ...>
+        <LinearLayout android:id="@+id/posisiControls">...</LinearLayout>
+    </com.flyerpix.editor.ui.view.DetailPanel>
+-->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Drag Handle Bar -->
+    <View
+        android:id="@+id/detailPanelHandle"
+        android:layout_width="@dimen/panel_handle_width"
+        android:layout_height="@dimen/panel_handle_height"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="4dp"
+        android:background="@color/panel_handle" />
+
+    <!-- Header: judul di kiri, Apply/Cancel di kanan -->
+    <LinearLayout
+        android:id="@+id/detailPanelHeader"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/panel_header_height"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="8dp">
+
+        <!-- Aksen brand bar -->
+        <View
+            android:layout_width="4dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="10dp"
+            android:background="@color/brand_blue" />
+
+        <TextView
+            android:id="@+id/detailPanelTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="Detail"
+            android:textColor="@color/panel_text_primary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.02" />
+
+        <!-- Tombol Terapkan (✓) -->
+        <ImageButton
+            android:id="@+id/detailPanelApply"
+            style="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="2dp"
+            android:src="@drawable/ic_check_24px"
+            app:tint="@color/panel_icon_active"
+            android:contentDescription="Apply settings" />
+
+        <!-- Tombol Batal (✕) -->
+        <ImageButton
+            android:id="@+id/detailPanelCancel"
+            style="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_sharp_clear_24px"
+            app:tint="#E53935"
+            android:contentDescription="Cancel / exit" />
+    </LinearLayout>
+
+    <!-- Divider bawah header -->
+    <View
+        android:id="@+id/detailPanelDivider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/panel_divider" />
+
+    <!-- Area Konten: full-width, scrollable vertikal -->
+    <ScrollView
+        android:id="@+id/detailPanelScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fillViewport="true"
+        android:scrollbars="none"
+        android:fadeScrollbars="false"
+        android:maxHeight="@dimen/panel_max_height">
+
+        <LinearLayout
+            android:id="@+id/detailPanelContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/panel_bg_alt"
+            android:paddingBottom="8dp" />
+    </ScrollView>
+
+</merge>

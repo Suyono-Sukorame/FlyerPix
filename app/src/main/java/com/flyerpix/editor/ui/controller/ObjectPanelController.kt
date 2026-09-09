@@ -238,7 +238,7 @@ class ObjectPanelController(
             OBJ_BLEND       -> syncBlendUI(layer)
             OBJ_PERSPECTIVE -> syncPerspectiveUI(layer)
         }
-        fs.effectSettingsTitle.text = toolLabels[tag] ?: "Effect Settings"
+        (fs.root as? com.flyerpix.editor.ui.view.DetailPanel)?.setTitle(toolLabels[tag] ?: "Effect Settings")
         for ((t, v) in panelViews) v.visibility = if (t == tag) View.VISIBLE else View.GONE
     }
 
