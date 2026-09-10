@@ -35,7 +35,6 @@ import kotlin.math.min
 import android.util.Log
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import com.google.android.material.bottomsheet.BottomSheetBehavior
 import android.widget.FrameLayout
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -122,7 +121,6 @@ class TextPanelController(
     private var syncStylesUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var threeDComposeHost: ComposeView? = null
     private var threeDComposeContainer: FrameLayout? = null
-    private var threeDBottomSheet: BottomSheetBehavior<View>? = null
 
     companion object {
         private const val CATEGORY_BASIC = "basic"
@@ -185,18 +183,11 @@ class TextPanelController(
         (binding.textPropertyPanelInclude.root as? com.flyerpix.editor.ui.view.DetailPanel)
             ?.showConfirmActions(false)
 
-        // locate 3D Compose container and behavior if present
+        // locate 3D Compose container and host if present
         threeDComposeContainer = activity.findViewById(R.id.composeThreeDSheetContainer)
         threeDComposeHost = activity.findViewById(R.id.composeThreeDDetail)
         if (threeDComposeContainer != null) {
-            try {
-                threeDBottomSheet = BottomSheetBehavior.from(threeDComposeContainer as View)
-                // make it collapse initially and hideable
-                threeDBottomSheet?.state = BottomSheetBehavior.STATE_COLLAPSED
-                threeDBottomSheet?.isHideable = true
-                val density = activity.resources.displayMetrics.density
-                threeDBottomSheet?.peekHeight = (120 * density).toInt()
-            } catch (_: Exception) {}
+            threeDComposeContainer?.visibility = View.GONE
         }
 
         // locate 3D Compose host if present in activity layout
@@ -271,25 +262,6 @@ initializeMaskControls()
 
     private fun initializeThreeDCompose() {
         val host = threeDComposeHost ?: return
-        fun dumpSizingInfo(prefix: String) {
-            try {
-                val screenH = activity.resources.displayMetrics.heightPixels
-                val screenW = activity.resources.displayMetrics.widthPixels
-                val canvasH = try { pixelCanvasView.height } catch (_: Exception) { -1 }
-                val canvasMeasured = try { pixelCanvasView.measuredHeight } catch (_: Exception) { -1 }
-                val canvasCard = activity.findViewById<View>(R.id.canvasCard)
-                val canvasCardH = canvasCard?.height ?: -1
-                val motion = activity.findViewById<View>(R.id.motionLayout)
-                val motionH = motion?.height ?: -1
-                val beforeLP = threeDComposeContainer?.layoutParams?.height ?: -1
-                val containerH = threeDComposeContainer?.height ?: -1
-                val containerMeasured = threeDComposeContainer?.measuredHeight ?: -1
-                val effectRootH = binding.effectSettingsInclude.root?.height ?: -1
-                Log.d("TextPanelController", "$prefix - screenH=$screenH screenW=$screenW canvasH=$canvasH canvasMeasured=$canvasMeasured canvasCardH=$canvasCardH motionH=$motionH containerH=$containerH containerMeasured=$containerMeasured beforeLP=$beforeLP effectRootH=$effectRootH")
-            } catch (ex: Exception) {
-                Log.e("TextPanelController", "dumpSizingInfo failed", ex)
-            }
-        }
         // Register fragment result listener for depth color pick (for Compose path)
         (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
             .setFragmentResultListener(
@@ -326,84 +298,133 @@ initializeMaskControls()
         pixelCanvasView.onLayerSelectedListener = { layer ->
             prevListener?.invoke(layer)
             val sel = layer as? TextLayer
-            if (sel != null && sel.extrudeEnabled) {
-            Log.d("TextPanelController", "3D selected - enabling compose sheet and hiding legacy include")
-            dumpSizingInfo("before-show")
-            // show bottom sheet container
-            threeDComposeContainer?.visibility = View.VISIBLE
-            // hide legacy container
-            binding.effectSettingsInclude.root.visibility = View.GONE
-            Log.d("TextPanelController", "effectSettingsInclude hidden")
-
-                val depth = sel.extrudeDepth.coerceIn(1, 50)
-                val angle = sel.extrudeAngle
-                val depthColor = sel.extrudeColor.toLong()
-                // compute sheet height dynamically: utamakan ruang kosong di bawah
-                // canvas, plus aturan PanelHeightManager (60% canvas / 35% layar /
-                // cap 50% layar). Dijamin tidak menutupi canvas.
-                try {
-                    val screenH = activity.resources.displayMetrics.heightPixels
-                    val density = activity.resources.displayMetrics.density
-                    val canvasH = try { pixelCanvasView.height } catch (_: Exception) { 0 }
-                    val canvasCard = activity.findViewById<View>(R.id.canvasCard)
-                    var space = 0
-                    if (canvasCard != null && canvasCard.height > 0) {
-                        val root = binding.parentLayout
-                        space = PanelHeightManager.anchorBottomInRoot(
-                            root,
-                            (56 * density).toInt()
-                        ) -
-                            PanelHeightManager.bottomInRoot(canvasCard, root)
-                    }
-                    val maxH = PanelHeightManager.safeDetailHeight(space, canvasH, screenH, density)
-                    val before = threeDComposeContainer?.layoutParams?.height ?: -1
-                    Log.d("TextPanelController", "3D sheet sizing - screenH=$screenH canvasH=$canvasH space=$space computedMaxH=$maxH beforeLayout=$before")
-                    threeDComposeContainer?.layoutParams?.height = maxH
-                    threeDComposeContainer?.requestLayout()
-                    // give the view a moment to re-measure; log after a posted runnable
-                    threeDComposeContainer?.post {
-                        dumpSizingInfo("after-requestLayout-post")
-                        threeDBottomSheet?.peekHeight = maxH
-                        val applied = threeDComposeContainer?.layoutParams?.height ?: -1
-                        Log.d("TextPanelController", "3D sheet applied layout (post) height=$applied peek=${threeDBottomSheet?.peekHeight}")
-                        try { showSnackbar("3D sheet height=$applied px") } catch (_: Exception) {}
-                        try { threeDBottomSheet?.state = BottomSheetBehavior.STATE_COLLAPSED } catch (_: Exception) {}
-                    }
-                } catch (ex: Exception) {
-                    Log.e("TextPanelController", "Failed setting 3D sheet height", ex)
-                }
-
-                host.setContent {
-                    com.flyerpix.editor.ui.compose.ThreeDTextDetailPage(
-                        depth = depth,
-                        depthColor = depthColor,
-                        angle = angle,
-                        onDepthChange = { v -> applyToTextLayer { it.extrudeDepth = v }; pixelCanvasView.invalidate() },
-                        onDepthPickRequested = {
-                            val layer = pixelCanvasView.selectedLayer as? TextLayer ?: return@ThreeDTextDetailPage
-                            com.flyerpix.editor.ui.dialog.ColorPickerDialog
-                                .newInstance(
-                                    initialColor = layer.extrudeColor,
-                                    initialGradient = layer.extrudeGradient,
-                                    resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.DEPTH_RESULT_KEY
-                                )
-                                .show((activity as androidx.fragment.app.FragmentActivity).supportFragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
-                        },
-                        onAngleChange = { a -> applyToTextLayer { it.extrudeAngle = a }; pixelCanvasView.invalidate() },
-                        onApply = { try { threeDBottomSheet?.state = BottomSheetBehavior.STATE_HIDDEN } catch (_: Exception) {}; onEffectSettingsOpenChanged(false) },
-                        onCancel = { try { threeDBottomSheet?.state = BottomSheetBehavior.STATE_HIDDEN } catch (_: Exception) {}; onEffectSettingsOpenChanged(false) }
-                    )
-                }
+            if (sel != null && (sel.extrudeEnabled || activeTextToolTag == TOOL_3D_TEXT)) {
+                showCompose3DSheet(sel)
+            } else if (activeTextToolTag == TOOL_3D_TEXT) {
+                // layer non-3D dipilih saat halaman tool 3D Text terbuka:
+                // tutup halaman settings (paralel dengan perilaku legacy panel)
+                closeEffectSettings()
             } else {
-                // Layer teks non-3D: sembunyikan sheet Compose 3D saja. Jangan
-                // memaksa panel efek tampil — panel mengelola visibilitasnya
-                // sendiri (muncul hanya saat tool efek diaktifkan user). Memaksa
-                // VISIBLE di sini membuat panel kosong menutupi halaman menu aktif
-                // (mis. carousel Presets) sejak aplikasi dibuka.
-                try { threeDBottomSheet?.state = BottomSheetBehavior.STATE_HIDDEN } catch (_: Exception) {}
-                threeDComposeContainer?.visibility = View.GONE
+                hideCompose3DSheet()
             }
         }
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk 3D Text dengan parameter dari layer.
+     * Dipanggil saat layer dipilih (jika extrude aktif / tool 3D Text aktif),
+     * atau saat tool 3D Text diklik dari effect settings.
+     */
+    private fun showCompose3DSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        // hide legacy container
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        // saat dibuka via tool, sinkronkan state "effect settings open" ke caller
+        if (activeTextToolTag == TOOL_3D_TEXT && !alreadyVisible) onEffectSettingsOpenChanged(true)
+        // show bottom sheet container
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val depth = layer.extrudeDepth.coerceIn(1, 50)
+        val angle = layer.extrudeAngle
+        val depthColor = layer.extrudeColor.toLong()
+        val enabled = layer.extrudeEnabled
+        val viewType = layer.extrudeViewType.name
+
+        // compute sheet height dynamically
+        var sheetMaxH = 420
+        try {
+            val screenH = activity.resources.displayMetrics.heightPixels
+            val density = activity.resources.displayMetrics.density
+            val canvasH = try { pixelCanvasView.height } catch (_: Exception) { 0 }
+            val canvasCard = activity.findViewById<View>(R.id.canvasCard)
+            var space = 0
+            if (canvasCard != null && canvasCard.height > 0) {
+                val root = binding.parentLayout
+                space = PanelHeightManager.anchorBottomInRoot(
+                    root,
+                    0
+                ) -
+                    PanelHeightManager.bottomInRoot(canvasCard, root)
+            }
+            sheetMaxH = PanelHeightManager.safeDetailHeight(space, canvasH, screenH, density)
+            // Lantai tinggi: ketika ruang kosong di bawah canvas sempit, panel
+            // boleh menutupi sebagian canvas (perilaku normal panel bawah) agar
+            // kontrol tetap tampil — tidak hanya header.
+            val fallbackH = PanelHeightManager.fallbackHeight(canvasH, screenH, density)
+            val floorH = minOf((screenH * 0.45f).toInt(), fallbackH).coerceAtLeast(280)
+            sheetMaxH = maxOf(sheetMaxH, floorH)
+            PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        } catch (ex: Exception) {
+            Log.e("TextPanelController", "Failed setting 3D sheet height", ex)
+        }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.ThreeDTextDetailPage(
+                depth = depth,
+                depthColor = depthColor,
+                angle = angle,
+                extrudeEnabled = enabled,
+                viewType = viewType,
+                maxHeightPx = sheetMaxH,
+                onDepthChange = { v -> applyToTextLayer { it.extrudeDepth = v }; pixelCanvasView.invalidate() },
+                onDepthPickRequested = {
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@ThreeDTextDetailPage
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                        .newInstance(
+                            initialColor = sel.extrudeColor,
+                            initialGradient = sel.extrudeGradient,
+                            resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.DEPTH_RESULT_KEY
+                        )
+                        .show((activity as androidx.fragment.app.FragmentActivity).supportFragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
+                },
+                onAngleChange = { a -> applyToTextLayer { it.extrudeAngle = a }; pixelCanvasView.invalidate() },
+                onExtrudeEnabledChange = { newEnabled ->
+                    applyToTextLayer { it.extrudeEnabled = newEnabled }
+                    pixelCanvasView.invalidate()
+                    // re-compose to show/hide controls
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer
+                    if (sel != null) showCompose3DSheet(sel)
+                },
+                onViewTypeChange = { type ->
+                    applyToTextLayer { it.extrudeViewType = ExtrudeViewType.valueOf(type) }
+                    pixelCanvasView.invalidate()
+                    // re-compose to show/hide angle slider
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer
+                    if (sel != null) showCompose3DSheet(sel)
+                },
+                onApply = {
+                    if (activeTextToolTag == TOOL_3D_TEXT) {
+                        applyEffectSettings()
+                    } else {
+                        onCompose3DSheetDismissed()
+                    }
+                },
+                onCancel = {
+                    if (activeTextToolTag == TOOL_3D_TEXT) {
+                        cancelEffectSettings()
+                    } else {
+                        onCompose3DSheetDismissed()
+                    }
+                }
+            )
+        }
+    }
+
+    /**
+     * Sembunyikan Compose bottom sheet 3D Text.
+     */
+    private fun hideCompose3DSheet() {
+        threeDComposeContainer?.visibility = View.GONE
+    }
+
+    /**
+     * Dismiss Compose sheet untuk kasus selain tool-3D-active (mis. layer 3D
+     * dipilih langsung dari canvas). Tidak memaksa keluar dari halaman teks.
+     */
+    private fun onCompose3DSheetDismissed() {
+        hideCompose3DSheet()
+        onEffectSettingsOpenChanged(false)
     }
 
     /**
@@ -2080,7 +2101,13 @@ tvAngleLabel.text = "Angle: 0°"
             TOOL_EMBOSS -> syncEmbossUIHook?.invoke(layer)
             TOOL_GRADIENT -> syncGradientUIHook?.invoke(layer)
             TOOL_TEXTURE -> syncTextureUIHook?.invoke(layer)
-            TOOL_3D_TEXT -> rebuildExtrudePaletteHook?.invoke(layer)
+            TOOL_3D_TEXT -> {
+                if (threeDComposeHost != null) {
+                    showCompose3DSheet(layer)
+                } else {
+                    rebuildExtrudePaletteHook?.invoke(layer)
+                }
+            }
             TOOL_3D_SHADOW -> syncShadow3DUIHook?.invoke(layer)
             TOOL_REFLECTION -> syncReflectionUIHook?.invoke(layer)
             TOOL_3D_ROTATE -> {
@@ -2280,11 +2307,16 @@ tvAngleLabel.text = "Angle: 0°"
      * kompleks mendapat ruang yang lebih lega tanpa tumpukan menu.
      */
     private fun updateEffectSettingsVisibility() {
+        // TOOL_3D_TEXT ditampilkan via Compose bottom sheet, bukan panel XML
+        // (yang kosong karena initializeExtrudeControls dialihkan ke Compose).
+        val composedPanel = activeTextToolTag == TOOL_3D_TEXT && threeDComposeHost != null
         val show = effectSettingsOpen && isPageOpen && activeTextToolTag in complexEffectTags &&
+            !composedPanel &&
             (pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer)?.let { !it.isLocked } ?: false
         val wasOpen = binding.effectSettingsInclude.root.visibility == View.VISIBLE
-        val changed = wasOpen != show
         binding.effectSettingsInclude.root.visibility = if (show) View.VISIBLE else View.GONE
+        if (composedPanel) return
+        val changed = wasOpen != show
         effectSettingsOpen = show
         if (changed) onEffectSettingsOpenChanged(show)
     }
@@ -2304,6 +2336,7 @@ tvAngleLabel.text = "Angle: 0°"
             return
         }
         if (effectSettingsOpen && activeTextToolTag == tag) return
+        if (tag != TOOL_3D_TEXT) hideCompose3DSheet()
         textToolTagBeforeEffect = activeTextToolTag.takeUnless { it in complexEffectTags } ?: ""
         snapshotCurrentState()
         activeTextToolTag = tag
@@ -2330,8 +2363,11 @@ tvAngleLabel.text = "Angle: 0°"
      * Batal (✕): kembalikan seluruh parameter efek ke kondisi sebelum halaman dibuka.
      */
     fun cancelEffectSettings() {
-        val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
-        if (layer != null) restoreSnapshot(layer)
+        val snapshot = settingsSnapshot
+        if (snapshot != null) {
+            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
+            if (layer != null) restoreSnapshot(snapshot)
+        }
         closeEffectSettings()
     }
 
@@ -2339,12 +2375,18 @@ tvAngleLabel.text = "Angle: 0°"
      * Tutup halaman settings (baik via ✓ maupun ✕) dan kembali ke strip tool.
      */
     private fun closeEffectSettings() {
+        val threeDOpened = activeTextToolTag == TOOL_3D_TEXT
         settingsSnapshot = null
         effectSettingsOpen = false
         activeTextToolTag = textToolTagBeforeEffect
         textToolTagBeforeEffect = ""
+        hideCompose3DSheet()
         pixelCanvasView.invalidate()
         refreshTextPageUI()
+        // UI yang di-render via Compose sheet (3D Text) tidak menyentuh
+        // effectSettingsInclude sehingga updateEffectSettingsVisibility tidak
+        // mendeteksi transisi terbuka→tertutup. Beri tahu caller secara eksplisit.
+        if (threeDOpened) onEffectSettingsOpenChanged(false)
     }
 
     /**
@@ -2711,6 +2753,7 @@ private fun registerTextPanels() {
         if (textToolItems.isEmpty()) return
 
         // Sembunyikan halaman Effect Settings jika beralih ke tool sederhana
+        hideCompose3DSheet()
         updateEffectSettingsVisibility()
 
         for ((t, item) in textToolItems) {
@@ -4345,6 +4388,7 @@ private fun registerTextPanels() {
         binding.textCategoryStripInclude.root.visibility = View.GONE
         binding.textToolStripInclude.textToolStripScroll.visibility = View.GONE
         binding.effectSettingsInclude.root.visibility = View.GONE
+        hideCompose3DSheet()
         activeTextToolTag = ""
         effectSettingsOpen = false
         textToolTagBeforeEffect = ""
