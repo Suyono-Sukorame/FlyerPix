@@ -15,8 +15,6 @@ import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Slider
 import androidx.compose.material.Surface
-import androidx.compose.material.Switch
-import androidx.compose.material.SwitchDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.lightColors
@@ -75,14 +73,12 @@ private fun RowScope.ViewTypeSegment(
 
 @Composable
 fun ThreeDShadowDetailPage(
-    enabled: Boolean,
     depth: Int,
     color: Long,
     angle: Float,
     blur: Float,
     opacity: Float,
     viewType: String,
-    onEnabledChange: (Boolean) -> Unit,
     onDepthChange: (Int) -> Unit,
     onColorPickRequested: () -> Unit,
     onAngleChange: (Float) -> Unit,
@@ -161,28 +157,10 @@ fun ThreeDShadowDetailPage(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Enable 3D Shadow",
-                                    style = MaterialTheme.typography.body2,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Switch(
-                                    checked = enabled,
-                                    onCheckedChange = onEnabledChange,
-                                    colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colors.primary)
-                                )
-                            }
+                            Divider(color = Color(PanelDivider), thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                            if (enabled) {
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Divider(color = Color(PanelDivider), thickness = 1.dp)
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                Surface(
+                            Surface(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp),
                                     color = Color(PanelAlt),
@@ -279,7 +257,6 @@ fun ThreeDShadowDetailPage(
                                 }
 
                                 Spacer(modifier = Modifier.height(8.dp))
-                            }
                         }
 
                         Column(

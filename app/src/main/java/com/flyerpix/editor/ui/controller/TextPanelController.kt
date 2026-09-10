@@ -349,10 +349,14 @@ initializeMaskControls()
         // show bottom sheet container
         threeDComposeContainer?.visibility = View.VISIBLE
 
+        // Toggle "Enable 3D Text" sudah dihapus: aktifkan ekstrusi otomatis
+        // saat tool 3D Text digunakan. Snapshot dibuat sebelum show ini,
+        // jadi Cancel tetap mengembalikan kondisi semula.
+        applyToTextLayer { it.extrudeEnabled = true }
+
         val depth = layer.extrudeDepth.coerceIn(1, 50)
         val angle = layer.extrudeAngle
         val depthColor = layer.extrudeColor.toLong()
-        val enabled = layer.extrudeEnabled
         val viewType = layer.extrudeViewType.name
 
         // compute sheet height dynamically
@@ -388,7 +392,6 @@ initializeMaskControls()
                 depth = depth,
                 depthColor = depthColor,
                 angle = angle,
-                extrudeEnabled = enabled,
                 viewType = viewType,
                 maxHeightPx = sheetMaxH,
                 onDepthChange = { v -> applyToTextLayer { it.extrudeDepth = v }; pixelCanvasView.invalidate() },
@@ -403,13 +406,6 @@ initializeMaskControls()
                         .show((activity as androidx.fragment.app.FragmentActivity).supportFragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
                 },
                 onAngleChange = { a -> applyToTextLayer { it.extrudeAngle = a }; pixelCanvasView.invalidate() },
-                onExtrudeEnabledChange = { newEnabled ->
-                    applyToTextLayer { it.extrudeEnabled = newEnabled }
-                    pixelCanvasView.invalidate()
-                    // re-compose to show/hide controls
-                    val sel = pixelCanvasView.selectedLayer as? TextLayer
-                    if (sel != null) showCompose3DSheet(sel)
-                },
                 onViewTypeChange = { type ->
                     applyToTextLayer { it.extrudeViewType = ExtrudeViewType.valueOf(type) }
                     pixelCanvasView.invalidate()
@@ -486,10 +482,13 @@ initializeMaskControls()
         // show bottom sheet container
         threeDComposeContainer?.visibility = View.VISIBLE
 
+        // Toggle "Enable 3D Shadow" sudah dihapus: aktifkan otomatis saat tool 3D
+        // Shadow digunakan (Cancel tetap mengembalikan kondisi semula via snapshot).
+        applyToTextLayer { it.shadow3DEnabled = true }
+
         val depth = layer.shadow3DDepth.coerceIn(1, 50)
         val angle = layer.shadow3DAngle
         val color = layer.shadow3DColor.toLong()
-        val enabled = layer.shadow3DEnabled
         val blur = layer.shadow3DBlur.coerceIn(0f, 40f)
         val opacity = layer.shadow3DOpacity.coerceIn(0f, 1f)
         val viewType = layer.shadow3DViewType.name
@@ -500,7 +499,6 @@ initializeMaskControls()
 
         host.setContent {
             com.flyerpix.editor.ui.compose.ThreeDShadowDetailPage(
-                enabled = enabled,
                 depth = depth,
                 color = color,
                 angle = angle,
@@ -521,13 +519,6 @@ initializeMaskControls()
                 onAngleChange = { a -> applyToTextLayer { it.shadow3DAngle = a }; pixelCanvasView.invalidate() },
                 onBlurChange = { b -> applyToTextLayer { it.shadow3DBlur = b }; pixelCanvasView.invalidate() },
                 onOpacityChange = { o -> applyToTextLayer { it.shadow3DOpacity = o }; pixelCanvasView.invalidate() },
-                onEnabledChange = { newEnabled ->
-                    applyToTextLayer { it.shadow3DEnabled = newEnabled }
-                    pixelCanvasView.invalidate()
-                    // re-compose to show/hide controls
-                    val sel = pixelCanvasView.selectedLayer as? TextLayer
-                    if (sel != null) showComposeShadow3DSheet(sel)
-                },
                 onViewTypeChange = { type ->
                     applyToTextLayer { it.shadow3DViewType = ExtrudeViewType.valueOf(type) }
                     pixelCanvasView.invalidate()
