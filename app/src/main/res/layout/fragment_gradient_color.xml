@@ -5,6 +5,11 @@
     android:layout_height="match_parent"
     android:fillViewport="true">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
     <!-- Konten utama gradient -->
     <LinearLayout
         android:id="@+id/gradientContent"
@@ -242,6 +247,8 @@
                 android:text="Set" />
 
         </LinearLayout>
+
+    </LinearLayout>
 
     </LinearLayout>
 
