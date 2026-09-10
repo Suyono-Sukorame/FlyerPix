@@ -3,6 +3,7 @@ package com.flyerpix.editor.ui.compose
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -12,11 +13,15 @@ import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.Divider
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Slider
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +35,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.flyerpix.editor.canvas.model.GradientColor
+import com.flyerpix.editor.ui.dialog.RecentEntry
 
 private val ThreeDTextColorScheme = lightColors(
     primary = Color(0xFF1769FF),
@@ -77,6 +84,9 @@ fun ThreeDTextDetailPage(
     depthColor: Long,
     angle: Float,
     viewType: String,
+    recents: List<RecentEntry> = emptyList(),
+    currentGradient: GradientColor? = null,
+    onRecentPicked: (RecentEntry) -> Unit = {},
     onDepthChange: (Int) -> Unit,
     onDepthPickRequested: () -> Unit,
     onAngleChange: (Float) -> Unit,
@@ -207,20 +217,35 @@ fun ThreeDTextDetailPage(
                                         style = MaterialTheme.typography.body2,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(RoundedCornerShape(24.dp))
-                                            .clickable(onClick = onDepthPickRequested)
-                                            .semantics { contentDescription = "Depth color" },
-                                        contentAlignment = Alignment.Center
+                                    IconButton(
+                                        onClick = onDepthPickRequested,
+                                        modifier = Modifier.size(34.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(36.dp)
-                                                .background(Color(depthColorArgb), RoundedCornerShape(18.dp))
-                                                .border(1.dp, Color(PanelDivider), RoundedCornerShape(18.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "Pick depth color",
+                                            tint = MaterialTheme.colors.primary
                                         )
+                                    }
+                                }
+
+                                if (recents.isNotEmpty()) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        recents.forEachIndexed { index, entry ->
+                                            val selected = when (entry) {
+                                                is RecentEntry.Solid -> entry.color == depthColorArgb
+                                                is RecentEntry.Gradient -> gradientsEqual(entry.gradient, currentGradient)
+                                            }
+                                            RecentColorChip(entry, selected) { onRecentPicked(entry) }
+                                            if (index < recents.lastIndex) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                            }
+                                        }
                                     }
                                 }
 
@@ -266,3 +291,9 @@ fun ThreeDTextDetailPage(
         }
     }
 }
+
+private fun gradientsEqual(a: GradientColor?, b: GradientColor?): Boolean =
+    a != null && b != null &&
+        a.colors.contentEquals(b.colors) &&
+        a.type == b.type &&
+        a.angle == b.angle

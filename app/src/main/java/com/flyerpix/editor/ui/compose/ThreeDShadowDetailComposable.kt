@@ -3,6 +3,7 @@ package com.flyerpix.editor.ui.compose
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -12,11 +13,15 @@ import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.Divider
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Slider
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +35,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.flyerpix.editor.ui.dialog.RecentEntry
 
 private val ThreeDShadowColorScheme = lightColors(
     primary = Color(0xFF1769FF),
@@ -79,6 +85,8 @@ fun ThreeDShadowDetailPage(
     blur: Float,
     opacity: Float,
     viewType: String,
+    recents: List<RecentEntry> = emptyList(),
+    onRecentPicked: (RecentEntry) -> Unit = {},
     onDepthChange: (Int) -> Unit,
     onColorPickRequested: () -> Unit,
     onAngleChange: (Float) -> Unit,
@@ -239,20 +247,33 @@ fun ThreeDShadowDetailPage(
                                         style = MaterialTheme.typography.body2,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(RoundedCornerShape(24.dp))
-                                            .clickable(onClick = onColorPickRequested)
-                                            .semantics { contentDescription = "Shadow color" },
-                                        contentAlignment = Alignment.Center
+                                    IconButton(
+                                        onClick = onColorPickRequested,
+                                        modifier = Modifier.size(34.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(36.dp)
-                                                .background(Color(colorArgb), RoundedCornerShape(18.dp))
-                                                .border(1.dp, Color(PanelDivider), RoundedCornerShape(18.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "Pick shadow color",
+                                            tint = MaterialTheme.colors.primary
                                         )
+                                    }
+                                }
+
+                                if (recents.isNotEmpty()) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        recents.forEachIndexed { index, entry ->
+                                            if (entry is RecentEntry.Solid) {
+                                                RecentColorChip(entry, entry.color == colorArgb) { onRecentPicked(entry) }
+                                                if (index < recents.lastIndex) {
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                }
+                                            }
+                                        }
                                     }
                                 }
 

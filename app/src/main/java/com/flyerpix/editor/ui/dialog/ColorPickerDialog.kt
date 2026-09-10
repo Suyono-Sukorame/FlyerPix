@@ -72,12 +72,16 @@ class ColorPickerDialog : DialogFragment() {
             )
             val result = Bundle()
             if (binding.viewPagerColorPicker.currentItem == 0 && currentFragment is SolidColorFragment) {
+                val color = currentFragment.getSelectedColor()
                 result.putBoolean(EXTRA_IS_GRADIENT, false)
-                result.putInt(EXTRA_COLOR, currentFragment.getSelectedColor())
+                result.putInt(EXTRA_COLOR, color)
+                ColorRecents(requireContext()).pushSolid(color)
             } else if (currentFragment is GradientColorFragment) {
                 result.putBoolean(EXTRA_IS_GRADIENT, true)
                 @Suppress("DEPRECATION")
-                result.putSerializable(EXTRA_GRADIENT, currentFragment.getGradient())
+                val gradient = currentFragment.getGradient()
+                result.putSerializable(EXTRA_GRADIENT, gradient)
+                ColorRecents(requireContext()).pushGradient(gradient)
             }
             setFragmentResult(resultKey, result)
             dismiss()

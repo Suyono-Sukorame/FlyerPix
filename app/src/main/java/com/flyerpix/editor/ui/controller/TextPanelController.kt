@@ -292,6 +292,9 @@ initializeMaskControls()
                     }
                 }
                 pixelCanvasView.invalidate()
+                // refresh chip/strip recent di sheet Compose
+                val sel = pixelCanvasView.selectedLayer as? TextLayer
+                if (sel != null && activeTextToolTag == TOOL_3D_TEXT) showCompose3DSheet(sel)
             }
         // Register fragment result listener for 3D shadow color pick (Compose path)
         (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
@@ -311,6 +314,9 @@ initializeMaskControls()
                         layer.shadow3DColor = color
                     }
                     pixelCanvasView.invalidate()
+                    // refresh chip/strip recent di sheet Compose
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer
+                    if (sel != null && activeTextToolTag == TOOL_3D_SHADOW) showComposeShadow3DSheet(sel)
                 }
             }
         // Recompose content and visibility whenever layer selection changes.
@@ -358,6 +364,8 @@ initializeMaskControls()
         val angle = layer.extrudeAngle
         val depthColor = layer.extrudeColor.toLong()
         val viewType = layer.extrudeViewType.name
+        val recents = com.flyerpix.editor.ui.dialog.ColorRecents(activity).recents()
+        val currentGradient = layer.extrudeGradient
 
         // compute sheet height dynamically
         var sheetMaxH = 420
@@ -393,7 +401,22 @@ initializeMaskControls()
                 depthColor = depthColor,
                 angle = angle,
                 viewType = viewType,
+                recents = recents,
+                currentGradient = currentGradient,
                 maxHeightPx = sheetMaxH,
+                onRecentPicked = { entry ->
+                    when (entry) {
+                        is com.flyerpix.editor.ui.dialog.RecentEntry.Solid -> applyToTextLayer {
+                            it.extrudeColor = entry.color
+                            it.extrudeGradient = null
+                        }
+                        is com.flyerpix.editor.ui.dialog.RecentEntry.Gradient -> applyToTextLayer {
+                            it.extrudeGradient = entry.gradient
+                        }
+                    }
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer
+                    if (sel != null && activeTextToolTag == TOOL_3D_TEXT) showCompose3DSheet(sel)
+                },
                 onDepthChange = { v -> applyToTextLayer { it.extrudeDepth = v }; pixelCanvasView.invalidate() },
                 onDepthPickRequested = {
                     val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@ThreeDTextDetailPage
@@ -491,6 +514,7 @@ initializeMaskControls()
         val color = layer.shadow3DColor.toLong()
         val blur = layer.shadow3DBlur.coerceIn(0f, 40f)
         val opacity = layer.shadow3DOpacity.coerceIn(0f, 1f)
+        val recents = com.flyerpix.editor.ui.dialog.ColorRecents(activity).recents()
         val viewType = layer.shadow3DViewType.name
 
         // Shadow punya kontrol lebih banyak (blur + opacity), beri lantai lebih tinggi
@@ -505,7 +529,15 @@ initializeMaskControls()
                 blur = blur,
                 opacity = opacity,
                 viewType = viewType,
+                recents = recents,
                 maxHeightPx = sheetMaxH,
+                onRecentPicked = { entry ->
+                    (entry as? com.flyerpix.editor.ui.dialog.RecentEntry.Solid)?.let { solid ->
+                        applyToTextLayer { it.shadow3DColor = solid.color }
+                    }
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer
+                    if (sel != null && activeTextToolTag == TOOL_3D_SHADOW) showComposeShadow3DSheet(sel)
+                },
                 onDepthChange = { v -> applyToTextLayer { it.shadow3DDepth = v }; pixelCanvasView.invalidate() },
                 onColorPickRequested = {
                     val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@ThreeDShadowDetailPage

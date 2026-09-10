@@ -149,18 +149,10 @@ class SolidColorEditorView @JvmOverloads constructor(
         onColorChanged = listener
     }
 
-    /** Tambahkan warna terpilih ke daftar Recent (SharedPreferences). */
+    /** Tambahkan warna terpilih ke daftar Recent (store terpadu, solid + gradasi). */
     fun commitCurrentColorToRecents() {
-        val recents = loadRecentsFromStorage()
-        if (recents.firstOrNull() == currentColor) return
-        recents.remove(currentColor)
-        recents.add(0, currentColor)
-        val trimmed = recents.take(MAX_RECENTS).toMutableList()
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putString(KEY_RECENTS, trimmed.joinToString(","))
-            .apply()
-        rebuildRecents(trimmed)
+        ColorRecents(context).pushSolid(currentColor)
+        rebuildRecents(ColorRecents(context).solids())
     }
 
     // ── Internal ────────────────────────────────────────────────────────────
@@ -260,17 +252,7 @@ class SolidColorEditorView @JvmOverloads constructor(
 
     // ── Recents ─────────────────────────────────────────────────────────────
 
-    private fun loadRecentsFromStorage(): MutableList<Int> {
-        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY_RECENTS, "")
-            .orEmpty()
-        val list = ArrayList<Int>()
-        for (part in raw.split(",")) {
-            val v = part.toIntOrNull()
-            if (v != null) list.add(v)
-        }
-        return list
-    }
+    private fun loadRecentsFromStorage(): List<Int> = ColorRecents(context).solids()
 
     private fun loadRecents() {
         rebuildRecents(loadRecentsFromStorage())
@@ -325,9 +307,6 @@ class SolidColorEditorView @JvmOverloads constructor(
     private fun dip(value: Int) = (value * context.resources.displayMetrics.density).toInt()
 
     companion object {
-        private const val PREFS = "color_picker"
-        private const val KEY_RECENTS = "solid_color_recents"
-        private const val MAX_RECENTS = 12
         private const val SWATCH_DP = 34
         private const val SWATCH_MARGIN_DP = 4
     }
