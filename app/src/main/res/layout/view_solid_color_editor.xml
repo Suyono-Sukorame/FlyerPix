@@ -39,116 +39,12 @@
 
     </LinearLayout>
 
-    <!-- Hue -->
-    <LinearLayout
+    <!-- Panel SV + strip Hue -->
+    <com.flyerpix.editor.ui.dialog.SvHuePanel
+        android:id="@+id/svPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Hue"
-            android:textSize="12sp"
-            android:textColor="#666666" />
-
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderHue"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginHorizontal="4dp"
-            android:valueFrom="0"
-            android:valueTo="359"
-            android:stepSize="1"
-            android:value="0"
-            app:labelBehavior="gone" />
-
-        <TextView
-            android:id="@+id/tvHueValue"
-            android:layout_width="42dp"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:text="0°"
-            android:textSize="12sp"
-            android:textColor="#666666" />
-
-    </LinearLayout>
-
-    <!-- Saturation -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Saturation"
-            android:textSize="12sp"
-            android:textColor="#666666" />
-
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderSaturation"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginHorizontal="4dp"
-            android:valueFrom="0"
-            android:valueTo="100"
-            android:stepSize="1"
-            android:value="0"
-            app:labelBehavior="gone" />
-
-        <TextView
-            android:id="@+id/tvSaturationValue"
-            android:layout_width="42dp"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:text="0%"
-            android:textSize="12sp"
-            android:textColor="#666666" />
-
-    </LinearLayout>
-
-    <!-- Brightness -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Brightness"
-            android:textSize="12sp"
-            android:textColor="#666666" />
-
-        <com.google.android.material.slider.Slider
-            android:id="@+id/sliderValue"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginHorizontal="4dp"
-            android:valueFrom="0"
-            android:valueTo="100"
-            android:stepSize="1"
-            android:value="100"
-            app:labelBehavior="gone" />
-
-        <TextView
-            android:id="@+id/tvValueValue"
-            android:layout_width="42dp"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:text="100%"
-            android:textSize="12sp"
-            android:textColor="#666666" />
-
-    </LinearLayout>
+        android:layout_marginBottom="6dp" />
 
     <!-- Alpha -->
     <LinearLayout

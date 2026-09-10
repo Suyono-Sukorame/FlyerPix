@@ -1,11 +1,14 @@
 package com.flyerpix.editor.ui.dialog
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.AttributeSet
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -38,13 +41,8 @@ class SolidColorEditorView @JvmOverloads constructor(
 
     private lateinit var preview: View
     private lateinit var etHex: EditText
-    private lateinit var sliderHue: Slider
-    private lateinit var sliderSat: Slider
-    private lateinit var sliderVal: Slider
+    private lateinit var svPanel: SvHuePanel
     private lateinit var sliderAlpha: Slider
-    private lateinit var tvHueValue: TextView
-    private lateinit var tvSatValue: TextView
-    private lateinit var tvValValue: TextView
     private lateinit var tvAlphaValue: TextView
     private lateinit var llPresets: LinearLayout
     private lateinit var llRecents: LinearLayout
@@ -64,13 +62,8 @@ class SolidColorEditorView @JvmOverloads constructor(
     private fun bindViews(root: View) {
         preview = root.findViewById(R.id.viewColorPreview)
         etHex = root.findViewById(R.id.etHexInput)
-        sliderHue = root.findViewById(R.id.sliderHue)
-        sliderSat = root.findViewById(R.id.sliderSaturation)
-        sliderVal = root.findViewById(R.id.sliderValue)
+        svPanel = root.findViewById(R.id.svPanel)
         sliderAlpha = root.findViewById(R.id.sliderAlpha)
-        tvHueValue = root.findViewById(R.id.tvHueValue)
-        tvSatValue = root.findViewById(R.id.tvSaturationValue)
-        tvValValue = root.findViewById(R.id.tvValueValue)
         tvAlphaValue = root.findViewById(R.id.tvAlphaValue)
         llPresets = root.findViewById(R.id.llPresets)
         llRecents = root.findViewById(R.id.llRecents)
@@ -81,7 +74,19 @@ class SolidColorEditorView @JvmOverloads constructor(
     private fun wireUp() {
         preview.background = circularSwatch(currentColor, borderWidth = 2)
 
-        // Hex input — live, tanpa tombol Apply
+        // Hex input — live, tanpa tombol Apply; Enter = commit.
+        etHex.imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+        etHex.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                commitCurrentColorToRecents()
+                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE)
+                        as? android.view.inputmethod.InputMethodManager
+                imm?.hideSoftInputFromWindow(etHex.windowToken, 0)
+                true
+            } else {
+                false
+            }
+        }
         etHex.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -96,35 +101,37 @@ class SolidColorEditorView @JvmOverloads constructor(
             }
         })
 
-        sliderHue.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) tvHueValue.text = "${value.roundToInt()}°"
-        }
-        sliderSat.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) tvSatValue.text = "${value.roundToInt()}%"
-        }
-        sliderVal.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) tvValValue.text = "${value.roundToInt()}%"
-        }
-        sliderAlpha.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) tvAlphaValue.text = "${(value / 255f * 100f).roundToInt()}%"
+        // Long-press preview = salin hex ke clipboard.
+        preview.setOnLongClickListener {
+            val hex = hexOf(currentColor)
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("Hex Color", hex))
+            android.widget.Toast.makeText(context, "Copied $hex", android.widget.Toast.LENGTH_SHORT)
+                .show()
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            true
         }
 
-        val hsvListener = object : Slider.OnSliderTouchListener {
+        sliderAlpha.addOnChangeListener { _, alpha, fromUser ->
+            if (fromUser) {
+                tvAlphaValue.text = "${(alpha / 255f * 100f).roundToInt()}%"
+                syncFromPanel()
+            }
+        }
+        sliderAlpha.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: Slider) {}
             override fun onStopTrackingTouch(slider: Slider) {
                 commitCurrentColorToRecents()
             }
-        }
-        sliderHue.addOnSliderTouchListener(hsvListener)
-        sliderSat.addOnSliderTouchListener(hsvListener)
-        sliderVal.addOnSliderTouchListener(hsvListener)
-        sliderAlpha.addOnSliderTouchListener(hsvListener)
+        })
 
-        val sliderChange = Slider.OnChangeListener { _, _, _ -> syncFromSliders() }
-        sliderHue.addOnChangeListener(sliderChange)
-        sliderSat.addOnChangeListener(sliderChange)
-        sliderVal.addOnChangeListener(sliderChange)
-        sliderAlpha.addOnChangeListener(sliderChange)
+        svPanel.onChange = { h, s, v ->
+            hsv[0] = h
+            hsv[1] = s
+            hsv[2] = v
+            syncFromPanel()
+        }
+        svPanel.onCommit = { commitCurrentColorToRecents() }
 
         buildPresets()
         loadRecents()
@@ -162,20 +169,11 @@ class SolidColorEditorView @JvmOverloads constructor(
         currentColor = color
         Color.colorToHSV(color, hsv)
 
-        sliderHue.value = hsv[0].coerceIn(0f, 359f)
-        sliderSat.value = hsv[1] * 100f
-        sliderVal.value = hsv[2] * 100f
-        sliderAlpha.value = (Color.alpha(color)).toFloat()
-
-        tvHueValue.text = "${hsv[0].roundToInt()}°"
-        tvSatValue.text = "${(hsv[1] * 100).roundToInt()}%"
-        tvValValue.text = "${(hsv[2] * 100).roundToInt()}%"
+        svPanel.setHsv(hsv[0], hsv[1], hsv[2])
+        sliderAlpha.value = Color.alpha(color).toFloat()
         tvAlphaValue.text = "${(Color.alpha(color) / 255f * 100f).roundToInt()}%"
 
-        val hex = if (Color.alpha(color) == 255)
-            String.format("#%06X", 0xFFFFFF and color)
-        else
-            String.format("#%08X", color)
+        val hex = hexOf(color)
         if (!fromHex) {
             etHex.setText(hex)
             etHex.setSelection(hex.length)
@@ -186,10 +184,7 @@ class SolidColorEditorView @JvmOverloads constructor(
         onColorChanged?.invoke(color)
     }
 
-    private fun syncFromSliders() {
-        hsv[0] = sliderHue.value
-        hsv[1] = sliderSat.value / 100f
-        hsv[2] = sliderVal.value / 100f
+    private fun syncFromPanel() {
         val rgb = Color.HSVToColor(hsv)
         currentColor = Color.argb(
             sliderAlpha.value.roundToInt(),
@@ -197,10 +192,7 @@ class SolidColorEditorView @JvmOverloads constructor(
             Color.green(rgb),
             Color.blue(rgb)
         )
-        val hex = if (Color.alpha(currentColor) == 255)
-            String.format("#%06X", 0xFFFFFF and currentColor)
-        else
-            String.format("#%08X", currentColor)
+        val hex = hexOf(currentColor)
         if (etHex.text.toString().uppercase() != hex) {
             etHex.setText(hex)
             etHex.setSelection(hex.length)
@@ -210,6 +202,12 @@ class SolidColorEditorView @JvmOverloads constructor(
         refreshSelectionHighlight()
         onColorChanged?.invoke(currentColor)
     }
+
+    private fun hexOf(color: Int): String =
+        if (Color.alpha(color) == 255)
+            String.format("#%06X", 0xFFFFFF and color)
+        else
+            String.format("#%08X", color)
 
     private fun parseHex(hex: String): Int? {
         val cleaned = hex.trim().removePrefix("#")
@@ -248,6 +246,7 @@ class SolidColorEditorView @JvmOverloads constructor(
             gd.setStroke(1, if (color == Color.WHITE) 0xFFDDDDDD.toInt() else 0x22FFFFFF)
             swatch.background = gd
             swatch.setOnClickListener {
+                swatch.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 applyColor(color, fromHex = false)
                 commitCurrentColorToRecents()
             }
@@ -291,6 +290,7 @@ class SolidColorEditorView @JvmOverloads constructor(
             val swatch = makeSwatch(size)
             swatch.background = circularSwatch(color, borderWidth = 1)
             swatch.setOnClickListener {
+                swatch.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 applyColor(color, fromHex = false)
             }
             val lp = LinearLayout.LayoutParams(size, size)
