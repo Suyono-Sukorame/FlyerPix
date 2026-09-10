@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -70,6 +71,7 @@ class GradientColorFragment : Fragment() {
         inlineStopEditor = view.findViewById(R.id.inlineStopEditor)
         tvStopEditorTitle = view.findViewById(R.id.tvStopEditorTitle)
         val rvPresets = view.findViewById<RecyclerView>(R.id.rvGradientPresets)
+        var presetAdapter: GradientPresetAdapter? = null
 
         fun updatePreview() {
             val gd = GradientDrawable().apply {
@@ -116,6 +118,7 @@ class GradientColorFragment : Fragment() {
             if (editingStart) colorStart = picked else colorEnd = picked
             updateColorSwatches()
             updatePreview()
+            presetAdapter?.updateSelection(matchingPresetIndex())
             closeStopEditor()
         }
         view.findViewById<View>(R.id.btnStopEditorCancel).setOnClickListener { closeStopEditor() }
@@ -132,6 +135,7 @@ class GradientColorFragment : Fragment() {
             }
             layoutAngle.visibility = if (gradientType == GradientType.LINEAR) View.VISIBLE else View.GONE
             updatePreview()
+            presetAdapter?.updateSelection(matchingPresetIndex())
         }
 
         sliderAngle.addOnChangeListener { _, value, fromUser ->
@@ -139,10 +143,11 @@ class GradientColorFragment : Fragment() {
                 angle = value
                 tvAngleLabel.text = "Angle: ${value.roundToInt()}°"
                 updatePreview()
+                presetAdapter?.updateSelection(matchingPresetIndex())
             }
         }
 
-        val presetAdapter = GradientPresetAdapter { preset ->
+        presetAdapter = GradientPresetAdapter { preset ->
             colorStart = preset.colors[0]
             colorEnd = preset.colors[preset.colors.size - 1]
             gradientType = preset.type
@@ -175,6 +180,7 @@ class GradientColorFragment : Fragment() {
         tvAngleLabel.text = "Angle: ${angle.roundToInt()}°"
         updateColorSwatches()
         updatePreview()
+        presetAdapter?.updateSelection(matchingPresetIndex())
     }
 
     fun getGradient(): GradientColor {
@@ -186,29 +192,59 @@ class GradientColorFragment : Fragment() {
         )
     }
 
+    /** Indeks preset yang cocok persis dengan state gradasi saat ini, -1 jika tak ada. */
+    private fun matchingPresetIndex(): Int =
+        GradientColor.PRESETS.indexOfFirst { preset ->
+            preset.colors.isNotEmpty() &&
+                preset.colors.first() == colorStart &&
+                preset.colors.last() == colorEnd &&
+                preset.type == gradientType &&
+                preset.angle == angle
+        }
+
     private class GradientPresetAdapter(
         private val onPresetSelected: (GradientColor) -> Unit
     ) : RecyclerView.Adapter<GradientPresetAdapter.VH>() {
 
-        class VH(val view: View) : RecyclerView.ViewHolder(view)
+        private var selectedIndex: Int = -1
+
+        class VH(val frame: FrameLayout, val thumb: View) : RecyclerView.ViewHolder(frame)
+
+        /** Perbarui preset yang ditandai (berdasarkan kecocokan state gradasi). */
+        fun updateSelection(index: Int) {
+            if (index != selectedIndex) {
+                val prev = selectedIndex
+                selectedIndex = index
+                if (prev in 0 until itemCount) notifyItemChanged(prev)
+                if (selectedIndex in 0 until itemCount) notifyItemChanged(selectedIndex)
+            }
+        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val v = View(parent.context).apply {
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
+            val dp = parent.context.resources.displayMetrics.density
+            val frame = FrameLayout(parent.context).apply {
+                layoutParams = RecyclerView.LayoutParams((56 * dp).toInt(), (56 * dp).toInt())
+            }
+            val thumb = View(parent.context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
-                val pad = (8 * parent.context.resources.displayMetrics.density).toInt()
-                setPadding(pad, pad, pad, pad)
             }
-            return VH(v)
+            frame.addView(thumb)
+            return VH(frame, thumb)
         }
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val preset = GradientColor.PRESETS[position]
-            val gd = GradientDrawable().apply {
+            val selected = position == selectedIndex
+            val dp = holder.frame.context.resources.displayMetrics.density
+            val pad = ((if (selected) 3 else 1) * dp).toInt()
+            holder.frame.setPadding(pad, pad, pad, pad)
+            holder.frame.background = ringDrawable(selected, dp)
+            holder.thumb.background = GradientDrawable().apply {
                 colors = preset.colors
-                cornerRadius = 16f
+                cornerRadius = 16f * dp
                 gradientType = when (preset.type) {
                     GradientType.LINEAR -> GradientDrawable.LINEAR_GRADIENT
                     GradientType.RADIAL -> GradientDrawable.RADIAL_GRADIENT
@@ -216,11 +252,24 @@ class GradientColorFragment : Fragment() {
                 }
                 orientation = GradientDrawable.Orientation.LEFT_RIGHT
             }
-            holder.view.background = gd
-            holder.view.setOnClickListener { onPresetSelected(preset) }
+            holder.frame.setOnClickListener {
+                onPresetSelected(preset)
+                updateSelection(position)
+            }
         }
 
         override fun getItemCount() = GradientColor.PRESETS.size
+
+        private fun ringDrawable(selected: Boolean, dp: Float): GradientDrawable =
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 12f * dp
+                setColor(0x00000000)
+                setStroke(
+                    ((if (selected) 2f else 1f) * dp).toInt(),
+                    if (selected) 0xFF1769FF.toInt() else 0x11000000
+                )
+            }
     }
 
     companion object {
