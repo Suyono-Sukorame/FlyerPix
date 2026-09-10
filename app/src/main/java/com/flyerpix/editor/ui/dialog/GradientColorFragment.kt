@@ -7,12 +7,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.RadioGroup
-import android.widget.SeekBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.Slider
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.model.GradientColor
@@ -20,12 +18,10 @@ import com.flyerpix.editor.canvas.model.GradientType
 import kotlin.math.roundToInt
 
 /**
- * Tab Gradient Color — picker gradasi dengan:
+ * Tab Gradient Color — gradasi modern:
  *  - Preview bar gradasi.
- *  - 2 titik warna (start/end) — ketuk untuk ubah.
- *  - Pilihan tipe gradasi (Linear/Radial/Sweep).
- *  - Slider sudut (Linear).
- *  - Preset gradasi populer.
+ *  - 2 titik warna (start/end) — ketuk membuka editor inline (bukan dialog bertumpuk).
+ *  - Tipe gradasi (Linear/Radial/Sweep) + slider sudut + preset populer.
  */
 class GradientColorFragment : Fragment() {
 
@@ -33,7 +29,19 @@ class GradientColorFragment : Fragment() {
     private var colorEnd: Int = 0xFFDD2476.toInt()
     private var gradientType: GradientType = GradientType.LINEAR
     private var angle: Float = 0f
-    private var pickingStart = true
+    private var editingStart = true
+
+    private lateinit var preview: View
+    private lateinit var colorStartView: View
+    private lateinit var colorEndView: View
+    private lateinit var rgType: RadioGroup
+    private lateinit var layoutAngle: View
+    private lateinit var tvAngleLabel: TextView
+    private lateinit var sliderAngle: Slider
+    private lateinit var gradientContent: View
+    private lateinit var stopEditorSection: View
+    private lateinit var inlineStopEditor: SolidColorEditorView
+    private lateinit var tvStopEditorTitle: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -50,19 +58,22 @@ class GradientColorFragment : Fragment() {
             angle = initGrad.angle
         }
 
-        val preview = view.findViewById<View>(R.id.viewGradientPreview)
-        val colorStartView = view.findViewById<View>(R.id.viewColorStart)
-        val colorEndView = view.findViewById<View>(R.id.viewColorEnd)
-        val rgType = view.findViewById<RadioGroup>(R.id.rgGradientType)
-        val layoutAngle = view.findViewById<View>(R.id.layoutAngle)
-        val tvAngleLabel = view.findViewById<TextView>(R.id.tvAngleLabel)
-        val sliderAngle = view.findViewById<Slider>(R.id.sliderAngle)
+        preview = view.findViewById(R.id.viewGradientPreview)
+        colorStartView = view.findViewById(R.id.viewColorStart)
+        colorEndView = view.findViewById(R.id.viewColorEnd)
+        rgType = view.findViewById(R.id.rgGradientType)
+        layoutAngle = view.findViewById(R.id.layoutAngle)
+        tvAngleLabel = view.findViewById(R.id.tvAngleLabel)
+        sliderAngle = view.findViewById(R.id.sliderAngle)
+        gradientContent = view.findViewById(R.id.gradientContent)
+        stopEditorSection = view.findViewById(R.id.stopEditorSection)
+        inlineStopEditor = view.findViewById(R.id.inlineStopEditor)
+        tvStopEditorTitle = view.findViewById(R.id.tvStopEditorTitle)
         val rvPresets = view.findViewById<RecyclerView>(R.id.rvGradientPresets)
 
         fun updatePreview() {
-            val colors = intArrayOf(colorStart, colorEnd)
             val gd = GradientDrawable().apply {
-                this.colors = colors
+                colors = intArrayOf(colorStart, colorEnd)
                 gradientType = when (this@GradientColorFragment.gradientType) {
                     GradientType.LINEAR -> GradientDrawable.LINEAR_GRADIENT
                     GradientType.RADIAL -> GradientDrawable.RADIAL_GRADIENT
@@ -74,96 +85,45 @@ class GradientColorFragment : Fragment() {
             preview.background = gd
         }
 
+        fun swatchDrawable(color: Int) = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(color)
+            setStroke(2, 0x22888888)
+        }
+
         fun updateColorSwatches() {
-            colorStartView.setBackgroundColor(colorStart)
-            colorEndView.setBackgroundColor(colorEnd)
+            colorStartView.background = swatchDrawable(colorStart)
+            colorEndView.background = swatchDrawable(colorEnd)
         }
 
-        // Color picker dialogs for start/end
-        fun showColorPicker(initialColor: Int, onPicked: (Int) -> Unit) {
-            val hsv = floatArrayOf(0f, 0f, 1f)
-            Color.colorToHSV(initialColor, hsv)
-
-            val dialogView = LayoutInflater.from(requireContext())
-                .inflate(R.layout.fragment_solid_color, null)
-
-            val seekHue = dialogView.findViewById<SeekBar>(R.id.seekHue)
-            val seekSat = dialogView.findViewById<SeekBar>(R.id.seekSaturation)
-            val seekVal = dialogView.findViewById<SeekBar>(R.id.seekValue)
-            val previewView = dialogView.findViewById<View>(R.id.viewColorPreview)
-            val etHex = dialogView.findViewById<android.widget.EditText>(R.id.etHexInput)
-            val btnApply = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnHexApply)
-            val grid = dialogView.findViewById<android.widget.GridLayout>(R.id.gridPresets)
-
-            var currentColor = initialColor
-
-            fun updateDialogPreview() {
-                previewView.setBackgroundColor(currentColor)
-                val hex = String.format("#%06X", 0xFFFFFF and currentColor)
-                etHex.setText(hex)
-                etHex.setSelection(hex.length)
-            }
-
-            fun syncSliders() {
-                seekHue.progress = hsv[0].roundToInt()
-                seekSat.progress = (hsv[1] * 100).roundToInt()
-                seekVal.progress = (hsv[2] * 100).roundToInt()
-            }
-
-            val hsvListener = object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                    if (!fromUser) return
-                    hsv[0] = seekHue.progress.toFloat()
-                    hsv[1] = seekSat.progress / 100f
-                    hsv[2] = seekVal.progress / 100f
-                    currentColor = Color.HSVToColor(hsv)
-                    updateDialogPreview()
-                }
-                override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
-            }
-            seekHue.setOnSeekBarChangeListener(hsvListener)
-            seekSat.setOnSeekBarChangeListener(hsvListener)
-            seekVal.setOnSeekBarChangeListener(hsvListener)
-
-            btnApply.setOnClickListener {
-                val hex = etHex.text.toString().trim().removePrefix("#")
-                try {
-                    currentColor = Color.parseColor("#$hex")
-                    Color.colorToHSV(currentColor, hsv)
-                    syncSliders()
-                    updateDialogPreview()
-                } catch (_: Exception) {}
-            }
-
-            syncSliders()
-            updateDialogPreview()
-
-            MaterialAlertDialogBuilder(requireContext(), R.style.AppAlertDialog)
-                .setTitle("Pick Color")
-                .setView(dialogView)
-                .setPositiveButton("OK") { _, _ -> onPicked(currentColor) }
-                .setNegativeButton("Cancel", null)
-                .show()
+        fun closeStopEditor() {
+            stopEditorSection.visibility = View.GONE
+            gradientContent.visibility = View.VISIBLE
         }
 
-        colorStartView.setOnClickListener {
-            showColorPicker(colorStart) { color ->
-                colorStart = color
-                updateColorSwatches()
-                updatePreview()
-            }
+        fun openStopEditor(isStart: Boolean) {
+            editingStart = isStart
+            tvStopEditorTitle.text = if (isStart) "Start Color" else "End Color"
+            inlineStopEditor.setInitialColor(if (isStart) colorStart else colorEnd)
+            gradientContent.visibility = View.GONE
+            stopEditorSection.visibility = View.VISIBLE
         }
 
-        colorEndView.setOnClickListener {
-            showColorPicker(colorEnd) { color ->
-                colorEnd = color
-                updateColorSwatches()
-                updatePreview()
-            }
+        inlineStopEditor.setOnColorChanged { }
+        view.findViewById<View>(R.id.btnStopEditorSet).setOnClickListener {
+            val picked = inlineStopEditor.getSelectedColor()
+            inlineStopEditor.commitCurrentColorToRecents()
+            if (editingStart) colorStart = picked else colorEnd = picked
+            updateColorSwatches()
+            updatePreview()
+            closeStopEditor()
         }
+        view.findViewById<View>(R.id.btnStopEditorCancel).setOnClickListener { closeStopEditor() }
+        view.findViewById<View>(R.id.btnStopEditorBack).setOnClickListener { closeStopEditor() }
 
-        // Gradient type
+        colorStartView.setOnClickListener { openStopEditor(true) }
+        colorEndView.setOnClickListener { openStopEditor(false) }
+
         rgType.setOnCheckedChangeListener { _, checkedId ->
             gradientType = when (checkedId) {
                 R.id.rbRadial -> GradientType.RADIAL
@@ -174,7 +134,6 @@ class GradientColorFragment : Fragment() {
             updatePreview()
         }
 
-        // Angle slider
         sliderAngle.addOnChangeListener { _, value, fromUser ->
             if (fromUser) {
                 angle = value
@@ -183,13 +142,11 @@ class GradientColorFragment : Fragment() {
             }
         }
 
-        // Gradient presets
         val presetAdapter = GradientPresetAdapter { preset ->
             colorStart = preset.colors[0]
             colorEnd = preset.colors[preset.colors.size - 1]
             gradientType = preset.type
             angle = preset.angle
-
             rgType.check(
                 when (gradientType) {
                     GradientType.LINEAR -> R.id.rbLinear
@@ -200,14 +157,12 @@ class GradientColorFragment : Fragment() {
             layoutAngle.visibility = if (gradientType == GradientType.LINEAR) View.VISIBLE else View.GONE
             sliderAngle.value = angle
             tvAngleLabel.text = "Angle: ${angle.roundToInt()}°"
-
             updateColorSwatches()
             updatePreview()
         }
         rvPresets.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
         rvPresets.adapter = presetAdapter
 
-        // Init
         rgType.check(
             when (gradientType) {
                 GradientType.LINEAR -> R.id.rbLinear
@@ -230,8 +185,6 @@ class GradientColorFragment : Fragment() {
             name = "Custom"
         )
     }
-
-    // ── Preset adapter (inline, simple) ─────────────────────────────────────
 
     private class GradientPresetAdapter(
         private val onPresetSelected: (GradientColor) -> Unit

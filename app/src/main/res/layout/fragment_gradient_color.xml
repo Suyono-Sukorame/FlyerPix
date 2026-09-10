@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
 
+    <!-- Konten utama gradient -->
     <LinearLayout
+        android:id="@+id/gradientContent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -133,10 +136,10 @@
             android:layout_marginTop="8dp">
 
             <TextView
+                android:id="@+id/tvAngleLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Angle: 0°"
-                android:id="@+id/tvAngleLabel"
                 android:textSize="11sp"
                 android:textColor="#888888" />
 
@@ -149,8 +152,7 @@
                 android:valueTo="360"
                 android:stepSize="1"
                 android:value="0"
-                app:labelBehavior="gone"
-                xmlns:app="http://schemas.android.com/apk/res-auto" />
+                app:labelBehavior="gone" />
 
         </LinearLayout>
 
@@ -170,8 +172,76 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:clipToPadding="false"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            xmlns:app="http://schemas.android.com/apk/res-auto" />
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+    </LinearLayout>
+
+    <!-- Editor inline untuk satu stop (menggantikan dialog bertumpuk) -->
+    <LinearLayout
+        android:id="@+id/stopEditorSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStopEditorBack"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:paddingHorizontal="6dp"
+                android:text="‹ Gradient"
+                android:textSize="13sp"
+                android:textColor="@color/brand_blue" />
+
+            <TextView
+                android:id="@+id/tvStopEditorTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:text="Start Color"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#1A1A2E" />
+
+        </LinearLayout>
+
+        <com.flyerpix.editor.ui.dialog.SolidColorEditorView
+            android:id="@+id/inlineStopEditor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStopEditorCancel"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cancel" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStopEditorSet"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Set" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

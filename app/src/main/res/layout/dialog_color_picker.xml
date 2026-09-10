@@ -17,7 +17,7 @@
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPagerColorPicker"
         android:layout_width="match_parent"
-        android:layout_height="340dp" />
+        android:layout_height="400dp" />
 
     <View
         android:layout_width="match_parent"
