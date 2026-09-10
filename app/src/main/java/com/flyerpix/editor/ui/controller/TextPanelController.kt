@@ -168,6 +168,11 @@ class TextPanelController(
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY      = 0xFF616161.toInt()
+
+        // Tinggi sheet 3D Text / 3D Shadow: menempel penuh ke border bawah canvas.
+        private const val COMPOSE_SHEET_GAP_DP = 8
+        private const val COMPOSE_SHEET_MIN_USABLE_DP = 200
+        private const val COMPOSE_SHEET_FLOOR_DP = 240
     }
 
     /**
@@ -368,32 +373,8 @@ initializeMaskControls()
         val currentGradient = layer.extrudeGradient
 
         // compute sheet height dynamically
-        var sheetMaxH = 420
-        try {
-            val screenH = activity.resources.displayMetrics.heightPixels
-            val density = activity.resources.displayMetrics.density
-            val canvasH = try { pixelCanvasView.height } catch (_: Exception) { 0 }
-            val canvasCard = activity.findViewById<View>(R.id.canvasCard)
-            var space = 0
-            if (canvasCard != null && canvasCard.height > 0) {
-                val root = binding.parentLayout
-                space = PanelHeightManager.anchorBottomInRoot(
-                    root,
-                    0
-                ) -
-                    PanelHeightManager.bottomInRoot(canvasCard, root)
-            }
-            sheetMaxH = PanelHeightManager.safeDetailHeight(space, canvasH, screenH, density)
-            // Lantai tinggi: ketika ruang kosong di bawah canvas sempit, panel
-            // boleh menutupi sebagian canvas (perilaku normal panel bawah) agar
-            // kontrol tetap tampil — tidak hanya header.
-            val fallbackH = PanelHeightManager.fallbackHeight(canvasH, screenH, density)
-            val floorH = minOf((screenH * 0.45f).toInt(), fallbackH).coerceAtLeast(280)
-            sheetMaxH = maxOf(sheetMaxH, floorH)
-            PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
-        } catch (ex: Exception) {
-            Log.e("TextPanelController", "Failed setting 3D sheet height", ex)
-        }
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
 
         host.setContent {
             com.flyerpix.editor.ui.compose.ThreeDTextDetailPage(
@@ -464,13 +445,16 @@ initializeMaskControls()
     /**
      * Hitung tinggi maksimal Compose bottom sheet secara dinamis (canvas-aware).
      * Dipakai bersama oleh sheet 3D Text & 3D Shadow.
+     *
+     * Aturan (A1 - exact fit): tinggi = seluruh ruang kosong persis di bawah
+     * canvas dikurangi gap aman, sehingga tepi atas sheet menempel di border
+     * bawah canvas. Tidak ada potongan fallback/cap. Lantai hanya dipakai bila
+     * ruang bawah canvas nyaris tak ada (ruang < COMPOSE_SHEET_MIN_USABLE_DP).
      */
-    private fun computeComposeSheetHeight(floorPx: Int): Int {
-        var sheetMaxH = 420
+    private fun computeComposeSheetHeight(): Int {
+        var sheetMaxH = (COMPOSE_SHEET_FLOOR_DP * activity.resources.displayMetrics.density).toInt()
         try {
-            val screenH = activity.resources.displayMetrics.heightPixels
             val density = activity.resources.displayMetrics.density
-            val canvasH = try { pixelCanvasView.height } catch (_: Exception) { 0 }
             val canvasCard = activity.findViewById<View>(R.id.canvasCard)
             var space = 0
             if (canvasCard != null && canvasCard.height > 0) {
@@ -478,13 +462,17 @@ initializeMaskControls()
                 space = PanelHeightManager.anchorBottomInRoot(root, 0) -
                     PanelHeightManager.bottomInRoot(canvasCard, root)
             }
-            sheetMaxH = PanelHeightManager.safeDetailHeight(space, canvasH, screenH, density)
-            // Lantai tinggi: ketika ruang kosong di bawah canvas sempit, panel
-            // boleh menutupi sebagian canvas (perilaku normal panel bawah) agar
-            // kontrol tetap tampil — tidak hanya header.
-            val fallbackH = PanelHeightManager.fallbackHeight(canvasH, screenH, density)
-            val floorH = minOf((screenH * 0.45f).toInt(), fallbackH).coerceAtLeast(floorPx)
-            sheetMaxH = maxOf(sheetMaxH, floorH)
+            val minUsablePx = (COMPOSE_SHEET_MIN_USABLE_DP * density).toInt()
+            val floorPx = (COMPOSE_SHEET_FLOOR_DP * density).toInt()
+            val gap = (COMPOSE_SHEET_GAP_DP * density).toInt()
+            val fromSpace = space - gap
+            sheetMaxH = if (fromSpace >= minUsablePx) {
+                // Menempel penuh ke border bawah canvas.
+                fromSpace
+            } else {
+                // Ruang bawah canvas sempit: pakai lantai agar kontrol tetap terpakai.
+                floorPx
+            }
         } catch (ex: Exception) {
             Log.e("TextPanelController", "Failed setting 3D sheet height", ex)
         }
@@ -518,8 +506,8 @@ initializeMaskControls()
         val viewType = layer.shadow3DViewType.name
 
         // Shadow punya kontrol lebih banyak (blur + opacity), beri lantai lebih tinggi
-        val sheetMaxH = computeComposeSheetHeight(floorPx = 340)
-        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+val sheetMaxH = computeComposeSheetHeight()
+            PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
 
         host.setContent {
             com.flyerpix.editor.ui.compose.ThreeDShadowDetailPage(

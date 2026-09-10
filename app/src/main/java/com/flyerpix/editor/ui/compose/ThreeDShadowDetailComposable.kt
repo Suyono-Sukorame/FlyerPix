@@ -146,25 +146,6 @@ fun ThreeDShadowDetailPage(
                                 .verticalScroll(rememberScrollState())
                                 .padding(horizontal = 6.dp, vertical = 4.dp)
                         ) {
-                            Text(
-                                text = "3D Shadow",
-                                style = MaterialTheme.typography.h6,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF1A1A2E),
-                                modifier = Modifier.align(Alignment.Start)
-                            )
-
-                            Spacer(modifier = Modifier.height(2.dp))
-
-                            Text(
-                                text = "Depth, blur, and opacity",
-                                style = MaterialTheme.typography.caption,
-                                color = Color(PanelTextSecondary),
-                                modifier = Modifier.align(Alignment.Start)
-                            )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
                             Divider(color = Color(PanelDivider), thickness = 1.dp)
                             Spacer(modifier = Modifier.height(12.dp))
 
