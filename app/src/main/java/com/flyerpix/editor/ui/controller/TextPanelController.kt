@@ -293,19 +293,43 @@ initializeMaskControls()
                 }
                 pixelCanvasView.invalidate()
             }
+        // Register fragment result listener for 3D shadow color pick (Compose path)
+        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+            .setFragmentResultListener(
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW3D_RESULT_KEY,
+                activity
+            ) { _, bundle ->
+                val isGradient = bundle.getBoolean(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
+                )
+                if (!isGradient) {
+                    val color = bundle.getInt(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                        0xB3000000.toInt()
+                    )
+                    applyToTextLayer { layer ->
+                        layer.shadow3DColor = color
+                    }
+                    pixelCanvasView.invalidate()
+                }
+            }
         // Recompose content and visibility whenever layer selection changes.
+        // Sheet 3D hanya tampil saat tool 3D Text/3D Shadow aktif. Memilih layer
+        // yang ber-extrude TIDAK memunculkannya — sehingga setelah Apply, memilih
+        // kembali layer yang sama tidak membuka sheet di atas menu teks.
         val prevListener = pixelCanvasView.onLayerSelectedListener
         pixelCanvasView.onLayerSelectedListener = { layer ->
             prevListener?.invoke(layer)
             val sel = layer as? TextLayer
-            if (sel != null && (sel.extrudeEnabled || activeTextToolTag == TOOL_3D_TEXT)) {
-                showCompose3DSheet(sel)
-            } else if (activeTextToolTag == TOOL_3D_TEXT) {
-                // layer non-3D dipilih saat halaman tool 3D Text terbuka:
-                // tutup halaman settings (paralel dengan perilaku legacy panel)
-                closeEffectSettings()
-            } else {
-                hideCompose3DSheet()
+            when {
+                activeTextToolTag == TOOL_3D_TEXT && sel != null -> showCompose3DSheet(sel)
+                activeTextToolTag == TOOL_3D_SHADOW && sel != null -> showComposeShadow3DSheet(sel)
+                activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW -> {
+                    // layer non-3D/berbeda dipilih saat halaman tool 3D terbuka:
+                    // tutup halaman settings (paralel dengan perilaku legacy panel)
+                    closeEffectSettings()
+                }
+                else -> hideCompose3DSheet()
             }
         }
     }
@@ -416,6 +440,105 @@ initializeMaskControls()
      */
     private fun hideCompose3DSheet() {
         threeDComposeContainer?.visibility = View.GONE
+    }
+
+    /**
+     * Hitung tinggi maksimal Compose bottom sheet secara dinamis (canvas-aware).
+     * Dipakai bersama oleh sheet 3D Text & 3D Shadow.
+     */
+    private fun computeComposeSheetHeight(floorPx: Int): Int {
+        var sheetMaxH = 420
+        try {
+            val screenH = activity.resources.displayMetrics.heightPixels
+            val density = activity.resources.displayMetrics.density
+            val canvasH = try { pixelCanvasView.height } catch (_: Exception) { 0 }
+            val canvasCard = activity.findViewById<View>(R.id.canvasCard)
+            var space = 0
+            if (canvasCard != null && canvasCard.height > 0) {
+                val root = binding.parentLayout
+                space = PanelHeightManager.anchorBottomInRoot(root, 0) -
+                    PanelHeightManager.bottomInRoot(canvasCard, root)
+            }
+            sheetMaxH = PanelHeightManager.safeDetailHeight(space, canvasH, screenH, density)
+            // Lantai tinggi: ketika ruang kosong di bawah canvas sempit, panel
+            // boleh menutupi sebagian canvas (perilaku normal panel bawah) agar
+            // kontrol tetap tampil — tidak hanya header.
+            val fallbackH = PanelHeightManager.fallbackHeight(canvasH, screenH, density)
+            val floorH = minOf((screenH * 0.45f).toInt(), fallbackH).coerceAtLeast(floorPx)
+            sheetMaxH = maxOf(sheetMaxH, floorH)
+        } catch (ex: Exception) {
+            Log.e("TextPanelController", "Failed setting 3D sheet height", ex)
+        }
+        return sheetMaxH
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk 3D Shadow dengan parameter dari layer.
+     * Dipanggil saat tool 3D Shadow aktif.
+     */
+    private fun showComposeShadow3DSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        // hide legacy container
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        // saat dibuka via tool, sinkronkan state "effect settings open" ke caller
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        // show bottom sheet container
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val depth = layer.shadow3DDepth.coerceIn(1, 50)
+        val angle = layer.shadow3DAngle
+        val color = layer.shadow3DColor.toLong()
+        val enabled = layer.shadow3DEnabled
+        val blur = layer.shadow3DBlur.coerceIn(0f, 40f)
+        val opacity = layer.shadow3DOpacity.coerceIn(0f, 1f)
+        val viewType = layer.shadow3DViewType.name
+
+        // Shadow punya kontrol lebih banyak (blur + opacity), beri lantai lebih tinggi
+        val sheetMaxH = computeComposeSheetHeight(floorPx = 340)
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.ThreeDShadowDetailPage(
+                enabled = enabled,
+                depth = depth,
+                color = color,
+                angle = angle,
+                blur = blur,
+                opacity = opacity,
+                viewType = viewType,
+                maxHeightPx = sheetMaxH,
+                onDepthChange = { v -> applyToTextLayer { it.shadow3DDepth = v }; pixelCanvasView.invalidate() },
+                onColorPickRequested = {
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@ThreeDShadowDetailPage
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                        .newInstance(
+                            initialColor = sel.shadow3DColor,
+                            resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW3D_RESULT_KEY
+                        )
+                        .show((activity as androidx.fragment.app.FragmentActivity).supportFragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
+                },
+                onAngleChange = { a -> applyToTextLayer { it.shadow3DAngle = a }; pixelCanvasView.invalidate() },
+                onBlurChange = { b -> applyToTextLayer { it.shadow3DBlur = b }; pixelCanvasView.invalidate() },
+                onOpacityChange = { o -> applyToTextLayer { it.shadow3DOpacity = o }; pixelCanvasView.invalidate() },
+                onEnabledChange = { newEnabled ->
+                    applyToTextLayer { it.shadow3DEnabled = newEnabled }
+                    pixelCanvasView.invalidate()
+                    // re-compose to show/hide controls
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer
+                    if (sel != null) showComposeShadow3DSheet(sel)
+                },
+                onViewTypeChange = { type ->
+                    applyToTextLayer { it.shadow3DViewType = ExtrudeViewType.valueOf(type) }
+                    pixelCanvasView.invalidate()
+                    // re-compose to show/hide angle slider
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer
+                    if (sel != null) showComposeShadow3DSheet(sel)
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() }
+            )
+        }
     }
 
     /**
@@ -1223,6 +1346,12 @@ tvAngleLabel.text = "Angle: 0°"
     private fun initialize3DShadowControls() {
         val b = binding.effectSettingsInclude.shadow3DControlsInclude
         val panel = b.root
+        // If we have migrated this panel to Compose, keep the original XML include hidden
+        // to avoid duplicate UI. Compose host will manage visibility and updates.
+        if (threeDComposeHost != null) {
+            panel.visibility = View.GONE
+            return
+        }
         val switch = b.switchShadow3DEnabled
         val group = b.shadow3DControlsGroup
         val rgType = b.rgShadow3DViewType
@@ -2108,7 +2237,13 @@ tvAngleLabel.text = "Angle: 0°"
                     rebuildExtrudePaletteHook?.invoke(layer)
                 }
             }
-            TOOL_3D_SHADOW -> syncShadow3DUIHook?.invoke(layer)
+            TOOL_3D_SHADOW -> {
+                if (threeDComposeHost != null) {
+                    showComposeShadow3DSheet(layer)
+                } else {
+                    syncShadow3DUIHook?.invoke(layer)
+                }
+            }
             TOOL_REFLECTION -> syncReflectionUIHook?.invoke(layer)
             TOOL_3D_ROTATE -> {
                 val c = fs.rotate3DControlsInclude
@@ -2307,9 +2442,10 @@ tvAngleLabel.text = "Angle: 0°"
      * kompleks mendapat ruang yang lebih lega tanpa tumpukan menu.
      */
     private fun updateEffectSettingsVisibility() {
-        // TOOL_3D_TEXT ditampilkan via Compose bottom sheet, bukan panel XML
-        // (yang kosong karena initializeExtrudeControls dialihkan ke Compose).
-        val composedPanel = activeTextToolTag == TOOL_3D_TEXT && threeDComposeHost != null
+        // TOOL_3D_TEXT & TOOL_3D_SHADOW ditampilkan via Compose bottom sheet,
+        // bukan panel XML (yang kosong karena inisialisasinya dialihkan ke Compose).
+        val composedPanel = (activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW) &&
+            threeDComposeHost != null
         val show = effectSettingsOpen && isPageOpen && activeTextToolTag in complexEffectTags &&
             !composedPanel &&
             (pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer)?.let { !it.isLocked } ?: false
@@ -2375,7 +2511,7 @@ tvAngleLabel.text = "Angle: 0°"
      * Tutup halaman settings (baik via ✓ maupun ✕) dan kembali ke strip tool.
      */
     private fun closeEffectSettings() {
-        val threeDOpened = activeTextToolTag == TOOL_3D_TEXT
+        val composeOpened = activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW
         settingsSnapshot = null
         effectSettingsOpen = false
         activeTextToolTag = textToolTagBeforeEffect
@@ -2383,10 +2519,10 @@ tvAngleLabel.text = "Angle: 0°"
         hideCompose3DSheet()
         pixelCanvasView.invalidate()
         refreshTextPageUI()
-        // UI yang di-render via Compose sheet (3D Text) tidak menyentuh
+        // UI yang di-render via Compose sheet (3D Text / 3D Shadow) tidak menyentuh
         // effectSettingsInclude sehingga updateEffectSettingsVisibility tidak
         // mendeteksi transisi terbuka→tertutup. Beri tahu caller secara eksplisit.
-        if (threeDOpened) onEffectSettingsOpenChanged(false)
+        if (composeOpened) onEffectSettingsOpenChanged(false)
     }
 
     /**
