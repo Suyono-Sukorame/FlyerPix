@@ -16,8 +16,10 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.FragmentManager
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
+import com.flyerpix.editor.canvas.model.AnchorType
 import com.flyerpix.editor.canvas.model.ArrowLayer
 import com.flyerpix.editor.canvas.model.ArrowStyle
+import com.flyerpix.editor.canvas.model.BezierInputFlow
 import com.flyerpix.editor.canvas.model.PenLayer
 import com.flyerpix.editor.canvas.model.ShapeLayer
 import com.flyerpix.editor.canvas.model.ShapeType
@@ -82,6 +84,7 @@ class ObjectMenuController(
 
     private var draftArrow: ArrowLayer? = null
     private var draftPen: PenLayer? = null
+    private val bezierFlow = BezierInputFlow()
 
     /**
      * Callback saat salah satu Compose sheet Add dibuka/ditutup,
@@ -176,6 +179,9 @@ class ObjectMenuController(
         draftArrow = null
         draftPen = null
         canvas.freeDrawEnabled = false
+        canvas.bezierInputEnabled = false
+        canvas.bezierInputLayer = null
+        canvas.onBezierInputPointChanged = null
 
         // Hide Compose container
         composeContainer?.visibility = View.GONE
@@ -688,18 +694,35 @@ class ObjectMenuController(
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
 
-        val pen = existingPen ?: draftPen ?: canvas.addPenLayer().also {
+        val pen = existingPen ?: draftPen ?: PenLayer(isClosed = false).apply {
+            strokeColor = Color.WHITE
+            strokeWidth = 6f
+            x = (canvas.width / 2f)
+            y = (canvas.height / 2f)
+        }.also {
+            canvas.addLayer(it)
             canvas.selectedLayer = it
         }
         draftPen = pen
+        bezierFlow.clear()
+        pen.anchors.forEach { anchor -> bezierFlow.addPoint(anchor.x, anchor.y) }
 
         host.setContent {
             var currentWidth by remember { mutableStateOf(pen.strokeWidth) }
             var currentColor by remember { mutableStateOf(pen.strokeColor) }
+            var currentInputCount by remember { mutableStateOf(pen.anchors.size) }
+
+            canvas.bezierInputEnabled = true
+            canvas.bezierInputLayer = pen
+            canvas.onBezierInputPointChanged = { count ->
+                currentInputCount = count
+            }
 
             BezierDetailPage(
                 strokeWidth = currentWidth,
                 strokeColor = currentColor,
+                inputCount = currentInputCount,
+                canApply = currentInputCount >= 2,
                 onStrokeWidthChange = { width ->
                     currentWidth = width
                     pen.strokeWidth = width
@@ -716,16 +739,36 @@ class ObjectMenuController(
                         resultKey = BEZIER_COLOR_RESULT_KEY
                     ).show(fragmentManager, "BezierColorPicker")
                 },
+                onInputFirst = {
+                    val anchorX = if (pen.anchors.isEmpty()) canvas.width / 2f else pen.anchors.last().x + 80f
+                    val anchorY = if (pen.anchors.isEmpty()) canvas.height / 2f else pen.anchors.last().y + 40f
+                    pen.addAnchor(anchorX - pen.x, anchorY - pen.y, AnchorType.CORNER)
+                    bezierFlow.addPoint(anchorX, anchorY)
+                    currentInputCount = pen.anchors.size
+                    canvas.invalidate()
+                },
+                onResetInput = {
+                    pen.clearAllAnchors()
+                    bezierFlow.clear()
+                    currentInputCount = 0
+                    canvas.invalidate()
+                },
                 onApply = {
+                    if (pen.anchors.size < 2) {
+                        showSnackbar("Masukkan minimal 2 titik Bézier dulu")
+                        return@BezierDetailPage
+                    }
                     canvas.runRecordedAction("Add Bézier") {}
                     showSnackbar("Bézier curve added")
                     draftPen = null
+                    bezierFlow.clear()
                     deselect(restoreStrip = true)
                 },
                 onCancel = {
                     canvas.removeLayer(pen)
                     canvas.invalidate()
                     draftPen = null
+                    bezierFlow.clear()
                     deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH

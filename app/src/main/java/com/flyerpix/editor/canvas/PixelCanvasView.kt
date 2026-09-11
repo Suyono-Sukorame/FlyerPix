@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.DashPathEffect
+import android.graphics.Matrix
 import android.graphics.Path
 import android.graphics.Paint
 import android.graphics.PorterDuff
@@ -159,10 +160,18 @@ class PixelCanvasView @JvmOverloads constructor(
     private var textEditMode = false
 
     private var canvasZoom = 1f
+    private var canvasPanX = 0f
+    private var canvasPanY = 0f
     // Zoom tidak boleh di bawah 100% (user memilih model zoom naik saja).
     private val minCanvasZoom = 1f
     private val maxCanvasZoom = 4f
     private val zoomStep = 0.25f
+
+    // Matriks transform viewport (identik dengan Canvas translate/scale di onDraw)
+    // beserta inversnya, dipakai menyelaraskan koordinat sentuhan Edit Mode agar
+    // hit-test & drag objek tetap presisi walau kanvas sempat di-zoom/di-pan.
+    private val canvasTransformMatrix = Matrix()
+    private val canvasTransformInverse = Matrix()
 
     val zoomLevel: Float
         get() = canvasZoom
@@ -184,7 +193,13 @@ class PixelCanvasView @JvmOverloads constructor(
 
     fun zoomIn() = setCanvasZoom(canvasZoom + zoomStep)
     fun zoomOut() = setCanvasZoom(canvasZoom - zoomStep)
-    fun resetZoom() = setCanvasZoom(1f)
+    fun resetZoom() {
+        canvasZoom = minCanvasZoom
+        canvasPanX = 0f
+        canvasPanY = 0f
+        onZoomChangedListener?.invoke(canvasZoom)
+        invalidate()
+    }
 
     private var editorZoomMode = false
 
@@ -202,6 +217,8 @@ class PixelCanvasView @JvmOverloads constructor(
         isDragging = false
         currentTouchState = TouchState.IDLE
         activePerspectiveCorner = -1
+        lastTouchX = 0f
+        lastTouchY = 0f
         invalidate()
     }
 
@@ -817,6 +834,15 @@ class PixelCanvasView @JvmOverloads constructor(
     /** Apakah mode gambar bebas aktif: semua sentuhan di kanvas menjadi goresan pena. */
     var freeDrawEnabled: Boolean = false
 
+    /** Apakah mode input titik Bézier aktif: setiap tap menambah poin baru ke layer draft. */
+    var bezierInputEnabled: Boolean = false
+
+    /** Layer Bézier yang sedang menerima input titik. */
+    var bezierInputLayer: PenLayer? = null
+
+    /** Callback saat jumlah titik input Bézier berubah untuk sinkronisasi UI panel. */
+    var onBezierInputPointChanged: ((Int) -> Unit)? = null
+
     /** Callback saat goresan pertama dimulai (buat menyinkronkan UI panel). */
     var onFreeDrawStart: (() -> Unit)? = null
 
@@ -899,6 +925,16 @@ class PixelCanvasView @JvmOverloads constructor(
     /** Posisi sentuh Y terakhir dalam koordinat kanvas (dibaca oleh overlay). */
     var touchEventY: Float = 0f
         private set
+
+    fun addBezierInputPoint(canvasX: Float, canvasY: Float): PenLayer? {
+        val layer = bezierInputLayer ?: selectedLayer as? PenLayer ?: return null
+        val localX = canvasX - layer.x
+        val localY = canvasY - layer.y
+        layer.addAnchor(localX, localY, AnchorType.CORNER)
+        onBezierInputPointChanged?.invoke(layer.anchors.size)
+        invalidate()
+        return layer
+    }
 
     /** Callback yang dipanggil saat user memilih warna dari kanvas. */
     var onEyedropperColorListener: ((Int) -> Unit)? = null
@@ -1426,7 +1462,7 @@ class PixelCanvasView @JvmOverloads constructor(
         val cx = width / 2f
         val cy = height / 2f
         val drawSave = canvas.save()
-        canvas.translate(cx, cy)
+        canvas.translate(cx + canvasPanX, cy + canvasPanY)
         canvas.scale(canvasZoom, canvasZoom)
         canvas.translate(-cx, -cy)
 
@@ -1944,6 +1980,22 @@ class PixelCanvasView @JvmOverloads constructor(
     })
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // 0.1. Edit Mode: selaraskan koordinat sentuh dengan transform viewport
+        // (zoom + pan) yang dipakai di onDraw, sehingga objek tetap bisa dipilih
+        // & diedit walau kanvas sedang diperbesar/digeser. Zoom Mode memakai
+        // koordinat layar mentah dan keluar lebih dulu di blok 0.7.
+        if (!editorZoomMode && (canvasZoom != 1f || canvasPanX != 0f || canvasPanY != 0f)) {
+            val cx = width / 2f
+            val cy = height / 2f
+            canvasTransformMatrix.reset()
+            canvasTransformMatrix.postTranslate(cx + canvasPanX, cy + canvasPanY)
+            canvasTransformMatrix.postScale(canvasZoom, canvasZoom)
+            canvasTransformMatrix.postTranslate(-cx, -cy)
+            if (canvasTransformMatrix.invert(canvasTransformInverse)) {
+                event.transform(canvasTransformInverse)
+            }
+        }
+
         // 0. Tangani mode eyedropper — intercept seluruh sentuhan (Prompt 42)
         if (isEyedropperMode) {
             when (event.actionMasked) {
@@ -1960,7 +2012,24 @@ class PixelCanvasView @JvmOverloads constructor(
             return true
         }
 
-        // 0.5. Tangani mode gambar bebas — intercept seluruh sentuhan
+        // 0.5. Tangani mode input titik Bézier — tap di kanvas menambah titik baru.
+        if (bezierInputEnabled) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    addBezierInputPoint(event.x, event.y)
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    bezierInputEnabled = false
+                    bezierInputLayer = null
+                    onBezierInputPointChanged = null
+                    invalidate()
+                }
+            }
+            return true
+        }
+
+        // 0.6. Tangani mode gambar bebas — intercept seluruh sentuhan
         if (freeDrawEnabled) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -1998,11 +2067,36 @@ class PixelCanvasView @JvmOverloads constructor(
         // (pilih/geser/resize/rotate/handle) dinonaktifkan.
         if (editorZoomMode) {
             zoomCanvasScaleDetector.onTouchEvent(event)
-            if (zoomCanvasScaleDetector.isInProgress) {
-                invalidate()
-                return true
+
+            // Satu jari hanya menggeser viewport; object tetap tidak interaktif.
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastTouchX = event.x
+                    lastTouchY = event.y
+                }
+                MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_POINTER_UP -> {
+                    // Jumlah jari berubah (mulai/selesai pinch): segarkan posisi acuan
+                    // agar pan tidak meloncat setelah pinch selesai.
+                    lastTouchX = event.x
+                    lastTouchY = event.y
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (!zoomCanvasScaleDetector.isInProgress) {
+                        val dx = event.x - lastTouchX
+                        val dy = event.y - lastTouchY
+                        canvasPanX += dx
+                        canvasPanY += dy
+                        invalidate()
+                    }
+                    lastTouchX = event.x
+                    lastTouchY = event.y
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    lastTouchX = 0f
+                    lastTouchY = 0f
+                }
             }
-            // Tahan semua sentuhan lain agar objek tidak bisa dipilih/digeser.
+            if (zoomCanvasScaleDetector.isInProgress) invalidate()
             return true
         }
 

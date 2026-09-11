@@ -53,16 +53,17 @@ private val BezierSwatchColors = listOf(
 fun BezierDetailPage(
     strokeWidth: Float,
     strokeColor: Int,
+    inputCount: Int,
+    canApply: Boolean,
     onStrokeWidthChange: (Float) -> Unit,
     onStrokeColorChange: (Int) -> Unit,
     onOpenColorPicker: () -> Unit,
+    onInputFirst: () -> Unit,
+    onResetInput: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
     maxHeightPx: Int = 400
 ) {
-    var strokeWidthState by remember(strokeWidth) { mutableStateOf(strokeWidth) }
-    var strokeColorState by remember(strokeColor) { mutableStateOf(strokeColor) }
-
     MaterialTheme(colors = BezierColorScheme) {
         Box(
             modifier = Modifier
@@ -97,7 +98,6 @@ fun BezierDetailPage(
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Kolom Kiri: baris kontrol (identik RotateRow di 3D Rotate)
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -108,46 +108,74 @@ fun BezierDetailPage(
                             Spacer(modifier = Modifier.height(4.dp))
 
                             SettingRow(
-                                label = "Stroke Width",
-                                value = strokeWidthState,
-                                valueRange = 2f..60f,
-                                displayValue = "${strokeWidthState.toInt()} px",
-                                onValueChange = { new ->
-                                    strokeWidthState = new
-                                    onStrokeWidthChange(new)
-                                }
+                                label = "Width",
+                                value = strokeWidth,
+                                valueRange = 1f..30f,
+                                displayValue = "${strokeWidth.toInt()} px",
+                                onValueChange = onStrokeWidthChange
                             )
 
                             Spacer(modifier = Modifier.height(2.dp))
 
                             Text(
-                                text = "Curve Color",
+                                text = "Brush Color",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(PanelTextSecondary),
                                 fontWeight = FontWeight.SemiBold
                             )
                             SwatchRow(
                                 colors = BezierSwatchColors,
-                                selectedColor = strokeColorState,
-                                onColorChange = { color ->
-                                    strokeColorState = color
-                                    onStrokeColorChange(color)
-                                },
+                                selectedColor = strokeColor,
+                                onColorChange = onStrokeColorChange,
                                 onOpenColorPicker = onOpenColorPicker
                             )
 
                             Spacer(modifier = Modifier.height(2.dp))
 
                             Text(
-                                text = "Edit titik anchor & handle langsung di canvas",
+                                text = if (inputCount == 0) "Masukkan titik pertama dulu" else "Titik aktif: $inputCount",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(PanelTextSecondary),
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
                             )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Button(
+                                    onClick = onInputFirst,
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        backgroundColor = MaterialTheme.colors.primary,
+                                        contentColor = Color.White
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = if (inputCount == 0) "Input First" else "Add Point",
+                                        style = MaterialTheme.typography.caption,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                if (inputCount > 0) {
+                                    TextButton(
+                                        onClick = onResetInput,
+                                        modifier = Modifier.wrapContentWidth()
+                                    ) {
+                                        Text(
+                                            text = "Reset",
+                                            style = MaterialTheme.typography.caption,
+                                            color = MaterialTheme.colors.primary
+                                        )
+                                    }
+                                }
+                            }
                         }
 
-                        // Kolom Kanan: tombol Cancel & Apply (identik 3D Rotate)
                         Column(
                             modifier = Modifier
                                 .width(60.dp)
@@ -164,6 +192,7 @@ fun BezierDetailPage(
                             }
                             Button(
                                 onClick = onApply,
+                                enabled = canApply,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(
