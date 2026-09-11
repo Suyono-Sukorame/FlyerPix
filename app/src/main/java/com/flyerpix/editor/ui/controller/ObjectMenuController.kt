@@ -147,6 +147,7 @@ class ObjectMenuController(
     }
 
     private fun onToolClicked(tag: String) {
+        android.util.Log.i("BEZDEBUG", "onToolClicked tag=$tag activeTag=$activeTag selNav=${binding.bottomNavigation.selectedItemId}")
         if (tag == OBJ_TEXT) {
             canvas.addTextLayer("New Text")
             showSnackbar("Text layer added")
@@ -163,6 +164,7 @@ class ObjectMenuController(
 
     fun select(tag: String) {
         activeTag = tag
+        android.util.Log.i("BEZDEBUG", "select($tag)")
         updateToolStripSelection(tag)
         when (tag) {
             OBJ_STICKER -> showComposeStickerSheet()
@@ -177,6 +179,7 @@ class ObjectMenuController(
     }
 
     fun deselect(restoreStrip: Boolean = false) {
+        android.util.Log.i("BEZDEBUG", "deselect restoreStrip=$restoreStrip")
         activeTag = ""
         updateToolStripSelection("")
 
@@ -216,7 +219,8 @@ class ObjectMenuController(
     fun refreshUI() {
         binding.objectToolStripInclude.objectToolStripScroll.visibility = View.VISIBLE
         binding.objectMenuPanel.visibility = View.VISIBLE
-        if (activeTag.isEmpty()) {
+        val hasVisibleComposeSheet = composeContainer?.visibility == View.VISIBLE
+        if (activeTag.isEmpty() && !hasVisibleComposeSheet) {
             composeContainer?.visibility = View.GONE
             binding.objectContentPanel.visibility = View.GONE
         }
@@ -690,10 +694,15 @@ class ObjectMenuController(
     private fun showComposeBezierSheet(existingPen: PenLayer? = null) {
         val host = composeHost ?: return
         val container = composeContainer ?: return
+        android.util.Log.i("BEZDEBUG", "showComposeBezierSheet enter host=${host != null} container=${container != null}")
+
+        activeTag = OBJ_BEZIER
+        updateToolStripSelection(OBJ_BEZIER)
 
         binding.objectContentPanel.visibility = View.GONE
         binding.objectMenuPanel.visibility = View.GONE
         container.visibility = View.VISIBLE
+        android.util.Log.i("BEZDEBUG", "bezier container set VISIBLE")
         container.bringToFront()
 
         val sheetMaxH = computeSheetHeight(0.42f)
