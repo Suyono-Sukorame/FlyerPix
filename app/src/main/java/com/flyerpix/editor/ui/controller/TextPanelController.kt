@@ -92,7 +92,7 @@ class TextPanelController(
         TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_REFLECTION, TOOL_NEON,
         TOOL_STROKE, TOOL_SHADOW, TOOL_INNER, TOOL_LETTER, TOOL_LINE, TOOL_CURVE, TOOL_BG,
         TOOL_EMBOSS, TOOL_BLEND, TOOL_PERSPECTIVE,
-        TOOL_ALIGN, TOOL_SIZE, TOOL_OPACITY, TOOL_POSITION, TOOL_REL_POS
+        TOOL_ALIGN, TOOL_SIZE, TOOL_OPACITY, TOOL_POSITION, TOOL_REL_POS, TOOL_ROTATE
     )
     private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncInnerShadowUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
@@ -351,12 +351,17 @@ initializeMaskControls()
                 activeTextToolTag == TOOL_OPACITY && sel != null -> showComposeOpacitySheet(sel)
                 activeTextToolTag == TOOL_POSITION && sel != null -> showComposePositionSheet(sel)
                 activeTextToolTag == TOOL_REL_POS && sel != null -> showComposeRelativePositionSheet(sel)
+                activeTextToolTag == TOOL_ROTATE && sel != null -> showComposeRotateSheet(sel)
                 activeTextToolTag in composedEffectTags -> {
                     // layer non-teks/berbeda dipilih saat halaman tool terbuka:
                     // tutup halaman settings (paralel dengan perilaku legacy panel)
                     closeEffectSettings()
                 }
-                else -> hideCompose3DSheet()
+                else -> {
+                    if (isObjectEffectSettingsOpen() != true) {
+                        hideCompose3DSheet()
+                    }
+                }
             }
         }
     }
@@ -1515,6 +1520,36 @@ initializeMaskControls()
                         l.x = (w - sw) / 2f
                         l.y = (h - sh) / 2f
                     }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    private fun showComposeRotateSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.RotateDetailPage(
+                rotation = layer.rotation,
+                onRotationChange = { r ->
+                    applyToTextLayer { it.rotation = r }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer { it.rotation = 0f }
                     pixelCanvasView.invalidate()
                 },
                 onApply = { applyEffectSettings() },
@@ -3257,7 +3292,13 @@ tvAngleLabel.text = "Angle: 0°"
                     syncOpacityUIHook?.invoke(layer)
                 }
             }
-            TOOL_ROTATE -> syncRotateUIHook?.invoke(layer)
+            TOOL_ROTATE -> {
+                if (threeDComposeHost != null) {
+                    showComposeRotateSheet(layer)
+                } else {
+                    syncRotateUIHook?.invoke(layer)
+                }
+            }
             TOOL_COLOR -> syncColorUIHook?.invoke(layer)
             TOOL_PADDING -> syncPaddingUIHook?.invoke(layer)
             TOOL_SIZE -> {

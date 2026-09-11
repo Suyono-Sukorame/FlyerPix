@@ -3,6 +3,7 @@ package com.flyerpix.editor.ui.controller
 import android.app.Activity
 import android.graphics.Color
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -58,6 +59,11 @@ class ObjectPanelController(
             OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE, OBJ_COLOR,
             OBJ_STROKE, OBJ_SHADOW, OBJ_GRADIENT, OBJ_BLEND, OBJ_PERSPECTIVE
         )
+
+        val composedObjectTags = setOf(
+            OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE,
+            OBJ_SHADOW, OBJ_STROKE, OBJ_BLEND, OBJ_PERSPECTIVE
+        )
     }
 
     private val toolItems = LinkedHashMap<String, android.view.ViewGroup>()
@@ -71,7 +77,24 @@ class ObjectPanelController(
     private var objectColorComposeHost: androidx.compose.ui.platform.ComposeView? = null
     private var objectStrokeComposeHost: androidx.compose.ui.platform.ComposeView? = null
 
+    private val composeHost: ComposeView? get() = binding.composeThreeDDetail
+    private val composeContainer: FrameLayout? get() = binding.composeThreeDSheetContainer
+
     fun isEffectSettingsOpen(): Boolean = effectSettingsOpen
+
+    private fun computeComposeSheetHeight(): Int {
+        val density = activity.resources.displayMetrics.density
+        val root = binding.parentLayout
+        val homePanel = binding.bottomControlPanelContainer
+        if (root.height > 0 && homePanel.height > 0) {
+            val homeTop = PanelHeightManager.topInRoot(homePanel, root)
+            val alignedH = root.height - homeTop
+            if (alignedH > 0) return alignedH
+        }
+        val floorPx = (300 * density).toInt()
+        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.40f).toInt()
+        return targetPx.coerceAtLeast(floorPx)
+    }
 
     fun initialize() {
         buildEffectTools()
@@ -166,10 +189,15 @@ class ObjectPanelController(
     }
 
     private fun showEffectSettingsVisibility() {
+        val isCompose = activeToolTag in composedObjectTags
         val show = effectSettingsOpen && activeToolTag in sharedCoreEffectTags
-        val wasOpen = binding.effectSettingsInclude.root.visibility == View.VISIBLE
+        val wasOpen = binding.effectSettingsInclude.root.visibility == View.VISIBLE || composeContainer?.visibility == View.VISIBLE
         val changed = wasOpen != show
-        binding.effectSettingsInclude.root.visibility = if (show) View.VISIBLE else View.GONE
+        if (isCompose) {
+            binding.effectSettingsInclude.root.visibility = View.GONE
+        } else {
+            binding.effectSettingsInclude.root.visibility = if (show) View.VISIBLE else View.GONE
+        }
         effectSettingsOpen = show
         if (changed) onEffectSettingsOpenChanged(show)
     }
@@ -177,18 +205,24 @@ class ObjectPanelController(
     fun applyEffectSettings() { closeEffectSettings() }
 
     fun cancelEffectSettings() {
-        val layer = pixelCanvasView.selectedLayer
-        if (layer != null && settingsSnapshot != null) restoreSnapshot(layer)
+        val snapshot = settingsSnapshot
+        if (snapshot != null) {
+            val layer = pixelCanvasView.selectedLayer
+            if (layer != null) restoreSnapshot(snapshot)
+        }
         closeEffectSettings()
     }
 
     private fun closeEffectSettings() {
+        val wasCompose = activeToolTag in composedObjectTags
         settingsSnapshot = null
         effectSettingsOpen = false
         activeToolTag = toolBeforeEffect
         toolBeforeEffect = ""
+        hideComposeSheet()
         pixelCanvasView.invalidate()
         showEffectSettingsVisibility()
+        if (wasCompose) onEffectSettingsOpenChanged(false)
         // Kembalikan strip properti objek pada tab Edit jika layer objek masih terpilih.
         val layer = pixelCanvasView.selectedLayer
         if (layer != null && layer !is TextLayer && !layer.isLocked) {
@@ -235,19 +269,45 @@ class ObjectPanelController(
     private fun syncEffectUI(tag: String, layer: CanvasLayer) {
         val fs = binding.effectSettingsInclude
         when (tag) {
-            OBJ_POSITION    -> syncPositionUI(layer)
-            OBJ_SCALE       -> syncScaleUI(layer)
-            OBJ_OPACITY     -> syncOpacityUI(layer)
-            OBJ_ROTATE      -> syncRotateUI(layer)
+            OBJ_POSITION    -> {
+                if (composeHost != null) showComposePositionSheet(layer)
+                else syncPositionUI(layer)
+            }
+            OBJ_SCALE       -> {
+                if (composeHost != null) showComposeScaleSheet(layer)
+                else syncScaleUI(layer)
+            }
+            OBJ_OPACITY     -> {
+                if (composeHost != null) showComposeOpacitySheet(layer)
+                else syncOpacityUI(layer)
+            }
+            OBJ_ROTATE      -> {
+                if (composeHost != null) showComposeRotateSheet(layer)
+                else syncRotateUI(layer)
+            }
             OBJ_COLOR       -> syncColorUI(layer)
-            OBJ_STROKE      -> syncStrokeUI(layer)
-            OBJ_SHADOW      -> syncShadowUI(layer)
+            OBJ_STROKE      -> {
+                if (composeHost != null && (layer is ShapeLayer || layer is PenLayer)) showComposeStrokeSheet(layer)
+                else syncStrokeUI(layer)
+            }
+            OBJ_SHADOW      -> {
+                if (composeHost != null) showComposeShadowSheet(layer)
+                else syncShadowUI(layer)
+            }
             OBJ_GRADIENT    -> syncGradientUI(layer)
-            OBJ_BLEND       -> syncBlendUI(layer)
-            OBJ_PERSPECTIVE -> syncPerspectiveUI(layer)
+            OBJ_BLEND       -> {
+                if (composeHost != null) showComposeBlendSheet(layer)
+                else syncBlendUI(layer)
+            }
+            OBJ_PERSPECTIVE -> {
+                if (composeHost != null) showComposePerspectiveSheet(layer)
+                else syncPerspectiveUI(layer)
+            }
         }
-        (fs.root as? com.flyerpix.editor.ui.view.DetailPanel)?.setTitle(toolLabels[tag] ?: "Effect Settings")
-        for ((t, v) in panelViews) v.visibility = if (t == tag) View.VISIBLE else View.GONE
+        if (tag !in composedObjectTags) {
+            (fs.root as? com.flyerpix.editor.ui.view.DetailPanel)?.setTitle(toolLabels[tag] ?: "Effect Settings")
+            for ((t, v) in panelViews) v.visibility = if (t == tag) View.VISIBLE else View.GONE
+        }
     }
 
     private fun applyToLayer(block: (CanvasLayer) -> Unit) {
@@ -775,8 +835,358 @@ class ObjectPanelController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Compose Bottom Sheet Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun showComposePositionSheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        val range = max(pixelCanvasView.width, pixelCanvasView.height).toFloat().coerceAtLeast(1000f)
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.PositionDetailPage(
+                posX = layer.x,
+                posY = layer.y,
+                range = range,
+                onPositionChange = { newX, newY ->
+                    applyToLayer {
+                        it.x = newX
+                        it.y = newY
+                    }
+                },
+                onCenterHorizontal = {
+                    applyToLayer {
+                        val (w, _) = it.getUnwarpedDimensions()
+                        it.x = (pixelCanvasView.width - w * it.scale) / 2f
+                    }
+                },
+                onCenterVertical = {
+                    applyToLayer {
+                        val (_, h) = it.getUnwarpedDimensions()
+                        it.y = (pixelCanvasView.height - h * it.scale) / 2f
+                    }
+                },
+                onCenterBoth = {
+                    applyToLayer {
+                        val (w, h) = it.getUnwarpedDimensions()
+                        it.x = (pixelCanvasView.width - w * it.scale) / 2f
+                        it.y = (pixelCanvasView.height - h * it.scale) / 2f
+                    }
+                },
+                onReset = {
+                    applyToLayer {
+                        it.x = 0f
+                        it.y = 0f
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeScaleSheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.ScaleDetailPage(
+                scale = layer.scale,
+                onScaleChange = { sc ->
+                    applyToLayer { it.scale = sc }
+                },
+                onFitCanvas = {
+                    applyToLayer { l ->
+                        val (w, h) = l.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            l.scale = min(pixelCanvasView.width / w, pixelCanvasView.height / h * 0.9f).coerceAtLeast(0.05f)
+                        }
+                    }
+                },
+                onReset = {
+                    applyToLayer { it.scale = 1f }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeOpacitySheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.OpacityDetailPage(
+                opacity = layer.opacity,
+                onOpacityChange = { op ->
+                    applyToLayer { it.opacity = op }
+                },
+                onReset = {
+                    applyToLayer { it.opacity = 255 }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeRotateSheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.RotateDetailPage(
+                rotation = layer.rotation,
+                onRotationChange = { r ->
+                    applyToLayer { it.rotation = r }
+                },
+                onReset = {
+                    applyToLayer { it.rotation = 0f }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeShadowSheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.ShadowDetailPage(
+                title = "Object Shadow",
+                enabled = layer.shadowEnabled,
+                color = layer.shadowColor,
+                radius = layer.shadowRadius.coerceIn(0f, 40f),
+                opacityPct = (layer.shadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = layer.shadowDx.coerceIn(-30f, 30f),
+                dy = layer.shadowDy.coerceIn(-30f, 30f),
+                onEnabledChange = { en ->
+                    applyToLayer { it.shadowEnabled = en }
+                },
+                onColorChange = { c ->
+                    applyToLayer { it.shadowColor = c }
+                },
+                onColorPickRequested = { launchShadowColorPicker() },
+                onRadiusChange = { r ->
+                    applyToLayer { it.shadowRadius = r }
+                },
+                onOpacityChange = { opPct ->
+                    applyToLayer { it.shadowOpacity = (opPct / 100f).coerceIn(0f, 1f) }
+                },
+                onDxChange = { x ->
+                    applyToLayer { it.shadowDx = x }
+                },
+                onDyChange = { y ->
+                    applyToLayer { it.shadowDy = y }
+                },
+                onReset = {
+                    applyToLayer {
+                        it.shadowEnabled = false
+                        it.shadowRadius = 8f
+                        it.shadowOpacity = 0.6f
+                        it.shadowDx = 4f
+                        it.shadowDy = 4f
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeStrokeSheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.StrokeDetailPage(
+                enabled = strokeWidthOf(layer) > 0f,
+                width = strokeWidthOf(layer).coerceIn(0f, 100f),
+                opacityPct = strokeOpacityPercent(layer).toFloat().coerceIn(0f, 100f),
+                color = strokeColorOf(layer),
+                onEnabledChange = { en ->
+                    applyToLayer {
+                        if (en) setStrokeWidth(it, if (strokeWidthOf(it) > 0f) strokeWidthOf(it) else 4f)
+                        else setStrokeWidth(it, 0f)
+                    }
+                },
+                onWidthChange = { w ->
+                    applyToLayer { setStrokeWidth(it, w) }
+                },
+                onOpacityChange = { opPct ->
+                    applyToLayer { l ->
+                        setStrokeColor(l, argbFromOpacity(strokeColorOf(l), opPct))
+                    }
+                },
+                onColorChange = { c ->
+                    applyToLayer { l ->
+                        val currentAlpha = Color.alpha(strokeColorOf(l))
+                        setStrokeColor(l, (c and 0x00FFFFFF) or (currentAlpha shl 24))
+                    }
+                },
+                onColorPickRequested = { launchStrokeColorPicker() },
+                onReset = {
+                    applyToLayer {
+                        setStrokeWidth(it, 0f)
+                        setStrokeColor(it, Color.BLACK)
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeBlendSheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.BlendModeDetailPage(
+                currentMode = layer.blendMode,
+                currentExtra = layer.blendExtra,
+                onModeSelect = { m ->
+                    applyToLayer {
+                        it.blendMode = m
+                        it.blendExtra = null
+                    }
+                },
+                onExtraSelect = { ex ->
+                    applyToLayer { it.blendExtra = ex }
+                },
+                onReset = {
+                    applyToLayer {
+                        it.blendMode = android.graphics.PorterDuff.Mode.SRC_OVER
+                        it.blendExtra = null
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposePerspectiveSheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        val allPresets = com.flyerpix.editor.canvas.model.PerspectivePreset.values()
+        val currentPreset = allPresets.firstOrNull { preset ->
+            val target = layer.perspectiveCornersFor(preset)
+            layer.perspectiveCorners.size == target.size &&
+                layer.perspectiveCorners.indices.all { kotlin.math.abs(layer.perspectiveCorners[it] - target[it]) < 0.01f }
+        }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.PerspectiveDetailPage(
+                enabled = layer.perspectiveEnabled,
+                activePreset = currentPreset,
+                onEnabledChange = { en ->
+                    applyToLayer { it.perspectiveEnabled = en }
+                },
+                onPresetSelect = { preset ->
+                    applyToLayer {
+                        it.applyPerspectivePreset(preset)
+                        it.perspectiveEnabled = true
+                    }
+                },
+                onReset = {
+                    applyToLayer {
+                        it.perspectiveEnabled = false
+                        it.resetPerspective()
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun hideComposeSheet() {
+        composeContainer?.visibility = View.GONE
+        composeHost?.setContent {}
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     fun hideStripAndPanels() {
+        hideComposeSheet()
         binding.effectSettingsInclude.root.visibility = View.GONE
         activeToolTag = ""
         effectSettingsOpen = false
