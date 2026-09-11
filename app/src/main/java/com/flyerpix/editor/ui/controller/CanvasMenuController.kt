@@ -196,7 +196,7 @@ class CanvasMenuController(
     }
 
     private fun onToolClicked(tag: String) {
-        if (tag == activeTag) deselect() else select(tag)
+        if (tag == activeTag) deselect(restoreStrip = true) else select(tag)
     }
 
     /** Highlight sementara untuk tool aksi instan, lalu kembali ke warna default. */
@@ -230,7 +230,7 @@ class CanvasMenuController(
         applyContentVisibility()
     }
 
-    fun deselect() {
+    fun deselect(restoreStrip: Boolean = false) {
         activeTag = ""
         initialBgSnapshot = null
         for (item in toolItems.values) {
@@ -241,10 +241,8 @@ class CanvasMenuController(
         }
         composeContainer?.visibility = View.GONE
         binding.canvasContentPanel.visibility = View.GONE
-        if (binding.bottomNavigation.selectedItemId == R.id.nav_canvas) {
+        if (restoreStrip) {
             binding.canvasMenuPanel.visibility = View.VISIBLE
-        } else {
-            binding.canvasMenuPanel.visibility = View.GONE
         }
         onCanvasSettingsOpenChanged?.invoke(false)
         notifyDetailExpanded()
@@ -254,11 +252,7 @@ class CanvasMenuController(
         if (activeTag.isEmpty()) {
             composeContainer?.visibility = View.GONE
             binding.canvasContentPanel.visibility = View.GONE
-            if (binding.bottomNavigation.selectedItemId == R.id.nav_canvas) {
-                binding.canvasMenuPanel.visibility = View.VISIBLE
-            } else {
-                binding.canvasMenuPanel.visibility = View.GONE
-            }
+            binding.canvasMenuPanel.visibility = View.VISIBLE
             onCanvasSettingsOpenChanged?.invoke(false)
             notifyDetailExpanded()
             return
@@ -291,11 +285,7 @@ class CanvasMenuController(
                 }
                 else -> {
                     composeContainer?.visibility = View.GONE
-                    if (binding.bottomNavigation.selectedItemId == R.id.nav_canvas) {
-                        binding.canvasMenuPanel.visibility = View.VISIBLE
-                    } else {
-                        binding.canvasMenuPanel.visibility = View.GONE
-                    }
+                    binding.canvasMenuPanel.visibility = View.VISIBLE
                     onCanvasSettingsOpenChanged?.invoke(false)
                 }
             }
@@ -385,7 +375,7 @@ class CanvasMenuController(
                 onApply = {
                     pixelCanvasView.runRecordedAction("Change Canvas Background") {}
                     initialBgSnapshot = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
                     initialBgSnapshot?.let { snap ->
@@ -397,7 +387,7 @@ class CanvasMenuController(
                         }
                     }
                     initialBgSnapshot = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH
             )
@@ -423,10 +413,10 @@ class CanvasMenuController(
                 initialHeight = pixelCanvasView.canvasHeight,
                 onApply = { width, height ->
                     updateCanvasAspectRatio(width, height)
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH
             )
@@ -466,13 +456,13 @@ class CanvasMenuController(
                 },
                 onApply = {
                     pixelCanvasView.runRecordedAction("Configure Grid") {}
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
                     pixelCanvasView.isGridEnabled = initialGridEnabled
                     pixelCanvasView.gridSpacingDp = initialGridSpacing
                     pixelCanvasView.invalidate()
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH
             )
@@ -506,12 +496,12 @@ class CanvasMenuController(
                 },
                 onApply = {
                     pixelCanvasView.runRecordedAction("Configure Magnetic Snap") {}
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
                     pixelCanvasView.isSnapToCenterEnabled = initialSnapEnabled
                     pixelCanvasView.invalidate()
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH
             )

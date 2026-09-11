@@ -156,7 +156,7 @@ class EffectsController(
         applyContentVisibility()
     }
 
-    fun deselect() {
+    fun deselect(restoreStrip: Boolean = false) {
         if (initialSnapshot != null) {
             restoreSnapshot()
             initialSnapshot = null
@@ -170,13 +170,13 @@ class EffectsController(
             (item.getChildAt(1) as? TextView)?.setTextColor(COLOR_INACTIVE)
         }
         composeContainer?.visibility = View.GONE
-        if (binding.bottomNavigation.selectedItemId == R.id.nav_effects) {
+        if (restoreStrip) {
             binding.effectsMenuPanel.visibility = View.VISIBLE
         }
         if (wasOpen) {
             onEffectSettingsOpenChanged?.invoke(false)
         }
-        applyContentVisibility()
+        applyContentVisibility(restoreStrip)
     }
 
     private fun snapshotCurrentState() {
@@ -203,12 +203,12 @@ class EffectsController(
         refreshLegacyUI()
     }
 
-    private fun applyContentVisibility() {
+    private fun applyContentVisibility(restoreStrip: Boolean = true) {
         if (composeHost != null && composeContainer != null) {
             binding.effectContentPanel.visibility = View.GONE
             if (activeTag.isEmpty()) {
                 composeContainer?.visibility = View.GONE
-                if (binding.bottomNavigation.selectedItemId == R.id.nav_effects) {
+                if (restoreStrip) {
                     binding.effectsMenuPanel.visibility = View.VISIBLE
                 }
             } else {
@@ -218,7 +218,7 @@ class EffectsController(
                     TOOL_BLUR -> showComposeBlurSheet()
                     else -> {
                         composeContainer?.visibility = View.GONE
-                        if (binding.bottomNavigation.selectedItemId == R.id.nav_effects) {
+                        if (restoreStrip) {
                             binding.effectsMenuPanel.visibility = View.VISIBLE
                         }
                     }
@@ -286,7 +286,7 @@ class EffectsController(
                 onApply = {
                     pixelCanvasView.runRecordedAction("Adjust Canvas Colors") {}
                     initialSnapshot = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
                     cancelSheet()
@@ -340,7 +340,7 @@ class EffectsController(
                 onApply = {
                     pixelCanvasView.runRecordedAction("Apply Canvas Filters") {}
                     initialSnapshot = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
                     cancelSheet()
@@ -380,7 +380,7 @@ class EffectsController(
                 onApply = {
                     pixelCanvasView.runRecordedAction("Set Canvas Blur") {}
                     initialSnapshot = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
                     cancelSheet()
@@ -402,7 +402,7 @@ class EffectsController(
         if (activeTag.isNotEmpty()) {
             restoreSnapshot()
             initialSnapshot = null
-            deselect()
+            deselect(restoreStrip = true)
             return true
         }
         return false

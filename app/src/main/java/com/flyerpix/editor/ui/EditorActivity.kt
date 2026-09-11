@@ -404,7 +404,6 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         canvasMenuController.initialize()
         canvasMenuController.setBgGalleryLauncher(bgGalleryLauncher)
         canvasMenuController.setOnCameraRequested { checkCameraPermissionForBackground() }
-        canvasMenuController.onDetailExpandedChanged = { setDetailExpanded(canvasMenuController.activeTag.isNotEmpty()) }
         canvasMenuController.onCanvasSettingsOpenChanged = { open ->
             val density = resources.displayMetrics.density
             val offset = (56 * density).toInt()
@@ -474,7 +473,12 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             onShapeCreated = {}
         )
         objectMenu.initialize()
-        objectMenu.onDetailExpandedChanged = { setDetailExpanded(objectMenu.activeTag.isNotEmpty()) }
+        objectMenu.onAddSettingsOpenChanged = { open ->
+            val density = resources.displayMetrics.density
+            val offset = (56 * density).toInt()
+            animateNavTranslation(if (open) offset else 0)
+            fitCanvasToOpenPanels()
+        }
 
         // Tap shape di kanvas (bukan drag) => navigasikan ke tab Add lalu buka Shape Studio via Compose
         pixelCanvasView.onShapeTapRequested = { shape ->
@@ -761,7 +765,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
         // Jika berpindah ke Home / Add / Canvas / Edit tanpa sheet aktif, pastikan
         // compose sheet tertutup dan navbar bawah tampil penuh tanpa tergeser.
-        if (menuId == R.id.nav_home || (menuId != R.id.nav_canvas && menuId != R.id.nav_effects)) {
+        if (menuId == R.id.nav_home || (menuId != R.id.nav_canvas && menuId != R.id.nav_effects && menuId != R.id.nav_add)) {
             if (binding.composeThreeDSheetContainer.visibility == View.VISIBLE) {
                 binding.composeThreeDSheetContainer.visibility = View.GONE
             }

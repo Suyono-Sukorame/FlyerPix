@@ -177,7 +177,7 @@
                 android:layout_gravity="bottom"
                 android:visibility="gone"
                 android:background="@drawable/bg_panel_bottom"
-                android:elevation="8dp">
+                android:elevation="24dp">
 
             <androidx.compose.ui.platform.ComposeView
                     android:id="@+id/composeThreeDDetail"

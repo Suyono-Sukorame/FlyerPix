@@ -193,18 +193,15 @@ class ShapePanelController(
     /**
      * Sembunyikan Shape Settings Panel
      */
-    fun hideShapeSettings() {
+    fun hideShapeSettings(restoreStrip: Boolean = false) {
         binding.shapeSettingsPanel.root.visibility = View.GONE
-        // Kembalikan halaman Add hanya jika masih berada di tab Add
-        if (binding.bottomNavigation.selectedItemId == R.id.nav_add) {
-            binding.objectMenuPanel.visibility = View.VISIBLE
-        }
-        // Kembalikan strip properti objek pada tab Edit jika objek masih terpilih
-        if (binding.bottomNavigation.selectedItemId == R.id.nav_edit) {
+        if (restoreStrip) {
             val selected = canvas.selectedLayer
             if (selected != null && selected !is com.flyerpix.editor.canvas.model.TextLayer && !selected.isLocked) {
                 binding.editObjectBar.visibility = View.VISIBLE
                 binding.objectPropertyStripInclude.objectToolStripScroll.visibility = View.VISIBLE
+            } else {
+                binding.objectMenuPanel.visibility = View.VISIBLE
             }
         }
         currentShape = null
@@ -249,7 +246,7 @@ class ShapePanelController(
 
     private fun applyShapeChanges() {
         // Changes already applied in real-time, just hide panel
-        hideShapeSettings()
+        hideShapeSettings(restoreStrip = true)
         showSnackbar("Shape updated")
     }
 
@@ -270,7 +267,7 @@ class ShapePanelController(
                 canvas.invalidate()
             }
         }
-        hideShapeSettings()
+        hideShapeSettings(restoreStrip = true)
         showSnackbar("Changes cancelled")
     }
 

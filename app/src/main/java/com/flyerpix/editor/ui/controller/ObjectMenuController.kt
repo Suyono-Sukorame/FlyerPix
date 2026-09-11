@@ -80,14 +80,10 @@ class ObjectMenuController(
     private var draftPen: PenLayer? = null
 
     /**
-     * Dipanggil saat status detail (buka/tutup) berubah, agar activity bisa
-     * mengekspansi panel dan menyembunyikan/memunculkan kembali nav.
+     * Callback saat salah satu Compose sheet Add dibuka/ditutup,
+     * untuk menganimasikan navigasi bawah (translationY 56dp) dan fit canvas viewport.
      */
-    var onDetailExpandedChanged: ((Boolean) -> Unit)? = null
-
-    private fun notifyDetailExpanded() {
-        onDetailExpandedChanged?.invoke(activeTag.isNotEmpty())
-    }
+    var onAddSettingsOpenChanged: ((Boolean) -> Unit)? = null
 
     private fun computeSheetHeight(ratio: Float): Int {
         val displayMetrics = activity.resources.displayMetrics
@@ -149,7 +145,7 @@ class ObjectMenuController(
             showSnackbar("Text layer added")
             return
         }
-        if (tag == activeTag) deselect() else select(tag)
+        if (tag == activeTag) deselect(restoreStrip = true) else select(tag)
     }
 
     fun select(tag: String) {
@@ -163,11 +159,11 @@ class ObjectMenuController(
             OBJ_BEZIER  -> showComposeBezierSheet()
             OBJ_ARROW   -> showComposeArrowSheet()
         }
-        notifyDetailExpanded()
+        onAddSettingsOpenChanged?.invoke(true)
         onPanelChanged()
     }
 
-    fun deselect() {
+    fun deselect(restoreStrip: Boolean = false) {
         activeTag = ""
         updateToolStripSelection("")
 
@@ -177,12 +173,16 @@ class ObjectMenuController(
         draftPen = null
         canvas.freeDrawEnabled = false
 
-        // Hide Compose container & restore menu panel
+        // Hide Compose container
         composeContainer?.visibility = View.GONE
         binding.objectContentPanel.visibility = View.GONE
-        binding.objectMenuPanel.visibility = View.VISIBLE
 
-        notifyDetailExpanded()
+        if (restoreStrip) {
+            binding.objectToolStripInclude.objectToolStripScroll.visibility = View.VISIBLE
+            binding.objectMenuPanel.visibility = View.VISIBLE
+        }
+
+        onAddSettingsOpenChanged?.invoke(false)
         onPanelChanged()
     }
 
@@ -199,10 +199,10 @@ class ObjectMenuController(
 
     fun refreshUI() {
         binding.objectToolStripInclude.objectToolStripScroll.visibility = View.VISIBLE
+        binding.objectMenuPanel.visibility = View.VISIBLE
         if (activeTag.isEmpty()) {
             composeContainer?.visibility = View.GONE
             binding.objectContentPanel.visibility = View.GONE
-            binding.objectMenuPanel.visibility = View.VISIBLE
         }
     }
 
@@ -274,7 +274,7 @@ class ObjectMenuController(
                     canvas.addEmojiLayer(stickerItem.emoji)
                     showSnackbar("Added ${stickerItem.emoji} to canvas")
                 },
-                onClose = { deselect() },
+                onClose = { deselect(restoreStrip = true) },
                 maxHeightPx = sheetMaxH
             )
         }
@@ -397,7 +397,7 @@ class ObjectMenuController(
                     canvas.runRecordedAction(if (isNewShape) "Add Shape" else "Modify Shape") {}
                     showSnackbar("Shape saved")
                     draftShape = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
                     if (isNewShape) {
@@ -415,7 +415,7 @@ class ObjectMenuController(
                     }
                     canvas.invalidate()
                     draftShape = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH
             )
@@ -465,11 +465,11 @@ class ObjectMenuController(
                 onApply = {
                     canvas.freeDrawEnabled = false
                     showSnackbar("Drawing saved")
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
                     canvas.freeDrawEnabled = false
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH
             )
@@ -496,14 +496,14 @@ class ObjectMenuController(
         host.setContent {
             ImportDetailPage(
                 onGalleryClick = {
-                    deselect()
+                    deselect(restoreStrip = true)
                     onGalleryRequested()
                 },
                 onCameraClick = {
-                    deselect()
+                    deselect(restoreStrip = true)
                     onCameraRequested()
                 },
-                onClose = { deselect() },
+                onClose = { deselect(restoreStrip = true) },
                 maxHeightPx = sheetMaxH
             )
         }
@@ -566,13 +566,13 @@ class ObjectMenuController(
                     canvas.runRecordedAction("Add Arrow") {}
                     showSnackbar("Arrow added")
                     draftArrow = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
                     canvas.removeLayer(arrow)
                     canvas.invalidate()
                     draftArrow = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH
             )
@@ -628,13 +628,13 @@ class ObjectMenuController(
                     canvas.runRecordedAction("Add Bézier") {}
                     showSnackbar("Bézier curve added")
                     draftPen = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 onCancel = {
                     canvas.removeLayer(pen)
                     canvas.invalidate()
                     draftPen = null
-                    deselect()
+                    deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH
             )
