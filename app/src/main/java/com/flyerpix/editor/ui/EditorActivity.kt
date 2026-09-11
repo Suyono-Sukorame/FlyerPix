@@ -35,6 +35,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.snackbar.Snackbar
+import androidx.constraintlayout.widget.ConstraintSet
 
 import com.google.android.material.tabs.TabLayout
 import com.flyerpix.editor.canvas.PixelCanvasView
@@ -88,6 +89,11 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     private lateinit var templateController: TemplateController
     private lateinit var canvasToolsController: CanvasToolsController
     private lateinit var shapePanelController: ShapePanelController
+
+    // ── Kanvas dimensi & reservasi band panel bawah ─────────────────────────
+    private var canvasRatioW = 1
+    private var canvasRatioH = 1
+    private var lastReservedBottomPx = -1
 
 
     private val texturePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -320,6 +326,15 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         initializeViewPager()
         initializeBottomSheetBehavior()
         initializeBottomNavigationView()
+
+        // ── Jaga kanvas utuh: tiap perubahan layout panel bawah, sesuaikan
+        //    band yang direservasi sehingga kanvas mengecil & tidak pernah
+        //    tertutup oleh menu (design A: auto-shrink canvas).
+        if (::binding.isInitialized) {
+            binding.parentLayout.viewTreeObserver.addOnGlobalLayoutListener {
+                updateCanvasCardMargin()
+            }
+        }
     }
 
     /**
@@ -567,12 +582,26 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
      */
     private fun updateCanvasAspectRatio(width: Int, height: Int) {
         pixelCanvasView.setCanvasSize(width, height)
-        val ratio = "$width:$height"
+        canvasRatioW = width
+        canvasRatioH = height
+        val ratio = canvasDimRatio()
         binding.motionLayout.getConstraintSet(R.id.start)?.setDimensionRatio(R.id.canvasCard, ratio)
         binding.motionLayout.getConstraintSet(R.id.end)?.setDimensionRatio(R.id.canvasCard, ratio)
         binding.motionLayout.requestLayout()
-        Snackbar.make(binding.parentLayout, "Canvas size changed to $width × $height px ($ratio)", Snackbar.LENGTH_SHORT).show()
+        Snackbar.make(binding.parentLayout, "Canvas size changed to $width × $height px ($width:$height)", Snackbar.LENGTH_SHORT).show()
     }
+
+    /**
+     * Rasio kanvas dengan dimensi yang "langka" sebagai acuan:
+     * - Portrait (tinggi > lebar, mis. 9:16) → prefix "H," → tinggi dibatasi oleh
+     *   margin bawah (area panel), lebar mengikuti. Margin bawah JADI berefek:
+     *   kanvas mengecil saat panel bawah terbuka.
+     * - Landscape / square → prefix "W," (proporsi square: lebar acuan, margin
+     *   bawah tidak mengganggu).
+     */
+    private fun canvasDimRatio(): String =
+        if (canvasRatioH > canvasRatioW) "H,${canvasRatioW}:${canvasRatioH}"
+        else "W,${canvasRatioW}:${canvasRatioH}"
 
     override fun onBackPressed() {
         if (textPanelController.isEffectSettingsOpen()) {
@@ -1094,6 +1123,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         toolsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
         binding.motionLayout.transitionToEnd()
         saveMode = true
+        binding.canvasCard.post { updateCanvasCardMargin() }
     }
 
     private fun exitSaveMode() {
@@ -1391,14 +1421,58 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         binding.pixelCanvasView.postOnAnimation(renderer)
     }
 
-    private fun updateCanvasCardMargin() {
-        // Kesimpulan verifikasi empiris (09/2026): margin bawah canvasCard
-        // diabaikan MotionLayout pada perangkat ini di semua cara mutasi
-        // (layoutParams, clone/applyTo, setConstraintSet, atau scene_01).
-        // Seluruh halaman menu bawah dibatasi setinggi ≤ ~595px sehingga kanvas
-        // (dasar ≤ ~1651px) tidak pernah tertutup — fungsi ini hanya penjaga
-        // agar MotionLayout melakukan pemerataan ulang.
+    /** Ruang (px) yang ditempati panel bawah, diukur relatif terhadap dasar root.
+     *  Default: nav bar + strip presets (saat tampil). Panel mana pun yang tampil
+     *  bisa menambah band ini. */
+    private fun currentBottomReservedSpace(): Int {
+        val root = binding.parentLayout
+        val density = resources.displayMetrics.density
+        var reserved =
+            if (binding.bottomNavigation.height > 0) binding.bottomNavigation.height
+            else (56 * density).toInt()
+        val presets = binding.bottomControlPanelContainer
+        if (presets.visibility == View.VISIBLE && presets.height > 0) reserved += presets.height
+        val panels = listOfNotNull(
+            binding.textEditorBar,
+            binding.objectMenuPanel,
+            binding.canvasMenuPanel,
+            binding.effectsMenuPanel,
+            binding.detailSettingsHost,
+            binding.shapeSettingsPanel.root,
+            binding.composeThreeDSheetContainer,
+            binding.toolbarConfirmCancel
+        )
+        for (p in panels) {
+            if (p.visibility != View.VISIBLE || p.height <= 0) continue
+            val band = root.height - PanelHeightManager.topInRoot(p, root)
+            if (band > reserved) reserved = band
+        }
+        return reserved
+    }
+
+    /** Terapkan band ke canvasCard supaya kanvas mengecil (tetap menjaga rasio)
+     *  sehingga border bawahnya berada DI ATAS area panel. Kembali ke band default
+     *  saat panel ditutup → kanvas pulih ke ukuran penuh. */
+    private fun applyCanvasReservedBand(reservedPx: Int) {
+        val bottom = reservedPx + (8 * resources.displayMetrics.density).toInt()
+        val animating = binding.motionLayout.progress > 0f && binding.motionLayout.progress < 1f
+        if (bottom == lastReservedBottomPx || animating) return
+        lastReservedBottomPx = bottom
+        val sets = listOfNotNull(
+            binding.motionLayout.getConstraintSet(R.id.start),
+            binding.motionLayout.getConstraintSet(R.id.end)
+        )
+        for (cs in sets) cs.setMargin(binding.canvasCard.id, ConstraintSet.BOTTOM, bottom)
         binding.canvasCard.post { binding.motionLayout.requestLayout() }
+    }
+
+    /**
+     * Jaga kanvas agar selalu terlihat utuh: hitung band yang dipakai panel bawah
+     * lalu sesuaikan margin bawah canvasCard (dengan rasio height-referenced).
+     * Dipanggil dari semua chokepoint menu/panel berubah.
+     */
+    private fun updateCanvasCardMargin() {
+        applyCanvasReservedBand(currentBottomReservedSpace())
     }
 
 

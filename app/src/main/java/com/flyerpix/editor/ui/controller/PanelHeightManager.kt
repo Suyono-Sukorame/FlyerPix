@@ -64,6 +64,15 @@ object PanelHeightManager {
         return loc[1] - rootLoc[1] + view.height
     }
 
+    /** Posisi tepi atas [view] dalam koordinat [root]. */
+    fun topInRoot(view: View, root: View): Int {
+        val loc = IntArray(2)
+        val rootLoc = IntArray(2)
+        view.getLocationInWindow(loc)
+        root.getLocationInWindow(rootLoc)
+        return loc[1] - rootLoc[1]
+    }
+
     /**
      * Posisi tepi bawah anchor untuk panel bottom-anchored dalam koordinat [root].
      *

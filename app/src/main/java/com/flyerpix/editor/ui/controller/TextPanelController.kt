@@ -375,6 +375,7 @@ initializeMaskControls()
         // compute sheet height dynamically
         val sheetMaxH = computeComposeSheetHeight()
         PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
 
         host.setContent {
             com.flyerpix.editor.ui.compose.ThreeDTextDetailPage(
@@ -440,6 +441,7 @@ initializeMaskControls()
      */
     private fun hideCompose3DSheet() {
         threeDComposeContainer?.visibility = View.GONE
+        threeDComposeContainer?.post { onCanvasChanged() }
     }
 
     /**
@@ -506,8 +508,9 @@ initializeMaskControls()
         val viewType = layer.shadow3DViewType.name
 
         // Shadow punya kontrol lebih banyak (blur + opacity), beri lantai lebih tinggi
-val sheetMaxH = computeComposeSheetHeight()
-            PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
 
         host.setContent {
             com.flyerpix.editor.ui.compose.ThreeDShadowDetailPage(
