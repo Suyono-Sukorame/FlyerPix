@@ -90,7 +90,9 @@ class TextPanelController(
     private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_REFLECTION, TOOL_BLEND, TOOL_NEON, TOOL_STROKE, TOOL_LINE, TOOL_LETTER, TOOL_ALIGN, TOOL_BG, TOOL_CURVE, TOOL_STYLE, TOOL_MASK, TOOL_OPACITY, TOOL_ROTATE, TOOL_COLOR, TOOL_PADDING, TOOL_SIZE, TOOL_POSITION, TOOL_REL_POS, TOOL_STYLES)
     private val composedEffectTags = setOf(
         TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_REFLECTION, TOOL_NEON,
-        TOOL_STROKE, TOOL_SHADOW, TOOL_INNER, TOOL_LETTER, TOOL_LINE, TOOL_CURVE, TOOL_BG
+        TOOL_STROKE, TOOL_SHADOW, TOOL_INNER, TOOL_LETTER, TOOL_LINE, TOOL_CURVE, TOOL_BG,
+        TOOL_EMBOSS, TOOL_BLEND, TOOL_PERSPECTIVE,
+        TOOL_ALIGN, TOOL_SIZE, TOOL_OPACITY, TOOL_POSITION, TOOL_REL_POS
     )
     private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncInnerShadowUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
@@ -341,6 +343,14 @@ initializeMaskControls()
                 (activeTextToolTag == TOOL_LETTER || activeTextToolTag == TOOL_LINE) && sel != null -> showComposeSpacingSheet(sel)
                 activeTextToolTag == TOOL_CURVE && sel != null -> showComposeCurveSheet(sel)
                 activeTextToolTag == TOOL_BG && sel != null -> showComposeBackgroundSheet(sel)
+                activeTextToolTag == TOOL_EMBOSS && sel != null -> showComposeEmbossSheet(sel)
+                activeTextToolTag == TOOL_BLEND && layer != null -> showComposeBlendSheet(layer)
+                activeTextToolTag == TOOL_PERSPECTIVE && layer != null -> showComposePerspectiveSheet(layer)
+                activeTextToolTag == TOOL_ALIGN && sel != null -> showComposeAlignSheet(sel)
+                activeTextToolTag == TOOL_SIZE && sel != null -> showComposeSizeSheet(sel)
+                activeTextToolTag == TOOL_OPACITY && sel != null -> showComposeOpacitySheet(sel)
+                activeTextToolTag == TOOL_POSITION && sel != null -> showComposePositionSheet(sel)
+                activeTextToolTag == TOOL_REL_POS && sel != null -> showComposeRelativePositionSheet(sel)
                 activeTextToolTag in composedEffectTags -> {
                     // layer non-teks/berbeda dipilih saat halaman tool terbuka:
                     // tutup halaman settings (paralel dengan perilaku legacy panel)
@@ -1095,6 +1105,415 @@ initializeMaskControls()
                         it.bgOpacity = 1f
                         it.bgPadding = 0f
                         it.bgCornerRadius = 0f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk Emboss effect.
+     */
+    private fun showComposeEmbossSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        applyToTextLayer { it.embossEnabled = true }
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.EmbossDetailPage(
+                enabled = layer.embossEnabled,
+                lightAngle = layer.embossLightAngle.coerceIn(0f, 360f),
+                intensity = layer.embossIntensity.coerceIn(0f, 2.5f),
+                ambient = layer.embossAmbient.coerceIn(0f, 1f),
+                specular = layer.embossSpecular.coerceIn(0.1f, 20f),
+                bevel = layer.embossBevel.coerceIn(0.5f, 12f),
+                onEnabledChange = { en ->
+                    applyToTextLayer { it.embossEnabled = en }
+                    pixelCanvasView.invalidate()
+                },
+                onLightAngleChange = { angle ->
+                    applyToTextLayer { it.embossLightAngle = angle }
+                    pixelCanvasView.invalidate()
+                },
+                onIntensityChange = { intens ->
+                    applyToTextLayer { it.embossIntensity = intens }
+                    pixelCanvasView.invalidate()
+                },
+                onAmbientChange = { amb ->
+                    applyToTextLayer { it.embossAmbient = amb }
+                    pixelCanvasView.invalidate()
+                },
+                onSpecularChange = { spec ->
+                    applyToTextLayer { it.embossSpecular = spec }
+                    pixelCanvasView.invalidate()
+                },
+                onBevelChange = { bev ->
+                    applyToTextLayer { it.embossBevel = bev }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.embossEnabled = true
+                        it.embossLightAngle = 90f
+                        it.embossIntensity = 1.0f
+                        it.embossAmbient = 0.5f
+                        it.embossSpecular = 10f
+                        it.embossBevel = 3.0f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk Blend Mode.
+     * Mendukung PorterDuff.Mode standar dan ExtendedBlendMode (Android 10+).
+     */
+    private fun showComposeBlendSheet(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.BlendModeDetailPage(
+                currentMode = layer.blendMode,
+                currentExtra = layer.blendExtra,
+                onModeSelect = { mode ->
+                    pixelCanvasView.selectedLayer?.let { l ->
+                        if (!l.isLocked) {
+                            l.blendMode = mode
+                            l.blendExtra = null
+                            pixelCanvasView.invalidate()
+                        }
+                    }
+                },
+                onExtraSelect = { extra ->
+                    pixelCanvasView.selectedLayer?.let { l ->
+                        if (!l.isLocked) {
+                            l.blendMode = android.graphics.PorterDuff.Mode.SRC_OVER
+                            l.blendExtra = extra
+                            pixelCanvasView.invalidate()
+                        }
+                    }
+                },
+                onReset = {
+                    pixelCanvasView.selectedLayer?.let { l ->
+                        if (!l.isLocked) {
+                            l.blendMode = android.graphics.PorterDuff.Mode.SRC_OVER
+                            l.blendExtra = null
+                            pixelCanvasView.invalidate()
+                        }
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk Perspective distortion.
+     */
+    private fun showComposePerspectiveSheet(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        // Determine currently active preset (if any)
+        val allPresets = com.flyerpix.editor.canvas.model.PerspectivePreset.values()
+        val currentPreset = allPresets.firstOrNull { preset ->
+            val target = layer.perspectiveCornersFor(preset)
+            layer.perspectiveCorners.size == target.size &&
+                layer.perspectiveCorners.indices.all { kotlin.math.abs(layer.perspectiveCorners[it] - target[it]) < 0.01f }
+        }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.PerspectiveDetailPage(
+                enabled = layer.perspectiveEnabled,
+                activePreset = currentPreset,
+                onEnabledChange = { en ->
+                    pixelCanvasView.selectedLayer?.let { l ->
+                        if (!l.isLocked) {
+                            l.perspectiveEnabled = en
+                            pixelCanvasView.invalidate()
+                        }
+                    }
+                },
+                onPresetSelect = { preset ->
+                    pixelCanvasView.selectedLayer?.let { l ->
+                        if (!l.isLocked) {
+                            l.applyPerspectivePreset(preset)
+                            pixelCanvasView.invalidate()
+                        }
+                    }
+                },
+                onReset = {
+                    pixelCanvasView.selectedLayer?.let { l ->
+                        if (!l.isLocked) {
+                            l.resetPerspective()
+                            pixelCanvasView.invalidate()
+                        }
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    private fun showComposeAlignSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.AlignDetailPage(
+                alignment = layer.alignment,
+                justifyEnabled = layer.justifyEnabled,
+                wrapTextEnabled = layer.wrapTextEnabled,
+                wrapWidth = layer.wrapWidth,
+                onAlignChange = { align, justify ->
+                    applyToTextLayer {
+                        it.alignment = align
+                        it.justifyEnabled = justify
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onWrapTextChange = { enabled ->
+                    applyToTextLayer { target ->
+                        target.wrapTextEnabled = enabled
+                        if (target.wrapTextEnabled && target.wrapWidth <= 0f) {
+                            target.wrapWidth = target.measureNaturalWidth().coerceAtLeast(60f)
+                        }
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onWrapWidthChange = { width ->
+                    applyToTextLayer { it.wrapWidth = width }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    private fun showComposeSizeSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.SizeDetailPage(
+                textSize = layer.textSize,
+                scale = layer.scale,
+                onTextSizeChange = { sz ->
+                    applyToTextLayer { it.textSize = sz }
+                    pixelCanvasView.invalidate()
+                },
+                onScaleChange = { sc ->
+                    applyToTextLayer { it.scale = sc }
+                    pixelCanvasView.invalidate()
+                },
+                onFitToCanvas = {
+                    val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@SizeDetailPage
+                    val (lw, lh) = l.getUnwarpedDimensions()
+                    val s = kotlin.math.min(
+                        pixelCanvasView.width / lw,
+                        pixelCanvasView.height / lh * 0.9f
+                    )
+                    pixelCanvasView.runRecordedAction("Fit to Canvas") { l.scale = s.coerceAtLeast(0.01f) }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.textSize = 64f
+                        it.scale = 1f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    private fun showComposeOpacitySheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.OpacityDetailPage(
+                opacity = layer.opacity,
+                onOpacityChange = { op ->
+                    applyToTextLayer { it.opacity = op }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer { it.opacity = 255 }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    private fun showComposePositionSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        val range = kotlin.math.max(pixelCanvasView.width, pixelCanvasView.height).toFloat().coerceAtLeast(1000f)
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.PositionDetailPage(
+                posX = layer.x,
+                posY = layer.y,
+                range = range,
+                onPositionChange = { newX, newY ->
+                    applyToTextLayer {
+                        it.x = newX
+                        it.y = newY
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onCenterHorizontal = {
+                    val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@PositionDetailPage
+                    val (lw, _) = l.getUnwarpedDimensions()
+                    pixelCanvasView.runRecordedAction("Center Horizontal") {
+                        l.x = (pixelCanvasView.width - lw * l.scale) / 2f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onCenterVertical = {
+                    val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@PositionDetailPage
+                    val (_, lh) = l.getUnwarpedDimensions()
+                    pixelCanvasView.runRecordedAction("Center Vertical") {
+                        l.y = (pixelCanvasView.height - lh * l.scale) / 2f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onCenterBoth = {
+                    val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@PositionDetailPage
+                    val (lw, lh) = l.getUnwarpedDimensions()
+                    pixelCanvasView.runRecordedAction("Center on Canvas") {
+                        l.x = (pixelCanvasView.width - lw * l.scale) / 2f
+                        l.y = (pixelCanvasView.height - lh * l.scale) / 2f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.x = 0f
+                        it.y = 0f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    private fun showComposeRelativePositionSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.RelativePositionDetailPage(
+                onMove = { deltaX, deltaY ->
+                    val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@RelativePositionDetailPage
+                    pixelCanvasView.runRecordedAction("Move Layer") {
+                        l.x += deltaX
+                        l.y += deltaY
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onCenter = {
+                    val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@RelativePositionDetailPage
+                    val (lw, lh) = l.getUnwarpedDimensions()
+                    val w = pixelCanvasView.width
+                    val h = pixelCanvasView.height
+                    val sw = lw * l.scale
+                    val sh = lh * l.scale
+                    pixelCanvasView.runRecordedAction("Center Layer") {
+                        l.x = (w - sw) / 2f
+                        l.y = (h - sh) / 2f
                     }
                     pixelCanvasView.invalidate()
                 },
@@ -2808,7 +3227,13 @@ tvAngleLabel.text = "Angle: 0°"
                     syncSpacingUIHook?.invoke(layer)
                 }
             }
-            TOOL_ALIGN -> syncAlignUIHook?.invoke(layer)
+            TOOL_ALIGN -> {
+                if (threeDComposeHost != null) {
+                    showComposeAlignSheet(layer)
+                } else {
+                    syncAlignUIHook?.invoke(layer)
+                }
+            }
             TOOL_BG -> {
                 if (threeDComposeHost != null) {
                     showComposeBackgroundSheet(layer)
@@ -2825,13 +3250,37 @@ tvAngleLabel.text = "Angle: 0°"
             }
             TOOL_STYLE -> syncStyleUIHook?.invoke(layer)
             TOOL_MASK -> syncMaskUIHook?.invoke(layer)
-            TOOL_OPACITY -> syncOpacityUIHook?.invoke(layer)
+            TOOL_OPACITY -> {
+                if (threeDComposeHost != null) {
+                    showComposeOpacitySheet(layer)
+                } else {
+                    syncOpacityUIHook?.invoke(layer)
+                }
+            }
             TOOL_ROTATE -> syncRotateUIHook?.invoke(layer)
             TOOL_COLOR -> syncColorUIHook?.invoke(layer)
             TOOL_PADDING -> syncPaddingUIHook?.invoke(layer)
-            TOOL_SIZE -> syncSizeUIHook?.invoke(layer)
-            TOOL_POSITION -> syncPositionUIHook?.invoke(layer)
-            TOOL_REL_POS -> syncRelativePositionUIHook?.invoke(layer)
+            TOOL_SIZE -> {
+                if (threeDComposeHost != null) {
+                    showComposeSizeSheet(layer)
+                } else {
+                    syncSizeUIHook?.invoke(layer)
+                }
+            }
+            TOOL_POSITION -> {
+                if (threeDComposeHost != null) {
+                    showComposePositionSheet(layer)
+                } else {
+                    syncPositionUIHook?.invoke(layer)
+                }
+            }
+            TOOL_REL_POS -> {
+                if (threeDComposeHost != null) {
+                    showComposeRelativePositionSheet(layer)
+                } else {
+                    syncRelativePositionUIHook?.invoke(layer)
+                }
+            }
             TOOL_STYLES -> syncStylesUIHook?.invoke(layer)
             TOOL_INNER -> {
                 if (threeDComposeHost != null) {
@@ -2840,7 +3289,13 @@ tvAngleLabel.text = "Angle: 0°"
                     syncInnerShadowUIHook?.invoke(layer)
                 }
             }
-            TOOL_EMBOSS -> syncEmbossUIHook?.invoke(layer)
+            TOOL_EMBOSS -> {
+                if (threeDComposeHost != null) {
+                    showComposeEmbossSheet(layer)
+                } else {
+                    syncEmbossUIHook?.invoke(layer)
+                }
+            }
             TOOL_GRADIENT -> syncGradientUIHook?.invoke(layer)
             TOOL_TEXTURE -> syncTextureUIHook?.invoke(layer)
             TOOL_3D_TEXT -> {
@@ -2874,8 +3329,20 @@ tvAngleLabel.text = "Angle: 0°"
                     c.sliderRotateZ.value = layer.rotate3DZ.coerceIn(-180f, 180f)
                 }
             }
-            TOOL_PERSPECTIVE -> syncPerspectiveUIHook?.invoke(layer)
-            TOOL_BLEND -> syncBlendUIHook?.invoke(layer)
+            TOOL_PERSPECTIVE -> {
+                if (threeDComposeHost != null) {
+                    showComposePerspectiveSheet(layer)
+                } else {
+                    syncPerspectiveUIHook?.invoke(layer)
+                }
+            }
+            TOOL_BLEND -> {
+                if (threeDComposeHost != null) {
+                    showComposeBlendSheet(layer)
+                } else {
+                    syncBlendUIHook?.invoke(layer)
+                }
+            }
             TOOL_NEON -> {
                 if (threeDComposeHost != null) {
                     showComposeNeonSheet(layer)

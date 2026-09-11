@@ -1866,26 +1866,15 @@ class PixelCanvasView @JvmOverloads constructor(
 
     private val scaleGestureListener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
-            val layer = selectedLayer ?: return false
-            if (layer.isLocked) return false
-
             val factor = detector.scaleFactor
-            if (factor.isNaN() || factor.isInfinite() || factor == 0f) return false
-
-            // Penskalaan dengan titik pusat rotasi/skala di tengah bounding box layer
-            val previousScale = layer.scale
-            val newScale = (previousScale * factor).coerceIn(0.05f, 25.0f)
-            layer.scale = newScale
-            hasTouchTransformed = true
-
-            invalidate()
+            if (factor.isNaN() || factor.isInfinite() || factor <= 0f) return false
+            // Pinch dua jari = zoom KANVAS penuh (background + grid + semua layer)
+            // sekaligus, bukan menskalakan layer/objek yang terseleksi saja.
+            setCanvasZoom(canvasZoom * factor)
             return true
         }
 
-        override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-            val layer = selectedLayer ?: return false
-            return !layer.isLocked
-        }
+        override fun onScaleBegin(detector: ScaleGestureDetector): Boolean = true
     }
 
     private val scaleGestureDetector = ScaleGestureDetector(context, scaleGestureListener)
