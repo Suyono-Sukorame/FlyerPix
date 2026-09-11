@@ -150,8 +150,14 @@ class ObjectMenuController(
         if (tag == OBJ_TEXT) {
             canvas.addTextLayer("New Text")
             showSnackbar("Text layer added")
+            binding.bottomNavigation.selectedItemId = R.id.nav_edit
             return
         }
+
+        if (binding.bottomNavigation.selectedItemId != R.id.nav_add) {
+            binding.bottomNavigation.selectedItemId = R.id.nav_add
+        }
+
         if (tag == activeTag) deselect(restoreStrip = true) else select(tag)
     }
 

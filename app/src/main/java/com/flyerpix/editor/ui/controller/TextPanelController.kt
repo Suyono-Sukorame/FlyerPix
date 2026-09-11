@@ -211,18 +211,26 @@ class TextPanelController(
         // Tab Edit kini kontekstual per tipe layer: layer apa pun (teks/objek)
         // yang terpilih akan membuka tab Edit.
         pixelCanvasView.onLayerSelectedListener = listener@{ layer ->
-            if (!isInitializing && layer != null && !layer.isLocked) {
+            val isTextSelected = layer is com.flyerpix.editor.canvas.model.TextLayer
+            if (!isInitializing && isTextSelected && layer != null && !layer.isLocked) {
                 if (binding.bottomNavigation.selectedItemId != R.id.nav_edit) {
                     binding.bottomNavigation.selectedItemId = R.id.nav_edit
                 }
-            } else if (!isInitializing) {
-                // Layer null / terkunci: render ulang tab Edit (mode objek / empty state),
-                // atau cukup nonaktifkan panel properti teks jika bukan sedang di Edit.
+                return@listener
+            }
+
+            if (!isInitializing && layer == null) {
                 if (isPageOpen || binding.bottomNavigation.selectedItemId == R.id.nav_edit) {
                     binding.bottomNavigation.selectedItemId = R.id.nav_edit
                 } else {
                     for (v in textPanelViews.values) v.visibility = View.GONE
                 }
+            }
+
+            // Non-text layer harus tetap tinggal di tab Add / object flow agar Bezier, Draw,
+            // Shape, Arrow, dan menu lain tidak ikut berpindah ke tab Edit.
+            if (!isInitializing && layer != null && !isTextSelected && !layer.isLocked) {
+                for (v in textPanelViews.values) v.visibility = View.GONE
             }
         }
 
