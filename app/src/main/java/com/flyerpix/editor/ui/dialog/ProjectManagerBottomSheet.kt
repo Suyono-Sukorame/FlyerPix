@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.appcompat.widget.PopupMenu
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import androidx.fragment.app.FragmentManager
@@ -26,6 +27,12 @@ import kotlin.math.min
  */
 class ProjectManagerBottomSheet : BottomSheetDialogFragment() {
 
+    private enum class SortMode {
+        NEWEST,
+        OLDEST,
+        NAME
+    }
+
     private var _binding: LayoutProjectManagerBottomSheetBinding? = null
     private val binding get() = _binding!!
 
@@ -33,6 +40,7 @@ class ProjectManagerBottomSheet : BottomSheetDialogFragment() {
     var onImportExternalRequested: (() -> Unit)? = null
 
     private lateinit var adapter: SavedProjectsAdapter
+    private var sortMode = SortMode.NEWEST
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -61,7 +69,7 @@ class ProjectManagerBottomSheet : BottomSheetDialogFragment() {
         val density = resources.displayMetrics.density
         val maxWidth = (640f * density).toInt()
         val compactWidth = min(
-            (resources.displayMetrics.widthPixels * 0.92f).toInt(),
+            (resources.displayMetrics.widthPixels * 0.80f).toInt(),
             maxWidth
         )
 
@@ -93,12 +101,37 @@ class ProjectManagerBottomSheet : BottomSheetDialogFragment() {
             onImportExternalRequested?.invoke()
             dismiss()
         }
+        binding.btnSortProjects.setOnClickListener { showSortMenu() }
+        binding.btnDoneProjects.setOnClickListener { dismiss() }
+    }
+
+    private fun showSortMenu() {
+        PopupMenu(requireContext(), binding.btnSortProjects).apply {
+            menu.add("Newest first")
+            menu.add("Oldest first")
+            menu.add("Name A-Z")
+            setOnMenuItemClickListener { item ->
+                sortMode = when (item.title.toString()) {
+                    "Oldest first" -> SortMode.OLDEST
+                    "Name A-Z" -> SortMode.NAME
+                    else -> SortMode.NEWEST
+                }
+                loadProjects()
+                true
+            }
+        }.show()
     }
 
     fun loadProjects() {
         val context = context ?: return
         val files = ProjectSerializer.listProjects(context)
-        val items = SavedProjectsAdapter.createFromFiles(files)
+        val items = SavedProjectsAdapter.createFromFiles(files).let { projects ->
+            when (sortMode) {
+                SortMode.NEWEST -> projects.sortedByDescending { it.lastModified }
+                SortMode.OLDEST -> projects.sortedBy { it.lastModified }
+                SortMode.NAME -> projects.sortedBy { it.displayName.lowercase() }
+            }
+        }
 
         adapter.updateItems(items)
 

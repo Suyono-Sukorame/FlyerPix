@@ -26,7 +26,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="14dp"
         android:contentDescription="Project Icon"
-        android:src="@drawable/ic_nav_presets_24px"
+        android:src="@drawable/ic_plp_24px"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/dragHandle"
         app:tint="@color/header_secondary" />
@@ -34,7 +34,7 @@
     <!-- Header Title -->
     <TextView
         android:id="@+id/tvHeaderTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
         android:text="My Projects (.plp)"
@@ -42,6 +42,7 @@
         android:textSize="17sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@id/ivHeaderIcon"
+        app:layout_constraintEnd_toStartOf="@id/btnImportExternal"
         app:layout_constraintStart_toEndOf="@id/ivHeaderIcon"
         app:layout_constraintTop_toTopOf="@id/ivHeaderIcon" />
 
@@ -57,6 +58,7 @@
         android:textColor="#07164F"
         android:textSize="12sp"
         android:textStyle="bold"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/tvHeaderTitle"
         app:layout_constraintStart_toEndOf="@id/tvHeaderTitle"
         app:layout_constraintTop_toTopOf="@id/tvHeaderTitle"
@@ -66,15 +68,43 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnImportExternal"
         style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_width="wrap_content"
+        android:layout_width="36dp"
         android:layout_height="36dp"
-        android:layout_marginEnd="16dp"
-        android:text="Import .plp"
-        android:textColor="@color/header_secondary"
-        android:textSize="12sp"
-        app:icon="@drawable/ic_sharp_photo_camera_24px"
-        app:iconSize="16dp"
+        android:layout_marginEnd="4dp"
+        android:contentDescription="Import PLP project"
+        android:minWidth="0dp"
+        android:padding="0dp"
+        app:icon="@drawable/ic_plp_24px"
+        app:iconSize="20dp"
         app:iconTint="@color/header_secondary"
+        app:layout_constraintBottom_toBottomOf="@id/ivHeaderIcon"
+        app:layout_constraintEnd_toStartOf="@id/btnSortProjects"
+        app:layout_constraintTop_toTopOf="@id/ivHeaderIcon" />
+
+    <ImageButton
+        android:id="@+id/btnSortProjects"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="4dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Sort projects"
+        android:padding="6dp"
+        android:src="@drawable/ic_sort_24px"
+        app:tint="@color/header_secondary"
+        app:layout_constraintBottom_toBottomOf="@id/ivHeaderIcon"
+        app:layout_constraintEnd_toStartOf="@id/btnDoneProjects"
+        app:layout_constraintTop_toTopOf="@id/ivHeaderIcon" />
+
+    <ImageButton
+        android:id="@+id/btnDoneProjects"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="12dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Close projects"
+        android:padding="6dp"
+        android:src="@drawable/ic_check_24px"
+        app:tint="@color/header_secondary"
         app:layout_constraintBottom_toBottomOf="@id/ivHeaderIcon"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/ivHeaderIcon" />
