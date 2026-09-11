@@ -329,9 +329,12 @@ initializeMaskControls()
                 activeTextToolTag == TOOL_3D_TEXT && sel != null -> showCompose3DSheet(sel)
                 activeTextToolTag == TOOL_3D_SHADOW && sel != null -> showComposeShadow3DSheet(sel)
                 activeTextToolTag == TOOL_3D_ROTATE && sel != null -> showComposeRotate3DSheet(sel)
+                activeTextToolTag == TOOL_REFLECTION && sel != null -> showComposeReflectionSheet(sel)
+                activeTextToolTag == TOOL_NEON && sel != null -> showComposeNeonSheet(sel)
                 activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW ||
-                    activeTextToolTag == TOOL_3D_ROTATE -> {
-                    // layer non-3D/berbeda dipilih saat halaman tool 3D terbuka:
+                    activeTextToolTag == TOOL_3D_ROTATE || activeTextToolTag == TOOL_REFLECTION ||
+                    activeTextToolTag == TOOL_NEON -> {
+                    // layer non-teks/berbeda dipilih saat halaman tool terbuka:
                     // tutup halaman settings (paralel dengan perilaku legacy panel)
                     closeEffectSettings()
                 }
@@ -562,6 +565,138 @@ initializeMaskControls()
                 onRotateXChange = { v -> applyToTextLayer { it.rotate3DX = v }; pixelCanvasView.invalidate() },
                 onRotateYChange = { v -> applyToTextLayer { it.rotate3DY = v }; pixelCanvasView.invalidate() },
                 onRotateZChange = { v -> applyToTextLayer { it.rotate3DZ = v }; pixelCanvasView.invalidate() },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() }
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk Reflection (pantulan teks) dengan gaya
+     * yang sama persis seperti halaman 3D Rotate / 3D Text.
+     */
+    private fun showComposeReflectionSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        // Auto-enable saat tool Reflection digunakan (Cancel mengembalikan via snapshot)
+        applyToTextLayer { it.reflectionEnabled = true }
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.ReflectionDetailPage(
+                enabled = layer.reflectionEnabled,
+                opacity = layer.reflectionOpacity.coerceIn(0f, 1f),
+                distance = layer.reflectionDistance.coerceIn(0f, 200f),
+                fade = layer.reflectionFade.coerceIn(0f, 1f),
+                maxHeightPx = sheetMaxH,
+                onEnabledChange = { en ->
+                    applyToTextLayer { it.reflectionEnabled = en }
+                    pixelCanvasView.invalidate()
+                },
+                onOpacityChange = { op ->
+                    applyToTextLayer { it.reflectionOpacity = op }
+                    pixelCanvasView.invalidate()
+                },
+                onDistanceChange = { d ->
+                    applyToTextLayer { it.reflectionDistance = d }
+                    pixelCanvasView.invalidate()
+                },
+                onFadeChange = { f ->
+                    applyToTextLayer { it.reflectionFade = f }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.reflectionEnabled = true
+                        it.reflectionOpacity = 0.4f
+                        it.reflectionDistance = 10f
+                        it.reflectionFade = 0.5f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() }
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk Neon / Glow dengan gaya yang
+     * sama persis seperti halaman 3D Rotate / 3D Text.
+     */
+    private fun showComposeNeonSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        // Auto-enable saat tool Neon digunakan (Cancel mengembalikan via snapshot)
+        applyToTextLayer { it.neonEnabled = true }
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.NeonDetailPage(
+                enabled = layer.neonEnabled,
+                color = layer.neonColor,
+                radius = layer.neonRadius.coerceIn(1f, 40f),
+                intensity = layer.neonIntensity.coerceIn(0.1f, 2f),
+                coreEnabled = layer.neonCoreEnabled,
+                maxHeightPx = sheetMaxH,
+                onEnabledChange = { en ->
+                    applyToTextLayer { it.neonEnabled = en }
+                    pixelCanvasView.invalidate()
+                },
+                onColorChange = { c ->
+                    applyToTextLayer { it.neonColor = c }
+                    pixelCanvasView.invalidate()
+                },
+                onColorPickRequested = {
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@NeonDetailPage
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                        .newInstance(
+                            initialColor = sel.neonColor,
+                            resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.NEON_RESULT_KEY
+                        )
+                        .show(
+                            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                        )
+                },
+                onRadiusChange = { r ->
+                    applyToTextLayer { it.neonRadius = r }
+                    pixelCanvasView.invalidate()
+                },
+                onIntensityChange = { i ->
+                    applyToTextLayer { it.neonIntensity = i }
+                    pixelCanvasView.invalidate()
+                },
+                onCoreEnabledChange = { core ->
+                    applyToTextLayer { it.neonCoreEnabled = core }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.neonColor = 0xFF00E5FF.toInt()
+                        it.neonRadius = 12f
+                        it.neonIntensity = 1f
+                        it.neonCoreEnabled = true
+                        it.neonEnabled = true
+                    }
+                    pixelCanvasView.invalidate()
+                },
                 onApply = { applyEffectSettings() },
                 onCancel = { cancelEffectSettings() }
             )
@@ -2118,6 +2253,10 @@ tvAngleLabel.text = "Angle: 0°"
                     }
                     setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
                     pixelCanvasView.invalidate()
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer
+                    if (sel != null && activeTextToolTag == TOOL_NEON && threeDComposeHost != null) {
+                        showComposeNeonSheet(sel)
+                    }
                 }
             }
 
@@ -2272,7 +2411,13 @@ tvAngleLabel.text = "Angle: 0°"
                     syncShadow3DUIHook?.invoke(layer)
                 }
             }
-            TOOL_REFLECTION -> syncReflectionUIHook?.invoke(layer)
+            TOOL_REFLECTION -> {
+                if (threeDComposeHost != null) {
+                    showComposeReflectionSheet(layer)
+                } else {
+                    syncReflectionUIHook?.invoke(layer)
+                }
+            }
             TOOL_3D_ROTATE -> {
                 if (threeDComposeHost != null) {
                     showComposeRotate3DSheet(layer)
@@ -2285,7 +2430,13 @@ tvAngleLabel.text = "Angle: 0°"
             }
             TOOL_PERSPECTIVE -> syncPerspectiveUIHook?.invoke(layer)
             TOOL_BLEND -> syncBlendUIHook?.invoke(layer)
-            TOOL_NEON -> syncNeonUIHook?.invoke(layer)
+            TOOL_NEON -> {
+                if (threeDComposeHost != null) {
+                    showComposeNeonSheet(layer)
+                } else {
+                    syncNeonUIHook?.invoke(layer)
+                }
+            }
         }
         val title = textToolLabels[tag] ?: "Effect Settings"
         (binding.effectSettingsInclude.root as? com.flyerpix.editor.ui.view.DetailPanel)?.setTitle(title)
@@ -2471,11 +2622,11 @@ tvAngleLabel.text = "Angle: 0°"
      * kompleks mendapat ruang yang lebih lega tanpa tumpukan menu.
      */
     private fun updateEffectSettingsVisibility() {
-        // TOOL_3D_TEXT, TOOL_3D_SHADOW & TOOL_3D_ROTATE ditampilkan via Compose
-        // bottom sheet, bukan panel XML (yang kosong karena inisialisasinya
-        // dialihkan ke Compose).
+        // TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_REFLECTION & TOOL_NEON
+        // ditampilkan via Compose bottom sheet, bukan panel XML.
         val composedPanel = (activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW ||
-            activeTextToolTag == TOOL_3D_ROTATE) &&
+            activeTextToolTag == TOOL_3D_ROTATE || activeTextToolTag == TOOL_REFLECTION ||
+            activeTextToolTag == TOOL_NEON) &&
             threeDComposeHost != null
         val show = effectSettingsOpen && isPageOpen && activeTextToolTag in complexEffectTags &&
             !composedPanel &&
@@ -2503,7 +2654,8 @@ tvAngleLabel.text = "Angle: 0°"
             return
         }
         if (effectSettingsOpen && activeTextToolTag == tag) return
-        if (tag != TOOL_3D_TEXT && tag != TOOL_3D_SHADOW && tag != TOOL_3D_ROTATE) hideCompose3DSheet()
+        if (tag != TOOL_3D_TEXT && tag != TOOL_3D_SHADOW && tag != TOOL_3D_ROTATE &&
+            tag != TOOL_REFLECTION && tag != TOOL_NEON) hideCompose3DSheet()
         textToolTagBeforeEffect = activeTextToolTag.takeUnless { it in complexEffectTags } ?: ""
         snapshotCurrentState()
         activeTextToolTag = tag
@@ -2543,7 +2695,8 @@ tvAngleLabel.text = "Angle: 0°"
      */
     private fun closeEffectSettings() {
         val composeOpened = activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW ||
-            activeTextToolTag == TOOL_3D_ROTATE
+            activeTextToolTag == TOOL_3D_ROTATE || activeTextToolTag == TOOL_REFLECTION ||
+            activeTextToolTag == TOOL_NEON
         settingsSnapshot = null
         effectSettingsOpen = false
         activeTextToolTag = textToolTagBeforeEffect
