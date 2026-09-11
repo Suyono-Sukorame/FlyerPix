@@ -168,7 +168,8 @@
                 android:layout_height="wrap_content" />
     </FrameLayout>
 
-        <!-- Compose host untuk detail 3D: panel kompak di bawah canvas -->
+        <!-- Compose host untuk detail 3D: panel kompak menempel di bawah layar.
+             Navbar otomatis ditranslate ke bawah saat sheet terbuka, jadi margin 0. -->
         <FrameLayout
                 android:id="@+id/composeThreeDSheetContainer"
                 android:layout_width="match_parent"

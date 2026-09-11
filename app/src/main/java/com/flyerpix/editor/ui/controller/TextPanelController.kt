@@ -159,11 +159,11 @@ class TextPanelController(
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY      = 0xFF616161.toInt()
 
-        // Tinggi sheet 3D Text / 3D Shadow: samakan dengan tinggi menu Presets
-        // (kartu 72dp + label + padding rv ≈ 107dp) agar tidak mengecilkan canvas.
+        // Tinggi sheet 3D Text / 3D Shadow: samakan dengan tinggi page Home
+        // (panel preset: rvTemplatePresets ≈ 115dp + marginBottom 56dp ke navbar).
         // Konten Compose di-scroll di dalam sheet.
         private const val COMPOSE_SHEET_GAP_DP = 8
-        private const val COMPOSE_SHEET_FLOOR_DP = 107
+        private const val COMPOSE_SHEET_FLOOR_DP = 116
         private const val COMPOSE_SHEET_RATIO_OF_SCREEN = 0.12f
     }
 
