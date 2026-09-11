@@ -103,7 +103,7 @@ class ObjectPanelController(
             Spec(OBJ_PERSPECTIVE, "Perspective", R.drawable.ic_perspective_24px)
         )
         val density = activity.resources.displayMetrics.density
-        val container = binding.objectToolStripInclude.objectToolStripContainer
+        val container = binding.objectPropertyStripInclude.objectToolStripContainer
         container.post {
             for (spec in specs) {
                 require(spec.tag in sharedCoreEffectTags) {
@@ -158,6 +158,8 @@ class ObjectPanelController(
         activeToolTag = tag
         effectSettingsOpen = true
         binding.objectMenuPanel.visibility = View.GONE
+        binding.editObjectBar.visibility = View.GONE
+        binding.textEditorBar.visibility = View.GONE
         for (v in panelViews.values) v.visibility = View.GONE
         showEffectSettingsVisibility()
         syncEffectUI(tag, layer)
@@ -187,6 +189,12 @@ class ObjectPanelController(
         toolBeforeEffect = ""
         pixelCanvasView.invalidate()
         showEffectSettingsVisibility()
+        // Kembalikan strip properti objek pada tab Edit jika layer objek masih terpilih.
+        val layer = pixelCanvasView.selectedLayer
+        if (layer != null && layer !is TextLayer && !layer.isLocked) {
+            binding.editObjectBar.visibility = View.VISIBLE
+            binding.objectPropertyStripInclude.objectToolStripScroll.visibility = View.VISIBLE
+        }
     }
 
     private fun snapshotCurrentState() {

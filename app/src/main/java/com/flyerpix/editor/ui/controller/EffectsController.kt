@@ -65,7 +65,7 @@ class EffectsController(
         data class Spec(val tag: String, val label: String, val iconRes: Int)
         val specs = listOf(
             Spec(TOOL_ADJUST,  "Adjust",  R.drawable.ic_sharp_palette_24px),
-            Spec(TOOL_EFFECTS, "Effects", R.drawable.ic_nav_wand_24px),
+            Spec(TOOL_EFFECTS, "Filters", R.drawable.ic_nav_wand_24px),
             Spec(TOOL_BLUR,    "Blur",    R.drawable.ic_opacity_24px)
         )
         val density = activity.resources.displayMetrics.density

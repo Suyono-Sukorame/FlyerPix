@@ -43,10 +43,16 @@ class CanvasMenuController(
     private var onCameraRequested: (() -> Unit)? = null
 
     companion object {
-        const val TOOL_BG = "canvas_bg"
+        const val TOOL_BG   = "canvas_bg"
+        const val TOOL_SIZE = "canvas_size"
+        const val TOOL_GRID = "canvas_grid"
+        const val TOOL_SNAP = "canvas_snap"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
+
+        // Aksi instan: tidak membuka konten panel detail.
+        private val instantTools = setOf(TOOL_SIZE, TOOL_GRID, TOOL_SNAP)
     }
 
     private val toolItems = LinkedHashMap<String, ViewGroup>()
@@ -96,7 +102,10 @@ class CanvasMenuController(
     private fun buildToolStrip() {
         data class Spec(val tag: String, val label: String, val iconRes: Int)
         val specs = listOf(
-            Spec(TOOL_BG, "Background", R.drawable.ic_background_24px)
+            Spec(TOOL_BG,   "Background", R.drawable.ic_background_24px),
+            Spec(TOOL_SIZE, "Canvas Size", R.drawable.ic_aspect_ratio_24px),
+            Spec(TOOL_GRID, "Grid", R.drawable.ic_grid_on_24px),
+            Spec(TOOL_SNAP, "Snap", R.drawable.ic_snap_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.canvasToolStripInclude.canvasToolStripContainer
@@ -132,7 +141,46 @@ class CanvasMenuController(
     }
 
     private fun onToolClicked(tag: String) {
+        if (tag == TOOL_SIZE) {
+            showImageSizeDialog()
+            flashSelection(tag)
+            return
+        }
+        if (tag == TOOL_GRID) {
+            val enabled = !pixelCanvasView.isGridEnabled
+            pixelCanvasView.isGridEnabled = enabled
+            pixelCanvasView.invalidate()
+            showSnackbar(if (enabled) "Guide grid enabled" else "Guide grid disabled")
+            flashSelection(tag)
+            return
+        }
+        if (tag == TOOL_SNAP) {
+            val enabled = !pixelCanvasView.isSnapToCenterEnabled
+            pixelCanvasView.isSnapToCenterEnabled = enabled
+            pixelCanvasView.invalidate()
+            showSnackbar(if (enabled) "Snap to guides enabled" else "Snap to guides disabled")
+            flashSelection(tag)
+            return
+        }
         if (tag == activeTag) deselect() else select(tag)
+    }
+
+    /** Highlight sementara untuk tool aksi instan, lalu kembali ke warna default. */
+    private fun flashSelection(tag: String) {
+        if (activeTag == tag) return
+        val item = toolItems[tag] ?: return
+        item.isSelected = true
+        val c = COLOR_ACTIVE
+        (item.getChildAt(0) as? ImageView)?.colorFilter = PorterDuffColorFilter(c, PorterDuff.Mode.SRC_IN)
+        (item.getChildAt(1) as? TextView)?.setTextColor(c)
+        item.postDelayed({
+            if (activeTag != tag) {
+                item.isSelected = false
+                val g = COLOR_GRAY
+                (item.getChildAt(0) as? ImageView)?.colorFilter = PorterDuffColorFilter(g, PorterDuff.Mode.SRC_IN)
+                (item.getChildAt(1) as? TextView)?.setTextColor(g)
+            }
+        }, 400)
     }
 
     fun select(tag: String) {

@@ -61,10 +61,9 @@ class CanvasToolsController(
         val currentMenu = binding.bottomNavigation.selectedItemId
         val selectedLayer = pixelCanvasView.selectedLayer
         
-        // Palette & Eyedropper: hanya untuk Text & Object menu dengan layer terpilih
+        // Palette & Eyedropper: hanya untuk Edit menu dengan layer terpilih
         val showColorTools = selectedLayer != null && 
-                            (currentMenu == com.flyerpix.editor.R.id.nav_text || 
-                             currentMenu == com.flyerpix.editor.R.id.nav_object) &&
+                            (currentMenu == com.flyerpix.editor.R.id.nav_edit) &&
                             !pixelCanvasView.isEyedropperMode &&
                             !binding.cropCanvasOverlay.isActive
         

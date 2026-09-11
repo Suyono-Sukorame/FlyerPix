@@ -27,15 +27,14 @@ class ObjectMenuController(
     private val onShapeCreated: ((com.flyerpix.editor.canvas.model.ShapeLayer) -> Unit)? = null
 ) {
     companion object {
-        // Object-only creation tools: fitur pembuatan/penambahan layer objek.
-        // Semuanya bersifat berbeda dari Text editing tools dan tidak boleh
-        // di-duplicate ke menu Text.
-        const val OBJ_STICKER = "obj_sticker"
-        const val OBJ_IMPORT  = "obj_import"
-        const val OBJ_DRAW    = "obj_draw"
-        const val OBJ_SHAPES  = "obj_shapes"
-        const val OBJ_BEZIER  = "obj_bezier"
-        const val OBJ_ARROW   = "obj_arrow"
+        // Add-only creation tools: fitur pembuatan/penambahan layer.
+        const val OBJ_TEXT     = "obj_text"
+        const val OBJ_STICKER  = "obj_sticker"
+        const val OBJ_IMPORT   = "obj_import"
+        const val OBJ_DRAW     = "obj_draw"
+        const val OBJ_SHAPES   = "obj_shapes"
+        const val OBJ_BEZIER   = "obj_bezier"
+        const val OBJ_ARROW    = "obj_arrow"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
@@ -83,12 +82,13 @@ class ObjectMenuController(
     private fun buildToolStrip() {
         data class Spec(val tag: String, val label: String, val iconRes: Int)
         val specs = listOf(
-            Spec(OBJ_STICKER, "Sticker", R.drawable.ic_sharp_face_24px),
-            Spec(OBJ_IMPORT,  "Import",  R.drawable.ic_outline_photo_24px),
-            Spec(OBJ_DRAW,    "Draw",    R.drawable.ic_sharp_brush_24px),
-            Spec(OBJ_SHAPES,  "Shapes",  R.drawable.ic_nav_shapes_24px),
-            Spec(OBJ_BEZIER,  "Bezier",  R.drawable.ic_curve_24px),
-            Spec(OBJ_ARROW,   "Arrow",   R.drawable.ic_arrow_24px)
+            Spec(OBJ_TEXT,     "Text",    R.drawable.ic_nav_text_24px),
+            Spec(OBJ_STICKER,  "Sticker", R.drawable.ic_sharp_face_24px),
+            Spec(OBJ_IMPORT,   "Import",  R.drawable.ic_outline_photo_24px),
+            Spec(OBJ_DRAW,     "Draw",    R.drawable.ic_sharp_brush_24px),
+            Spec(OBJ_SHAPES,   "Shapes",  R.drawable.ic_nav_shapes_24px),
+            Spec(OBJ_BEZIER,   "Bezier",  R.drawable.ic_curve_24px),
+            Spec(OBJ_ARROW,    "Arrow",   R.drawable.ic_arrow_24px)
         )
         val density = context.resources.displayMetrics.density
         val container = binding.objectToolStripInclude.objectToolStripContainer
@@ -121,6 +121,13 @@ class ObjectMenuController(
     }
 
     private fun onToolClicked(tag: String) {
+        // Text adalah aksi instan: tambah layer teks lalu biarkan listener
+        // seleksi memindahkan pengguna ke tab Edit.
+        if (tag == OBJ_TEXT) {
+            canvas.addTextLayer("New Text")
+            showSnackbar("Text layer added")
+            return
+        }
         if (tag == activeTag) deselect() else select(tag)
     }
 

@@ -181,6 +181,8 @@ class ShapePanelController(
         // Show panel, menggantikan halaman Objek agar tidak berhimpit
         binding.shapeSettingsPanel.root.visibility = View.VISIBLE
         binding.objectMenuPanel.visibility = View.GONE
+        binding.editObjectBar.visibility = View.GONE
+        binding.editEmptyHint.visibility = View.GONE
         binding.effectSettingsInclude.root.visibility = View.GONE
 
         // Hide other panels
@@ -193,9 +195,17 @@ class ShapePanelController(
      */
     fun hideShapeSettings() {
         binding.shapeSettingsPanel.root.visibility = View.GONE
-        // Kembalikan halaman Objek hanya jika masih berada di page Objek
-        if (binding.bottomNavigation.selectedItemId == R.id.nav_object) {
+        // Kembalikan halaman Add hanya jika masih berada di tab Add
+        if (binding.bottomNavigation.selectedItemId == R.id.nav_add) {
             binding.objectMenuPanel.visibility = View.VISIBLE
+        }
+        // Kembalikan strip properti objek pada tab Edit jika objek masih terpilih
+        if (binding.bottomNavigation.selectedItemId == R.id.nav_edit) {
+            val selected = canvas.selectedLayer
+            if (selected != null && selected !is com.flyerpix.editor.canvas.model.TextLayer && !selected.isLocked) {
+                binding.editObjectBar.visibility = View.VISIBLE
+                binding.objectPropertyStripInclude.objectToolStripScroll.visibility = View.VISIBLE
+            }
         }
         currentShape = null
         snapshotShape = null

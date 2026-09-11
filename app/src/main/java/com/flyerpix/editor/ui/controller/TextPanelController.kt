@@ -202,18 +202,19 @@ class TextPanelController(
         // Controller terpusat. Dipasang PALING AWAL sehingga menjadi innermost
         // pada rantai onLayerSelectedListener → dijalankan PALING AKHIR, dan
         // visibilitas halaman yang ditetapkannya selalu menang.
+        // Tab Edit kini kontekstual per tipe layer: layer apa pun (teks/objek)
+        // yang terpilih akan membuka tab Edit.
         pixelCanvasView.onLayerSelectedListener = listener@{ layer ->
-            val textLayer = layer as? TextLayer
-
-            // Skip auto-switch saat initialization untuk mempertahankan menu default (Presets)
-            if (!isInitializing && textLayer != null && !textLayer.isLocked) {
-                onShowMenu(R.id.nav_text)
+            if (!isInitializing && layer != null && !layer.isLocked) {
+                if (binding.bottomNavigation.selectedItemId != R.id.nav_edit) {
+                    binding.bottomNavigation.selectedItemId = R.id.nav_edit
+                }
             } else if (!isInitializing) {
-                if (isPageOpen) {
-                    onShowMenu(R.id.nav_presets)
+                // Layer null / terkunci: render ulang tab Edit (mode objek / empty state),
+                // atau cukup nonaktifkan panel properti teks jika bukan sedang di Edit.
+                if (isPageOpen || binding.bottomNavigation.selectedItemId == R.id.nav_edit) {
+                    binding.bottomNavigation.selectedItemId = R.id.nav_edit
                 } else {
-                    // Halaman lain (Objek/Kanvas/Efek) dibiarkan terbuka;
-                    // cukup nonaktifkan panel properti teks.
                     for (v in textPanelViews.values) v.visibility = View.GONE
                 }
             }
@@ -2378,7 +2379,7 @@ tvAngleLabel.text = "Angle: 0°"
 
 
     private fun openTextPage() {
-        onShowMenu(R.id.nav_text)
+        onShowMenu(R.id.nav_edit)
     }
 
     private fun closeTextPage(resetNav: Boolean = true) {
@@ -2388,9 +2389,9 @@ tvAngleLabel.text = "Angle: 0°"
         for (v in textPanelViews.values) v.visibility = View.GONE
         refreshTextPageUI()
         if (resetNav) {
-            binding.bottomNavigation.selectedItemId = R.id.nav_presets
+            binding.bottomNavigation.selectedItemId = R.id.nav_edit
         } else {
-            onShowMenu(R.id.nav_presets)
+            onShowMenu(R.id.nav_edit)
         }
     }
 

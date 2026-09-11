@@ -57,7 +57,7 @@
 
     </androidx.constraintlayout.motion.widget.MotionLayout>
 
-    <!-- Tab Presets: carousel template -->
+    <!-- Tab Home: aksi cepat (New/Open/Recents/Settings) + carousel template -->
     <LinearLayout
             android:id="@+id/bottomControlPanelContainer"
             android:layout_width="match_parent"
@@ -67,6 +67,73 @@
             android:background="@color/light_surface"
             android:orientation="vertical"
             android:elevation="8dp">
+
+        <LinearLayout
+                android:id="@+id/homeQuickActions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="10dp"
+                android:paddingTop="10dp">
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnHomeNew"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:minHeight="40dp"
+                    android:text="🆕 New"
+                    android:textSize="12sp"
+                    app:strokeColor="#444444" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnHomeOpen"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:minHeight="40dp"
+                    android:text="📂 Open"
+                    android:textSize="12sp"
+                    app:strokeColor="#444444" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnHomeRecents"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:minHeight="40dp"
+                    android:text="🕘 Recents"
+                    android:textSize="12sp"
+                    app:strokeColor="#444444" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnHomeSettings"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minHeight="40dp"
+                    android:text="⚙️ Settings"
+                    android:textSize="12sp"
+                    app:strokeColor="#444444" />
+        </LinearLayout>
+
+        <TextView
+                android:id="@+id/tvHomeTemplatesLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="12dp"
+                android:paddingTop="8dp"
+                android:text="Templates"
+                android:textColor="@color/light_text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold" />
 
         <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvTemplatePresets"
@@ -90,33 +157,65 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 
-    <!-- Text Page (UX ala Presets): tool strip + property panel kompak -->
+    <!-- Tab Edit: panel kontekstual per tipe layer terpilih (Text / Objek / empty state) -->
     <LinearLayout
-            android:id="@+id/textEditorBar"
+            android:id="@+id/editContainerPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:maxHeight="560dp"
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp"
-            android:maxHeight="560dp"
             android:orientation="vertical"
             android:background="@drawable/bg_panel_bottom"
             android:elevation="@dimen/panel_elevation"
             android:theme="@style/LightPanelTheme"
             android:visibility="gone">
 
-        <!-- Panel properti kontekstual: satu panel aktif sesuai tool yang dipilih pada strip -->
-        <include
-                layout="@layout/layout_text_property_panel"
-                android:id="@+id/textPropertyPanelInclude"
+        <TextView
+                android:id="@+id/editEmptyHint"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingVertical="28dp"
+                android:text="Select a layer on the canvas to edit it"
+                android:textColor="@color/light_text_secondary"
+                android:textSize="13sp"
+                android:visibility="gone" />
 
-        <!-- Tool strip horizontal: ikon + label, scroll horizontal -->
-        <include
-                layout="@layout/layout_text_tool_strip"
-                android:id="@+id/textToolStripInclude"
+        <!-- Mode objek: tool properti untuk shape/image/sticker/pen/arrow -->
+        <LinearLayout
+                android:id="@+id/editObjectBar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+            <include
+                    layout="@layout/layout_object_tool_strip"
+                    android:id="@+id/objectPropertyStripInclude"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Mode teks: panel properti kontekstual + tool strip teks -->
+        <LinearLayout
+                android:id="@+id/textEditorBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+            <include
+                    layout="@layout/layout_text_property_panel"
+                    android:id="@+id/textPropertyPanelInclude"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+            <include
+                    layout="@layout/layout_text_tool_strip"
+                    android:id="@+id/textToolStripInclude"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Detail panel khusus efek: berdiri sendiri agar tidak ikut menu lain dan tidak menutup canvas terlalu banyak -->
@@ -162,7 +261,7 @@
             android:layout_gravity="bottom"
             android:layout_marginBottom="56dp" />
 
-    <!-- Halaman Objek: tool strip ikon + konten detail -->
+    <!-- Tab Add: tool strip pembuatan layer + konten detail (sticker/import/draw/shape/bezier/arrow) -->
     <LinearLayout
             android:id="@+id/objectMenuPanel"
             android:layout_width="match_parent"
@@ -670,7 +769,7 @@
             <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="EFFECTS"
+                    android:text="FILTERS"
                     android:textColor="#18C8F5"
                     android:textSize="11sp"
                     android:textStyle="bold" />

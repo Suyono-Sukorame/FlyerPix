@@ -280,7 +280,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                     val after = binding.bottomNavigation.selectedItemId
                     android.util.Log.d(
                         "FlyerPixProfile",
-                        "TemplateTest navBefore=$before navAfter=$after expected=${R.id.nav_presets}" +
+                        "TemplateTest navBefore=$before navAfter=$after expected=${R.id.nav_home}" +
                             " selected=${pixelCanvasView.selectedLayer?.javaClass?.simpleName}"
                     )
                 }, 600)
@@ -325,6 +325,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         initializeViewPager()
         initializeBottomSheetBehavior()
         initializeBottomNavigationView()
+        initializeHomeQuickActions()
 
         // ── Jaga kanvas utuh: tiap perubahan layout panel bawah, sesuaikan
         //    band yang direservasi sehingga kanvas mengecil & tidak pernah
@@ -366,10 +367,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 animateNavTranslation(if (effectSettingsOpen) offset else 0)
                 val collapsedH = (107 * density).toInt()
                 if (effectSettingsOpen) {
-                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel, binding.editContainerPanel)
                         .forEach { it.animateLayoutHeight(collapsedH) }
                 } else {
-                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel, binding.editContainerPanel)
                         .forEach {
                             it.animateLayoutHeight(collapsedH)
                             it.animateLayoutMarginBottom((56 * density).toInt())
@@ -465,10 +466,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         objectMenu.initialize()
         objectMenu.onDetailExpandedChanged = { setDetailExpanded(objectMenu.activeTag.isNotEmpty()) }
 
-        // Tap shape di kanvas (bukan drag) => navigasikan ke halaman Objek lalu buka Shape Settings
+        // Tap shape di kanvas (bukan drag) => navigasikan ke tab Edit lalu buka Shape Settings
         pixelCanvasView.onShapeTapRequested = { shape ->
-            binding.bottomNavigation.selectedItemId = R.id.nav_object
-            objectMenu.select(ObjectMenuController.OBJ_SHAPES)
+            binding.bottomNavigation.selectedItemId = R.id.nav_edit
             shapePanelController.showShapeSettings(shape)
         }
 
@@ -484,10 +484,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 animateNavTranslation(if (effectSettingsOpen) offset else 0)
                 val collapsedH = (107 * density).toInt()
                 if (effectSettingsOpen) {
-                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel, binding.editContainerPanel)
                         .forEach { it.animateLayoutHeight(collapsedH) }
                 } else {
-                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+                    listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel, binding.editContainerPanel)
                         .forEach {
                             it.animateLayoutHeight(collapsedH)
                             it.animateLayoutMarginBottom((56 * density).toInt())
@@ -535,6 +535,36 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     private fun initializeSave() {
         binding.saveFab.setOnClickListener {
             exportController.showExportDialog()
+        }
+    }
+
+    /**
+     * Aksi cepat tab Home. Fase 1: New = bersihkan kanvas, Open & Recents =
+     * project manager yang sudah ada, Settings = placeholder (detail menyusul).
+     */
+    private fun initializeHomeQuickActions() {
+        binding.btnHomeNew.setOnClickListener {
+            MaterialAlertDialogBuilder(this, R.style.AppAlertDialog)
+                .setTitle("New Project")
+                .setMessage("Start a new project? Current canvas will be cleared.")
+                .setPositiveButton(R.string.yes) { _, _ ->
+                    pixelCanvasView.runWithLayerSelectSuppressed {
+                        pixelCanvasView.clearLayers()
+                    }
+                    pixelCanvasView.invalidate()
+                    showSnackbar("New project started")
+                }
+                .setNegativeButton(R.string.no, null)
+                .show()
+        }
+        binding.btnHomeOpen.setOnClickListener {
+            exportController.showProjectManager()
+        }
+        binding.btnHomeRecents.setOnClickListener {
+            exportController.showProjectManager()
+        }
+        binding.btnHomeSettings.setOnClickListener {
+            showSnackbar("Settings page coming soon")
         }
     }
 
@@ -624,8 +654,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         if (binding.paletteFab.isExpanded) {
             binding.paletteFab.isExpanded = false
         }
-        if (binding.bottomNavigation.selectedItemId != R.id.nav_presets) {
-            binding.bottomNavigation.selectedItemId = R.id.nav_presets
+        if (binding.bottomNavigation.selectedItemId != R.id.nav_home) {
+            binding.bottomNavigation.selectedItemId = R.id.nav_home
         } else if (saveMode) {
             exitSaveMode()
         } else {
@@ -654,20 +684,18 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
      * lama (dictator tumpang-tindih) selalu dipensiunkan.
      */
     private fun showMenu(menuId: Int) {
-        // Hide all FABs immediately to prevent flash effect when switching menus
-        // DISABLED: FAB features tidak diperlukan saat ini
-        // binding.paletteFab.visibility = View.GONE
-        // binding.eyedropperFab.visibility = View.GONE
-        // binding.cropFab.visibility = View.GONE
-
-        if (menuId != R.id.nav_text && textPanelController.isEffectSettingsOpen()) {
+        // Tutup halaman Effect Settings (teks maupun objek) saat pindah tab Edit.
+        if (menuId != R.id.nav_edit && textPanelController.isEffectSettingsOpen()) {
             textPanelController.cancelEffectSettings()
         }
-        
+        if (menuId != R.id.nav_edit && objectPanelController.isEffectSettingsOpen()) {
+            objectPanelController.cancelEffectSettings()
+        }
+
         val pages = listOf(
-            R.id.nav_presets to binding.bottomControlPanelContainer,
-            R.id.nav_text to binding.textEditorBar,
-            R.id.nav_object to binding.objectMenuPanel,
+            R.id.nav_home to binding.bottomControlPanelContainer,
+            R.id.nav_add to binding.objectMenuPanel,
+            R.id.nav_edit to binding.editContainerPanel,
             R.id.nav_canvas to binding.canvasMenuPanel,
             R.id.nav_effects to binding.effectsMenuPanel
         )
@@ -676,13 +704,18 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             page.visibility = if (id == menuId) View.VISIBLE else View.GONE
         }
 
-        // Tutup panel Shape Settings jika pindah ke halaman selain Objek
-        if (menuId != R.id.nav_object && ::shapePanelController.isInitialized) {
+        // Tutup panel Shape Settings jika pindah ke halaman selain Add/Edit
+        if (menuId != R.id.nav_add && menuId != R.id.nav_edit && ::shapePanelController.isInitialized) {
             shapePanelController.hideShapeSettings()
         }
 
-        textPanelController.isPageOpen = menuId == R.id.nav_text
-        textPanelController.pagePinnedByNav = textPanelController.isPageOpen
+        // Tab Edit bersifat kontekstual: mode bergantung tipe layer yang terpilih.
+        val selected = pixelCanvasView.selectedLayer
+        val isTextMode = menuId == R.id.nav_edit &&
+            selected is com.flyerpix.editor.canvas.model.TextLayer && !selected.isLocked
+        textPanelController.isPageOpen = isTextMode
+        textPanelController.pagePinnedByNav = false
+        applyEditContextVisuals(menuId)
 
         // Sheet lama dipensiunkan: tak pernah boleh muncul lagi di atas kanvas.
         binding.toolsBottomSheet.visibility = View.GONE
@@ -691,23 +724,12 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         }
 
         if (textPanelController.isPageOpen) {
-            val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
-            if (layer == null || layer.isLocked) {
-                val unlocked = pixelCanvasView.layers.lastOrNull {
-                    it is com.flyerpix.editor.canvas.model.TextLayer && !it.isLocked
-                }
-                if (unlocked != null) {
-                    pixelCanvasView.selectedLayer = unlocked
-                } else {
-                    showSnackbar("Add a text layer first via + Add → Text")
-                }
-            }
             textPanelController.refreshUI()
         } else {
             textPanelController.hideStripAndPanels()
         }
 
-        if (menuId == R.id.nav_object) {
+        if (menuId == R.id.nav_add) {
             objectMenu.refreshUI()
         } else {
             objectMenu.deselect()
@@ -724,16 +746,31 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         } else {
             effectsController.deselect()
         }
-        
-        // Update FAB visibility berdasarkan menu yang aktif
-        // DISABLED: CanvasToolsController tidak di-initialize
-        // canvasToolsController.updateContextFabVisibility()
-        
+
         fitCanvasToOpenPanels()
     }
 
+    /**
+     * Atur tampilan tab Edit sesuai tipe layer terpilih:
+     * - TextLayer → panel properti teks + tool strip teks.
+     * - Layer objek lain → tool strip properti objek.
+     * - Tidak ada / terkunci → empty state.
+     */
+    private fun applyEditContextVisuals(menuId: Int) {
+        if (menuId != R.id.nav_edit) return
+        val selected = pixelCanvasView.selectedLayer
+        val isText = selected is com.flyerpix.editor.canvas.model.TextLayer
+        val usable = selected != null && !selected.isLocked
+        binding.editEmptyHint.visibility = if (usable) View.GONE else View.VISIBLE
+        binding.editObjectBar.visibility = if (usable && !isText) View.VISIBLE else View.GONE
+        binding.textEditorBar.visibility = if (usable && isText) View.VISIBLE else View.GONE
+        if (usable && !isText) {
+            binding.objectPropertyStripInclude.objectToolStripScroll.visibility = View.VISIBLE
+        }
+    }
+
     private fun initializeBottomNavigationView() {
-        // Halaman awal: Presets (default dari XML), sheet dipensiunkan.
+        // Halaman awal: Home (default dari XML), sheet dipensiunkan.
         binding.toolsBottomSheet.visibility = View.GONE
         textPanelController.isPageOpen = false
         textPanelController.pagePinnedByNav = false
@@ -743,8 +780,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             true
         }
         
-        // Initialize dengan menu default (Presets) untuk set FAB visibility dengan benar
-        showMenu(R.id.nav_presets)
+        // Initialize dengan menu default (Home) untuk set FAB visibility dengan benar
+        showMenu(R.id.nav_home)
     }
 
     private fun initializeAuthenticTopBar() {
@@ -946,23 +983,23 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                     showSnackbar("Text layer copied")
                 }
                 3 -> {
-                    // Size - switch to text panel
-                    binding.bottomNavigation.selectedItemId = R.id.nav_text
-                    showSnackbar("Adjust text size with the slider in the Text panel")
+                    // Size - switch to edit tab
+                    binding.bottomNavigation.selectedItemId = R.id.nav_edit
+                    showSnackbar("Adjust text size with the slider in the Edit panel")
                 }
                 4 -> {
-                    // Rotate - switch to text panel
-                    binding.bottomNavigation.selectedItemId = R.id.nav_text
-                    showSnackbar("Adjust text rotation with the slider in the Text panel")
+                    // Rotate - switch to edit tab
+                    binding.bottomNavigation.selectedItemId = R.id.nav_edit
+                    showSnackbar("Adjust text rotation with the slider in the Edit panel")
                 }
                 5 -> {
                     // Alignment menu
                     showTextAlignmentMenu(anchor, textLayer)
                 }
                 6 -> {
-                    // Color - switch to text panel
-                    binding.bottomNavigation.selectedItemId = R.id.nav_text
-                    showSnackbar("Choose text color in the Text panel")
+                    // Color - switch to edit tab
+                    binding.bottomNavigation.selectedItemId = R.id.nav_edit
+                    showSnackbar("Choose text color in the Edit panel")
                 }
                 7 -> {
                     // To Front
@@ -1031,16 +1068,16 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                     pixelCanvasView.addTextLayer(date)
                 }
                 3 -> {
-                    binding.bottomNavigation.selectedItemId = R.id.nav_object
+                    binding.bottomNavigation.selectedItemId = R.id.nav_add
                     objectMenu.select(ObjectMenuController.OBJ_STICKER)
                 }
                 4 -> {
-                    binding.bottomNavigation.selectedItemId = R.id.nav_object
+                    binding.bottomNavigation.selectedItemId = R.id.nav_add
                     objectMenu.select(ObjectMenuController.OBJ_SHAPES)
                 }
                 5 -> preEditImageLauncher.launch("image/*")
                 6 -> {
-                    binding.bottomNavigation.selectedItemId = R.id.nav_object
+                    binding.bottomNavigation.selectedItemId = R.id.nav_add
                     objectMenu.select(ObjectMenuController.OBJ_DRAW)
                 }
             }
@@ -1134,8 +1171,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         binding.topBarInclude.root.visibility = View.VISIBLE
         binding.nameTextInputLayout.visibility = View.GONE
         val current = binding.bottomNavigation.selectedItemId
-        val known = listOf(R.id.nav_presets, R.id.nav_text, R.id.nav_object, R.id.nav_canvas, R.id.nav_effects).contains(current)
-        showMenu(if (known) current else R.id.nav_presets)
+        val known = listOf(R.id.nav_home, R.id.nav_add, R.id.nav_edit, R.id.nav_canvas, R.id.nav_effects).contains(current)
+        showMenu(if (known) current else R.id.nav_home)
         // updateContextFabVisibility() sudah dipanggil di dalam showMenu(), tidak perlu double call
         binding.motionLayout.transitionToStart()
         saveMode = false
@@ -1264,7 +1301,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             // Kontraksi: semua panel kembali ke ukuran default & nav dipanggil kembali.
             // Kanvas DIPERTAHANKAN kecil selama panel menyusut agar tidak tertutup,
             // lalu di-fit-kan ulang ke ruang baru setelah animasi selesai.
-            listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+            listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel, binding.editContainerPanel)
                 .forEach { panel ->
                     panel.animateLayoutHeight(collapsedH)
                     panel.animateLayoutMarginBottom(collapsedMargin)
@@ -1274,8 +1311,11 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             return
         }
 
+        // Tab Edit memakai tinggi natural (wrap_content + maxHeight), tidak perlu ekspansi.
+        if (binding.bottomNavigation.selectedItemId == R.id.nav_edit) return
+
         val activePanel = when (binding.bottomNavigation.selectedItemId) {
-            R.id.nav_object -> binding.objectMenuPanel
+            R.id.nav_add -> binding.objectMenuPanel
             R.id.nav_canvas -> binding.canvasMenuPanel
             R.id.nav_effects -> binding.effectsMenuPanel
             else -> return
@@ -1283,7 +1323,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
         // Tinggi expanded diambil dari tinggi natural konten (bukan ruang sisa
         // di bawah kanvas), di-clamp agar masih menyisakan ruang untuk kanvas.
-        listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
+        listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel, binding.editContainerPanel)
             .filter { it != activePanel }
             .forEach { panel -> panel.animateLayoutHeight(collapsedH) }
         animateNavTranslation(navOffset)
@@ -1530,7 +1570,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     /** Panel-panel bawah yang sedang menempati ruang layar. */
     private fun visibleBottomPanels(): List<View> = listOf(
         binding.bottomControlPanelContainer,
-        binding.textEditorBar,
+        binding.editContainerPanel,
         binding.objectMenuPanel,
         binding.canvasMenuPanel,
         binding.effectsMenuPanel,
