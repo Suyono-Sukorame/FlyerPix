@@ -57,7 +57,8 @@
 
     </androidx.constraintlayout.motion.widget.MotionLayout>
 
-    <!-- Tab Home: aksi cepat (New/Open/Recents/Settings) + carousel template -->
+    <!-- Tab Home: carousel template presets (tab panel; aksi cepat proyek ada di
+         menu overflow top-bar agar tidak menutupi editor kanvas) -->
     <LinearLayout
             android:id="@+id/bottomControlPanelContainer"
             android:layout_width="match_parent"
@@ -68,80 +69,13 @@
             android:orientation="vertical"
             android:elevation="8dp">
 
-        <LinearLayout
-                android:id="@+id/homeQuickActions"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingHorizontal="10dp"
-                android:paddingTop="10dp">
-
-            <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnHomeNew"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
-                    android:minHeight="40dp"
-                    android:text="🆕 New"
-                    android:textSize="12sp"
-                    app:strokeColor="#444444" />
-
-            <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnHomeOpen"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
-                    android:minHeight="40dp"
-                    android:text="📂 Open"
-                    android:textSize="12sp"
-                    app:strokeColor="#444444" />
-
-            <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnHomeRecents"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
-                    android:minHeight="40dp"
-                    android:text="🕘 Recents"
-                    android:textSize="12sp"
-                    app:strokeColor="#444444" />
-
-            <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnHomeSettings"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:minHeight="40dp"
-                    android:text="⚙️ Settings"
-                    android:textSize="12sp"
-                    app:strokeColor="#444444" />
-        </LinearLayout>
-
-        <TextView
-                android:id="@+id/tvHomeTemplatesLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="12dp"
-                android:paddingTop="8dp"
-                android:text="Templates"
-                android:textColor="@color/light_text_secondary"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
         <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvTemplatePresets"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:paddingHorizontal="8dp"
-                android:paddingVertical="8dp"
+                android:paddingVertical="12dp"
                 android:clipToPadding="false"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
     </LinearLayout>

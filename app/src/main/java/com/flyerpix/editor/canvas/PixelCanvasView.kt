@@ -838,6 +838,15 @@ class PixelCanvasView @JvmOverloads constructor(
 
     @Volatile
     private var blurRebuildPending = false
+
+    /**
+     * Snapshot blur yang menunggu recycle oleh worker. UI thread TIDAK boleh
+     * me-recycle bitmap snapshot sementara build sedang berjalan (worker masih
+     * memegang referensinya → `getPixels()` pada bitmap recycled = crash).
+     * Saat resize terjadi dengan build in-flight, UI mendaftarkan bitmap lama di
+     * sini dan [runBlurBuild] yang me-recycle setelah selesai memakainya.
+     */
+    private val blurStaleBitmaps = java.util.concurrent.ConcurrentLinkedDeque<Bitmap>()
     @Volatile
     private var blurRebuildFp: Int = 0
     @Volatile
@@ -1182,7 +1191,14 @@ class PixelCanvasView @JvmOverloads constructor(
 
         var bmp = nativeBlurBitmap
         if (bmp == null || bmp.width != bw || bmp.height != bh) {
-            nativeBlurBitmap?.recycle()
+            if (blurRebuildPending) {
+                // Build sedang berjalan dan masih memegang bitmap lama → jangan
+                // recycle sekarang, biarkan worker yang me-recycle (lihat
+                // runBlurBuild). Memaksa recycle di sini = crash getPixels.
+                if (nativeBlurBitmap != null) blurStaleBitmaps.offer(nativeBlurBitmap)
+            } else {
+                nativeBlurBitmap?.recycle()
+            }
             bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             nativeBlurBitmap = bmp
             nativeBlurPixels = IntArray(bw * bh)
@@ -1260,63 +1276,77 @@ class PixelCanvasView @JvmOverloads constructor(
 
     /** Body worker: render snapshot di UI thread → blur native → publish. */
     private fun runBlurBuild() {
-        while (true) {
-            val bmp = nativeBlurBitmap
-            val pixels = nativeBlurPixels
-            if (bmp == null || pixels == null) break
-            val bw = bmp.width
-            val bh = bmp.height
-            val fp = blurRebuildFp
-            val radius = blurRebuildRadius
+        try {
+            while (true) {
+                val bmp = nativeBlurBitmap
+                val pixels = nativeBlurPixels
+                if (bmp == null || pixels == null) break
+                val bw = bmp.width
+                val bh = bmp.height
+                val fp = blurRebuildFp
+                val radius = blurRebuildRadius
 
-            // Render snapshot di UI thread; tunggu selesai agar pixel stabil.
-            val latch = CountDownLatch(1)
-            val posted = Handler(Looper.getMainLooper()).post {
-                renderBlurSnapshot(width, height, viewportRectOrFull())
-                latch.countDown()
-            }
-            if (!posted) { blurRebuildPending = false; return }
-            latch.await()
+                // Render snapshot di UI thread; tunggu selesai agar pixel stabil.
+                val latch = CountDownLatch(1)
+                val posted = Handler(Looper.getMainLooper()).post {
+                    renderBlurSnapshot(width, height, viewportRectOrFull())
+                    latch.countDown()
+                }
+                if (!posted) { blurRebuildPending = false; return }
+                latch.await()
 
-            val t0 = System.nanoTime()
-            bmp.getPixels(pixels, 0, bw, 0, 0, bw, bh)
-            runCatching { FpNative.blurPixels(pixels, bw, bh, radius) }
-            val t1 = System.nanoTime()
-            val brightness = adjustments[CanvasAdjustment.BRIGHTNESS] ?: 0f
-            val contrast = adjustments[CanvasAdjustment.CONTRAST] ?: 0f
-            val saturation = adjustments[CanvasAdjustment.SATURATION] ?: 0f
-            if (brightness != 0f || contrast != 0f || saturation != 0f) {
-                runCatching { FpNative.applyColorMatrix(pixels, brightness, contrast, saturation) }
-            }
-            val noiseAlpha = if (isEffectEnabled(CanvasEffect.NOISE)) NOISE_OVERLAY_ALPHA else 0
-            val vignette = isEffectEnabled(CanvasEffect.VIGNETTE)
-            if (noiseAlpha != 0 || vignette) {
-                runCatching {
-                    FpNative.applyNoiseVignette(pixels, bw, bh, noiseAlpha, NOISE_SEED, vignette)
+                // UI thread bisa mengganti+men-recycle snapshot saat kita menunggu
+                // render (resize kanvas saat panel terbuka). Lewati iterasi: loop
+                // mengambil pasangan bitmap yang baru dan merender ulang.
+                if (bmp.isRecycled) continue
+
+                val t0 = System.nanoTime()
+                bmp.getPixels(pixels, 0, bw, 0, 0, bw, bh)
+                runCatching { FpNative.blurPixels(pixels, bw, bh, radius) }
+                val t1 = System.nanoTime()
+                val brightness = adjustments[CanvasAdjustment.BRIGHTNESS] ?: 0f
+                val contrast = adjustments[CanvasAdjustment.CONTRAST] ?: 0f
+                val saturation = adjustments[CanvasAdjustment.SATURATION] ?: 0f
+                if (brightness != 0f || contrast != 0f || saturation != 0f) {
+                    runCatching { FpNative.applyColorMatrix(pixels, brightness, contrast, saturation) }
+                }
+                val noiseAlpha = if (isEffectEnabled(CanvasEffect.NOISE)) NOISE_OVERLAY_ALPHA else 0
+                val vignette = isEffectEnabled(CanvasEffect.VIGNETTE)
+                if (noiseAlpha != 0 || vignette) {
+                    runCatching {
+                        FpNative.applyNoiseVignette(pixels, bw, bh, noiseAlpha, NOISE_SEED, vignette)
+                    }
+                }
+                val t2 = System.nanoTime()
+                val out = blurOutBufferFor(bw, bh)
+                out.setPixels(pixels, 0, bw, 0, 0, bw, bh)
+                val t3 = System.nanoTime()
+                blurRebuildCount++
+                if (profileEnabled) {
+                    android.util.Log.d(
+                        PROFILE_TAG,
+                        "blurBuild get+blur=${(t1 - t0) / 1_000_000.0}ms adjust=${(t2 - t1) / 1_000_000.0}ms" +
+                            " set=${(t3 - t2) / 1_000_000.0}ms total=${(t3 - t0) / 1_000_000.0}ms" +
+                            " size=${bw}x${bh} r=$radius rebuilds=$blurRebuildCount"
+                    )
+                }
+
+                nativeBlurResult = out
+                nativeBlurResultFp = fp
+                postInvalidateOnAnimation()
+
+                // Coalescing: bila selama build ada permintaan baru, rebuild lagi.
+                if (blurRebuildFp == fp) {
+                    blurRebuildPending = false
+                    break
                 }
             }
-            val t2 = System.nanoTime()
-            val out = blurOutBufferFor(bw, bh)
-            out.setPixels(pixels, 0, bw, 0, 0, bw, bh)
-            val t3 = System.nanoTime()
-            blurRebuildCount++
-            if (profileEnabled) {
-                android.util.Log.d(
-                    PROFILE_TAG,
-                    "blurBuild get+blur=${(t1 - t0) / 1_000_000.0}ms adjust=${(t2 - t1) / 1_000_000.0}ms" +
-                        " set=${(t3 - t2) / 1_000_000.0}ms total=${(t3 - t0) / 1_000_000.0}ms" +
-                        " size=${bw}x${bh} r=$radius rebuilds=$blurRebuildCount"
-                )
-            }
-
-            nativeBlurResult = out
-            nativeBlurResultFp = fp
-            postInvalidateOnAnimation()
-
-            // Coalescing: bila selama build ada permintaan baru, rebuild lagi.
-            if (blurRebuildFp == fp) {
-                blurRebuildPending = false
-                break
+        } finally {
+            // Snapshot lama yang di-defer saat resize (karena build in-flight)
+            // baru aman di-recycle setelah build ini benar-benar selesai.
+            while (true) {
+                val stale = blurStaleBitmaps.poll() ?: break
+                stale.recycle()
             }
         }
     }

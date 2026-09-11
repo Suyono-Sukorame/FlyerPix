@@ -325,7 +325,6 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         initializeViewPager()
         initializeBottomSheetBehavior()
         initializeBottomNavigationView()
-        initializeHomeQuickActions()
 
         // ── Jaga kanvas utuh: tiap perubahan layout panel bawah, sesuaikan
         //    band yang direservasi sehingga kanvas mengecil & tidak pernah
@@ -539,33 +538,23 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     }
 
     /**
-     * Aksi cepat tab Home. Fase 1: New = bersihkan kanvas, Open & Recents =
-     * project manager yang sudah ada, Settings = placeholder (detail menyusul).
+     * Dialog "New Project": bersihkan kanvas dengan konfirmasi. Dipanggil dari
+     * menu overflow top-bar (aksi cepat tab Home dipindah ke sana agar panel
+     * Home tidak menutupi editor kanvas).
      */
-    private fun initializeHomeQuickActions() {
-        binding.btnHomeNew.setOnClickListener {
-            MaterialAlertDialogBuilder(this, R.style.AppAlertDialog)
-                .setTitle("New Project")
-                .setMessage("Start a new project? Current canvas will be cleared.")
-                .setPositiveButton(R.string.yes) { _, _ ->
-                    pixelCanvasView.runWithLayerSelectSuppressed {
-                        pixelCanvasView.clearLayers()
-                    }
-                    pixelCanvasView.invalidate()
-                    showSnackbar("New project started")
+    private fun showNewProjectDialog() {
+        MaterialAlertDialogBuilder(this, R.style.AppAlertDialog)
+            .setTitle("New Project")
+            .setMessage("Start a new project? Current canvas will be cleared.")
+            .setPositiveButton(R.string.yes) { _, _ ->
+                pixelCanvasView.runWithLayerSelectSuppressed {
+                    pixelCanvasView.clearLayers()
                 }
-                .setNegativeButton(R.string.no, null)
-                .show()
-        }
-        binding.btnHomeOpen.setOnClickListener {
-            exportController.showProjectManager()
-        }
-        binding.btnHomeRecents.setOnClickListener {
-            exportController.showProjectManager()
-        }
-        binding.btnHomeSettings.setOnClickListener {
-            showSnackbar("Settings page coming soon")
-        }
+                pixelCanvasView.invalidate()
+                showSnackbar("New project started")
+            }
+            .setNegativeButton(R.string.no, null)
+            .show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -1117,6 +1106,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         popup.menu.add(0, 6, 5, "Clear canvas")
         popup.menu.add(0, 7, 6, "Save Project")
         popup.menu.add(0, 8, 7, "Open Project (.plp)")
+        popup.menu.add(0, 9, 8, "New Project")
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -1136,6 +1126,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 6 -> pixelCanvasView.clearLayers()
                 7 -> exportController.showSaveProjectDialog()
                 8 -> exportController.showProjectManager()
+                9 -> showNewProjectDialog()
             }
             true
         }
@@ -1516,9 +1507,15 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
      * Posisi panel dibaca dari koordinat NYATA (getLocationInWindow), sehingga
      * otomatis mengikuti animasi nav/panel dan margin yang sedang berubah.
      */
+    private var canvasFitPending = false
+    private var lastFullRatio: String? = null
+
     private fun fitCanvasToOpenPanels(attempt: Int = 0) {
+        if (canvasFitPending) return
         val root = binding.parentLayout
+        canvasFitPending = true
         binding.root.post {
+            canvasFitPending = false
             if (root.width <= 0 || root.height <= 0) return@post
             // Tunggu transisi MotionLayout (save mode) selesai agar ukuran kanvas
             // yang kita set tidak di-overwrite mid-transition.
@@ -1608,6 +1605,14 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
      */
     private fun applyCanvasSize(w: Int, h: Int, topMarginPx: Int, parentHeightPx: Int) {
         val bottomMargin = (parentHeightPx - topMarginPx - h).coerceAtLeast(0)
+        val lp = binding.canvasCard.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+        // Idempoten: skip bila ukuran & margin sudah persis sama. Tanpa guard ini
+        // setCanvasSize + requestLayout tiap pass layout → feedback-loop tak berujung.
+        if (lp != null && lp.width == w && lp.height == h &&
+            lp.topMargin == topMarginPx && lp.bottomMargin == bottomMargin
+        ) {
+            return
+        }
         val cs = binding.motionLayout.getConstraintSet(R.id.start)
         if (cs != null) {
             cs.constrainWidth(R.id.canvasCard, w)
@@ -1619,7 +1624,6 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             cs.setMargin(R.id.canvasCard, ConstraintSet.TOP, topMarginPx)
             cs.setMargin(R.id.canvasCard, ConstraintSet.BOTTOM, bottomMargin)
         }
-        val lp = binding.canvasCard.layoutParams as? android.view.ViewGroup.MarginLayoutParams
         if (lp != null) {
             lp.width = w
             lp.height = h
@@ -1638,6 +1642,15 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         val topMargin = (8 * density).toInt()
         val bottomMargin = (56 * density).toInt()
         val ratio = "${pixelCanvasView.canvasWidth}:${pixelCanvasView.canvasHeight}"
+        // Idempoten: kanvas sudah full & rasio masih sama → tidak perlu requestLayout.
+        // Mencegah feedback-loop layout yang sama seperti applyCanvasSize.
+        val lp = binding.canvasCard.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+        if (lp != null && lp.width == 0 && lp.height == 0 &&
+            lp.topMargin == topMargin && lp.bottomMargin == bottomMargin &&
+            lastFullRatio == ratio
+        ) {
+            return
+        }
         val cs = binding.motionLayout.getConstraintSet(R.id.start)
         if (cs != null) {
             cs.constrainWidth(R.id.canvasCard, 0)
@@ -1650,7 +1663,6 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             cs.setMargin(R.id.canvasCard, ConstraintSet.TOP, topMargin)
             cs.setMargin(R.id.canvasCard, ConstraintSet.BOTTOM, bottomMargin)
         }
-        val lp = binding.canvasCard.layoutParams as? android.view.ViewGroup.MarginLayoutParams
         if (lp != null) {
             lp.width = 0
             lp.height = 0
@@ -1660,6 +1672,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             lp.rightMargin = 0
             binding.canvasCard.layoutParams = lp
         }
+        lastFullRatio = ratio
         binding.motionLayout.requestLayout()
     }
 
