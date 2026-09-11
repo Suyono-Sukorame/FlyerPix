@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/light_surface"
+    android:background="@drawable/bg_project_manager_sheet"
     android:paddingBottom="24dp">
 
     <!-- Drag Handle -->

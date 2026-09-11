@@ -75,15 +75,20 @@ class SavedProjectsAdapter(
                 val details = try {
                     val json = file.readText(Charsets.UTF_8)
                     val root = JsonParser.parseString(json).asJsonObject
-                    if (root.has("project_name")) {
-                        val parsedName = root.get("project_name").asString
+                    val nameElement = root.get("projectName") ?: root.get("project_name")
+                    if (nameElement != null && !nameElement.isJsonNull) {
+                        val parsedName = nameElement.asString
                         if (!parsedName.isNullOrBlank()) {
                             name = parsedName
                         }
                     }
                     val canvasObj = root.getAsJsonObject("canvas")
-                    val w = canvasObj?.get("width")?.asInt ?: 1080
-                    val h = canvasObj?.get("height")?.asInt ?: 1080
+                    val w = root.get("canvasWidth")?.asInt
+                        ?: canvasObj?.get("width")?.asInt
+                        ?: 1080
+                    val h = root.get("canvasHeight")?.asInt
+                        ?: canvasObj?.get("height")?.asInt
+                        ?: 1080
                     val layerCount = root.getAsJsonArray("layers")?.size() ?: 0
                     val sizeKb = (file.length() + 1023) / 1024
                     val dateStr = dateFormat.format(Date(file.lastModified()))

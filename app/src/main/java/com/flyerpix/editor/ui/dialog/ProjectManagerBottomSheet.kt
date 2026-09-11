@@ -1,10 +1,15 @@
 package com.flyerpix.editor.ui.dialog
 
 import android.os.Bundle
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Toast
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import androidx.fragment.app.FragmentManager
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -14,6 +19,7 @@ import com.flyerpix.editor.project.ProjectModel
 import com.flyerpix.editor.project.ProjectSerializer
 import com.flyerpix.editor.ui.adapter.SavedProjectsAdapter
 import java.io.File
+import kotlin.math.min
 
 /**
  * BottomSheet pop-up untuk melihat, memuat ulang, dan mengelola proyek .plp yang tersimpan (Prompt 48).
@@ -43,6 +49,30 @@ class ProjectManagerBottomSheet : BottomSheetDialogFragment() {
         setupAdapter()
         setupListeners()
         loadProjects()
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        val bottomSheetDialog = dialog as? BottomSheetDialog ?: return
+        val bottomSheet = bottomSheetDialog.findViewById<View>(
+            com.google.android.material.R.id.design_bottom_sheet
+        ) ?: return
+        val density = resources.displayMetrics.density
+        val maxWidth = (640f * density).toInt()
+        val compactWidth = min(
+            (resources.displayMetrics.widthPixels * 0.92f).toInt(),
+            maxWidth
+        )
+
+        bottomSheet.layoutParams = bottomSheet.layoutParams.apply {
+            width = compactWidth
+            height = ViewGroup.LayoutParams.WRAP_CONTENT
+        }
+        bottomSheet.background = ColorDrawable(Color.TRANSPARENT)
+        BottomSheetBehavior.from(bottomSheet).isFitToContents = true
+        bottomSheet.requestLayout()
+        bottomSheetDialog.window?.setLayout(compactWidth, WindowManager.LayoutParams.WRAP_CONTENT)
     }
 
     private fun setupAdapter() {

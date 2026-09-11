@@ -1226,7 +1226,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             when (item.itemId) {
                 1 -> exportController.showSaveProjectDialog()
                 2 -> exportController.showExportDialog()
-                3 -> exportController.showProjectManager()
+                3 -> exportController.showProjectManager {
+                    openProjectFileLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                }
             }
             true
         }

@@ -112,11 +112,11 @@ class ExportController(
         }
     }
 
-    fun showProjectManager() {
+    fun showProjectManager(onImportExternalRequested: (() -> Unit)? = null) {
         ProjectManagerBottomSheet.show(
             fragmentManager = activity.supportFragmentManager,
             onProjectLoaded = { project -> loadProject(project) },
-            onImportExternalRequested = { /* handled by Activity launcher */ }
+            onImportExternalRequested = onImportExternalRequested
         )
     }
 
