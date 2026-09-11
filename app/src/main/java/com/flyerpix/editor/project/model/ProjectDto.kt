@@ -188,13 +188,18 @@ data class LayerDto(
     val layerName: String? = null,
 
     // ── ShapeLayer ───────────────────────────────────────────────────────────
-    /** "RECTANGLE" | "ROUNDED_RECTANGLE" | "CIRCLE" | "TRIANGLE" | "STAR" */
+    /** "RECTANGLE" | "ROUNDED_RECTANGLE" | "CIRCLE" | "ARC" | "TRIANGLE" | "STAR" */
     val shapeType: String? = null,
     val shapeWidth: Float? = null,
     val shapeHeight: Float? = null,
     val fillColor: Int? = null,
     val shapeStrokeColor: Int? = null,
     val shapeStrokeWidth: Float? = null,
+    val shapeStrokeOpacity: Int? = null,
+    val shapeStrokeJoin: String? = null,
+    val shapeStrokeStyle: String? = null,
+    val arcStartAngle: Float? = null,
+    val arcSweepAngle: Float? = null,
     val cornerRadiusX: Float? = null,
     val cornerRadiusY: Float? = null,
     val starPoints: Int? = null,

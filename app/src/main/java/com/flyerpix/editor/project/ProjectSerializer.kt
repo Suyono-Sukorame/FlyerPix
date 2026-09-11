@@ -318,6 +318,11 @@ object ProjectSerializer {
         fillColor           = l.fillColor,
         shapeStrokeColor    = l.strokeColor,
         shapeStrokeWidth    = l.strokeWidth,
+        shapeStrokeOpacity  = l.strokeOpacity,
+        shapeStrokeJoin     = l.strokeJoin.name,
+        shapeStrokeStyle    = l.strokeStyle.name,
+        arcStartAngle       = l.arcStartAngle,
+        arcSweepAngle       = l.arcSweepAngle,
         cornerRadiusX       = l.cornerRadiusX,
         cornerRadiusY       = l.cornerRadiusY,
         starPoints          = l.starPoints,
@@ -613,6 +618,15 @@ object ProjectSerializer {
                 fillColor           = dto.fillColor ?: Color.WHITE,
                 strokeColor         = dto.shapeStrokeColor ?: Color.BLACK,
                 strokeWidth         = dto.shapeStrokeWidth ?: 0f,
+                strokeOpacity       = dto.shapeStrokeOpacity ?: 255,
+                strokeJoin          = dto.shapeStrokeJoin?.let {
+                    try { android.graphics.Paint.Join.valueOf(it) } catch (e: Exception) { android.graphics.Paint.Join.MITER }
+                } ?: android.graphics.Paint.Join.MITER,
+                strokeStyle         = dto.shapeStrokeStyle?.let {
+                    try { StrokeStyle.valueOf(it) } catch (e: Exception) { StrokeStyle.SOLID }
+                } ?: StrokeStyle.SOLID,
+                arcStartAngle       = dto.arcStartAngle ?: 0f,
+                arcSweepAngle       = dto.arcSweepAngle ?: 270f,
                 cornerRadiusX       = dto.cornerRadiusX ?: 20f,
                 cornerRadiusY       = dto.cornerRadiusY ?: 20f,
                 starPoints          = dto.starPoints ?: 5,

@@ -43,7 +43,8 @@ private val PickerUnselectedBorder = Color(0xFFE2E8F0)
 private val SHAPE_ENTRIES = listOf(
     ShapeType.RECTANGLE         to "Rectangle",
     ShapeType.ROUNDED_RECTANGLE to "Rounded",
-    ShapeType.CIRCLE            to "Circle",
+    ShapeType.CIRCLE            to "Ellipse",
+    ShapeType.ARC               to "Arc",
     ShapeType.TRIANGLE          to "Triangle",
     ShapeType.STAR              to "Star"
 )
@@ -221,6 +222,16 @@ private fun DrawScope.drawShapePreview(type: ShapeType, fillColor: Color) {
                 color = fillColor,
                 radius = radius,
                 center = Offset(w / 2f, h / 2f)
+            )
+        }
+        ShapeType.ARC -> {
+            drawArc(
+                color = fillColor,
+                startAngle = 0f,
+                sweepAngle = 270f,
+                useCenter = true,
+                topLeft = Offset(pad, pad),
+                size = Size(w - pad * 2f, h - pad * 2f)
             )
         }
         ShapeType.TRIANGLE -> {

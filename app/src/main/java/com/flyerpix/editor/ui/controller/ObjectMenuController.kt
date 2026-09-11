@@ -21,6 +21,7 @@ import com.flyerpix.editor.canvas.model.ArrowStyle
 import com.flyerpix.editor.canvas.model.PenLayer
 import com.flyerpix.editor.canvas.model.ShapeLayer
 import com.flyerpix.editor.canvas.model.ShapeType
+import com.flyerpix.editor.canvas.model.StrokeStyle
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 import com.flyerpix.editor.ui.EditorActivity
 import com.flyerpix.editor.ui.compose.*
@@ -75,6 +76,9 @@ class ObjectMenuController(
     private var shapeSnapshotStrokeOpacity: Int = 255
     private var shapeSnapshotStrokeColor: Int = Color.BLACK
     private var shapeSnapshotStrokeJoin: Paint.Join = Paint.Join.MITER
+    private var shapeSnapshotStrokeStyle: StrokeStyle = StrokeStyle.SOLID
+    private var shapeSnapshotArcStartAngle: Float = 0f
+    private var shapeSnapshotArcSweepAngle: Float = 270f
 
     private var draftArrow: ArrowLayer? = null
     private var draftPen: PenLayer? = null
@@ -333,6 +337,9 @@ class ObjectMenuController(
                     shapeSnapshotStrokeOpacity = shape.strokeOpacity
                     shapeSnapshotStrokeColor = shape.strokeColor
                     shapeSnapshotStrokeJoin = shape.strokeJoin
+                    shapeSnapshotStrokeStyle = shape.strokeStyle
+                    shapeSnapshotArcStartAngle = shape.arcStartAngle
+                    shapeSnapshotArcSweepAngle = shape.arcSweepAngle
                     showComposeShapeDetail(shape)
                 },
                 onClose = {
@@ -377,6 +384,9 @@ class ObjectMenuController(
             shapeSnapshotStrokeOpacity = shape.strokeOpacity
             shapeSnapshotStrokeColor = shape.strokeColor
             shapeSnapshotStrokeJoin = shape.strokeJoin
+            shapeSnapshotStrokeStyle = shape.strokeStyle
+            shapeSnapshotArcStartAngle = shape.arcStartAngle
+            shapeSnapshotArcSweepAngle = shape.arcSweepAngle
         }
 
         host.setContent {
@@ -388,6 +398,9 @@ class ObjectMenuController(
             var currentStrokeOpacity by remember { mutableStateOf(shape.strokeOpacity / 255f * 100f) }
             var currentStrokeColor by remember { mutableStateOf(shape.strokeColor) }
             var currentStrokeJoin by remember { mutableStateOf(shape.strokeJoin) }
+            var currentStrokeStyle by remember { mutableStateOf(shape.strokeStyle) }
+            var currentArcStartAngle by remember { mutableStateOf(shape.arcStartAngle) }
+            var currentArcSweepAngle by remember { mutableStateOf(shape.arcSweepAngle) }
 
             ShapeDetailPage(
                 shapeType = currentType,
@@ -398,6 +411,9 @@ class ObjectMenuController(
                 strokeOpacity = currentStrokeOpacity,
                 strokeColor = currentStrokeColor,
                 strokeJoin = currentStrokeJoin,
+                strokeStyle = currentStrokeStyle,
+                arcStartAngle = currentArcStartAngle,
+                arcSweepAngle = currentArcSweepAngle,
                 onShapeTypeChange = { type ->
                     currentType = type
                     shape.shapeType = type
@@ -451,6 +467,21 @@ class ObjectMenuController(
                     shape.strokeJoin = join
                     canvas.invalidate()
                 },
+                onStrokeStyleChange = { style ->
+                    currentStrokeStyle = style
+                    shape.strokeStyle = style
+                    canvas.invalidate()
+                },
+                onArcStartAngleChange = { angle ->
+                    currentArcStartAngle = angle
+                    shape.arcStartAngle = angle
+                    canvas.invalidate()
+                },
+                onArcSweepAngleChange = { angle ->
+                    currentArcSweepAngle = angle
+                    shape.arcSweepAngle = angle
+                    canvas.invalidate()
+                },
                 onApply = {
                     canvas.runRecordedAction(if (isNewShape) "Add Shape" else "Modify Shape") {}
                     showSnackbar("Shape saved")
@@ -470,6 +501,9 @@ class ObjectMenuController(
                         shape.strokeOpacity = shapeSnapshotStrokeOpacity
                         shape.strokeColor = shapeSnapshotStrokeColor
                         shape.strokeJoin = shapeSnapshotStrokeJoin
+                        shape.strokeStyle = shapeSnapshotStrokeStyle
+                        shape.arcStartAngle = shapeSnapshotArcStartAngle
+                        shape.arcSweepAngle = shapeSnapshotArcSweepAngle
                     }
                     canvas.invalidate()
                     draftShape = null
@@ -580,7 +614,7 @@ class ObjectMenuController(
         container.visibility = View.VISIBLE
         container.bringToFront()
 
-        val sheetMaxH = computeSheetHeight(0.42f)
+        val sheetMaxH = computeSheetHeight(0.48f)
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
 

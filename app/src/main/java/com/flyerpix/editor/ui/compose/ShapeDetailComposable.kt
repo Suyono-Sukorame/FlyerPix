@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.model.ShapeType
+import com.flyerpix.editor.canvas.model.StrokeStyle
 
 private val PrimaryBlue = Color(0xFF1769FF)
 private val TextPrimary = Color(0xFF1E293B)
@@ -60,6 +61,9 @@ fun ShapeDetailPage(
     strokeOpacity: Float,
     strokeColor: Int,
     strokeJoin: Paint.Join,
+    strokeStyle: StrokeStyle,
+    arcStartAngle: Float,
+    arcSweepAngle: Float,
     onShapeTypeChange: (ShapeType) -> Unit,
     onCornerRadiusChange: (Float) -> Unit,
     onOpacityChange: (Float) -> Unit,
@@ -70,6 +74,9 @@ fun ShapeDetailPage(
     onStrokeColorChange: (Int) -> Unit,
     onOpenStrokeColorPicker: () -> Unit,
     onStrokeJoinChange: (Paint.Join) -> Unit,
+    onStrokeStyleChange: (StrokeStyle) -> Unit,
+    onArcStartAngleChange: (Float) -> Unit,
+    onArcSweepAngleChange: (Float) -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
     maxHeightPx: Int = 460
@@ -211,7 +218,8 @@ fun ShapeDetailPage(
                                         val shapeList = listOf(
                                             ShapeType.RECTANGLE to "Rectangle",
                                             ShapeType.ROUNDED_RECTANGLE to "Rounded",
-                                            ShapeType.CIRCLE to "Circle",
+                                            ShapeType.CIRCLE to "Ellipse",
+                                            ShapeType.ARC to "Arc",
                                             ShapeType.TRIANGLE to "Triangle",
                                             ShapeType.STAR to "Star"
                                         )
@@ -300,6 +308,29 @@ fun ShapeDetailPage(
                                                 activeTrackColor = PrimaryBlue
                                             )
                                         )
+                                    }
+
+                                    if (shapeType == ShapeType.ARC) {
+                                        listOf(
+                                            Triple("Arc Start Angle", arcStartAngle, onArcStartAngleChange),
+                                            Triple("Arc Sweep Angle", arcSweepAngle, onArcSweepAngleChange)
+                                        ).forEach { (label, value, onChange) ->
+                                            Column {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text(label, color = TextSecondary, fontSize = 11.sp)
+                                                    Text("${value.toInt()}°", color = PrimaryBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                                Slider(
+                                                    value = value,
+                                                    onValueChange = onChange,
+                                                    valueRange = if (label.startsWith("Arc Start")) -360f..360f else -360f..360f,
+                                                    colors = SliderDefaults.colors(thumbColor = PrimaryBlue, activeTrackColor = PrimaryBlue)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
 
@@ -471,6 +502,42 @@ fun ShapeDetailPage(
                                             elevation = ButtonDefaults.elevation(0.dp)
                                         ) {
                                             Text("More...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+
+                                    // Stroke Join Style
+                                    Text(
+                                        text = "Stroke Style",
+                                        color = TextSecondary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        listOf(
+                                            StrokeStyle.SOLID to "Solid",
+                                            StrokeStyle.DASHED to "Dashed",
+                                            StrokeStyle.DOTTED to "Dotted"
+                                        ).forEach { (style, label) ->
+                                            val isSelected = strokeStyle == style
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(if (isSelected) TabSelectedBg else Color(0xFFF8FAFC))
+                                                    .border(
+                                                        width = if (isSelected) 1.5.dp else 1.dp,
+                                                        color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
+                                                        shape = RoundedCornerShape(8.dp)
+                                                    )
+                                                    .clickable { onStrokeStyleChange(style) }
+                                                    .padding(vertical = 6.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(label, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, color = if (isSelected) PrimaryBlue else TextPrimary)
+                                            }
                                         }
                                     }
 

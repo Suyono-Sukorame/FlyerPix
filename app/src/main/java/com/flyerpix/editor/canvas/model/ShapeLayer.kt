@@ -2,6 +2,7 @@ package com.flyerpix.editor.canvas.model
 
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
@@ -16,8 +17,15 @@ enum class ShapeType {
     RECTANGLE,
     ROUNDED_RECTANGLE,
     CIRCLE,
+    ARC,
     TRIANGLE,
     STAR
+}
+
+enum class StrokeStyle {
+    SOLID,
+    DASHED,
+    DOTTED
 }
 
 /**
@@ -56,6 +64,9 @@ data class ShapeLayer(
     var strokeWidth: Float = 0f,
     var strokeOpacity: Int = 255, // Stroke opacity terpisah dari layer opacity
     var strokeJoin: Paint.Join = Paint.Join.MITER, // MITER, BEVEL, ROUND
+    var strokeStyle: StrokeStyle = StrokeStyle.SOLID,
+    var arcStartAngle: Float = 0f,
+    var arcSweepAngle: Float = 270f,
     // ── Rounded Rectangle ──────────────────────────────────────────────────
     var cornerRadiusX: Float = 20f,
     var cornerRadiusY: Float = 20f,
@@ -95,6 +106,7 @@ data class ShapeLayer(
             ShapeType.RECTANGLE        -> buildRectanglePath()
             ShapeType.ROUNDED_RECTANGLE -> buildRoundedRectanglePath()
             ShapeType.CIRCLE           -> buildCirclePath()
+            ShapeType.ARC             -> buildCirclePath()
             ShapeType.TRIANGLE         -> buildTrianglePath()
             ShapeType.STAR             -> buildStarPath()
         }
@@ -185,12 +197,6 @@ data class ShapeLayer(
         // 3. Gambar bentuk
         val path = buildPath()
 
-        // Fill
-        paint.style = Paint.Style.FILL
-        paint.color = fillColor
-        paint.alpha = opacity.coerceIn(0, 255)
-        paint.strokeWidth = 0f
-
         // Drop Shadow (via setShadowLayer — berfungsi untuk semua draw call)
         if (shadowEnabled && shadowRadius > 0f) {
             val a = (shadowOpacity.coerceIn(0f, 1f) * 255).toInt()
@@ -200,7 +206,16 @@ data class ShapeLayer(
             paint.clearShadowLayer()
         }
 
-        canvas.drawPath(path, paint)
+        // Arc memakai drawArc agar fill menjadi wedge dan stroke tetap terbuka.
+        paint.style = Paint.Style.FILL
+        paint.color = fillColor
+        paint.alpha = opacity.coerceIn(0, 255)
+        paint.strokeWidth = 0f
+        if (shapeType == ShapeType.ARC) {
+            canvas.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, paint)
+        } else {
+            canvas.drawPath(path, paint)
+        }
 
         // Clear shadow for stroke pass
         paint.clearShadowLayer()
@@ -212,8 +227,19 @@ data class ShapeLayer(
             paint.alpha = strokeOpacity.coerceIn(0, 255) // Gunakan stroke opacity terpisah
             paint.strokeWidth = strokeWidth
             paint.strokeJoin = strokeJoin // Apply join style
-            canvas.drawPath(path, paint)
+            paint.pathEffect = when (strokeStyle) {
+                StrokeStyle.SOLID -> null
+                StrokeStyle.DASHED -> DashPathEffect(floatArrayOf(strokeWidth * 3f, strokeWidth * 2f), 0f)
+                StrokeStyle.DOTTED -> DashPathEffect(floatArrayOf(strokeWidth, strokeWidth * 2f), 0f)
+            }
+            if (shapeType == ShapeType.ARC) {
+                canvas.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, false, paint)
+            } else {
+                canvas.drawPath(path, paint)
+            }
         }
+
+        paint.pathEffect = null
 
         canvas.restoreToCount(saveCount)
     }

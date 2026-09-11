@@ -40,6 +40,7 @@ private val BezierSwatchColors = listOf(
     0xFF43A047.toInt(),
     0xFFFFB300.toInt(),
     0xFF8E24AA.toInt(),
+    0xFF00ACC1.toInt(),
     0xFF212121.toInt()
 )
 
@@ -57,7 +58,7 @@ fun BezierDetailPage(
     onOpenColorPicker: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
-    maxHeightPx: Int = 360
+    maxHeightPx: Int = 400
 ) {
     var strokeWidthState by remember(strokeWidth) { mutableStateOf(strokeWidth) }
     var strokeColorState by remember(strokeColor) { mutableStateOf(strokeColor) }
@@ -109,7 +110,7 @@ fun BezierDetailPage(
                             SettingRow(
                                 label = "Stroke Width",
                                 value = strokeWidthState,
-                                valueRange = 2f..30f,
+                                valueRange = 2f..60f,
                                 displayValue = "${strokeWidthState.toInt()} px",
                                 onValueChange = { new ->
                                     strokeWidthState = new
