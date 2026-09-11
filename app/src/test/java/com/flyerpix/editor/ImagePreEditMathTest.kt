@@ -113,4 +113,53 @@ class ImagePreEditMathTest {
         assertTrue(locked.right <= 1f)
         assertTrue(locked.bottom <= 1f)
     }
+
+    @Test
+    fun fitRatioToCanvas_1_1_isFullSquare() {
+        val fitted = CropMath.fitRatioToCanvas(1, 1)
+        assertRect(RectNorm(0f, 0f, 1f, 1f), fitted)
+    }
+
+    @Test
+    fun fitRatioToCanvas_16_9_keepsRatioInsideCanvas() {
+        val fitted = CropMath.fitRatioToCanvas(16, 9)
+        assertEquals(16f / 9f, fitted.width / fitted.height, tolerance)
+        assertTrue(fitted.left >= 0f)
+        assertTrue(fitted.top >= 0f)
+        assertTrue(fitted.right <= 1f)
+        assertTrue(fitted.bottom <= 1f)
+    }
+
+    @Test
+    fun fitRatioToCanvas_9_16_isPortrait() {
+        val fitted = CropMath.fitRatioToCanvas(9, 16)
+        assertEquals(9f / 16f, fitted.width / fitted.height, tolerance)
+        assertTrue(fitted.width < fitted.height)
+    }
+
+    @Test
+    fun applyRatioLock_preservesRatio() {
+        val dragged = RectNorm(0.1f, 0.1f, 0.5f, 0.4f)
+        val locked = CropMath.applyRatioLock(dragged, DragCorner.TOP_LEFT, 16 to 9)
+        assertEquals(16f / 9f, locked.width / locked.height, tolerance)
+        assertTrue(locked.left >= 0f)
+        assertTrue(locked.top >= 0f)
+        assertTrue(locked.right <= 1f)
+        assertTrue(locked.bottom <= 1f)
+    }
+
+    @Test
+    fun fitRatioToCanvas_4_3_centered() {
+        val ratio4to3 = CropMath.fitRatioToCanvas(4, 3)
+        assertEquals(4f / 3f, ratio4to3.width / ratio4to3.height, tolerance)
+        assertEquals(ratio4to3.centerX, 0.5f, tolerance)
+        assertEquals(ratio4to3.centerY, 0.5f, tolerance)
+    }
+
+    @Test
+    fun applyRatioLock_nullFallsBackToSquare() {
+        val dragged = RectNorm(0.2f, 0.5f, 0.6f, 0.9f)
+        val locked = CropMath.applyRatioLock(dragged, DragCorner.TOP_LEFT, null)
+        assertEquals(locked.width, locked.height, tolerance)
+    }
 }

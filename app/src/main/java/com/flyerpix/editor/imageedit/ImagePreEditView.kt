@@ -28,6 +28,10 @@ class ImagePreEditView @JvmOverloads constructor(
     private var image: Bitmap? = null
     val selection = CropSelection()
 
+    /** Rasio aspek preset yang aktif ("1:1", "16:9", dst); null = bebas. */
+    var activeAspect: Pair<Int, Int>? = null
+        private set
+
     private val zoomLevels = floatArrayOf(1f, 1.6f, 2.4f, 3.6f)
     private var zoomIndex = 0
     private var panX = 0f
@@ -66,6 +70,7 @@ class ImagePreEditView @JvmOverloads constructor(
     fun setImage(bitmap: Bitmap) {
         image = bitmap
         selection.reset()
+        activeAspect = null
         
         // Smart Initial Zoom: Auto-detect optimal zoom level based on image size
         // If image is much larger than view, start with zoom level 1 or 2
@@ -118,10 +123,33 @@ class ImagePreEditView @JvmOverloads constructor(
     fun toggleLock(): Boolean {
         selection.isLocked = !selection.isLocked
         if (selection.isLocked && selection.shape == CropShape.RECTANGLE) {
-            selection.rect = CropMath.applyShapeLock(selection.rect, DragCorner.TOP_LEFT)
+            val ratio = activeAspect
+            selection.rect = if (ratio != null) {
+                CropMath.fitRatioToCanvas(ratio.first, ratio.second)
+            } else {
+                CropMath.applyShapeLock(selection.rect, DragCorner.TOP_LEFT)
+            }
         }
         invalidate()
         return selection.isLocked
+    }
+
+    /** Terapkan preset rasio aspek (seleksi memenuhi [presetW]:[presetH] di dalam gambar). */
+    fun applyAspectRatio(presetW: Int, presetH: Int) {
+        activeAspect = presetW to presetH
+        if (selection.shape == CropShape.RECTANGLE) {
+            selection.rect = CropMath.fitRatioToCanvas(presetW, presetH)
+        }
+        invalidate()
+    }
+
+    /** Kembali ke rasio bebas: seleksi mencakup seluruh gambar. */
+    fun applyFreeRatio() {
+        activeAspect = null
+        if (selection.shape == CropShape.RECTANGLE) {
+            selection.rect = RectNorm(0f, 0f, 1f, 1f)
+        }
+        invalidate()
     }
 
     fun toggleShape(): CropShape {
@@ -346,7 +374,7 @@ class ImagePreEditView @JvmOverloads constructor(
         }
         var next = RectNorm(nl, nt, nr, nb).normalized()
         if (selection.isLocked) {
-            next = CropMath.applyShapeLock(next, draggedCorner)
+            next = CropMath.applyRatioLock(next, draggedCorner, activeAspect)
         }
         selection.rect = next
     }

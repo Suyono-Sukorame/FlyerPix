@@ -56,13 +56,13 @@ class CropSelection {
         private set
     var isLocked: Boolean = false
 
-    var rect: RectNorm = RectNorm(0.05f, 0.05f, 0.95f, 0.95f)
+    var rect: RectNorm = RectNorm(0f, 0f, 1f, 1f)
     var circle: CircleNorm = CircleNorm(0.5f, 0.5f, 0.4f)
 
     fun reset() {
         shape = CropShape.RECTANGLE
         isLocked = false
-        rect = RectNorm(0.05f, 0.05f, 0.95f, 0.95f)
+        rect = RectNorm(0f, 0f, 1f, 1f)
         circle = CircleNorm(0.5f, 0.5f, 0.4f)
     }
 
@@ -85,6 +85,62 @@ object CropMath {
         val l = if (xPlus) ox - side else ox
         val t = if (yPlus) oy - side else oy
         return RectNorm(l, t, l + side, t + side).normalized()
+    }
+
+    /**
+     * Preset rasio aspek yang memenuhi kanvas [0,1]² (memuat area seluas mungkin
+     * sambil menjaga rasio width:height). Persegi 1:1 menghasilkan kotak penuh.
+     */
+    fun fitRatioToCanvas(ratioW: Int, ratioH: Int): RectNorm {
+        val rw = ratioW.coerceAtLeast(1).toFloat()
+        val rh = ratioH.coerceAtLeast(1).toFloat()
+        var w = 1f
+        var h = w * rh / rw
+        if (h > 1f) {
+            h = 1f
+            w = h * rw / rh
+        }
+        val l = (1f - w) / 2f
+        val t = (1f - h) / 2f
+        return RectNorm(l, t, l + w, t + h)
+    }
+
+    /**
+     * Kunci rasio saat menyeret sudut: menjaga rasio [ratio] (null → persegi via
+     * [applyShapeLock]) dengan anchor pada sudut yang tidak diseret.
+     */
+    fun applyRatioLock(r: RectNorm, dragged: DragCorner, ratio: Pair<Int, Int>?): RectNorm {
+        if (ratio == null) return applyShapeLock(r, dragged)
+        val ox = if (dragged == DragCorner.TOP_LEFT || dragged == DragCorner.BOTTOM_LEFT) r.right else r.left
+        val oy = if (dragged == DragCorner.TOP_LEFT || dragged == DragCorner.TOP_RIGHT) r.bottom else r.top
+        val xPlus = dragged == DragCorner.TOP_LEFT || dragged == DragCorner.BOTTOM_LEFT
+        val yPlus = dragged == DragCorner.TOP_LEFT || dragged == DragCorner.TOP_RIGHT
+        val rw = ratio.first.coerceAtLeast(1).toFloat()
+        val rh = ratio.second.coerceAtLeast(1).toFloat()
+        val fitX = if (xPlus) 1f - ox else ox
+        val fitY = if (yPlus) 1f - oy else oy
+        val minSize = 0.02f
+        var w = fitX
+        var h = w * rh / rw
+        if (h > fitY) {
+            h = fitY
+            w = h * rw / rh
+        }
+        if (w > fitX) {
+            w = fitX
+            h = w * rh / rw
+        }
+        if (w < minSize) {
+            w = minSize
+            h = w * rh / rw
+            if (h > fitY) {
+                h = fitY
+                w = h * rw / rh
+            }
+        }
+        val l = if (xPlus) ox - w else ox
+        val t = if (yPlus) oy - h else oy
+        return RectNorm(l, t, l + w, t + h).normalized()
     }
 
     fun rotateCW(r: RectNorm): RectNorm =

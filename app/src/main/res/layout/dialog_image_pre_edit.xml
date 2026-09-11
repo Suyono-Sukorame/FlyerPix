@@ -16,18 +16,6 @@
         android:background="@color/light_surface_alt">
 
         <TextView
-            android:id="@+id/btnCancel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="12dp"
-            android:text="Cancel"
-            android:textSize="16sp"
-            android:textColor="@color/light_text_primary"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackground" />
-
-        <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -36,19 +24,6 @@
             android:textSize="17sp"
             android:textStyle="bold"
             android:textColor="@color/light_text_primary" />
-
-        <TextView
-            android:id="@+id/btnOk"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="12dp"
-            android:text="OK"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#1769FF"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackground" />
     </LinearLayout>
 
     <com.flyerpix.editor.imageedit.ImagePreEditView
@@ -63,42 +38,70 @@
         android:layout_height="1dp"
         android:background="@color/light_divider" />
 
+    <!-- Baris 1: preset rasio (pill teks) + tombol Free -->
+    <HorizontalScrollView
+        android:id="@+id/ratioScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/light_surface_alt"
+        android:scrollbars="none"
+        android:fadeScrollbars="false">
+
+        <LinearLayout
+            android:id="@+id/ratioContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/light_divider" />
+
+    <!-- Baris 2: rotate kanan | rotate kiri | zoom-out | zoom-in | lock | circle -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
         android:background="@color/light_surface_alt">
 
         <ImageButton
-            android:id="@+id/btnRotateLeft"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:layout_margin="2dp"
-            android:contentDescription="Rotate Left"
-            android:src="@drawable/ic_rotate_left_24px"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/light_text_primary"
-            android:scaleType="center" />
-
-        <ImageButton
             android:id="@+id/btnRotateRight"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:layout_margin="2dp"
-            android:contentDescription="Rotate Right"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_margin="3dp"
+            android:contentDescription="Rotate Kanan"
             android:src="@drawable/ic_rotate_right_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:tint="@color/light_text_primary"
             android:scaleType="center" />
 
         <ImageButton
+            android:id="@+id/btnRotateLeft"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_margin="3dp"
+            android:contentDescription="Rotate Kiri"
+            android:src="@drawable/ic_rotate_left_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/light_text_primary"
+            android:scaleType="center" />
+
+        <ImageButton
             android:id="@+id/btnZoomOut"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:layout_margin="2dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_margin="3dp"
             android:contentDescription="Zoom Keluar"
             android:src="@drawable/ic_zoom_out_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
@@ -107,9 +110,9 @@
 
         <ImageButton
             android:id="@+id/btnZoomIn"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:layout_margin="2dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_margin="3dp"
             android:contentDescription="Zoom Masuk"
             android:src="@drawable/ic_zoom_in_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
@@ -117,33 +120,11 @@
             android:scaleType="center" />
 
         <ImageButton
-            android:id="@+id/btnFlipHorizontal"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:layout_margin="2dp"
-            android:contentDescription="Cermin Kiri-Kanan"
-            android:src="@drawable/ic_flip_horizontal_24px"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/light_text_primary"
-            android:scaleType="center" />
-
-        <ImageButton
-            android:id="@+id/btnFlipVertical"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:layout_margin="2dp"
-            android:contentDescription="Flip Top-Bottom"
-            android:src="@drawable/ic_flip_vertical_24px"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/light_text_primary"
-            android:scaleType="center" />
-
-        <ImageButton
             android:id="@+id/btnLock"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:layout_margin="2dp"
-            android:contentDescription="Lock Ratio"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_margin="3dp"
+            android:contentDescription="Lock Rasio"
             android:src="@drawable/ic_lock_open_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:tint="@color/light_text_primary"
@@ -151,13 +132,73 @@
 
         <ImageButton
             android:id="@+id/btnShape"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:layout_margin="2dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_margin="3dp"
             android:contentDescription="Crop Shape"
-            android:src="@drawable/ic_sharp_crop_free_24px"
+            android:src="@drawable/ic_sharp_circle_outline_24px"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:tint="@color/light_text_primary"
+            android:scaleType="center" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/light_divider" />
+
+    <!-- Baris 3: cermin kanan | cermin kiri | close (x) | check (v) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingTop="2dp"
+        android:paddingBottom="6dp"
+        android:background="@color/light_surface_alt">
+
+        <ImageButton
+            android:id="@+id/btnFlipRight"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_margin="3dp"
+            android:contentDescription="Cermin Kanan"
+            android:src="@drawable/ic_flip_horizontal_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/light_text_primary"
+            android:scaleType="center" />
+
+        <ImageButton
+            android:id="@+id/btnFlipLeft"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_margin="3dp"
+            android:contentDescription="Cermin Kiri"
+            android:src="@drawable/ic_flip_vertical_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/light_text_primary"
+            android:scaleType="center" />
+
+        <ImageButton
+            android:id="@+id/btnClose"
+            android:layout_width="52dp"
+            android:layout_height="48dp"
+            android:layout_margin="3dp"
+            android:contentDescription="Batal"
+            android:src="@drawable/ic_sharp_clear_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/light_text_primary"
+            android:scaleType="center" />
+
+        <ImageButton
+            android:id="@+id/btnOk"
+            android:layout_width="52dp"
+            android:layout_height="48dp"
+            android:layout_margin="3dp"
+            android:contentDescription="Terapkan"
+            android:src="@drawable/ic_check_24px"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#1769FF"
             android:scaleType="center" />
     </LinearLayout>
 </LinearLayout>
