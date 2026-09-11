@@ -88,6 +88,10 @@ class TextPanelController(
     private var textToolTagBeforeEffect = ""
     private var toolIsTextPage = false
     private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_REFLECTION, TOOL_BLEND, TOOL_NEON, TOOL_STROKE, TOOL_LINE, TOOL_LETTER, TOOL_ALIGN, TOOL_BG, TOOL_CURVE, TOOL_STYLE, TOOL_MASK, TOOL_OPACITY, TOOL_ROTATE, TOOL_COLOR, TOOL_PADDING, TOOL_SIZE, TOOL_POSITION, TOOL_REL_POS, TOOL_STYLES)
+    private val composedEffectTags = setOf(
+        TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_REFLECTION, TOOL_NEON,
+        TOOL_STROKE, TOOL_SHADOW, TOOL_INNER
+    )
     private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncInnerShadowUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncEmbossUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
@@ -331,9 +335,10 @@ initializeMaskControls()
                 activeTextToolTag == TOOL_3D_ROTATE && sel != null -> showComposeRotate3DSheet(sel)
                 activeTextToolTag == TOOL_REFLECTION && sel != null -> showComposeReflectionSheet(sel)
                 activeTextToolTag == TOOL_NEON && sel != null -> showComposeNeonSheet(sel)
-                activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW ||
-                    activeTextToolTag == TOOL_3D_ROTATE || activeTextToolTag == TOOL_REFLECTION ||
-                    activeTextToolTag == TOOL_NEON -> {
+                activeTextToolTag == TOOL_STROKE && sel != null -> showComposeStrokeSheet(sel)
+                activeTextToolTag == TOOL_SHADOW && sel != null -> showComposeShadowSheet(sel)
+                activeTextToolTag == TOOL_INNER && sel != null -> showComposeInnerShadowSheet(sel)
+                activeTextToolTag in composedEffectTags -> {
                     // layer non-teks/berbeda dipilih saat halaman tool terbuka:
                     // tutup halaman settings (paralel dengan perilaku legacy panel)
                     closeEffectSettings()
@@ -705,6 +710,250 @@ initializeMaskControls()
     }
 
     /**
+     * Tampilkan Compose bottom sheet untuk Stroke (outline teks) dengan gaya
+     * yang sama persis seperti halaman 3D Rotate / 3D Text.
+     */
+    private fun showComposeStrokeSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        // Jika strokeWidth <= 0f, aktifkan default 4px saat tool dibuka
+        if (layer.strokeWidth <= 0f) {
+            applyToTextLayer { it.strokeWidth = 4f }
+        }
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        val alpha = (layer.strokeColor ushr 24) and 0xFF
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.StrokeDetailPage(
+                enabled = layer.strokeWidth > 0f,
+                width = layer.strokeWidth.coerceIn(0f, 60f),
+                opacityPct = alpha * 100f / 255f,
+                color = layer.strokeColor,
+                maxHeightPx = sheetMaxH,
+                onEnabledChange = { en ->
+                    applyToTextLayer {
+                        it.strokeWidth = if (en) {
+                            if (it.strokeWidth > 0f) it.strokeWidth else 4f
+                        } else 0f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onWidthChange = { w ->
+                    applyToTextLayer { it.strokeWidth = w }
+                    pixelCanvasView.invalidate()
+                },
+                onOpacityChange = { op ->
+                    applyToTextLayer {
+                        val a = (op * 255f / 100f).toInt().coerceIn(0, 255)
+                        it.strokeColor = (it.strokeColor and 0x00FFFFFF) or (a shl 24)
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onColorChange = { c ->
+                    applyToTextLayer {
+                        val currentAlpha = (it.strokeColor ushr 24) and 0xFF
+                        val targetAlpha = if (currentAlpha == 0) 0xFF else currentAlpha
+                        it.strokeColor = (c and 0x00FFFFFF) or (targetAlpha shl 24)
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onColorPickRequested = {
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@StrokeDetailPage
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                        .newInstance(
+                            initialColor = sel.strokeColor,
+                            resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.STROKE_RESULT_KEY
+                        )
+                        .show(
+                            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                        )
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.strokeWidth = 4f
+                        it.strokeColor = android.graphics.Color.BLACK
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() }
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk Drop Shadow dengan gaya yang
+     * sama persis seperti halaman 3D Rotate / 3D Text.
+     */
+    private fun showComposeShadowSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        applyToTextLayer { it.shadowEnabled = true }
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.ShadowDetailPage(
+                title = "Drop Shadow",
+                enabled = layer.shadowEnabled,
+                color = layer.shadowColor,
+                radius = layer.shadowRadius.coerceIn(0f, 40f),
+                opacityPct = (layer.shadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = layer.shadowDx.coerceIn(-30f, 30f),
+                dy = layer.shadowDy.coerceIn(-30f, 30f),
+                maxHeightPx = sheetMaxH,
+                onEnabledChange = { en ->
+                    applyToTextLayer { it.shadowEnabled = en }
+                    pixelCanvasView.invalidate()
+                },
+                onColorChange = { c ->
+                    applyToTextLayer { it.shadowColor = c }
+                    pixelCanvasView.invalidate()
+                },
+                onColorPickRequested = {
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@ShadowDetailPage
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                        .newInstance(
+                            initialColor = sel.shadowColor,
+                            resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW_RESULT_KEY
+                        )
+                        .show(
+                            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                        )
+                },
+                onRadiusChange = { r ->
+                    applyToTextLayer { it.shadowRadius = r }
+                    pixelCanvasView.invalidate()
+                },
+                onOpacityChange = { op ->
+                    applyToTextLayer { it.shadowOpacity = op / 100f }
+                    pixelCanvasView.invalidate()
+                },
+                onDxChange = { x ->
+                    applyToTextLayer { it.shadowDx = x }
+                    pixelCanvasView.invalidate()
+                },
+                onDyChange = { y ->
+                    applyToTextLayer { it.shadowDy = y }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.shadowEnabled = true
+                        it.shadowColor = android.graphics.Color.BLACK
+                        it.shadowRadius = 10f
+                        it.shadowOpacity = 0.6f
+                        it.shadowDx = 0f
+                        it.shadowDy = 0f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() }
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk Inner Shadow dengan gaya yang
+     * sama persis seperti halaman 3D Rotate / 3D Text.
+     */
+    private fun showComposeInnerShadowSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        applyToTextLayer { it.innerShadowEnabled = true }
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.ShadowDetailPage(
+                title = "Inner Shadow",
+                enabled = layer.innerShadowEnabled,
+                color = layer.innerShadowColor,
+                radius = layer.innerShadowRadius.coerceIn(0f, 40f),
+                opacityPct = (layer.innerShadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = layer.innerShadowDx.coerceIn(-30f, 30f),
+                dy = layer.innerShadowDy.coerceIn(-30f, 30f),
+                maxHeightPx = sheetMaxH,
+                onEnabledChange = { en ->
+                    applyToTextLayer { it.innerShadowEnabled = en }
+                    pixelCanvasView.invalidate()
+                },
+                onColorChange = { c ->
+                    applyToTextLayer { it.innerShadowColor = c }
+                    pixelCanvasView.invalidate()
+                },
+                onColorPickRequested = {
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@ShadowDetailPage
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                        .newInstance(
+                            initialColor = sel.innerShadowColor,
+                            resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.INNER_SHADOW_RESULT_KEY
+                        )
+                        .show(
+                            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                        )
+                },
+                onRadiusChange = { r ->
+                    applyToTextLayer { it.innerShadowRadius = r }
+                    pixelCanvasView.invalidate()
+                },
+                onOpacityChange = { op ->
+                    applyToTextLayer { it.innerShadowOpacity = op / 100f }
+                    pixelCanvasView.invalidate()
+                },
+                onDxChange = { x ->
+                    applyToTextLayer { it.innerShadowDx = x }
+                    pixelCanvasView.invalidate()
+                },
+                onDyChange = { y ->
+                    applyToTextLayer { it.innerShadowDy = y }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.innerShadowEnabled = true
+                        it.innerShadowColor = android.graphics.Color.BLACK
+                        it.innerShadowRadius = 10f
+                        it.innerShadowOpacity = 0.6f
+                        it.innerShadowDx = 0f
+                        it.innerShadowDy = 0f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() }
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
      * Dismiss Compose sheet untuk kasus selain tool-3D-active (mis. layer 3D
      * dipilih langsung dari canvas). Tidak memaksa keluar dari halaman teks.
      */
@@ -810,6 +1059,10 @@ initializeMaskControls()
                     }
                     setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
                     pixelCanvasView.invalidate()
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer
+                    if (sel != null && activeTextToolTag == TOOL_SHADOW && threeDComposeHost != null) {
+                        showComposeShadowSheet(sel)
+                    }
                 }
             }
 
@@ -925,6 +1178,10 @@ initializeMaskControls()
                     }
                     setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
                     pixelCanvasView.invalidate()
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer
+                    if (sel != null && activeTextToolTag == TOOL_INNER && threeDComposeHost != null) {
+                        showComposeInnerShadowSheet(sel)
+                    }
                 }
             }
 
@@ -2377,8 +2634,20 @@ tvAngleLabel.text = "Angle: 0°"
     private fun syncEffectUI(tag: String, layer: TextLayer?) {        if (layer == null) return
         val fs = binding.effectSettingsInclude
         when (tag) {
-            TOOL_SHADOW -> syncShadowUIHook?.invoke(layer)
-            TOOL_STROKE -> syncStrokeUIHook?.invoke(layer)
+            TOOL_SHADOW -> {
+                if (threeDComposeHost != null) {
+                    showComposeShadowSheet(layer)
+                } else {
+                    syncShadowUIHook?.invoke(layer)
+                }
+            }
+            TOOL_STROKE -> {
+                if (threeDComposeHost != null) {
+                    showComposeStrokeSheet(layer)
+                } else {
+                    syncStrokeUIHook?.invoke(layer)
+                }
+            }
             TOOL_LINE, TOOL_LETTER -> syncSpacingUIHook?.invoke(layer)
             TOOL_ALIGN -> syncAlignUIHook?.invoke(layer)
             TOOL_BG -> syncBackgroundUIHook?.invoke(layer)
@@ -2393,7 +2662,13 @@ tvAngleLabel.text = "Angle: 0°"
             TOOL_POSITION -> syncPositionUIHook?.invoke(layer)
             TOOL_REL_POS -> syncRelativePositionUIHook?.invoke(layer)
             TOOL_STYLES -> syncStylesUIHook?.invoke(layer)
-            TOOL_INNER -> syncInnerShadowUIHook?.invoke(layer)
+            TOOL_INNER -> {
+                if (threeDComposeHost != null) {
+                    showComposeInnerShadowSheet(layer)
+                } else {
+                    syncInnerShadowUIHook?.invoke(layer)
+                }
+            }
             TOOL_EMBOSS -> syncEmbossUIHook?.invoke(layer)
             TOOL_GRADIENT -> syncGradientUIHook?.invoke(layer)
             TOOL_TEXTURE -> syncTextureUIHook?.invoke(layer)
@@ -2622,11 +2897,8 @@ tvAngleLabel.text = "Angle: 0°"
      * kompleks mendapat ruang yang lebih lega tanpa tumpukan menu.
      */
     private fun updateEffectSettingsVisibility() {
-        // TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_REFLECTION & TOOL_NEON
-        // ditampilkan via Compose bottom sheet, bukan panel XML.
-        val composedPanel = (activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW ||
-            activeTextToolTag == TOOL_3D_ROTATE || activeTextToolTag == TOOL_REFLECTION ||
-            activeTextToolTag == TOOL_NEON) &&
+        // Tool dalam composedEffectTags ditampilkan via Compose bottom sheet, bukan panel XML.
+        val composedPanel = activeTextToolTag in composedEffectTags &&
             threeDComposeHost != null
         val show = effectSettingsOpen && isPageOpen && activeTextToolTag in complexEffectTags &&
             !composedPanel &&
@@ -2654,8 +2926,7 @@ tvAngleLabel.text = "Angle: 0°"
             return
         }
         if (effectSettingsOpen && activeTextToolTag == tag) return
-        if (tag != TOOL_3D_TEXT && tag != TOOL_3D_SHADOW && tag != TOOL_3D_ROTATE &&
-            tag != TOOL_REFLECTION && tag != TOOL_NEON) hideCompose3DSheet()
+        if (tag !in composedEffectTags) hideCompose3DSheet()
         textToolTagBeforeEffect = activeTextToolTag.takeUnless { it in complexEffectTags } ?: ""
         snapshotCurrentState()
         activeTextToolTag = tag
@@ -2694,9 +2965,7 @@ tvAngleLabel.text = "Angle: 0°"
      * Tutup halaman settings (baik via ✓ maupun ✕) dan kembali ke strip tool.
      */
     private fun closeEffectSettings() {
-        val composeOpened = activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW ||
-            activeTextToolTag == TOOL_3D_ROTATE || activeTextToolTag == TOOL_REFLECTION ||
-            activeTextToolTag == TOOL_NEON
+        val composeOpened = activeTextToolTag in composedEffectTags
         settingsSnapshot = null
         effectSettingsOpen = false
         activeTextToolTag = textToolTagBeforeEffect
@@ -3987,7 +4256,12 @@ private fun registerTextPanels() {
                         layer.strokeColor = (color and 0x00FFFFFF) or (currentAlpha shl 24)
                     }
                     val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
-                    if (layer != null) sync(layer)
+                    if (layer != null) {
+                        sync(layer)
+                        if (activeTextToolTag == TOOL_STROKE && threeDComposeHost != null) {
+                            showComposeStrokeSheet(layer)
+                        }
+                    }
                     pixelCanvasView.invalidate()
                 }
             }
