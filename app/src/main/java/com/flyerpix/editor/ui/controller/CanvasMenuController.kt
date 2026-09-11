@@ -7,17 +7,23 @@ import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.LifecycleOwner
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
+import com.flyerpix.editor.canvas.model.CanvasBackground
 import com.flyerpix.editor.canvas.model.CanvasBackgroundMode
 import com.flyerpix.editor.canvas.model.GradientColor
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 import com.flyerpix.editor.ui.adapter.GradientPickerAdapter
+import com.flyerpix.editor.ui.compose.CanvasBgDetailPage
+import com.flyerpix.editor.ui.compose.CanvasSizeDetailPage
 import com.flyerpix.editor.ui.dialog.ColorPickerDialog
 
 /**
@@ -25,9 +31,9 @@ import com.flyerpix.editor.ui.dialog.ColorPickerDialog
  *
  * Bertanggung jawab untuk:
  * - Inisialisasi panel canvas menu
- * - Mengatur background kanvas (Transparent, Solid Color, Gradient, Image)
- * - Mengelola swatches warna solid
- * - Mengatur ukuran dan rasio aspek kanvas
+ * - Mengatur background kanvas (Transparent, Solid Color, Gradient, Image) via Compose bottom sheet
+ * - Mengatur ukuran dan rasio aspek kanvas via Compose bottom sheet
+ * - Quick toggles untuk Grid dan Snap to Center
  */
 class CanvasMenuController(
     private val activity: Activity,
@@ -42,6 +48,10 @@ class CanvasMenuController(
     private var bgGalleryLauncher: ActivityResultLauncher<String>? = null
     private var onCameraRequested: (() -> Unit)? = null
 
+    private val composeHost: ComposeView? get() = binding.composeThreeDDetail
+    private val composeContainer: FrameLayout? get() = binding.composeThreeDSheetContainer
+    private var initialBgSnapshot: CanvasBackground? = null
+
     companion object {
         const val TOOL_BG   = "canvas_bg"
         const val TOOL_SIZE = "canvas_size"
@@ -51,8 +61,7 @@ class CanvasMenuController(
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
 
-        // Aksi instan: tidak membuka konten panel detail.
-        private val instantTools = setOf(TOOL_SIZE, TOOL_GRID, TOOL_SNAP)
+        const val CANVAS_BG_RESULT_KEY = "canvas_bg_color_picker_result"
     }
 
     private val toolItems = LinkedHashMap<String, ViewGroup>()
@@ -66,6 +75,20 @@ class CanvasMenuController(
 
     private fun notifyDetailExpanded() {
         onDetailExpandedChanged?.invoke(activeTag.isNotEmpty())
+    }
+
+    private fun computeComposeSheetHeight(): Int {
+        val density = activity.resources.displayMetrics.density
+        val root = binding.parentLayout
+        val homePanel = binding.bottomControlPanelContainer
+        if (root.height > 0 && homePanel.height > 0) {
+            val homeTop = PanelHeightManager.topInRoot(homePanel, root)
+            val alignedH = root.height - homeTop
+            if (alignedH > 0) return alignedH
+        }
+        val floorPx = (320 * density).toInt()
+        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.42f).toInt()
+        return targetPx.coerceAtLeast(floorPx)
     }
 
     /**
@@ -87,12 +110,33 @@ class CanvasMenuController(
      */
     fun initialize() {
         buildToolStrip()
+        setupColorPickerResultListener()
         setupCanvasBgSwatches()
         setupBackgroundModeChips()
         setupGradientPicker()
         setupCustomColorButtons()
         setupImageBackgroundButtons()
         restoreCanvasBgMode()
+    }
+
+    private fun setupColorPickerResultListener() {
+        val lifecycleOwner = activity as? LifecycleOwner ?: return
+        fragmentManager.setFragmentResultListener(CANVAS_BG_RESULT_KEY, lifecycleOwner) { _, bundle ->
+            val isGradient = bundle.getBoolean(ColorPickerDialog.EXTRA_IS_GRADIENT, false)
+            if (!isGradient) {
+                val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
+                pixelCanvasView.setColorBackground(color)
+            } else {
+                @Suppress("DEPRECATION")
+                val grad = bundle.getSerializable(ColorPickerDialog.EXTRA_GRADIENT) as? GradientColor
+                if (grad != null) {
+                    pixelCanvasView.setGradientBackground(grad)
+                }
+            }
+            if (activeTag == TOOL_BG && composeHost != null) {
+                showComposeBgSheet()
+            }
+        }
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -141,11 +185,6 @@ class CanvasMenuController(
     }
 
     private fun onToolClicked(tag: String) {
-        if (tag == TOOL_SIZE) {
-            showImageSizeDialog()
-            flashSelection(tag)
-            return
-        }
         if (tag == TOOL_GRID) {
             val enabled = !pixelCanvasView.isGridEnabled
             pixelCanvasView.isGridEnabled = enabled
@@ -198,24 +237,174 @@ class CanvasMenuController(
 
     fun deselect() {
         activeTag = ""
+        initialBgSnapshot = null
         for (item in toolItems.values) {
             item.isSelected = false
             (item.getChildAt(0) as? ImageView)?.colorFilter =
                 PorterDuffColorFilter(COLOR_GRAY, PorterDuff.Mode.SRC_IN)
             (item.getChildAt(1) as? TextView)?.setTextColor(COLOR_GRAY)
         }
-        applyContentVisibility()
+        composeContainer?.visibility = View.GONE
+        binding.canvasContentPanel.visibility = View.GONE
+        notifyDetailExpanded()
     }
 
     private fun applyContentVisibility() {
-        binding.canvasContentPanel.visibility =
-            if (activeTag.isEmpty()) View.GONE else View.VISIBLE
-        restoreCanvasBgMode()
+        if (activeTag.isEmpty()) {
+            composeContainer?.visibility = View.GONE
+            binding.canvasContentPanel.visibility = View.GONE
+            notifyDetailExpanded()
+            return
+        }
+
+        if (composeHost != null && composeContainer != null) {
+            binding.canvasContentPanel.visibility = View.GONE
+            when (activeTag) {
+                TOOL_BG -> {
+                    initialBgSnapshot = pixelCanvasView.canvasBackground.copy(
+                        imageBitmap = pixelCanvasView.canvasBackground.imageBitmap
+                    )
+                    showComposeBgSheet()
+                }
+                TOOL_SIZE -> {
+                    showComposeSizeSheet()
+                }
+                else -> {
+                    composeContainer?.visibility = View.GONE
+                }
+            }
+        } else {
+            // Fallback ke XML panel legacy jika Compose view tidak tersedia
+            binding.canvasContentPanel.visibility = View.VISIBLE
+            restoreCanvasBgMode()
+        }
         notifyDetailExpanded()
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // SETUP BACKGROUND MODE CHIPS
+    // COMPOSE BOTTOM SHEETS
+    // ────────────────────────────────────────────────────────────────────────
+
+    private fun showComposeBgSheet() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.canvasContentPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        val currentBg = pixelCanvasView.canvasBackground
+        host.setContent {
+            CanvasBgDetailPage(
+                currentMode = currentBg.mode,
+                solidColor = pixelCanvasView.canvasBackgroundColor,
+                gradient = currentBg.gradient,
+                hasImage = currentBg.imageBitmap != null,
+                onModeChange = { mode ->
+                    when (mode) {
+                        CanvasBackgroundMode.TRANSPARENT -> pixelCanvasView.setTransparentBackground()
+                        CanvasBackgroundMode.SOLID_COLOR -> {
+                            val color = pixelCanvasView.canvasBackgroundColor
+                            pixelCanvasView.setColorBackground(color)
+                        }
+                        CanvasBackgroundMode.GRADIENT -> {
+                            val grad = currentBg.gradient ?: GradientColor.PRESETS.first()
+                            pixelCanvasView.setGradientBackground(grad)
+                        }
+                        CanvasBackgroundMode.IMAGE -> {
+                            currentBg.imageBitmap?.let { pixelCanvasView.setImageBackground(it) }
+                        }
+                    }
+                },
+                onSolidColorChange = { color ->
+                    pixelCanvasView.setColorBackground(color)
+                },
+                onOpenColorPicker = {
+                    val currentColor = pixelCanvasView.canvasBackgroundColor
+                    ColorPickerDialog.newInstance(
+                        initialColor = currentColor,
+                        resultKey = CANVAS_BG_RESULT_KEY
+                    ).show(fragmentManager, "CanvasBgSolidColorPicker")
+                },
+                onGradientChange = { grad ->
+                    pixelCanvasView.setGradientBackground(grad)
+                },
+                onOpenGradientPicker = {
+                    val currentGrad = currentBg.gradient ?: GradientColor.PRESETS.first()
+                    ColorPickerDialog.newInstance(
+                        initialGradient = currentGrad,
+                        resultKey = CANVAS_BG_RESULT_KEY
+                    ).show(fragmentManager, "CanvasBgGradientPicker")
+                },
+                onGalleryPickRequested = {
+                    bgGalleryLauncher?.launch("image/*")
+                },
+                onCameraRequested = {
+                    onCameraRequested?.invoke()
+                },
+                onRemoveImage = {
+                    pixelCanvasView.clearImageBackground()
+                    showSnackbar("Background image removed")
+                    showComposeBgSheet()
+                },
+                onReset = {
+                    pixelCanvasView.setColorBackground(Color.WHITE)
+                    showComposeBgSheet()
+                },
+                onApply = {
+                    pixelCanvasView.runRecordedAction("Change Canvas Background") {}
+                    initialBgSnapshot = null
+                    deselect()
+                },
+                onCancel = {
+                    initialBgSnapshot?.let { snap ->
+                        when (snap.mode) {
+                            CanvasBackgroundMode.TRANSPARENT -> pixelCanvasView.setTransparentBackground()
+                            CanvasBackgroundMode.SOLID_COLOR -> pixelCanvasView.setColorBackground(snap.solidColor)
+                            CanvasBackgroundMode.GRADIENT -> snap.gradient?.let { pixelCanvasView.setGradientBackground(it) }
+                            CanvasBackgroundMode.IMAGE -> snap.imageBitmap?.let { pixelCanvasView.setImageBackground(it) } ?: pixelCanvasView.clearImageBackground()
+                        }
+                    }
+                    initialBgSnapshot = null
+                    deselect()
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeSizeSheet() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.canvasContentPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            CanvasSizeDetailPage(
+                initialWidth = pixelCanvasView.canvasWidth,
+                initialHeight = pixelCanvasView.canvasHeight,
+                onApply = { width, height ->
+                    updateCanvasAspectRatio(width, height)
+                    deselect()
+                },
+                onCancel = {
+                    deselect()
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // LEGACY SETUP BACKGROUND MODE CHIPS (Fallback)
     // ────────────────────────────────────────────────────────────────────────
 
     private fun setupBackgroundModeChips() {
@@ -264,7 +453,7 @@ class CanvasMenuController(
 
         for (color in colors) {
             val swatch = View(activity).apply {
-                layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply {
+                layoutParams = LinearLayout.LayoutParams(size, size).apply {
                     setMargins(margin, margin, margin, margin)
                 }
                 background = GradientDrawable().apply {
@@ -303,7 +492,7 @@ class CanvasMenuController(
         binding.btnCustomSolidColor.setOnClickListener {
             val currentColor = pixelCanvasView.canvasBackgroundColor
             ColorPickerDialog
-                .newInstance(initialColor = currentColor)
+                .newInstance(initialColor = currentColor, resultKey = CANVAS_BG_RESULT_KEY)
                 .show(fragmentManager, "CanvasSolidColorPicker")
         }
 
@@ -311,7 +500,7 @@ class CanvasMenuController(
             val currentGrad = pixelCanvasView.canvasBackground.gradient
                 ?: GradientColor.PRESETS[0]
             ColorPickerDialog
-                .newInstance(initialGradient = currentGrad)
+                .newInstance(initialGradient = currentGrad, resultKey = CANVAS_BG_RESULT_KEY)
                 .show(fragmentManager, "CanvasGradientPicker")
         }
     }
@@ -339,9 +528,6 @@ class CanvasMenuController(
     // RESTORE BACKGROUND MODE
     // ────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Memulihkan chip background mode sesuai dengan state kanvas saat ini.
-     */
     private fun restoreCanvasBgMode() {
         when (pixelCanvasView.canvasBackground.mode) {
             CanvasBackgroundMode.TRANSPARENT -> {
@@ -366,21 +552,29 @@ class CanvasMenuController(
      */
     fun refreshUI() {
         binding.canvasToolStripInclude.canvasToolStripScroll.visibility = View.VISIBLE
-        if (activeTag.isEmpty()) binding.canvasContentPanel.visibility = View.GONE
-        else applyContentVisibility()
+        if (activeTag.isEmpty()) {
+            binding.canvasContentPanel.visibility = View.GONE
+            composeContainer?.visibility = View.GONE
+        } else {
+            select(activeTag)
+        }
         restoreCanvasBgMode()
     }
 
     /**
-     * Menampilkan dialog ukuran kanvas.
+     * Menampilkan dialog ukuran kanvas (kompatibilitas untuk pemanggil luar).
      */
     fun showImageSizeDialog() {
-        com.flyerpix.editor.ui.dialog.ImageSizeDialog.show(
-            activity,
-            pixelCanvasView.canvasWidth,
-            pixelCanvasView.canvasHeight
-        ) { width, height ->
-            updateCanvasAspectRatio(width, height)
+        if (composeHost != null && composeContainer != null) {
+            select(TOOL_SIZE)
+        } else {
+            com.flyerpix.editor.ui.dialog.ImageSizeDialog.show(
+                activity,
+                pixelCanvasView.canvasWidth,
+                pixelCanvasView.canvasHeight
+            ) { width, height ->
+                updateCanvasAspectRatio(width, height)
+            }
         }
     }
 }
