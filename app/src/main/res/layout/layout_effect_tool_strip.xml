@@ -16,7 +16,7 @@
 
     <HorizontalScrollView
         android:layout_width="match_parent"
-        android:layout_height="@dimen/panel_tool_strip_height"
+        android:layout_height="@dimen/panel_compact_bar_height"
         android:background="@color/panel_strip_bg"
         android:scrollbars="none"
         android:fillViewport="false">

@@ -90,10 +90,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     private lateinit var canvasToolsController: CanvasToolsController
     private lateinit var shapePanelController: ShapePanelController
 
-    // ── Kanvas dimensi & reservasi band panel bawah ─────────────────────────
+    // ── Kanvas dimensi ──────────────────────────────────────────────────────
     private var canvasRatioW = 1
     private var canvasRatioH = 1
-    private var lastReservedBottomPx = -1
 
 
     private val texturePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -332,7 +331,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         //    tertutup oleh menu (design A: auto-shrink canvas).
         if (::binding.isInitialized) {
             binding.parentLayout.viewTreeObserver.addOnGlobalLayoutListener {
-                updateCanvasCardMargin()
+                fitCanvasToOpenPanels()
             }
         }
     }
@@ -360,7 +359,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             onShowMenu = { showMenu(it) },
             onEditTextRequested = { showEditTextDialog(it) },
             onFontRequested = { fontController.openFontPicker(it) },
-            onCanvasChanged = { updateCanvasCardMargin() },
+            onCanvasChanged = { fitCanvasToOpenPanels() },
             onEffectSettingsOpenChanged = { effectSettingsOpen ->
                 val density = resources.displayMetrics.density
                 val offset = (56 * density).toInt()
@@ -376,7 +375,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                             it.animateLayoutMarginBottom((56 * density).toInt())
                         }
                 }
-                updateCanvasCardMargin()
+                fitCanvasToOpenPanels()
             }
         )
         textPanelController.initialize()
@@ -439,7 +438,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             this,
             binding,
             pixelCanvasView,
-            { showSnackbar(it) }
+            { showSnackbar(it) },
+            onCanvasChanged = { fitCanvasToOpenPanels() }
         )
 
         // Layer Panel Controller
@@ -459,7 +459,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             { showSnackbar(it) },
             onGalleryRequested = { preEditImageLauncher.launch("image/*") },
             onCameraRequested = { checkCameraPermissionForBackground() },
-            onPanelChanged = { updateCanvasCardMargin() },
+            onPanelChanged = { fitCanvasToOpenPanels() },
             onShapeCreated = { shape -> shapePanelController.showShapeSettings(shape) }
         )
         objectMenu.initialize()
@@ -493,7 +493,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                             it.animateLayoutMarginBottom((56 * density).toInt())
                         }
                 }
-                updateCanvasCardMargin()
+                fitCanvasToOpenPanels()
             }
         )
         objectPanelController.initialize()
@@ -588,7 +588,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         binding.motionLayout.getConstraintSet(R.id.start)?.setDimensionRatio(R.id.canvasCard, ratio)
         binding.motionLayout.getConstraintSet(R.id.end)?.setDimensionRatio(R.id.canvasCard, ratio)
         binding.motionLayout.requestLayout()
-        Snackbar.make(binding.parentLayout, "Canvas size changed to $width × $height px ($width:$height)", Snackbar.LENGTH_SHORT).show()
+        fitCanvasToOpenPanels()
+        Snackbar.make(binding.parentLayout, "Canvas size changed to $width × $height px ($ratio)", Snackbar.LENGTH_SHORT).show()
     }
 
     /**
@@ -728,7 +729,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         // DISABLED: CanvasToolsController tidak di-initialize
         // canvasToolsController.updateContextFabVisibility()
         
-        updateCanvasCardMargin()
+        fitCanvasToOpenPanels()
     }
 
     private fun initializeBottomNavigationView() {
@@ -1123,7 +1124,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         toolsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
         binding.motionLayout.transitionToEnd()
         saveMode = true
-        binding.canvasCard.post { updateCanvasCardMargin() }
+        binding.canvasCard.post { fitCanvasToOpenPanels() }
     }
 
     private fun exitSaveMode() {
@@ -1235,35 +1236,41 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     // ────────────────────────────────────────────────────────────────────────
     // DETAIL EXPAND: memperluas panel detail halaman menu; bottom nav dihindari
-    // dengan menggesernya keluar saat detail dibuka. Tinggi panel dihitung dari
-    // ruang kosong di bawah canvas (PanelHeightManager) agar tidak menutupinya.
+    // dengan menggesernya keluar saat detail dibuka. Tinggi panel = natural konten
+    // (Design A); kanvas di-fit-ulang agar tidak pernah tertutup.
     // ────────────────────────────────────────────────────────────────────────
 
     private var navTranslationAnimator: android.animation.ValueAnimator? = null
     private val panelHeightAnimators = HashMap<View, android.animation.ValueAnimator>()
+    private var isDetailExpanded = false
 
     /**
      * Mengekspansi panel detail (object/canvas/effects) dan menggeser keluar
      * bottom nav saat `expanded == true`; kembali normal saat `false`.
      *
-     * Panel tertutup:   tinggi 107dp, marginBottom 56dp (di atas nav).
-     * Panel terbuka:    tinggi dari ruang bawah canvas, marginBottom 0dp
-     *                   (nav disembunyikan).
+     * Paradigma Design A: tinggi panel TIDAK lagi diukur dari ruang sisa di bawah
+     * kanvas (yang untuk flyer 9:16 nyaris nol). Panel memakai tinggi natural dari
+     * kontennya, dan kanvas justru mengecil di-fit di atas panel lewat
+     * [fitCanvasToOpenPanels].
      */
     private fun setDetailExpanded(expanded: Boolean) {
+        isDetailExpanded = expanded
         val density = resources.displayMetrics.density
         val collapsedH = (107 * density).toInt()
         val collapsedMargin = (56 * density).toInt()
+        val navOffset = (56 * density).toInt()
 
         if (!expanded) {
             // Kontraksi: semua panel kembali ke ukuran default & nav dipanggil kembali.
+            // Kanvas DIPERTAHANKAN kecil selama panel menyusut agar tidak tertutup,
+            // lalu di-fit-kan ulang ke ruang baru setelah animasi selesai.
             listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
                 .forEach { panel ->
                     panel.animateLayoutHeight(collapsedH)
                     panel.animateLayoutMarginBottom(collapsedMargin)
                 }
             animateNavTranslation(0)
-            updateCanvasCardMargin()
+            binding.root.postDelayed({ fitCanvasToOpenPanels() }, 320)
             return
         }
 
@@ -1274,28 +1281,64 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             else -> return
         }
 
-        // Tinggi expanded dihitung dinamis dari ruang kosong di bawah canvas
-        // (PanelHeightManager), sehingga detail TIDAK menutupi canvas. Minimum
-        // tidak di bawah tinggi collapsed agar tool strip tetap utuh.
-        val expandedH = activePanel.let {
-            val space = PanelHeightManager.anchorBottomInRoot(binding.parentLayout, 0) -
-                PanelHeightManager.bottomInRoot(binding.canvasCard, binding.parentLayout)
-            PanelHeightManager.safeDetailHeight(
-                availableBelowCanvasPx = space,
-                canvasHeightPx = pixelCanvasView.height,
-                screenHeightPx = resources.displayMetrics.heightPixels,
-                density = density,
-            ).let { if (it >= collapsedH) it else collapsedH }
-        }
-
-        val navOffset = (56 * density).toInt()
+        // Tinggi expanded diambil dari tinggi natural konten (bukan ruang sisa
+        // di bawah kanvas), di-clamp agar masih menyisakan ruang untuk kanvas.
         listOf(binding.objectMenuPanel, binding.canvasMenuPanel, binding.effectsMenuPanel)
             .filter { it != activePanel }
             .forEach { panel -> panel.animateLayoutHeight(collapsedH) }
-        activePanel.animateLayoutHeight(expandedH)
-        activePanel.animateLayoutMarginBottom(0)
         animateNavTranslation(navOffset)
-        updateCanvasCardMargin()
+
+        activePanel.post {
+            if (!isDetailExpanded) return@post
+            val expandedH = contentBasedExpandedHeight(activePanel)
+            activePanel.animateLayoutHeight(expandedH)
+            activePanel.animateLayoutMarginBottom(0)
+            // Pre-fit kanvas ke boundary akhir panel SEBELUM animasi berjalan,
+            // sehingga panel tidak pernah sempat menutupi kanvas.
+            fitCanvasAbove(binding.parentLayout.height - expandedH)
+        }
+        // Koreksi final dari posisi nyata setelah layout/animasi selesai.
+        binding.root.postDelayed({ fitCanvasToOpenPanels() }, 320)
+    }
+
+    /** Tinggi natural panel detail sesuai kontennya, di-clamp terhadap kapasitas layar. */
+    private fun contentBasedExpandedHeight(panel: View): Int {
+        val density = resources.displayMetrics.density
+        val screenH = resources.displayMetrics.heightPixels
+        val cap = (screenH * 0.46f).toInt()
+        val collapsedH = (107 * density).toInt()
+
+        val contentScroll = when (panel) {
+            binding.objectMenuPanel -> binding.objectContentPanel
+            binding.canvasMenuPanel -> binding.canvasContentPanel
+            binding.effectsMenuPanel -> binding.effectContentPanel
+            else -> null
+        }
+        var contentH = 0
+        if (contentScroll != null && contentScroll.childCount > 0) {
+            val child = contentScroll.getChildAt(0)
+            if (child != null && child.visibility != View.GONE) {
+                if (contentScroll.width > 0) {
+                    child.measure(
+                        android.view.View.MeasureSpec.makeMeasureSpec(contentScroll.width, android.view.View.MeasureSpec.EXACTLY),
+                        android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
+                    )
+                    contentH = child.measuredHeight + child.paddingTop + child.paddingBottom
+                } else if (child.height > 0) {
+                    contentH = child.height + child.paddingTop + child.paddingBottom
+                }
+            }
+        }
+        if (contentH <= 0) return cap
+
+        val stripH = when (panel) {
+            binding.objectMenuPanel -> binding.objectToolStripInclude.root.height
+            binding.canvasMenuPanel -> binding.canvasToolStripInclude.root.height
+            binding.effectsMenuPanel -> binding.effectToolStripInclude.root.height
+            else -> 0
+        }
+        val natural = contentH + (if (stripH > 0) stripH else (62 * density).toInt())
+        return natural.coerceIn(collapsedH, cap)
     }
 
     private fun View.animateLayoutHeight(target: Int) {
@@ -1421,60 +1464,164 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         binding.pixelCanvasView.postOnAnimation(renderer)
     }
 
-    /** Ruang (px) yang ditempati panel bawah, diukur relatif terhadap dasar root.
-     *  Default: nav bar + strip presets (saat tampil). Panel mana pun yang tampil
-     *  bisa menambah band ini. */
-    private fun currentBottomReservedSpace(): Int {
+/**
+     * Design A - Auto-shrink canvas (pola Canva/PicsArt).
+     *
+     * Satu-satunya titik sinkronisasi semua menu bawah: setiap kali salah satu
+     * panel bawah berubah (buka/tutup/resize), kanvas di-fit-kan ulang agar:
+     *   - Selalu tampil UTUH (tanpa tertutup) dengan rasio tetap 9:16 dll,
+     *   - Menaati ruang di atas panel paling tinggi yang sedang tampil,
+     *   - Kembali ke ukuran penuh saat tidak ada panel bawah.
+     *
+     * Posisi panel dibaca dari koordinat NYATA (getLocationInWindow), sehingga
+     * otomatis mengikuti animasi nav/panel dan margin yang sedang berubah.
+     */
+    private fun fitCanvasToOpenPanels(attempt: Int = 0) {
         val root = binding.parentLayout
-        val density = resources.displayMetrics.density
-        var reserved =
-            if (binding.bottomNavigation.height > 0) binding.bottomNavigation.height
-            else (56 * density).toInt()
-        val presets = binding.bottomControlPanelContainer
-        if (presets.visibility == View.VISIBLE && presets.height > 0) reserved += presets.height
-        val panels = listOfNotNull(
-            binding.textEditorBar,
-            binding.objectMenuPanel,
-            binding.canvasMenuPanel,
-            binding.effectsMenuPanel,
-            binding.detailSettingsHost,
-            binding.shapeSettingsPanel.root,
-            binding.composeThreeDSheetContainer,
-            binding.toolbarConfirmCancel
-        )
-        for (p in panels) {
-            if (p.visibility != View.VISIBLE || p.height <= 0) continue
-            val band = root.height - PanelHeightManager.topInRoot(p, root)
-            if (band > reserved) reserved = band
+        binding.root.post {
+            if (root.width <= 0 || root.height <= 0) return@post
+            // Tunggu transisi MotionLayout (save mode) selesai agar ukuran kanvas
+            // yang kita set tidak di-overwrite mid-transition.
+            if (binding.motionLayout.progress != 0f) {
+                if (attempt < 30) {
+                    binding.root.postDelayed({ fitCanvasToOpenPanels(attempt + 1) }, 60)
+                }
+                return@post
+            }
+            val panels = visibleBottomPanels()
+            if (panels.isEmpty()) {
+                restoreFullCanvas()
+                return@post
+            }
+            val boundary = panels
+                .asSequence()
+                .filter { it.height > 0 }
+                .map { PanelHeightManager.topInRoot(it, root) }
+                .minOrNull()
+
+            if (boundary == null) {
+                // Panel belum terukur (baru tampil). Coba lagi sebentar.
+                if (attempt < 12) {
+                    binding.root.postDelayed({ fitCanvasToOpenPanels(attempt + 1) }, 80)
+                } else {
+                    restoreFullCanvas()
+                }
+            } else {
+                // Jika kanvas ukuran penuh (rasio flyer) SUDAH muat di atas panel
+                // paling tinggi, tidak perlu mengecilkannya (mis. carousel presets
+                // yang pendek). Mengecil hanya saat panel benar-benar menutupi kanvas.
+                val density = resources.displayMetrics.density
+                val topMarginPx = (8 * density).toInt()
+                val gapPx = (8 * density).toInt()
+                val motionTop = PanelHeightManager.topInRoot(binding.motionLayout, root)
+                val naturalH = (root.width.toLong() *
+                    kotlin.math.max(1, pixelCanvasView.canvasHeight) /
+                    kotlin.math.max(1, pixelCanvasView.canvasWidth)).toInt().coerceAtLeast(1)
+                val naturalCanvasBottom = motionTop + topMarginPx + naturalH
+                if (naturalCanvasBottom + gapPx <= boundary) {
+                    restoreFullCanvas()
+                } else {
+                    fitCanvasAbove(boundary)
+                }
+            }
         }
-        return reserved
     }
 
-    /** Terapkan band ke canvasCard supaya kanvas mengecil (tetap menjaga rasio)
-     *  sehingga border bawahnya berada DI ATAS area panel. Kembali ke band default
-     *  saat panel ditutup → kanvas pulih ke ukuran penuh. */
-    private fun applyCanvasReservedBand(reservedPx: Int) {
-        val bottom = reservedPx + (8 * resources.displayMetrics.density).toInt()
-        val animating = binding.motionLayout.progress > 0f && binding.motionLayout.progress < 1f
-        if (bottom == lastReservedBottomPx || animating) return
-        lastReservedBottomPx = bottom
-        val sets = listOfNotNull(
-            binding.motionLayout.getConstraintSet(R.id.start),
-            binding.motionLayout.getConstraintSet(R.id.end)
+    /** Panel-panel bawah yang sedang menempati ruang layar. */
+    private fun visibleBottomPanels(): List<View> = listOf(
+        binding.bottomControlPanelContainer,
+        binding.textEditorBar,
+        binding.objectMenuPanel,
+        binding.canvasMenuPanel,
+        binding.effectsMenuPanel,
+        binding.shapeSettingsPanel.root,
+        binding.effectSettingsInclude.root,
+        binding.composeThreeDSheetContainer,
+    ).filter { it.visibility == View.VISIBLE }
+
+    /** Fit kanvas (rasio flyer) agar muat di atas tepi atas panel [boundaryTopPx]. */
+    private fun fitCanvasAbove(boundaryTopPx: Int) {
+        val root = binding.parentLayout
+        val density = resources.displayMetrics.density
+        val topMargin = (8 * density).toInt()
+        val gap = (8 * density).toInt()
+        // Kanvas berada di dalam motionLayout yang dimulai di bawah top bar, sehingga
+        // batas atas panel dipetakan dahulu ke koordinat relative motionLayout.
+        val motionTop = PanelHeightManager.topInRoot(binding.motionLayout, root)
+        val panelTopInMotion = boundaryTopPx - motionTop
+        val (w, h) = PanelHeightManager.fitCanvasSize(
+            topBoundaryPx = panelTopInMotion,
+            topMarginPx = topMargin,
+            gapPx = gap,
+            screenWidthPx = root.width,
+            ratioW = pixelCanvasView.canvasWidth,
+            ratioH = pixelCanvasView.canvasHeight,
         )
-        for (cs in sets) cs.setMargin(binding.canvasCard.id, ConstraintSet.BOTTOM, bottom)
-        binding.canvasCard.post { binding.motionLayout.requestLayout() }
+        if (w <= 0 || h <= 0) return
+        applyCanvasSize(w, h, topMargin, binding.motionLayout.height)
     }
 
     /**
-     * Jaga kanvas agar selalu terlihat utuh: hitung band yang dipakai panel bawah
-     * lalu sesuaikan margin bawah canvasCard (dengan rasio height-referenced).
-     * Dipanggil dari semua chokepoint menu/panel berubah.
+     * Terapkan ukuran kanvas ke canvasCard. Dua jalur agar robust:
+     *  1) layoutParams eksplisit (primer, deterministik karena tidak ada rasio).
+     *  2) ConstraintSet start (jaga-jaga & agar MotionLayout konsisten).
      */
-    private fun updateCanvasCardMargin() {
-        applyCanvasReservedBand(currentBottomReservedSpace())
+    private fun applyCanvasSize(w: Int, h: Int, topMarginPx: Int, parentHeightPx: Int) {
+        val bottomMargin = (parentHeightPx - topMarginPx - h).coerceAtLeast(0)
+        val cs = binding.motionLayout.getConstraintSet(R.id.start)
+        if (cs != null) {
+            cs.constrainWidth(R.id.canvasCard, w)
+            cs.constrainHeight(R.id.canvasCard, h)
+            cs.setVerticalBias(R.id.canvasCard, 0f)
+            cs.setHorizontalBias(R.id.canvasCard, 0.5f)
+            cs.setMargin(R.id.canvasCard, ConstraintSet.START, 0)
+            cs.setMargin(R.id.canvasCard, ConstraintSet.END, 0)
+            cs.setMargin(R.id.canvasCard, ConstraintSet.TOP, topMarginPx)
+            cs.setMargin(R.id.canvasCard, ConstraintSet.BOTTOM, bottomMargin)
+        }
+        val lp = binding.canvasCard.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+        if (lp != null) {
+            lp.width = w
+            lp.height = h
+            lp.topMargin = topMarginPx
+            lp.bottomMargin = bottomMargin
+            lp.leftMargin = 0
+            lp.rightMargin = 0
+            binding.canvasCard.layoutParams = lp
+        }
+        binding.motionLayout.requestLayout()
     }
 
+    /** Kembalikan kanvas ke ukuran penuh (rasio lewat constraint set asli scene_01). */
+    private fun restoreFullCanvas() {
+        val density = resources.displayMetrics.density
+        val topMargin = (8 * density).toInt()
+        val bottomMargin = (56 * density).toInt()
+        val ratio = "${pixelCanvasView.canvasWidth}:${pixelCanvasView.canvasHeight}"
+        val cs = binding.motionLayout.getConstraintSet(R.id.start)
+        if (cs != null) {
+            cs.constrainWidth(R.id.canvasCard, 0)
+            cs.constrainHeight(R.id.canvasCard, 0)
+            cs.setDimensionRatio(R.id.canvasCard, ratio)
+            cs.setVerticalBias(R.id.canvasCard, 0.5f)
+            cs.setHorizontalBias(R.id.canvasCard, 0.5f)
+            cs.setMargin(R.id.canvasCard, ConstraintSet.START, 0)
+            cs.setMargin(R.id.canvasCard, ConstraintSet.END, 0)
+            cs.setMargin(R.id.canvasCard, ConstraintSet.TOP, topMargin)
+            cs.setMargin(R.id.canvasCard, ConstraintSet.BOTTOM, bottomMargin)
+        }
+        val lp = binding.canvasCard.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+        if (lp != null) {
+            lp.width = 0
+            lp.height = 0
+            lp.topMargin = topMargin
+            lp.bottomMargin = bottomMargin
+            lp.leftMargin = 0
+            lp.rightMargin = 0
+            binding.canvasCard.layoutParams = lp
+        }
+        binding.motionLayout.requestLayout()
+    }
 
     private fun initializeViewPager() {
         val pagerAdapter = ToolsViewPagerAdapter(supportFragmentManager, binding.toolsTabLayout.tabCount)

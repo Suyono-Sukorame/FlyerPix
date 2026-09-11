@@ -69,11 +69,9 @@ class TextPanelController(
 
     // ── Text Page State─────────────────────────────────────────────────────
     private val textToolItems = LinkedHashMap<String, ViewGroup>()
-    private val textCategoryItems = LinkedHashMap<String, TextView>()
     private val textPanelViews = LinkedHashMap<String, View>()
     private val savedTextStyles = LinkedHashMap<String, SavedTextStyle>()
     private var activeTextToolTag: String = ""
-    private var activeTextCategory: String = CATEGORY_BASIC
     private var maxPropertyPanelScrollH = 0
     var isPageOpen = false
     var pagePinnedByNav = false
@@ -123,14 +121,6 @@ class TextPanelController(
     private var threeDComposeContainer: FrameLayout? = null
 
     companion object {
-        private const val CATEGORY_BASIC = "basic"
-        private const val CATEGORY_LAYOUT = "layout"
-        private const val CATEGORY_TEXT = "text"
-        private const val CATEGORY_APPEARANCE = "appearance"
-        private const val CATEGORY_EFFECTS = "effects"
-        private const val CATEGORY_ADVANCED = "advanced"
-        private const val CATEGORY_LAYER = "layer"
-
         const val TOOL_STYLES       = "styles"
         const val TOOL_EDIT         = "edit"
         const val TOOL_DELETE       = "delete"
@@ -169,10 +159,12 @@ class TextPanelController(
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY      = 0xFF616161.toInt()
 
-        // Tinggi sheet 3D Text / 3D Shadow: menempel penuh ke border bawah canvas.
+        // Tinggi sheet 3D Text / 3D Shadow: samakan dengan tinggi menu Presets
+        // (kartu 72dp + label + padding rv ≈ 107dp) agar tidak mengecilkan canvas.
+        // Konten Compose di-scroll di dalam sheet.
         private const val COMPOSE_SHEET_GAP_DP = 8
-        private const val COMPOSE_SHEET_MIN_USABLE_DP = 200
-        private const val COMPOSE_SHEET_FLOOR_DP = 240
+        private const val COMPOSE_SHEET_FLOOR_DP = 107
+        private const val COMPOSE_SHEET_RATIO_OF_SCREEN = 0.12f
     }
 
     /**
@@ -180,10 +172,10 @@ class TextPanelController(
      * Harus dipanggil setelah binding dan pixelCanvasView siap.
      */
     fun initialize() {
-        buildTextCategoryStrip()
         buildTextToolStrip()
         registerTextPanels()
-        configurePanelHeights()
+        // Design A: panel properti / effect settings memakai tinggi natural
+        // (wrap_content + maxHeight pada DetailPanel); kanvas menyesuaikan sendiri.
         // Panel properti teks tidak butuh aksi ✓/✕ pada header.
         (binding.textPropertyPanelInclude.root as? com.flyerpix.editor.ui.view.DetailPanel)
             ?.showConfirmActions(false)
@@ -434,6 +426,7 @@ initializeMaskControls()
                 }
             )
         }
+        onCanvasChanged()
     }
 
     /**
@@ -441,44 +434,23 @@ initializeMaskControls()
      */
     private fun hideCompose3DSheet() {
         threeDComposeContainer?.visibility = View.GONE
-        threeDComposeContainer?.post { onCanvasChanged() }
+        onCanvasChanged()
     }
 
     /**
-     * Hitung tinggi maksimal Compose bottom sheet secara dinamis (canvas-aware).
+     * Hitung tinggi Compose bottom sheet (3D Text & 3D Shadow) secara natural.
      * Dipakai bersama oleh sheet 3D Text & 3D Shadow.
      *
-     * Aturan (A1 - exact fit): tinggi = seluruh ruang kosong persis di bawah
-     * canvas dikurangi gap aman, sehingga tepi atas sheet menempel di border
-     * bawah canvas. Tidak ada potongan fallback/cap. Lantai hanya dipakai bila
-     * ruang bawah canvas nyaris tak ada (ruang < COMPOSE_SHEET_MIN_USABLE_DP).
+     * Design A: tidak lagi mengukur "ruang sisa di bawah canvas" (kecil sekali
+     * untuk flyer 9:16). Sheet mengambil porsi layar tetap, dan kanvas justru
+     * di-fit-kan ulang di atasnya oleh EditorActivity.
      */
     private fun computeComposeSheetHeight(): Int {
-        var sheetMaxH = (COMPOSE_SHEET_FLOOR_DP * activity.resources.displayMetrics.density).toInt()
-        try {
-            val density = activity.resources.displayMetrics.density
-            val canvasCard = activity.findViewById<View>(R.id.canvasCard)
-            var space = 0
-            if (canvasCard != null && canvasCard.height > 0) {
-                val root = binding.parentLayout
-                space = PanelHeightManager.anchorBottomInRoot(root, 0) -
-                    PanelHeightManager.bottomInRoot(canvasCard, root)
-            }
-            val minUsablePx = (COMPOSE_SHEET_MIN_USABLE_DP * density).toInt()
-            val floorPx = (COMPOSE_SHEET_FLOOR_DP * density).toInt()
-            val gap = (COMPOSE_SHEET_GAP_DP * density).toInt()
-            val fromSpace = space - gap
-            sheetMaxH = if (fromSpace >= minUsablePx) {
-                // Menempel penuh ke border bawah canvas.
-                fromSpace
-            } else {
-                // Ruang bawah canvas sempit: pakai lantai agar kontrol tetap terpakai.
-                floorPx
-            }
-        } catch (ex: Exception) {
-            Log.e("TextPanelController", "Failed setting 3D sheet height", ex)
-        }
-        return sheetMaxH
+        val density = activity.resources.displayMetrics.density
+        val screenH = activity.resources.displayMetrics.heightPixels
+        val floorPx = (COMPOSE_SHEET_FLOOR_DP * density).toInt()
+        val targetPx = (screenH * COMPOSE_SHEET_RATIO_OF_SCREEN).toInt()
+        return targetPx.coerceAtLeast(floorPx)
     }
 
     /**
@@ -553,6 +525,7 @@ initializeMaskControls()
                 onCancel = { cancelEffectSettings() }
             )
         }
+        onCanvasChanged()
     }
 
     /**
@@ -2426,9 +2399,6 @@ tvAngleLabel.text = "Angle: 0°"
         val hasEditor = layer != null && !layer.isLocked
 
         binding.textEditorBar.visibility = if (isPageOpen && !effectSettingsOpen) View.VISIBLE else View.GONE
-        binding.textCategoryStripInclude.root.visibility =
-            if (isPageOpen && !effectSettingsOpen) View.VISIBLE else View.GONE
-        updateTextCategorySelection()
         updateVisibleTextTools()
         updateEffectSettingsVisibility()
         binding.textPropertyPanelInclude.root.visibility =
@@ -2769,80 +2739,8 @@ private fun registerTextPanels() {
         updateVisibleTextTools()
     }
 
-    private fun buildTextCategoryStrip() {
-        val categories = listOf(
-            CATEGORY_BASIC to "Basic",
-            CATEGORY_LAYOUT to "Layout",
-            CATEGORY_TEXT to "Text",
-            CATEGORY_APPEARANCE to "Appearance",
-            CATEGORY_EFFECTS to "Effects",
-            CATEGORY_ADVANCED to "Advanced",
-            CATEGORY_LAYER to "Layer"
-        )
-        val density = activity.resources.displayMetrics.density
-        val container = binding.textCategoryStripInclude.textCategoryContainer
-        container.removeAllViews()
-        textCategoryItems.clear()
-
-        for ((category, labelText) in categories) {
-            val label = TextView(activity).apply {
-                text = labelText
-                textSize = 11f
-                gravity = android.view.Gravity.CENTER
-                isClickable = true
-                isFocusable = true
-                setPadding(
-                    (14 * density).toInt(), (7 * density).toInt(),
-                    (14 * density).toInt(), (7 * density).toInt()
-                )
-                setBackgroundResource(R.drawable.bg_text_category_item)
-                setOnClickListener { selectTextCategory(category) }
-            }
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            params.setMargins((3 * density).toInt(), 0, (3 * density).toInt(), 0)
-            container.addView(label, params)
-            textCategoryItems[category] = label
-        }
-        updateTextCategorySelection()
-    }
-
-    private fun selectTextCategory(category: String) {
-        if (activeTextCategory == category) return
-        activeTextCategory = category
-        if (activeTextToolTag.isNotEmpty() && !isToolInCategory(activeTextToolTag, category)) {
-            deselectTextTool()
-        }
-        updateTextCategorySelection()
-        updateVisibleTextTools()
-    }
-
-    private fun updateTextCategorySelection() {
-        for ((category, item) in textCategoryItems) {
-            item.isSelected = category == activeTextCategory
-            item.setTextColor(if (item.isSelected) Color.WHITE else COLOR_GRAY)
-        }
-    }
-
     private fun updateVisibleTextTools() {
-        for ((tag, item) in textToolItems) {
-            item.visibility = if (isToolInCategory(tag, activeTextCategory)) View.VISIBLE else View.GONE
-        }
-    }
-
-    private fun isToolInCategory(tag: String, category: String): Boolean {
-        return when (category) {
-            CATEGORY_BASIC -> tag in setOf(TOOL_EDIT, TOOL_FONT, TOOL_STYLE)
-            CATEGORY_LAYOUT -> tag in setOf(TOOL_POSITION, TOOL_REL_POS, TOOL_SIZE, TOOL_PADDING, TOOL_ROTATE, TOOL_ALIGN)
-            CATEGORY_TEXT -> tag in setOf(TOOL_LETTER, TOOL_LINE, TOOL_CURVE, TOOL_BG, TOOL_MASK)
-            CATEGORY_APPEARANCE -> tag in setOf(TOOL_COLOR, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_OPACITY, TOOL_STROKE)
-            CATEGORY_EFFECTS -> tag in setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_REFLECTION, TOOL_NEON)
-            CATEGORY_ADVANCED -> tag in setOf(TOOL_PERSPECTIVE, TOOL_3D_ROTATE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_BLEND)
-            CATEGORY_LAYER -> tag in setOf(TOOL_STYLES, TOOL_COPY, TOOL_FRONT, TOOL_BACK, TOOL_DELETE)
-            else -> false
-        }
+        for (item in textToolItems.values) item.visibility = View.VISIBLE
     }
 
     private fun onTextToolClicked(tag: String) {
@@ -2949,52 +2847,27 @@ private fun registerTextPanels() {
         val density = activity.resources.displayMetrics.density
         val screenHeight = activity.resources.displayMetrics.heightPixels
         if (maxPropertyPanelScrollH == 0) {
-            maxPropertyPanelScrollH = (screenHeight * 0.32f).toInt()
+            maxPropertyPanelScrollH = (screenHeight * 0.30f).toInt()
         }
         val panel = binding.textPropertyPanelInclude.root as? com.flyerpix.editor.ui.view.DetailPanel ?: return
         val scroll = panel.scrollView
         scroll.post {
-            // Batas aman utuh textEditorBar agar TIDAK menutupi canvas (anchor
-            // bawah = margin 56dp di atas bottom nav).
-            val root = binding.parentLayout
-            val canvasCard = binding.canvasCard
-            val bottomMargin = (56 * density).toInt()
-            val safeBar = if (canvasCard.height > 0) {
-                val space = PanelHeightManager.anchorBottomInRoot(root, bottomMargin) -
-                    PanelHeightManager.bottomInRoot(canvasCard, root)
-                PanelHeightManager.safeDetailHeight(space, pixelCanvasView.height, screenHeight, density)
-            } else {
-                PanelHeightManager.fallbackHeight(pixelCanvasView.height, screenHeight, density)
-            }
+            // Design A: batas aman bar tekstidak lagi diukur dari ruang sisa di
+            // bawah canvas. Bar memakai tinggi natural (wrap_content, maxHeight
+            // 560dp di XML); kanvaslah yang menyesuaikan di atasnya.
             val contentH = scroll.getChildAt(0)?.height ?: 0
             val minH = (48 * density).toInt()
             // Kurangi bagian tetap bar (handle + header + strip kategori + strip tool)
-            // agar scroll tidak mendorong bar melewati batas aman.
+            // agar total bar tidak melewati maxHeight 560dp dari layout.
             val others = (binding.textEditorBar.height - scroll.height).coerceAtLeast(0)
-            val target = minOf(contentH, maxPropertyPanelScrollH, (safeBar - others)).coerceAtLeast(minH)
+            val maxBar = (560 * density).toInt()
+            val maxByBar = (maxBar - others).coerceAtLeast(minH)
+            val target = minOf(contentH, maxPropertyPanelScrollH, maxByBar).coerceAtLeast(minH)
             if (scroll.layoutParams.height != target) {
                 scroll.layoutParams = scroll.layoutParams.apply { height = target }
                 scroll.requestLayout()
                 onCanvasChanged()
             }
-        }
-    }
-
-    private fun configurePanelHeights() {
-        binding.effectSettingsInclude.root.post {
-            val density = activity.resources.displayMetrics.density
-            // Tinggi efek settings dihitung dari ruang kosong di bawah canvas
-            // (PanelHeightManager): 60% canvas / fallback 35% layar / cap 50%
-            // layar, dengan anchor bawah 56dp di atas bottom nav agar tidak
-            // menutupi canvas.
-            PanelHeightManager.applyCanvasAwareHeight(
-                panel = binding.effectSettingsInclude.root,
-                root = binding.parentLayout,
-                canvasCard = binding.canvasCard,
-                bottomMarginPx = (56 * density).toInt(),
-                screenHeightPx = PanelHeightManager.screenHeightPx(activity.resources),
-                density = density,
-            )
         }
     }
 
@@ -4535,7 +4408,6 @@ private fun registerTextPanels() {
     fun hideStripAndPanels() {
         val wasOpen = effectSettingsOpen
         binding.textPropertyPanelInclude.root.visibility = View.GONE
-        binding.textCategoryStripInclude.root.visibility = View.GONE
         binding.textToolStripInclude.textToolStripScroll.visibility = View.GONE
         binding.effectSettingsInclude.root.visibility = View.GONE
         hideCompose3DSheet()

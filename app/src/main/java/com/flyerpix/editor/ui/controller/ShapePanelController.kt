@@ -19,7 +19,8 @@ class ShapePanelController(
     private val activity: EditorActivity,
     private val binding: ActivityEditorBinding,
     private val canvas: PixelCanvasView,
-    private val showSnackbar: (String) -> Unit
+    private val showSnackbar: (String) -> Unit,
+    private val onCanvasChanged: () -> Unit = {}
 ) {
 
     private var currentShape: ShapeLayer? = null
@@ -169,19 +170,10 @@ class ShapePanelController(
         currentShape = shape
         snapshotShape = shape.copy() // Backup untuk Cancel
 
-        // Tinggi panel dihitung dari ruang kosong di bawah canvas agar objek di
-        // kanvas tetap terlihat (aturan PanelHeightManager: 60% canvas / cap 50%
-        // layar), anchor bawah 56dp di atas bottom nav.
-        val density = PanelHeightManager.densityOf(activity.resources)
-        val panel = binding.shapeSettingsPanel.root
-        PanelHeightManager.applyCanvasAwareHeight(
-            panel = panel,
-            root = binding.parentLayout,
-            canvasCard = binding.canvasCard,
-            bottomMarginPx = (56 * density).toInt(),
-            screenHeightPx = PanelHeightManager.screenHeightPx(activity.resources),
-            density = density,
-        )
+        // Design A: tinggi panel memakai ukuran natural (wrap_content + maxHeight
+        // di DetailPanel). Kanvas yang di-fit-kan ulang oleh EditorActivity lewat
+        // onCanvasChanged, bukan panel yang dipaksa mengecil karena takut menutup kanvas.
+        onCanvasChanged()
 
         // Update UI dengan nilai shape saat ini
         updateUIFromShape(shape)
@@ -193,6 +185,7 @@ class ShapePanelController(
 
         // Hide other panels
         hideOtherPanels()
+        binding.root.post { onCanvasChanged() }
     }
 
     /**
@@ -206,6 +199,8 @@ class ShapePanelController(
         }
         currentShape = null
         snapshotShape = null
+        onCanvasChanged()
+        binding.root.post { onCanvasChanged() }
     }
 
     private fun updateUIFromShape(shape: ShapeLayer) {

@@ -64,13 +64,44 @@ object PanelHeightManager {
         return loc[1] - rootLoc[1] + view.height
     }
 
-    /** Posisi tepi atas [view] dalam koordinat [root]. */
+/** Posisi tepi atas [view] dalam koordinat [root] (memperhitungkan translation). */
     fun topInRoot(view: View, root: View): Int {
         val loc = IntArray(2)
         val rootLoc = IntArray(2)
         view.getLocationInWindow(loc)
         root.getLocationInWindow(rootLoc)
         return loc[1] - rootLoc[1]
+    }
+
+/**
+     * Paradigma baru (Design A - auto-shrink canvas): alokasikan ruang panel
+     * TERLEBIH DAHULU, lalu fit kanvas di atasnya. Hitung ukuran kanvas (w×h,
+     * px) yang menjaga rasio flyer dan muat di dalam region vertikal
+     * [topMarginPx, topBoundaryPx - gapPx], dengan lebar tak melebihi layar.
+     *
+     * @param topBoundaryPx tepi atas panel paling tinggi (min top) yang sedang tampil.
+     * @param topMarginPx jarak aman dari tepi atas layar ke kanvas.
+     * @param gapPx jarak aman antara tepi bawah kanvas dan tepi atas panel.
+     * @param screenWidthPx lebar layar (batas lebar kanvas).
+     * @param ratioW/ratioH rasio aspek flyer (dari pixelCanvasView.canvasWidth/Height).
+     * @return Pair(lebar, tinggi) kanvas; (0,0) bila tidak muat.
+     */
+    fun fitCanvasSize(
+        topBoundaryPx: Int,
+        topMarginPx: Int,
+        gapPx: Int,
+        screenWidthPx: Int,
+        ratioW: Int,
+        ratioH: Int,
+    ): Pair<Int, Int> {
+        val rW = ratioW.coerceAtLeast(1)
+        val rH = ratioH.coerceAtLeast(1)
+        val availableH = topBoundaryPx - topMarginPx - gapPx
+        if (availableH <= 0 || screenWidthPx <= 0) return 0 to 0
+        val hFromW = screenWidthPx.toLong() * rH / rW
+        val h = minOf(availableH.toLong(), hFromW).toInt()
+        val w = (h.toLong() * rW / rH).toInt()
+        return if (w > 0 && h > 0) w to h else 0 to 0
     }
 
     /**

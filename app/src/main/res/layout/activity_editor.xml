@@ -111,13 +111,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
-        <!-- Kategori tool teks agar strip utama tidak terlalu padat -->
-        <include
-                layout="@layout/layout_text_category_strip"
-                android:id="@+id/textCategoryStripInclude"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
         <!-- Tool strip horizontal: ikon + label, scroll horizontal -->
         <include
                 layout="@layout/layout_text_tool_strip"
@@ -142,14 +135,15 @@
                 android:layout_height="wrap_content" />
     </FrameLayout>
 
-        <!-- Compose host untuk detail 3D: berdiri sendiri agar tidak ikut menu umum dan tidak menutup canvas terlalu lebar -->
+        <!-- Compose host untuk detail 3D: panel kompak di bawah canvas -->
         <FrameLayout
                 android:id="@+id/composeThreeDSheetContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom"
                 android:visibility="gone"
-                android:background="@android:color/transparent">
+                android:background="@drawable/bg_panel_bottom"
+                android:elevation="8dp">
 
             <androidx.compose.ui.platform.ComposeView
                     android:id="@+id/composeThreeDDetail"

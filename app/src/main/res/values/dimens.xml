@@ -8,6 +8,7 @@
     <dimen name="panel_min_height">52dp</dimen>
     <dimen name="panel_max_height">260dp</dimen>
     <dimen name="panel_tool_strip_height">52dp</dimen>
+    <dimen name="panel_compact_bar_height">107dp</dimen>
     <dimen name="panel_handle_width">36dp</dimen>
     <dimen name="panel_handle_height">4dp</dimen>
     <dimen name="panel_corner_radius">16dp</dimen>
