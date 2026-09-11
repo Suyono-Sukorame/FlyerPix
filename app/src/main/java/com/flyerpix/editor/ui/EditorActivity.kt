@@ -628,6 +628,14 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             textPanelController.cancelEffectSettings()
             return
         }
+        if (objectPanelController.isEffectSettingsOpen()) {
+            objectPanelController.cancelEffectSettings()
+            return
+        }
+        if (effectsController.isSheetOpen()) {
+            effectsController.cancelSheet()
+            return
+        }
         if (layerPanel.isOpen) {
             layerPanel.close()
             return
