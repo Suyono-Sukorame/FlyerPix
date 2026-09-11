@@ -439,18 +439,25 @@ initializeMaskControls()
     }
 
     /**
-     * Hitung tinggi Compose bottom sheet (3D Text & 3D Shadow) secara natural.
-     * Dipakai bersama oleh sheet 3D Text & 3D Shadow.
+     * Hitung tinggi Compose bottom sheet (3D Text & 3D Shadow).
      *
-     * Design A: tidak lagi mengukur "ruang sisa di bawah canvas" (kecil sekali
-     * untuk flyer 9:16). Sheet mengambil porsi layar tetap, dan kanvas justru
-     * di-fit-kan ulang di atasnya oleh EditorActivity.
+     * Acuan tinggi = page Home (bottomControlPanelContainer): tepi atas sheet
+     * disamakan dengan tepi atas page Home, dan sheet menempel ke dasar layar
+     * (navbar di-translate ke bawah saat sheet terbuka), sehingga halaman 3D
+     * setinggi page Home. Kanvas di-fit-kan ulang di atasnya oleh EditorActivity.
+     * Bila acuan Home belum terukur, fallback ke porsi tetap layar + lantai.
      */
     private fun computeComposeSheetHeight(): Int {
         val density = activity.resources.displayMetrics.density
-        val screenH = activity.resources.displayMetrics.heightPixels
+        val root = binding.parentLayout
+        val homePanel = binding.bottomControlPanelContainer
+        if (root.height > 0 && homePanel.height > 0) {
+            val homeTop = PanelHeightManager.topInRoot(homePanel, root)
+            val alignedH = root.height - homeTop
+            if (alignedH > 0) return alignedH
+        }
         val floorPx = (COMPOSE_SHEET_FLOOR_DP * density).toInt()
-        val targetPx = (screenH * COMPOSE_SHEET_RATIO_OF_SCREEN).toInt()
+        val targetPx = (activity.resources.displayMetrics.heightPixels * COMPOSE_SHEET_RATIO_OF_SCREEN).toInt()
         return targetPx.coerceAtLeast(floorPx)
     }
 
