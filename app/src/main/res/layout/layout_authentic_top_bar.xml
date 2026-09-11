@@ -137,59 +137,33 @@
             android:src="@drawable/ic_sharp_redo_24px"
             app:tint="@android:color/white" />
 
-        <LinearLayout
-            android:id="@+id/topZoomControls"
+        <ImageButton
+            android:id="@+id/btnTopZoom"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            android:background="@drawable/bg_mode_pill"
+            android:contentDescription="Enter zoom mode"
+            android:padding="6dp"
+            android:src="@drawable/ic_zoom_in_24px"
+            app:tint="@android:color/white" />
+
+        <TextView
+            android:id="@+id/tvTopZoomLabel"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <ImageButton
-                android:id="@+id/btnTopZoom"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:background="@drawable/bg_mode_pill"
-                android:contentDescription="Enter zoom mode"
-                android:padding="6dp"
-                android:src="@drawable/ic_zoom_in_24px"
-                app:tint="@android:color/white" />
-
-            <ImageButton
-                android:id="@+id/btnTopZoomOut"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Perkecil zoom canvas"
-                android:src="@drawable/ic_zoom_out_24px"
-                android:visibility="gone"
-                app:tint="@android:color/white" />
-
-            <TextView
-                android:id="@+id/tvTopZoomLabel"
-                android:layout_width="56dp"
-                android:layout_height="30dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="2dp"
-                android:background="@drawable/bg_pixellab_badge"
-                android:gravity="center"
-                android:text="100%"
-                android:textColor="@android:color/white"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:visibility="gone" />
-
-            <ImageButton
-                android:id="@+id/btnTopZoomIn"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Perbesar zoom canvas"
-                android:src="@drawable/ic_zoom_in_24px"
-                android:visibility="gone"
-                app:tint="@android:color/white" />
-        </LinearLayout>
+            android:layout_height="30dp"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            android:background="@drawable/bg_pixellab_badge"
+            android:gravity="center"
+            android:minWidth="44dp"
+            android:paddingHorizontal="8dp"
+            android:text="100%"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
 
         <ImageButton
             android:id="@+id/btnTopGrid"
