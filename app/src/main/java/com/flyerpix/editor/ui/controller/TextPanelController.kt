@@ -2706,12 +2706,12 @@ private fun registerTextPanels() {
                 isFocusable = true
                 setBackgroundResource(R.drawable.bg_panel_tool_item)
                 setPadding(
-                    (6 * density).toInt(), (6 * density).toInt(),
-                    (6 * density).toInt(), (4 * density).toInt()
+                    (8 * density).toInt(), (8 * density).toInt(),
+                    (8 * density).toInt(), (6 * density).toInt()
                 )
                 setOnClickListener { onTextToolClicked(spec.tag) }
             }
-            val iconSize = (22 * density).toInt()
+            val iconSize = (28 * density).toInt()
             val icon = android.widget.ImageView(activity).apply {
                 setImageResource(spec.iconRes)
                 layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
@@ -2722,7 +2722,7 @@ private fun registerTextPanels() {
             }
             val label = android.widget.TextView(activity).apply {
                 text = spec.label
-                textSize = 9.5f
+                textSize = 11f
                 maxLines = 1
                 gravity = android.view.Gravity.CENTER
                 setTextColor(COLOR_GRAY)
@@ -2733,7 +2733,7 @@ private fun registerTextPanels() {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            layerParams.width = (52 * density).toInt()
+            layerParams.width = (62 * density).toInt()
             container.addView(item, layerParams)
             textToolItems[spec.tag] = item
         }

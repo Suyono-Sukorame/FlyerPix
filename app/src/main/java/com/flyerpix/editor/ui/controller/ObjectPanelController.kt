@@ -116,21 +116,21 @@ class ObjectPanelController(
                     isClickable = true
                     isFocusable = true
                     setBackgroundResource(R.drawable.bg_object_tool_item)
-                    setPadding((6 * density).toInt(), (6 * density).toInt(), (6 * density).toInt(), (4 * density).toInt())
+                    setPadding((8 * density).toInt(), (8 * density).toInt(), (8 * density).toInt(), (6 * density).toInt())
                     setOnClickListener { onToolClicked(spec.tag) }
                 }
-                val iconSize = (22 * density).toInt()
+                val iconSize = (28 * density).toInt()
                 item.addView(ImageView(activity).apply {
                     setImageResource(spec.iconRes)
                     layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
                     colorFilter = android.graphics.PorterDuffColorFilter(COLOR_GRAY, android.graphics.PorterDuff.Mode.SRC_IN)
                 })
                 item.addView(TextView(activity).apply {
-                    text = spec.label; textSize = 9.5f; maxLines = 1
+                    text = spec.label; textSize = 11f; maxLines = 1
                     gravity = android.view.Gravity.CENTER; setTextColor(COLOR_GRAY)
                 })
                 val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-                lp.width = (52 * density).toInt()
+                lp.width = (62 * density).toInt()
                 container.addView(item, lp)
                 toolItems[spec.tag] = item
             }
