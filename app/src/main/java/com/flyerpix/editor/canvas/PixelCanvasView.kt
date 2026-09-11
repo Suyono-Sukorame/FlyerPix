@@ -1535,7 +1535,7 @@ class PixelCanvasView @JvmOverloads constructor(
         val (w, h) = layer.getUnwarpedDimensions()
         if (w <= 0f || h <= 0f) return
 
-        val padding = 12f * resources.displayMetrics.density
+        val padding = 0f
         val pts = layer.getSelectionBoxPoints(padding)
         if (pts.size < 8) return
 
@@ -1607,7 +1607,7 @@ class PixelCanvasView @JvmOverloads constructor(
         val layer = selectedLayer ?: return TransformHandle.NONE
         if (!layer.isVisible || layer.isLocked || layer.perspectiveEnabled) return TransformHandle.NONE
 
-        val padding = 12f * resources.displayMetrics.density
+        val padding = 0f
         val pts = layer.getSelectionBoxPoints(padding)
         if (pts.size < 8) return TransformHandle.NONE
 

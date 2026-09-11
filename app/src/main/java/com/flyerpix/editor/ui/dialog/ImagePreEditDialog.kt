@@ -13,6 +13,9 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.fragment.app.DialogFragment
 import com.flyerpix.editor.R
 import com.flyerpix.editor.databinding.DialogImagePreEditBinding
@@ -67,6 +70,24 @@ private val ratioPills = mutableListOf<RatioPill>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         image?.let { binding.preEditView.setImage(it) }
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val bottomInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+            if (bottomInset > 0) binding.root.updatePadding(bottom = bottomInset)
+            insets
+        }
+
+        binding.root.post {
+            val insets = ViewCompat.getRootWindowInsets(requireActivity().window.decorView)
+            val navBottom = insets?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
+            if (navBottom > 0) binding.root.updatePadding(bottom = navBottom)
+        }
+
+        binding.root.post {
+            val insets = ViewCompat.getRootWindowInsets(requireActivity().window.decorView)
+            val navBottom = insets?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
+            if (navBottom > 0) binding.root.updatePadding(bottom = navBottom)
+        }
 
         val editor = binding.preEditView
         buildRatioPills()
