@@ -90,7 +90,7 @@ class TextPanelController(
     private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_REFLECTION, TOOL_BLEND, TOOL_NEON, TOOL_STROKE, TOOL_LINE, TOOL_LETTER, TOOL_ALIGN, TOOL_BG, TOOL_CURVE, TOOL_STYLE, TOOL_MASK, TOOL_OPACITY, TOOL_ROTATE, TOOL_COLOR, TOOL_PADDING, TOOL_SIZE, TOOL_POSITION, TOOL_REL_POS, TOOL_STYLES)
     private val composedEffectTags = setOf(
         TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_REFLECTION, TOOL_NEON,
-        TOOL_STROKE, TOOL_SHADOW, TOOL_INNER
+        TOOL_STROKE, TOOL_SHADOW, TOOL_INNER, TOOL_LETTER, TOOL_LINE, TOOL_CURVE, TOOL_BG
     )
     private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncInnerShadowUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
@@ -338,6 +338,9 @@ initializeMaskControls()
                 activeTextToolTag == TOOL_STROKE && sel != null -> showComposeStrokeSheet(sel)
                 activeTextToolTag == TOOL_SHADOW && sel != null -> showComposeShadowSheet(sel)
                 activeTextToolTag == TOOL_INNER && sel != null -> showComposeInnerShadowSheet(sel)
+                (activeTextToolTag == TOOL_LETTER || activeTextToolTag == TOOL_LINE) && sel != null -> showComposeSpacingSheet(sel)
+                activeTextToolTag == TOOL_CURVE && sel != null -> showComposeCurveSheet(sel)
+                activeTextToolTag == TOOL_BG && sel != null -> showComposeBackgroundSheet(sel)
                 activeTextToolTag in composedEffectTags -> {
                     // layer non-teks/berbeda dipilih saat halaman tool terbuka:
                     // tutup halaman settings (paralel dengan perilaku legacy panel)
@@ -948,6 +951,156 @@ initializeMaskControls()
                 },
                 onApply = { applyEffectSettings() },
                 onCancel = { cancelEffectSettings() }
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk Spacing (Letter & Line Spacing).
+     */
+    private fun showComposeSpacingSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.SpacingDetailPage(
+                letterSpacing = layer.letterSpacing.coerceIn(-0.2f, 1.0f),
+                lineSpacing = layer.lineSpacing.coerceIn(-20f, 80f),
+                onLetterSpacingChange = { ls ->
+                    applyToTextLayer { it.letterSpacing = ls }
+                    pixelCanvasView.invalidate()
+                },
+                onLineSpacingChange = { linesp ->
+                    applyToTextLayer { it.lineSpacing = linesp }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.letterSpacing = 0.0f
+                        it.lineSpacing = 0f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk Text Curve / Bending.
+     */
+    private fun showComposeCurveSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.CurveDetailPage(
+                curvePercent = layer.curvePercent.coerceIn(-100, 100),
+                onCurvePercentChange = { cp ->
+                    applyToTextLayer { it.curvePercent = cp }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer { it.curvePercent = 0 }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk Text Background.
+     */
+    private fun showComposeBackgroundSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        applyToTextLayer { it.bgEnabled = true }
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.BackgroundDetailPage(
+                enabled = layer.bgEnabled,
+                color = layer.bgColor,
+                opacityPct = (layer.bgOpacity * 100f).coerceIn(0f, 100f),
+                padding = layer.bgPadding.coerceIn(0f, 100f),
+                cornerRadius = layer.bgCornerRadius.coerceIn(0f, 120f),
+                onEnabledChange = { en ->
+                    applyToTextLayer { it.bgEnabled = en }
+                    pixelCanvasView.invalidate()
+                },
+                onColorChange = { c ->
+                    applyToTextLayer { layer ->
+                        val currentAlpha = (layer.bgColor ushr 24) and 0xFF
+                        layer.bgColor = (c and 0x00FFFFFF) or (currentAlpha shl 24)
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onColorPickRequested = {
+                    val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@BackgroundDetailPage
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                        .newInstance(
+                            initialColor = sel.bgColor,
+                            resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.BG_RESULT_KEY
+                        )
+                        .show(
+                            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                        )
+                },
+                onOpacityChange = { op ->
+                    applyToTextLayer { it.bgOpacity = op / 100f }
+                    pixelCanvasView.invalidate()
+                },
+                onPaddingChange = { pad ->
+                    applyToTextLayer { it.bgPadding = pad }
+                    pixelCanvasView.invalidate()
+                },
+                onCornerRadiusChange = { cr ->
+                    applyToTextLayer { it.bgCornerRadius = cr }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.bgEnabled = true
+                        it.bgColor = Color.BLACK
+                        it.bgOpacity = 1f
+                        it.bgPadding = 0f
+                        it.bgCornerRadius = 0f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
             )
         }
         onCanvasChanged()
@@ -2648,10 +2801,28 @@ tvAngleLabel.text = "Angle: 0°"
                     syncStrokeUIHook?.invoke(layer)
                 }
             }
-            TOOL_LINE, TOOL_LETTER -> syncSpacingUIHook?.invoke(layer)
+            TOOL_LINE, TOOL_LETTER -> {
+                if (threeDComposeHost != null) {
+                    showComposeSpacingSheet(layer)
+                } else {
+                    syncSpacingUIHook?.invoke(layer)
+                }
+            }
             TOOL_ALIGN -> syncAlignUIHook?.invoke(layer)
-            TOOL_BG -> syncBackgroundUIHook?.invoke(layer)
-            TOOL_CURVE -> syncCurveUIHook?.invoke(layer)
+            TOOL_BG -> {
+                if (threeDComposeHost != null) {
+                    showComposeBackgroundSheet(layer)
+                } else {
+                    syncBackgroundUIHook?.invoke(layer)
+                }
+            }
+            TOOL_CURVE -> {
+                if (threeDComposeHost != null) {
+                    showComposeCurveSheet(layer)
+                } else {
+                    syncCurveUIHook?.invoke(layer)
+                }
+            }
             TOOL_STYLE -> syncStyleUIHook?.invoke(layer)
             TOOL_MASK -> syncMaskUIHook?.invoke(layer)
             TOOL_OPACITY -> syncOpacityUIHook?.invoke(layer)
@@ -4516,7 +4687,12 @@ private fun registerTextPanels() {
                         layer.bgColor = (color and 0x00FFFFFF) or (currentAlpha shl 24)
                     }
                     val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
-                    if (layer != null) sync(layer)
+                    if (layer != null) {
+                        sync(layer)
+                        if (activeTextToolTag == TOOL_BG && threeDComposeHost != null) {
+                            showComposeBackgroundSheet(layer)
+                        }
+                    }
                     pixelCanvasView.invalidate()
                 }
             }
