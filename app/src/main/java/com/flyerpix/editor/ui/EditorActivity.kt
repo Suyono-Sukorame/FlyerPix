@@ -1041,38 +1041,32 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     }
 
     private fun showTopAddMenu(anchor: View) {
-        val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
-        popup.menu.add(0, 1, 0, "Text")
-        popup.menu.add(0, 2, 1, "Today's Date")
-        popup.menu.add(0, 3, 2, "Sticker")
-        popup.menu.add(0, 4, 3, "Shape")
-        popup.menu.add(0, 5, 4, "From Gallery")
-        popup.menu.add(0, 6, 5, "Free Draw")
-
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> pixelCanvasView.addTextLayer("New Text")
-                2 -> {
+        CompactPopupMenu(
+            this,
+            anchor,
+            listOf("Text", "Today's Date", "Sticker", "Shape", "From Gallery", "Free Draw")
+        ) { index, _ ->
+            when (index) {
+                0 -> pixelCanvasView.addTextLayer("New Text")
+                1 -> {
                     val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
                     pixelCanvasView.addTextLayer(date)
                 }
-                3 -> {
+                2 -> {
                     binding.bottomNavigation.selectedItemId = R.id.nav_add
                     objectMenu.select(ObjectMenuController.OBJ_STICKER)
                 }
-                4 -> {
+                3 -> {
                     binding.bottomNavigation.selectedItemId = R.id.nav_add
                     objectMenu.select(ObjectMenuController.OBJ_SHAPES)
                 }
-                5 -> preEditImageLauncher.launch("image/*")
-                6 -> {
+                4 -> preEditImageLauncher.launch("image/*")
+                5 -> {
                     binding.bottomNavigation.selectedItemId = R.id.nav_add
                     objectMenu.select(ObjectMenuController.OBJ_DRAW)
                 }
             }
-            true
-        }
-        popup.show()
+        }.show()
     }
 
     private fun showTopSaveMenu(anchor: View) {
@@ -1097,24 +1091,25 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     }
 
     private fun showTopOverflowMenu(anchor: View) {
-        val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
-        popup.menu.add(0, 1, 0, "Use image from gallery")
-        popup.menu.add(0, 2, 1, "Use image from camera")
-        popup.menu.add(0, 3, 2, "Export image")
-        popup.menu.add(0, 4, 3, "Image size")
-        popup.menu.add(0, 5, 4, "Background")
-        popup.menu.add(0, 6, 5, "Clear canvas")
-        popup.menu.add(0, 7, 6, "Save Project")
-        popup.menu.add(0, 8, 7, "Open Project (.plp)")
-        popup.menu.add(0, 9, 8, "New Project")
-
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> bgGalleryLauncher.launch("image/*")
-                2 -> checkCameraPermissionForBackground()
-                3 -> exportController.showExportDialog()
-                4 -> canvasMenuController.showImageSizeDialog()
-                5 -> {
+        // Hanya item unik: Export/Save/Open sudah ada di menu popup Save (ketas
+        // dan tidak diduplikasi di sini agar popup tidak memenuhi layar).
+        CompactPopupMenu(
+            this,
+            anchor,
+            listOf(
+                "Use image from gallery",
+                "Use image from camera",
+                "Image size",
+                "Background",
+                "Clear canvas",
+                "New Project"
+            )
+        ) { index, _ ->
+            when (index) {
+                0 -> bgGalleryLauncher.launch("image/*")
+                1 -> checkCameraPermissionForBackground()
+                2 -> canvasMenuController.showImageSizeDialog()
+                3 -> {
                     val sheet = com.flyerpix.editor.ui.dialog.CanvasBackgroundBottomSheet.show(supportFragmentManager, pixelCanvasView)
                     sheet.onBackgroundImageRequested = { src ->
                         when (src) {
@@ -1123,14 +1118,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                         }
                     }
                 }
-                6 -> pixelCanvasView.clearLayers()
-                7 -> exportController.showSaveProjectDialog()
-                8 -> exportController.showProjectManager()
-                9 -> showNewProjectDialog()
+                4 -> pixelCanvasView.clearLayers()
+                5 -> showNewProjectDialog()
             }
-            true
-        }
-        popup.show()
+        }.show()
     }
 
     private var saveMode = false
