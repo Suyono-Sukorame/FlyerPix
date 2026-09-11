@@ -940,104 +940,202 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             return
         }
 
-        val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
+        val density = resources.displayMetrics.density
+        val iconSize = (48 * density).toInt()
+        val pad = (12 * density).toInt()
 
-        // Editing Operations
-        popup.menu.add(0, 1, 0, "Edit Text")
-        popup.menu.add(0, 2, 1, "Copy")
-        popup.menu.add(0, 3, 2, "Size")
-        popup.menu.add(0, 4, 3, "Rotate")
-        popup.menu.add(0, 5, 4, "Alignment")
-        popup.menu.add(0, 6, 5, "Color")
-
-        // Z-Order Operations
-        popup.menu.add(0, 7, 6, "To Front")
-        popup.menu.add(0, 8, 7, "To Back")
-
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> {
-                    // Edit Teks
-                    showEditTextDialog(textLayer)
-                }
-                2 -> {
-                    // Copy text layer
-                    pixelCanvasView.runRecordedAction("Copy Text") {
-                        val copiedLayer = textLayer.copyLayer() as com.flyerpix.editor.canvas.model.TextLayer
-                        copiedLayer.x += 30f
-                        copiedLayer.y += 30f
-                        pixelCanvasView.addLayer(copiedLayer)
-                    }
-                    pixelCanvasView.invalidate()
-                    showSnackbar("Text layer copied")
-                }
-                3 -> {
-                    // Size - switch to edit tab
-                    binding.bottomNavigation.selectedItemId = R.id.nav_edit
-                    showSnackbar("Adjust text size with the slider in the Edit panel")
-                }
-                4 -> {
-                    // Rotate - switch to edit tab
-                    binding.bottomNavigation.selectedItemId = R.id.nav_edit
-                    showSnackbar("Adjust text rotation with the slider in the Edit panel")
-                }
-                5 -> {
-                    // Alignment menu
-                    showTextAlignmentMenu(anchor, textLayer)
-                }
-                6 -> {
-                    // Color - switch to edit tab
-                    binding.bottomNavigation.selectedItemId = R.id.nav_edit
-                    showSnackbar("Choose text color in the Edit panel")
-                }
-                7 -> {
-                    // To Front
-                    pixelCanvasView.runRecordedAction("Bring to Front") {
-                        pixelCanvasView.bringLayerToFront(textLayer)
-                    }
-                    pixelCanvasView.invalidate()
-                    showSnackbar("Layer brought to front")
-                }
-                8 -> {
-                    // To Back
-                    pixelCanvasView.runRecordedAction("Send to Back") {
-                        pixelCanvasView.sendLayerToBack(textLayer)
-                    }
-                    pixelCanvasView.invalidate()
-                    showSnackbar("Layer sent to back")
+        fun makeIcon(resId: Int, tooltip: String, onClick: () -> Unit): android.widget.ImageView {
+            val icon = android.widget.ImageView(this).apply {
+                setImageResource(resId)
+                imageTintList = android.content.res.ColorStateList.valueOf(
+                    resources.getColor(R.color.light_text_primary, theme)
+                )
+                layoutParams = android.widget.FrameLayout.LayoutParams(iconSize, iconSize)
+                    .apply { setMargins(pad / 2, pad / 2, pad / 2, pad / 2) }
+                background = androidx.appcompat.content.res.AppCompatResources.getDrawable(
+                    this@EditorActivity, R.drawable.bg_quick_toolbar
+                )?.apply { mutate(); alpha = 60 }
+                scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                isClickable = true
+                isFocusable = true
+                contentDescription = tooltip
+                androidx.appcompat.widget.TooltipCompat.setTooltipText(this, tooltip)
+                setOnClickListener {
+                    popup?.dismiss()
+                    onClick()
                 }
             }
-            true
+            return icon
         }
-        popup.show()
+
+        val row1 = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER
+        }
+        val row2 = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER
+        }
+
+        // Row 1: Edit Text, Copy, Size, Rotate
+        row1.addView(makeIcon(R.drawable.ic_edit_24px, "Edit Text") {
+            showEditTextDialog(textLayer)
+        })
+        row1.addView(makeIcon(R.drawable.ic_copy_24px, "Copy") {
+            pixelCanvasView.runRecordedAction("Copy Text") {
+                val copiedLayer = textLayer.copyLayer() as com.flyerpix.editor.canvas.model.TextLayer
+                copiedLayer.x += 30f
+                copiedLayer.y += 30f
+                pixelCanvasView.addLayer(copiedLayer)
+            }
+            pixelCanvasView.invalidate()
+            showSnackbar("Text layer copied")
+        })
+        row1.addView(makeIcon(R.drawable.ic_size_24px, "Size") {
+            binding.bottomNavigation.selectedItemId = R.id.nav_edit
+            showSnackbar("Adjust text size with the slider in the Edit panel")
+        })
+        row1.addView(makeIcon(R.drawable.ic_rotate_right_24px, "Rotate") {
+            binding.bottomNavigation.selectedItemId = R.id.nav_edit
+            showSnackbar("Adjust text rotation with the slider in the Edit panel")
+        })
+
+        // Row 2: Alignment, Color, To Front, To Back
+        row2.addView(makeIcon(R.drawable.ic_align_left_24, "Alignment") {
+            showAlignmentSubPopup(anchor, textLayer)
+        })
+        row2.addView(makeIcon(R.drawable.ic_sharp_palette_24px, "Color") {
+            binding.bottomNavigation.selectedItemId = R.id.nav_edit
+            showSnackbar("Choose text color in the Edit panel")
+        })
+        row2.addView(makeIcon(R.drawable.ic_bring_to_front_24px, "To Front") {
+            pixelCanvasView.runRecordedAction("Bring to Front") {
+                pixelCanvasView.bringLayerToFront(textLayer)
+            }
+            pixelCanvasView.invalidate()
+            showSnackbar("Layer brought to front")
+        })
+        row2.addView(makeIcon(R.drawable.ic_send_to_back_24px, "To Back") {
+            pixelCanvasView.runRecordedAction("Send to Back") {
+                pixelCanvasView.sendLayerToBack(textLayer)
+            }
+            pixelCanvasView.invalidate()
+            showSnackbar("Layer sent to back")
+        })
+
+        val container = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(0xFFFFFFFF.toInt())
+                cornerRadius = 4 * density
+            }
+            elevation = 8 * density
+            addView(row1)
+            addView(row2)
+        }
+
+        val location = IntArray(2)
+        anchor.getLocationOnScreen(location)
+        val popupW = (48 * 4 + 12 * 3) * density
+        var x = location[0] + anchor.width / 2 - (popupW / 2).toInt()
+        val screenW = resources.displayMetrics.widthPixels
+        val margin = (4 * density).toInt()
+        x = x.coerceIn(margin, screenW - popupW.toInt() - margin)
+
+        popup = android.widget.PopupWindow(
+            container,
+            popupW.toInt(),
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            isOutsideTouchable = true
+            elevation = 8 * density
+            showAtLocation(anchor, android.view.Gravity.TOP or android.view.Gravity.START,
+                x, location[1] + anchor.height + 4)
+        }
     }
 
-    /**
-     * Show text alignment menu
-     */
-    private fun showTextAlignmentMenu(anchor: View, textLayer: com.flyerpix.editor.canvas.model.TextLayer) {
-        val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
+    private var popup: android.widget.PopupWindow? = null
 
+    /**
+     * Popup kecil untuk pilihan perataan teks (Left/Center/Right) — dibuka dari
+     * ikon Alignment pada grid edit teks.
+     */
+    private fun showAlignmentSubPopup(anchor: View, textLayer: com.flyerpix.editor.canvas.model.TextLayer) {
+        val density = resources.displayMetrics.density
+        val iconSize = (44 * density).toInt()
+        val pad = (10 * density).toInt()
         val alignments = listOf("Left", "Center", "Right")
-        val alignValues = listOf(
+        val alignmentIcons = listOf(
+            R.drawable.ic_align_left_24, R.drawable.ic_align_center_24, R.drawable.ic_align_right_24
+        )
+        val alignmentValues = listOf(
             android.text.Layout.Alignment.ALIGN_NORMAL,
             android.text.Layout.Alignment.ALIGN_CENTER,
             android.text.Layout.Alignment.ALIGN_OPPOSITE
         )
 
-        alignments.forEachIndexed { index, name ->
-            popup.menu.add(0, index + 1, index, name)
+        val row = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER
         }
 
-        popup.setOnMenuItemClickListener { item ->
-            val align = alignValues.getOrNull(item.itemId - 1)
-            if (align != null) {
-                // Note: TextLayer doesn't have alignment, but we can add it as future feature
-                showSnackbar("Alignment: ${alignments[item.itemId - 1]}")
+        for (i in 0..2) {
+            val icon = android.widget.ImageView(this).apply {
+                setImageResource(alignmentIcons[i])
+                imageTintList = android.content.res.ColorStateList.valueOf(
+                    resources.getColor(R.color.light_text_primary, theme)
+                )
+                layoutParams = android.widget.FrameLayout.LayoutParams(iconSize, iconSize)
+                    .apply { setMargins(pad / 2, pad / 2, pad / 2, pad / 2) }
+                background = androidx.appcompat.content.res.AppCompatResources.getDrawable(
+                    this@EditorActivity, R.drawable.bg_quick_toolbar
+                )?.apply { mutate(); alpha = 60 }
+                scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                isClickable = true
+                isFocusable = true
+                contentDescription = alignments[i]
+                androidx.appcompat.widget.TooltipCompat.setTooltipText(this, alignments[i])
+                setOnClickListener {
+                    val align = alignmentValues.getOrNull(i)
+                    if (align != null) {
+                        // Note: TextLayer belum punya properti alignment — snackbar saja
+                        showSnackbar("Alignment: ${alignments[i]}")
+                    }
+                }
             }
-            true
+            row.addView(icon)
         }
-        popup.show()
+
+        val container = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(0xFFFFFFFF.toInt())
+                cornerRadius = 4 * density
+            }
+            elevation = 10 * density
+            addView(row)
+        }
+
+        val location = IntArray(2)
+        anchor.getLocationOnScreen(location)
+        val popupW = (44 * 3 + 10 * 2) * density
+        var x = location[0] + anchor.width / 2 - (popupW / 2).toInt()
+        val screenW = resources.displayMetrics.widthPixels
+        val margin = (4 * density).toInt()
+        x = x.coerceIn(margin, screenW - popupW.toInt() - margin)
+
+        android.widget.PopupWindow(
+            container,
+            popupW.toInt(),
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            isOutsideTouchable = true
+            elevation = 10 * density
+            showAtLocation(anchor, android.view.Gravity.TOP or android.view.Gravity.START,
+                x, location[1] + anchor.height + 4)
+        }
     }
 
     private fun showTopAddMenu(anchor: View) {
