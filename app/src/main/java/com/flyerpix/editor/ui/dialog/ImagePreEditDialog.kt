@@ -38,14 +38,17 @@ class ImagePreEditDialog : DialogFragment() {
         "6:8" to (6 to 8),
     )
 
-    private val ratioPills = mutableListOf<TextView>()
+    private class RatioPill(val label: TextView, val box: View)
+
+private val ratioPills = mutableListOf<RatioPill>()
     private var freeBtn: ImageButton? = null
     private var selectedPreset: Pair<Int, Int>? = null
 
     private val pillSelectedColor = 0xFF1769FF.toInt()
     private val pillTextColor = 0xFF5F6B7A.toInt()
     private val pillTextSelected = Color.WHITE
-    private val pillFill = 0xFFF0F2F5.toInt()
+    private val pillBorderColor = 0xFFB9C2CE.toInt()
+    private val pillActiveFill = 0xFFE3EEFC.toInt()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,28 +105,49 @@ class ImagePreEditDialog : DialogFragment() {
         container.removeAllViews()
         ratioPills.clear()
         for ((label, ratio) in ratioPresets) {
-            val pill = TextView(requireContext()).apply {
-                text = label
-                textSize = 12f
-                setTextColor(pillTextColor)
-                gravity = Gravity.CENTER
+            val item = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
                 isClickable = true
                 isFocusable = true
-                setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
-                setPadding(dp(12), dp(7), dp(12), dp(7))
-                background = pillBackground(false)
+                setPadding(dp(9), dp(5), dp(9), dp(5))
+                background = pillItemBackground(false)
                 setOnClickListener {
                     selectPreset(ratio)
                     binding.preEditView.applyAspectRatio(ratio.first, ratio.second)
                 }
             }
+
+            val box = View(requireContext()).apply {
+                background = ratioBoxBackground(false, ratio.first, ratio.second)
+            }
+            val boxLp = LinearLayout.LayoutParams(
+                ratioBoxWidthDp(ratio.first, ratio.second),
+                dp(18)
+            )
+            item.addView(box, boxLp)
+
+            val label = TextView(requireContext()).apply {
+                text = label
+                textSize = 11f
+                setTextColor(pillTextColor)
+                gravity = Gravity.CENTER
+                setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                setPadding(0, dp(3), 0, 0)
+            }
+            val labelLp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            item.addView(label, labelLp)
+
             val lp = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            lp.setMargins(dp(3), 0, dp(3), 0)
-            container.addView(pill, lp)
-            ratioPills.add(pill)
+            lp.setMargins(dp(2), 0, dp(2), 0)
+            container.addView(item, lp)
+            ratioPills.add(RatioPill(label, box))
         }
 
         val freeBtn = ImageButton(requireContext())
@@ -159,20 +183,37 @@ class ImagePreEditDialog : DialogFragment() {
     private fun updatePillStyles() {
         for ((index, pill) in ratioPills.withIndex()) {
             val active = ratioPresets[index].second == selectedPreset
-            pill.setTextColor(if (active) pillTextSelected else pillTextColor)
-            pill.background = pillBackground(active)
+            pill.label.setTextColor(if (active) pillSelectedColor else pillTextColor)
+            pill.box.background = ratioBoxBackground(
+                active, ratioPresets[index].second.first, ratioPresets[index].second.second
+            )
+            (pill.box.parent as? android.view.View)?.background = pillItemBackground(active)
         }
         freeBtn?.setColorFilter(if (selectedPreset == null) pillSelectedColor else pillTextColor)
     }
 
-    private fun pillBackground(active: Boolean): GradientDrawable =
+    /** Lebar kotak preview proporsional terhadap rasio (dibatasi agar tidak ekstrem). */
+    private fun ratioBoxWidthDp(ratioW: Int, ratioH: Int): Int {
+        val dpW = (18f * ratioW.toFloat() / ratioH.toFloat()).coerceIn(9f, 34f)
+        return (dpW * resources.displayMetrics.density).toInt()
+    }
+
+    private fun ratioBoxBackground(active: Boolean, ratioW: Int, ratioH: Int): GradientDrawable =
         GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = dp(14).toFloat()
-            setColor(if (active) pillSelectedColor else pillFill)
+            cornerRadius = dp(2).toFloat()
+            setColor(Color.TRANSPARENT)
+            setStroke(dp(2), if (active) pillSelectedColor else pillBorderColor)
         }
 
-private fun rippleBackground(): android.graphics.drawable.Drawable {
+    private fun pillItemBackground(active: Boolean): GradientDrawable =
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(9).toFloat()
+            setColor(if (active) pillActiveFill else Color.TRANSPARENT)
+        }
+
+    private fun rippleBackground(): android.graphics.drawable.Drawable {
     val out = TypedValue()
     requireContext().theme.resolveAttribute(
         android.R.attr.selectableItemBackgroundBorderless, out, true
