@@ -471,15 +471,15 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             onGalleryRequested = { preEditImageLauncher.launch("image/*") },
             onCameraRequested = { checkCameraPermissionForBackground() },
             onPanelChanged = { fitCanvasToOpenPanels() },
-            onShapeCreated = { shape -> shapePanelController.showShapeSettings(shape) }
+            onShapeCreated = {}
         )
         objectMenu.initialize()
         objectMenu.onDetailExpandedChanged = { setDetailExpanded(objectMenu.activeTag.isNotEmpty()) }
 
-        // Tap shape di kanvas (bukan drag) => navigasikan ke tab Edit lalu buka Shape Settings
+        // Tap shape di kanvas (bukan drag) => navigasikan ke tab Add lalu buka Shape Studio via Compose
         pixelCanvasView.onShapeTapRequested = { shape ->
-            binding.bottomNavigation.selectedItemId = R.id.nav_edit
-            shapePanelController.showShapeSettings(shape)
+            binding.bottomNavigation.selectedItemId = R.id.nav_add
+            objectMenu.showComposeShapeSheet(shape)
         }
 
         // Object Panel Controller - Mengelola efek properti objek (Shape/Image/etc)

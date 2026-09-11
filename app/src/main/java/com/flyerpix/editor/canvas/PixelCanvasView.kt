@@ -835,6 +835,14 @@ class PixelCanvasView @JvmOverloads constructor(
         color = Color.WHITE
     }
 
+    var freeDrawColor: Int
+        get() = freeDrawPaint.color
+        set(value) { freeDrawPaint.color = value }
+
+    var freeDrawStrokeWidth: Float
+        get() = freeDrawPaint.strokeWidth
+        set(value) { freeDrawPaint.strokeWidth = value }
+
     /** Bitmap hasil capture kanvas untuk pembacaan pixel. */
     private var capturedBitmap: Bitmap? = null
 
@@ -3067,8 +3075,8 @@ class PixelCanvasView @JvmOverloads constructor(
         val layer = PenLayer.fromPoints(rel).apply {
             x = minX
             y = minY
-            strokeColor = Color.WHITE
-            strokeWidth = 6f
+            strokeColor = freeDrawPaint.color
+            strokeWidth = freeDrawPaint.strokeWidth
         }
         addLayer(layer)
         invalidate()

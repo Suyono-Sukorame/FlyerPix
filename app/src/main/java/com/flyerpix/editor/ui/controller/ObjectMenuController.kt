@@ -1,33 +1,43 @@
 package com.flyerpix.editor.ui.controller
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.drawable.BitmapDrawable
-import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.fragment.app.FragmentManager
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
+import com.flyerpix.editor.canvas.model.ArrowLayer
+import com.flyerpix.editor.canvas.model.ArrowStyle
+import com.flyerpix.editor.canvas.model.PenLayer
 import com.flyerpix.editor.canvas.model.ShapeLayer
 import com.flyerpix.editor.canvas.model.ShapeType
 import com.flyerpix.editor.databinding.ActivityEditorBinding
+import com.flyerpix.editor.ui.EditorActivity
+import com.flyerpix.editor.ui.compose.*
+import com.flyerpix.editor.ui.dialog.ColorPickerDialog
+import com.flyerpix.editor.ui.controller.PanelHeightManager
 
 class ObjectMenuController(
-    private val context: Context,
+    private val activity: EditorActivity,
     private val binding: ActivityEditorBinding,
     private val canvas: PixelCanvasView,
     private val showSnackbar: (String) -> Unit,
     private val onGalleryRequested: () -> Unit,
     private val onCameraRequested: () -> Unit,
     private val onPanelChanged: () -> Unit = {},
-    private val onShapeCreated: ((com.flyerpix.editor.canvas.model.ShapeLayer) -> Unit)? = null
+    private val onShapeCreated: ((ShapeLayer) -> Unit)? = null
 ) {
     companion object {
-        // Add-only creation tools: fitur pembuatan/penambahan layer.
         const val OBJ_TEXT     = "obj_text"
         const val OBJ_STICKER  = "obj_sticker"
         const val OBJ_IMPORT   = "obj_import"
@@ -38,11 +48,36 @@ class ObjectMenuController(
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
+
+        private const val SHAPE_FILL_RESULT_KEY = "obj_shape_fill_color_key"
+        private const val SHAPE_STROKE_RESULT_KEY = "obj_shape_stroke_color_key"
+        private const val DRAW_COLOR_RESULT_KEY = "obj_draw_color_key"
+        private const val ARROW_COLOR_RESULT_KEY = "obj_arrow_color_key"
+        private const val BEZIER_COLOR_RESULT_KEY = "obj_bezier_color_key"
     }
 
-    private val toolItems = LinkedHashMap<String, android.view.ViewGroup>()
-    private val contentViews = LinkedHashMap<String, View>()
+    private val fragmentManager: FragmentManager get() = activity.supportFragmentManager
+    private val composeHost: ComposeView? get() = binding.composeThreeDDetail
+    private val composeContainer: FrameLayout? get() = binding.composeThreeDSheetContainer
+
+    private val toolItems = LinkedHashMap<String, ViewGroup>()
     var activeTag: String = ""
+
+    // Draft layer snapshots for Cancel / Rollback
+    private var draftShape: ShapeLayer? = null
+    private var isNewShape: Boolean = false
+    private var shapeSnapshotType: ShapeType = ShapeType.RECTANGLE
+    private var shapeSnapshotCornerX: Float = 20f
+    private var shapeSnapshotCornerY: Float = 20f
+    private var shapeSnapshotOpacity: Int = 255
+    private var shapeSnapshotFillColor: Int = 0xFF1769FF.toInt()
+    private var shapeSnapshotStrokeWidth: Float = 0f
+    private var shapeSnapshotStrokeOpacity: Int = 255
+    private var shapeSnapshotStrokeColor: Int = Color.BLACK
+    private var shapeSnapshotStrokeJoin: Paint.Join = Paint.Join.MITER
+
+    private var draftArrow: ArrowLayer? = null
+    private var draftPen: PenLayer? = null
 
     /**
      * Dipanggil saat status detail (buka/tutup) berubah, agar activity bisa
@@ -54,29 +89,17 @@ class ObjectMenuController(
         onDetailExpandedChanged?.invoke(activeTag.isNotEmpty())
     }
 
+    private fun computeSheetHeight(ratio: Float): Int {
+        val displayMetrics = activity.resources.displayMetrics
+        val density = displayMetrics.density
+        val targetPx = (displayMetrics.heightPixels * ratio).toInt()
+        val floorPx = (300 * density).toInt()
+        return targetPx.coerceAtLeast(floorPx)
+    }
+
     fun initialize() {
-        contentViews[OBJ_STICKER] = binding.fragmentTabSticker
-        contentViews[OBJ_IMPORT]  = binding.objectContentImage
-        contentViews[OBJ_SHAPES]  = binding.objectContentShape
-        contentViews[OBJ_DRAW]    = binding.objectContentDraw
-        contentViews[OBJ_BEZIER]  = binding.objectContentBezier
-        contentViews[OBJ_ARROW]   = binding.objectContentArrow
-
         buildToolStrip()
-
-        binding.btnObjGallery.setOnClickListener { onGalleryRequested() }
-        binding.btnObjCamera.setOnClickListener { onCameraRequested() }
-        buildShapeRow()
-
-        binding.btnObjStartDraw.setOnClickListener { toggleFreeDrawMode() }
-        binding.btnObjAddBezier.setOnClickListener {
-            canvas.addPenLayer()
-            showSnackbar("Bézier curve added")
-        }
-        binding.btnObjAddArrow.setOnClickListener {
-            canvas.addArrowLayer()
-            showSnackbar("Arrow added")
-        }
+        setupColorResultListeners()
     }
 
     private fun buildToolStrip() {
@@ -90,26 +113,26 @@ class ObjectMenuController(
             Spec(OBJ_BEZIER,   "Bezier",  R.drawable.ic_curve_24px),
             Spec(OBJ_ARROW,    "Arrow",   R.drawable.ic_arrow_24px)
         )
-        val density = context.resources.displayMetrics.density
+        val density = activity.resources.displayMetrics.density
         val container = binding.objectToolStripInclude.objectToolStripContainer
         container.removeAllViews()
 
         for (spec in specs) {
-            val item = LinearLayout(context).apply {
+            val item = LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = android.view.Gravity.CENTER
                 isClickable = true; isFocusable = true
                 setBackgroundResource(R.drawable.bg_panel_tool_item)
-                setPadding((8*density).toInt(), (8*density).toInt(), (8*density).toInt(), (6*density).toInt())
+                setPadding((8 * density).toInt(), (8 * density).toInt(), (8 * density).toInt(), (6 * density).toInt())
                 setOnClickListener { onToolClicked(spec.tag) }
             }
             val iconSize = (28 * density).toInt()
-            item.addView(android.widget.ImageView(context).apply {
+            item.addView(ImageView(activity).apply {
                 setImageResource(spec.iconRes)
                 colorFilter = android.graphics.PorterDuffColorFilter(COLOR_GRAY, android.graphics.PorterDuff.Mode.SRC_IN)
                 layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
             })
-            item.addView(android.widget.TextView(context).apply {
+            item.addView(TextView(activity).apply {
                 text = spec.label; textSize = 11f; maxLines = 1
                 gravity = android.view.Gravity.CENTER; setTextColor(COLOR_GRAY)
             })
@@ -121,8 +144,6 @@ class ObjectMenuController(
     }
 
     private fun onToolClicked(tag: String) {
-        // Text adalah aksi instan: tambah layer teks lalu biarkan listener
-        // seleksi memindahkan pengguna ke tab Edit.
         if (tag == OBJ_TEXT) {
             canvas.addTextLayer("New Text")
             showSnackbar("Text layer added")
@@ -133,114 +154,490 @@ class ObjectMenuController(
 
     fun select(tag: String) {
         activeTag = tag
-        for ((t, item) in toolItems) {
-            val sel = t == tag
-            item.isSelected = sel
-            val c = if (sel) COLOR_ACTIVE else COLOR_GRAY
-            (item.getChildAt(0) as? android.widget.ImageView)?.colorFilter =
-                android.graphics.PorterDuffColorFilter(c, android.graphics.PorterDuff.Mode.SRC_IN)
-            (item.getChildAt(1) as? android.widget.TextView)?.setTextColor(c)
+        updateToolStripSelection(tag)
+        when (tag) {
+            OBJ_STICKER -> showComposeStickerSheet()
+            OBJ_IMPORT  -> showComposeImportSheet()
+            OBJ_DRAW    -> showComposeDrawSheet()
+            OBJ_SHAPES  -> showComposeShapeSheet()
+            OBJ_BEZIER  -> showComposeBezierSheet()
+            OBJ_ARROW   -> showComposeArrowSheet()
         }
-        applyContentVisibility()
+        notifyDetailExpanded()
         onPanelChanged()
     }
 
     fun deselect() {
         activeTag = ""
-        for (item in toolItems.values) {
-            item.isSelected = false
-            (item.getChildAt(0) as? android.widget.ImageView)?.colorFilter =
-                android.graphics.PorterDuffColorFilter(COLOR_GRAY, android.graphics.PorterDuff.Mode.SRC_IN)
-            (item.getChildAt(1) as? android.widget.TextView)?.setTextColor(COLOR_GRAY)
-        }
-        binding.objectContentPanel.visibility = View.GONE
-        applyContentVisibility()
+        updateToolStripSelection("")
+
+        // Cleanup draft layers if cancelled
+        draftShape = null
+        draftArrow = null
+        draftPen = null
         canvas.freeDrawEnabled = false
+
+        // Hide Compose container & restore menu panel
+        composeContainer?.visibility = View.GONE
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.VISIBLE
+
+        notifyDetailExpanded()
         onPanelChanged()
     }
 
-    private fun applyContentVisibility() {
-        binding.objectContentPanel.visibility = if (activeTag.isEmpty()) View.GONE else View.VISIBLE
-        for ((t, v) in contentViews) v.visibility = if (t == activeTag) View.VISIBLE else View.GONE
-        notifyDetailExpanded()
+    private fun updateToolStripSelection(active: String) {
+        for ((t, item) in toolItems) {
+            val sel = t == active
+            item.isSelected = sel
+            val c = if (sel) COLOR_ACTIVE else COLOR_GRAY
+            (item.getChildAt(0) as? ImageView)?.colorFilter =
+                android.graphics.PorterDuffColorFilter(c, android.graphics.PorterDuff.Mode.SRC_IN)
+            (item.getChildAt(1) as? TextView)?.setTextColor(c)
+        }
     }
 
     fun refreshUI() {
         binding.objectToolStripInclude.objectToolStripScroll.visibility = View.VISIBLE
-        if (activeTag.isEmpty()) binding.objectContentPanel.visibility = View.GONE
-        else applyContentVisibility()
-        syncDrawButton()
+        if (activeTag.isEmpty()) {
+            composeContainer?.visibility = View.GONE
+            binding.objectContentPanel.visibility = View.GONE
+            binding.objectMenuPanel.visibility = View.VISIBLE
+        }
     }
 
-    private fun toggleFreeDrawMode() {
-        val enabled = !canvas.freeDrawEnabled
-        canvas.freeDrawEnabled = enabled
-        canvas.onFreeDrawStart = { syncDrawButton() }
-        syncDrawButton()
-        showSnackbar(if (enabled) "Free Draw mode on. Drag on the canvas." else "Free Draw mode off")
-    }
+    // ─────────────────────────────────────────────────────────────────────────
+    // Color Picker Result Listeners
+    // ─────────────────────────────────────────────────────────────────────────
 
-    fun syncDrawButton() {
-        val enabled = canvas.freeDrawEnabled
-        binding.btnObjStartDraw.text = if (enabled) "🛑 Finish Drawing" else "✏️ Start Free Draw"
-        binding.btnObjStartDraw.setStrokeColor(
-            android.content.res.ColorStateList.valueOf(if (enabled) 0xFF2E7D32.toInt() else 0xFF444444.toInt())
-        )
-    }
-
-    private fun buildShapeRow() {
-        val shapes = listOf(
-            ShapeType.RECTANGLE, ShapeType.CIRCLE, ShapeType.TRIANGLE,
-            ShapeType.STAR, ShapeType.ROUNDED_RECTANGLE
-        )
-        val density = context.resources.displayMetrics.density
-        val size = (48 * density).toInt()
-        val margin = (6 * density).toInt()
-        binding.llShapeRow.removeAllViews()
-        for (type in shapes) {
-            val tile = FrameLayout(context).apply {
-                layoutParams = LinearLayout.LayoutParams(size, size).apply { setMargins(margin, margin, margin, margin) }
-                setBackgroundResource(R.drawable.bg_shape_preview)
-                isClickable = true
-                isFocusable = true
-                setOnClickListener {
-                    val shape = canvas.addShapeLayer(type)
-                    canvas.selectedLayer = shape // Auto select shape
-                    showSnackbar("Shape ${type.name} created")
-                    onShapeCreated?.invoke(shape) // Notify controller to show settings
-                }
+    private fun setupColorResultListeners() {
+        fragmentManager.setFragmentResultListener(SHAPE_FILL_RESULT_KEY, activity) { _, bundle ->
+            val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
+            draftShape?.let {
+                it.fillColor = color
+                canvas.invalidate()
+                showComposeShapeSheet(it)
             }
-            tile.addView(ImageView(context).apply {
-                setImageDrawable(buildShapeIcon(type, size))
-                layoutParams = FrameLayout.LayoutParams(size, size, Gravity.CENTER)
-            })
-            binding.llShapeRow.addView(tile)
+        }
+        fragmentManager.setFragmentResultListener(SHAPE_STROKE_RESULT_KEY, activity) { _, bundle ->
+            val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.BLACK)
+            draftShape?.let {
+                it.strokeColor = color
+                canvas.invalidate()
+                showComposeShapeSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(DRAW_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
+            canvas.freeDrawColor = color
+            showComposeDrawSheet()
+        }
+        fragmentManager.setFragmentResultListener(ARROW_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
+            draftArrow?.let {
+                it.headColor = color
+                it.tailColor = color
+                canvas.invalidate()
+                showComposeArrowSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(BEZIER_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
+            draftPen?.let {
+                it.strokeColor = color
+                canvas.invalidate()
+                showComposeBezierSheet(it)
+            }
         }
     }
 
-    /**
-     * Gambar preview shape (fill + stroke) ke dalam Bitmap menggunakan builder
-     * path yang sama dengan rendering kanvas, sehingga preview selalu WYSIWYG.
-     */
-    private fun buildShapeIcon(type: ShapeType, sizePx: Int): BitmapDrawable {
-        val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-        val c = Canvas(bmp)
-        val inset = sizePx * 0.15f
-        val side = sizePx - 2 * inset
-        val model = ShapeLayer(shapeType = type, width = side, height = side)
-        val path = model.buildPath()
-        c.translate(inset, inset)
-        val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFF1769FF.toInt()
-            style = Paint.Style.FILL
+    // ─────────────────────────────────────────────────────────────────────────
+    // 1. Sticker Sheet (~68% Screen Height)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun showComposeStickerSheet() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeSheetHeight(0.68f)
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            StickerDetailPage(
+                onStickerSelected = { stickerItem ->
+                    canvas.addEmojiLayer(stickerItem.emoji)
+                    showSnackbar("Added ${stickerItem.emoji} to canvas")
+                },
+                onClose = { deselect() },
+                maxHeightPx = sheetMaxH
+            )
         }
-        val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFF0D47A1.toInt()
-            style = Paint.Style.STROKE
-            strokeWidth = (side * 0.05f).coerceAtLeast(1.5f)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2. Shape Studio Sheet (~58% Screen Height)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun showComposeShapeSheet(shapeToEdit: ShapeLayer? = null) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_SHAPES
+        updateToolStripSelection(OBJ_SHAPES)
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeSheetHeight(0.58f)
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val shape = shapeToEdit ?: draftShape ?: canvas.addShapeLayer(ShapeType.RECTANGLE).also {
+            isNewShape = true
+            canvas.selectedLayer = it
+            onShapeCreated?.invoke(it)
         }
-        c.drawPath(path, fill)
-        c.drawPath(path, stroke)
-        return BitmapDrawable(context.resources, bmp)
+
+        if (draftShape == null) {
+            draftShape = shape
+            isNewShape = (shapeToEdit == null)
+            // Backup initial state
+            shapeSnapshotType = shape.shapeType
+            shapeSnapshotCornerX = shape.cornerRadiusX
+            shapeSnapshotCornerY = shape.cornerRadiusY
+            shapeSnapshotOpacity = shape.opacity
+            shapeSnapshotFillColor = shape.fillColor
+            shapeSnapshotStrokeWidth = shape.strokeWidth
+            shapeSnapshotStrokeOpacity = shape.strokeOpacity
+            shapeSnapshotStrokeColor = shape.strokeColor
+            shapeSnapshotStrokeJoin = shape.strokeJoin
+        }
+
+        host.setContent {
+            var currentType by remember { mutableStateOf(shape.shapeType) }
+            var currentCorner by remember { mutableStateOf(shape.cornerRadiusX) }
+            var currentOpacity by remember { mutableStateOf(shape.opacity / 255f * 100f) }
+            var currentFillColor by remember { mutableStateOf(shape.fillColor) }
+            var currentStrokeWidth by remember { mutableStateOf(shape.strokeWidth) }
+            var currentStrokeOpacity by remember { mutableStateOf(shape.strokeOpacity / 255f * 100f) }
+            var currentStrokeColor by remember { mutableStateOf(shape.strokeColor) }
+            var currentStrokeJoin by remember { mutableStateOf(shape.strokeJoin) }
+
+            ShapeDetailPage(
+                shapeType = currentType,
+                cornerRadius = currentCorner,
+                opacity = currentOpacity,
+                fillColor = currentFillColor,
+                strokeWidth = currentStrokeWidth,
+                strokeOpacity = currentStrokeOpacity,
+                strokeColor = currentStrokeColor,
+                strokeJoin = currentStrokeJoin,
+                onShapeTypeChange = { type ->
+                    currentType = type
+                    shape.shapeType = type
+                    canvas.invalidate()
+                },
+                onCornerRadiusChange = { radius ->
+                    currentCorner = radius
+                    shape.cornerRadiusX = radius
+                    shape.cornerRadiusY = radius
+                    canvas.invalidate()
+                },
+                onOpacityChange = { op ->
+                    currentOpacity = op
+                    shape.opacity = (op / 100f * 255f).toInt()
+                    canvas.invalidate()
+                },
+                onFillColorChange = { color ->
+                    currentFillColor = color
+                    shape.fillColor = color
+                    canvas.invalidate()
+                },
+                onOpenFillColorPicker = {
+                    ColorPickerDialog.newInstance(
+                        initialColor = shape.fillColor,
+                        resultKey = SHAPE_FILL_RESULT_KEY
+                    ).show(fragmentManager, "ShapeFillColorPicker")
+                },
+                onStrokeWidthChange = { width ->
+                    currentStrokeWidth = width
+                    shape.strokeWidth = width
+                    canvas.invalidate()
+                },
+                onStrokeOpacityChange = { op ->
+                    currentStrokeOpacity = op
+                    shape.strokeOpacity = (op / 100f * 255f).toInt()
+                    canvas.invalidate()
+                },
+                onStrokeColorChange = { color ->
+                    currentStrokeColor = color
+                    shape.strokeColor = color
+                    canvas.invalidate()
+                },
+                onOpenStrokeColorPicker = {
+                    ColorPickerDialog.newInstance(
+                        initialColor = shape.strokeColor,
+                        resultKey = SHAPE_STROKE_RESULT_KEY
+                    ).show(fragmentManager, "ShapeStrokeColorPicker")
+                },
+                onStrokeJoinChange = { join ->
+                    currentStrokeJoin = join
+                    shape.strokeJoin = join
+                    canvas.invalidate()
+                },
+                onApply = {
+                    canvas.runRecordedAction(if (isNewShape) "Add Shape" else "Modify Shape") {}
+                    showSnackbar("Shape saved")
+                    draftShape = null
+                    deselect()
+                },
+                onCancel = {
+                    if (isNewShape) {
+                        canvas.removeLayer(shape)
+                    } else {
+                        shape.shapeType = shapeSnapshotType
+                        shape.cornerRadiusX = shapeSnapshotCornerX
+                        shape.cornerRadiusY = shapeSnapshotCornerY
+                        shape.opacity = shapeSnapshotOpacity
+                        shape.fillColor = shapeSnapshotFillColor
+                        shape.strokeWidth = shapeSnapshotStrokeWidth
+                        shape.strokeOpacity = shapeSnapshotStrokeOpacity
+                        shape.strokeColor = shapeSnapshotStrokeColor
+                        shape.strokeJoin = shapeSnapshotStrokeJoin
+                    }
+                    canvas.invalidate()
+                    draftShape = null
+                    deselect()
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 3. Free Draw Studio Sheet (~48% Screen Height)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun showComposeDrawSheet() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeSheetHeight(0.48f)
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        canvas.freeDrawEnabled = true
+
+        host.setContent {
+            var currentBrushSize by remember { mutableStateOf(canvas.freeDrawStrokeWidth) }
+            var currentBrushColor by remember { mutableStateOf(canvas.freeDrawColor) }
+
+            DrawDetailPage(
+                brushSize = currentBrushSize,
+                brushColor = currentBrushColor,
+                onBrushSizeChange = { size ->
+                    currentBrushSize = size
+                    canvas.freeDrawStrokeWidth = size
+                },
+                onBrushColorChange = { color ->
+                    currentBrushColor = color
+                    canvas.freeDrawColor = color
+                },
+                onOpenColorPicker = {
+                    ColorPickerDialog.newInstance(
+                        initialColor = canvas.freeDrawColor,
+                        resultKey = DRAW_COLOR_RESULT_KEY
+                    ).show(fragmentManager, "DrawColorPicker")
+                },
+                onApply = {
+                    canvas.freeDrawEnabled = false
+                    showSnackbar("Drawing saved")
+                    deselect()
+                },
+                onCancel = {
+                    canvas.freeDrawEnabled = false
+                    deselect()
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 4. Import Sheet (~38% Screen Height)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun showComposeImportSheet() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeSheetHeight(0.38f)
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            ImportDetailPage(
+                onGalleryClick = {
+                    deselect()
+                    onGalleryRequested()
+                },
+                onCameraClick = {
+                    deselect()
+                    onCameraRequested()
+                },
+                onClose = { deselect() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 5. Arrow Studio Sheet (~42% Screen Height)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeSheetHeight(0.42f)
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val arrow = existingArrow ?: draftArrow ?: canvas.addArrowLayer().also {
+            canvas.selectedLayer = it
+        }
+        draftArrow = arrow
+
+        host.setContent {
+            var currentStyle by remember { mutableStateOf(arrow.arrowStyle) }
+            var currentStemWidth by remember { mutableStateOf(arrow.stemWidth) }
+            var currentColor by remember { mutableStateOf(arrow.headColor) }
+
+            ArrowDetailPage(
+                arrowStyle = currentStyle,
+                stemWidth = currentStemWidth,
+                arrowColor = currentColor,
+                onArrowStyleChange = { style ->
+                    currentStyle = style
+                    arrow.arrowStyle = style
+                    canvas.invalidate()
+                },
+                onStemWidthChange = { width ->
+                    currentStemWidth = width
+                    arrow.stemWidth = width
+                    canvas.invalidate()
+                },
+                onArrowColorChange = { color ->
+                    currentColor = color
+                    arrow.headColor = color
+                    arrow.tailColor = color
+                    canvas.invalidate()
+                },
+                onOpenColorPicker = {
+                    ColorPickerDialog.newInstance(
+                        initialColor = arrow.headColor,
+                        resultKey = ARROW_COLOR_RESULT_KEY
+                    ).show(fragmentManager, "ArrowColorPicker")
+                },
+                onApply = {
+                    canvas.runRecordedAction("Add Arrow") {}
+                    showSnackbar("Arrow added")
+                    draftArrow = null
+                    deselect()
+                },
+                onCancel = {
+                    canvas.removeLayer(arrow)
+                    canvas.invalidate()
+                    draftArrow = null
+                    deselect()
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 6. Bézier Curve Sheet (~42% Screen Height)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun showComposeBezierSheet(existingPen: PenLayer? = null) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeSheetHeight(0.42f)
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val pen = existingPen ?: draftPen ?: canvas.addPenLayer().also {
+            canvas.selectedLayer = it
+        }
+        draftPen = pen
+
+        host.setContent {
+            var currentWidth by remember { mutableStateOf(pen.strokeWidth) }
+            var currentColor by remember { mutableStateOf(pen.strokeColor) }
+
+            BezierDetailPage(
+                strokeWidth = currentWidth,
+                strokeColor = currentColor,
+                onStrokeWidthChange = { width ->
+                    currentWidth = width
+                    pen.strokeWidth = width
+                    canvas.invalidate()
+                },
+                onStrokeColorChange = { color ->
+                    currentColor = color
+                    pen.strokeColor = color
+                    canvas.invalidate()
+                },
+                onOpenColorPicker = {
+                    ColorPickerDialog.newInstance(
+                        initialColor = pen.strokeColor,
+                        resultKey = BEZIER_COLOR_RESULT_KEY
+                    ).show(fragmentManager, "BezierColorPicker")
+                },
+                onApply = {
+                    canvas.runRecordedAction("Add Bézier") {}
+                    showSnackbar("Bézier curve added")
+                    draftPen = null
+                    deselect()
+                },
+                onCancel = {
+                    canvas.removeLayer(pen)
+                    canvas.invalidate()
+                    draftPen = null
+                    deselect()
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
     }
 }

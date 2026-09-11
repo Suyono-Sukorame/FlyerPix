@@ -111,7 +111,7 @@ class TabSticker : Fragment() {
         /**
          * Data stiker/emoji bawaan per kategori.
          */
-        private val STICKER_DATA: List<StickerItem> = listOf(
+        internal val STICKER_DATA: List<StickerItem> = listOf(
             // ── Smileys & People ──────────────────────────────────────────
             StickerItem("😀", "Grinning", StickerCategory.SMILEYS),
             StickerItem("😃", "Grin", StickerCategory.SMILEYS),
