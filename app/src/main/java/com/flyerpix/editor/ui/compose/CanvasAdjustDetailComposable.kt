@@ -31,7 +31,9 @@ private const val PanelHandle = 0xFFD0D4DE
 
 /**
  * Compose bottom sheet untuk Canvas Adjustments (Brightness, Contrast, Saturation).
- * Mengikuti pola Card bottom sheet konsisten ala Reflection / Neon / 3D Detail.
+ * Gayanya identik 100% dengan halaman 3D Rotate:
+ * Card bawah, drag handle, divider, daftar baris slider (Label | Slider | Nilai) + tombol Reset
+ * di kolom kiri (scrollable), dan tombol Cancel / Apply di kolom kanan.
  */
 @Composable
 fun CanvasAdjustDetailPage(
@@ -44,7 +46,7 @@ fun CanvasAdjustDetailPage(
     onReset: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
-    maxHeightPx: Int = 360
+    maxHeightPx: Int = 420
 ) {
     var brightnessState by remember(brightness) { mutableStateOf(brightness) }
     var contrastState by remember(contrast) { mutableStateOf(contrast) }
@@ -70,7 +72,6 @@ fun CanvasAdjustDetailPage(
                         .fillMaxWidth()
                         .padding(top = 6.dp)
                 ) {
-                    // Drag Handle
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
@@ -85,7 +86,7 @@ fun CanvasAdjustDetailPage(
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left Column: Scrollable controls
+                        // Kolom Kiri: Baris kontrol slider (Identik RotateRow di 3D Rotate)
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -93,77 +94,59 @@ fun CanvasAdjustDetailPage(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Divider(color = Color(PanelDivider), thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(4.dp))
 
-                            // Header row: Title + Reset Button
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Color Adjustments",
-                                    style = MaterialTheme.typography.caption,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colors.onSurface
-                                )
-
-                                Text(
-                                    text = "Reset",
-                                    style = MaterialTheme.typography.caption,
-                                    color = MaterialTheme.colors.primary,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier
-                                        .clickable {
-                                            brightnessState = 0f
-                                            contrastState = 0f
-                                            saturationState = 0f
-                                            onReset()
-                                        }
-                                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                                )
-                            }
-
-                            // Brightness Slider
-                            AdjustSliderRow(
+                            AdjustRow(
                                 label = "Brightness",
                                 value = brightnessState,
-                                range = -100f..100f,
-                                steps = 200,
-                                valueText = formatAdjustValue(brightnessState),
-                                onValueChange = { v ->
-                                    brightnessState = v
-                                    onBrightnessChange(v)
+                                onValueChange = { new ->
+                                    brightnessState = new
+                                    onBrightnessChange(new)
                                 }
                             )
 
-                            // Contrast Slider
-                            AdjustSliderRow(
+                            AdjustRow(
                                 label = "Contrast",
                                 value = contrastState,
-                                range = -100f..100f,
-                                steps = 200,
-                                valueText = formatAdjustValue(contrastState),
-                                onValueChange = { v ->
-                                    contrastState = v
-                                    onContrastChange(v)
+                                onValueChange = { new ->
+                                    contrastState = new
+                                    onContrastChange(new)
                                 }
                             )
 
-                            // Saturation Slider
-                            AdjustSliderRow(
+                            AdjustRow(
                                 label = "Saturation",
                                 value = saturationState,
-                                range = -100f..100f,
-                                steps = 200,
-                                valueText = formatAdjustValue(saturationState),
-                                onValueChange = { v ->
-                                    saturationState = v
-                                    onSaturationChange(v)
+                                onValueChange = { new ->
+                                    saturationState = new
+                                    onSaturationChange(new)
                                 }
+                            )
+
+                            Spacer(modifier = Modifier.height(2.dp))
+
+                            Text(
+                                text = "Reset",
+                                style = MaterialTheme.typography.caption,
+                                color = MaterialTheme.colors.primary,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        brightnessState = 0f
+                                        contrastState = 0f
+                                        saturationState = 0f
+                                        onBrightnessChange(0f)
+                                        onContrastChange(0f)
+                                        onSaturationChange(0f)
+                                        onReset()
+                                    }
+                                    .padding(vertical = 4.dp)
                             )
                         }
 
-                        // Right column: Cancel & Apply
+                        // Kolom Kanan: Tombol Cancel & Apply (Identik 3D Rotate)
                         Column(
                             modifier = Modifier
                                 .width(60.dp)
@@ -203,18 +186,13 @@ fun CanvasAdjustDetailPage(
     }
 }
 
-private fun formatAdjustValue(v: Float): String {
-    val intVal = v.toInt()
-    return if (intVal > 0) "+$intVal" else "$intVal"
-}
-
+/**
+ * Baris item pengaturan tunggal (Label | Slider | Nilai), identik 100% dengan RotateRow di 3D Rotate.
+ */
 @Composable
-private fun AdjustSliderRow(
+private fun AdjustRow(
     label: String,
     value: Float,
-    range: ClosedFloatingPointRange<Float>,
-    steps: Int,
-    valueText: String,
     onValueChange: (Float) -> Unit
 ) {
     Row(
@@ -228,10 +206,10 @@ private fun AdjustSliderRow(
             modifier = Modifier.width(68.dp)
         )
         Slider(
-            value = value.coerceIn(range.start, range.endInclusive),
+            value = value,
             onValueChange = onValueChange,
-            valueRange = range,
-            steps = steps,
+            valueRange = -100f..100f,
+            steps = 200,
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colors.primary,
                 activeTrackColor = MaterialTheme.colors.primary
@@ -241,12 +219,16 @@ private fun AdjustSliderRow(
                 .height(30.dp)
         )
         Text(
-            text = valueText,
+            text = formatAdjustValue(value),
             style = MaterialTheme.typography.caption,
-            fontWeight = FontWeight.Medium,
             color = Color(PanelTextSecondary),
             textAlign = TextAlign.End,
             modifier = Modifier.width(36.dp)
         )
     }
+}
+
+private fun formatAdjustValue(v: Float): String {
+    val intVal = v.toInt()
+    return if (intVal > 0) "+$intVal" else "$intVal"
 }

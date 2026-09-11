@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 private val FiltersColorScheme = lightColors(
@@ -33,6 +34,7 @@ private const val PanelHandle = 0xFFD0D4DE
 
 /**
  * Compose bottom sheet untuk Canvas Filters (Vignette, Noise, Monochrome).
+ * Desain kartu preset visual interaktif yang to-the-point dan konsisten dengan 3D Shadow / Rotate.
  */
 @Composable
 fun CanvasFiltersDetailPage(
@@ -69,7 +71,7 @@ fun CanvasFiltersDetailPage(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 6.dp)
+                        .padding(top = 8.dp)
                 ) {
                     // Drag Handle
                     Box(
@@ -83,86 +85,94 @@ fun CanvasFiltersDetailPage(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left Column: Scrollable controls
+                        // Left Column
                         Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Divider(color = Color(PanelDivider), thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(2.dp))
 
-                            // Header row: Title + Reset Button
+                            Text(
+                                text = "Tap filter to toggle on / off",
+                                style = MaterialTheme.typography.caption,
+                                color = Color(PanelTextSecondary)
+                            )
+
+                            // 3 Horizontal Preset Filter Cards
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(
-                                    text = "Canvas Filters",
-                                    style = MaterialTheme.typography.caption,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colors.onSurface
+                                FilterPresetTile(
+                                    title = "Vignette",
+                                    subtitle = "Dark edges",
+                                    active = vignetteState,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        val next = !vignetteState
+                                        vignetteState = next
+                                        onVignetteChange(next)
+                                    }
                                 )
 
-                                Text(
-                                    text = "Reset",
-                                    style = MaterialTheme.typography.caption,
-                                    color = MaterialTheme.colors.primary,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier
-                                        .clickable {
-                                            vignetteState = false
-                                            noiseState = false
-                                            monochromeState = false
-                                            onReset()
-                                        }
-                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                FilterPresetTile(
+                                    title = "Noise",
+                                    subtitle = "Film grain",
+                                    active = noiseState,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        val next = !noiseState
+                                        noiseState = next
+                                        onNoiseChange(next)
+                                    }
+                                )
+
+                                FilterPresetTile(
+                                    title = "B&W",
+                                    subtitle = "Monochrome",
+                                    active = monochromeState,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        val next = !monochromeState
+                                        monochromeState = next
+                                        onFilterMonochromeChange(next)
+                                    }
                                 )
                             }
 
-                            // Vignette Toggle Item
-                            FilterToggleCard(
-                                title = "Vignette",
-                                subtitle = "Soft dark edges around canvas",
-                                checked = vignetteState,
-                                onCheckedChange = { isChecked ->
-                                    vignetteState = isChecked
-                                    onVignetteChange(isChecked)
-                                }
-                            )
+                            Spacer(modifier = Modifier.height(6.dp))
 
-                            // Noise Toggle Item
-                            FilterToggleCard(
-                                title = "Noise",
-                                subtitle = "Subtle film grain texture",
-                                checked = noiseState,
-                                onCheckedChange = { isChecked ->
-                                    noiseState = isChecked
-                                    onNoiseChange(isChecked)
-                                }
-                            )
-
-                            // Monochrome Toggle Item
-                            FilterToggleCard(
-                                title = "Monochrome",
-                                subtitle = "Black & white color matrix",
-                                checked = monochromeState,
-                                onCheckedChange = { isChecked ->
-                                    monochromeState = isChecked
-                                    onFilterMonochromeChange(isChecked)
-                                }
+                            // Reset Button
+                            Text(
+                                text = "Reset All Filters",
+                                style = MaterialTheme.typography.caption,
+                                color = MaterialTheme.colors.primary,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        vignetteState = false
+                                        noiseState = false
+                                        monochromeState = false
+                                        onReset()
+                                    }
+                                    .padding(vertical = 4.dp)
                             )
                         }
 
                         // Right column: Cancel & Apply
                         Column(
                             modifier = Modifier
-                                .width(60.dp)
-                                .padding(start = 6.dp),
+                                .width(64.dp)
+                                .padding(start = 4.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Bottom
                         ) {
@@ -173,6 +183,7 @@ fun CanvasFiltersDetailPage(
                             ) {
                                 Text("Cancel", style = MaterialTheme.typography.caption)
                             }
+                            Spacer(modifier = Modifier.height(2.dp))
                             Button(
                                 onClick = onApply,
                                 modifier = Modifier.fillMaxWidth(),
@@ -199,45 +210,51 @@ fun CanvasFiltersDetailPage(
 }
 
 @Composable
-private fun FilterToggleCard(
+private fun FilterPresetTile(
     title: String,
     subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    active: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
-    val borderColor = if (checked) MaterialTheme.colors.primary.copy(alpha = 0.4f) else Color(PanelDivider)
-    val bgColor = if (checked) MaterialTheme.colors.primary.copy(alpha = 0.05f) else Color(PanelAlt)
+    val borderColor = if (active) MaterialTheme.colors.primary else Color(PanelDivider)
+    val bgColor = if (active) MaterialTheme.colors.primary.copy(alpha = 0.08f) else Color(PanelAlt)
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .border(if (active) 2.dp else 1.dp, borderColor, RoundedCornerShape(12.dp))
             .background(bgColor)
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 10.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable { onClick() }
+            .padding(vertical = 12.dp, horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.body2,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
+            color = if (active) MaterialTheme.colors.primary else MaterialTheme.colors.onSurface
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.overline,
+            color = Color(PanelTextSecondary)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(4.dp))
+                .background(if (active) MaterialTheme.colors.primary else Color(0xFFD0D4DE))
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+        ) {
             Text(
-                text = title,
-                style = MaterialTheme.typography.caption,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colors.onSurface
-            )
-            Text(
-                text = subtitle,
+                text = if (active) "ON" else "OFF",
                 style = MaterialTheme.typography.overline,
-                color = Color(PanelTextSecondary)
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colors.primary,
-                checkedTrackColor = MaterialTheme.colors.primary.copy(alpha = 0.5f)
-            )
-        )
     }
 }

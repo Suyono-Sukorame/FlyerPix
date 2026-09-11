@@ -414,7 +414,12 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             { showSnackbar(it) }
         )
         effectsController.initialize()
-        effectsController.onDetailExpandedChanged = { setDetailExpanded(it) }
+        effectsController.onEffectSettingsOpenChanged = { open ->
+            val density = resources.displayMetrics.density
+            val offset = (56 * density).toInt()
+            animateNavTranslation(if (open) offset else 0)
+            fitCanvasToOpenPanels()
+        }
 
         // Template Controller - Mengelola template presets
         templateController = TemplateController(

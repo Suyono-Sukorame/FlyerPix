@@ -10,6 +10,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -27,10 +28,12 @@ private val BlurColorScheme = lightColors(
 
 private const val PanelTextSecondary = 0xFF5F6B7A
 private const val PanelDivider = 0xFFE4E8F0
+private const val PanelAlt = 0xFFF4F6FA
 private const val PanelHandle = 0xFFD0D4DE
 
 /**
  * Compose bottom sheet untuk Canvas Blur Effect.
+ * Langsung to-the-point ala 3D Shadow: slider radius langsung aktif tanpa toggle switch manual yang membingungkan.
  */
 @Composable
 fun CanvasBlurDetailPage(
@@ -39,10 +42,9 @@ fun CanvasBlurDetailPage(
     onReset: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
-    maxHeightPx: Int = 340
+    maxHeightPx: Int = 360
 ) {
     var radiusState by remember(blurRadius) { mutableStateOf(blurRadius) }
-    var enabledState by remember(blurRadius) { mutableStateOf(blurRadius > 0f) }
 
     MaterialTheme(colors = BlurColorScheme) {
         Box(
@@ -62,7 +64,7 @@ fun CanvasBlurDetailPage(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 6.dp)
+                        .padding(top = 8.dp)
                 ) {
                     // Drag Handle
                     Box(
@@ -76,120 +78,98 @@ fun CanvasBlurDetailPage(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left Column: Scrollable controls
+                        // Left Column
                         Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Divider(color = Color(PanelDivider), thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(4.dp))
 
-                            // Header row: Switch Enable + Reset Button
+                            Text(
+                                text = "Blur Radius: ${if (radiusState <= 0f) "0 (Disabled)" else "${radiusState.toInt()}px"}",
+                                style = MaterialTheme.typography.body2,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colors.onSurface
+                            )
+
+                            Slider(
+                                value = radiusState.coerceIn(0f, 25f),
+                                onValueChange = { v ->
+                                    radiusState = v
+                                    onBlurRadiusChange(v)
+                                },
+                                valueRange = 0f..25f,
+                                steps = 25,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colors.primary,
+                                    activeTrackColor = MaterialTheme.colors.primary
+                                ),
+                                modifier = Modifier.fillMaxWidth().height(30.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Quick Presets Row
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.weight(1f),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Switch(
-                                        checked = enabledState,
-                                        onCheckedChange = { isChecked ->
-                                            enabledState = isChecked
-                                            if (isChecked) {
-                                                val newR = if (radiusState <= 0f) 8f else radiusState
-                                                radiusState = newR
-                                                onBlurRadiusChange(newR)
-                                            } else {
-                                                onBlurRadiusChange(0f)
-                                            }
-                                        },
-                                        colors = SwitchDefaults.colors(
-                                            checkedThumbColor = MaterialTheme.colors.primary,
-                                            checkedTrackColor = MaterialTheme.colors.primary.copy(alpha = 0.5f)
-                                        )
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Enable Blur",
-                                        style = MaterialTheme.typography.caption,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colors.onSurface
-                                    )
-                                }
-
-                                Text(
-                                    text = "Reset",
-                                    style = MaterialTheme.typography.caption,
-                                    color = MaterialTheme.colors.primary,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier
-                                        .clickable {
-                                            enabledState = false
-                                            radiusState = 0f
-                                            onReset()
-                                        }
-                                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                                )
-                            }
-
-                            if (enabledState) {
-                                // Slider Row
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Radius",
-                                        style = MaterialTheme.typography.caption,
-                                        color = Color(PanelTextSecondary),
-                                        modifier = Modifier.width(52.dp)
-                                    )
-                                    Slider(
-                                        value = radiusState.coerceIn(1f, 25f),
-                                        onValueChange = { v ->
-                                            radiusState = v
-                                            onBlurRadiusChange(v)
-                                        },
-                                        valueRange = 1f..25f,
-                                        steps = 24,
-                                        colors = SliderDefaults.colors(
-                                            thumbColor = MaterialTheme.colors.primary,
-                                            activeTrackColor = MaterialTheme.colors.primary
-                                        ),
+                                val presets = listOf("Off" to 0f, "Subtle" to 5f, "Medium" to 12f, "Strong" to 20f)
+                                for ((label, presetVal) in presets) {
+                                    val isSelected = (radiusState.toInt() == presetVal.toInt())
+                                    Box(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .height(30.dp)
-                                    )
-                                    Text(
-                                        text = "${radiusState.toInt()}px",
-                                        style = MaterialTheme.typography.caption,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(PanelTextSecondary),
-                                        textAlign = TextAlign.End,
-                                        modifier = Modifier.width(42.dp)
-                                    )
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) MaterialTheme.colors.primary else Color(PanelAlt))
+                                            .clickable {
+                                                radiusState = presetVal
+                                                onBlurRadiusChange(presetVal)
+                                            }
+                                            .padding(vertical = 7.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.caption,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) Color.White else Color(PanelTextSecondary)
+                                        )
+                                    }
                                 }
-                            } else {
-                                Text(
-                                    text = "Blur effect is disabled",
-                                    style = MaterialTheme.typography.caption,
-                                    color = Color(PanelTextSecondary),
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                )
                             }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Reset Button
+                            Text(
+                                text = "Reset",
+                                style = MaterialTheme.typography.caption,
+                                color = MaterialTheme.colors.primary,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        radiusState = 0f
+                                        onReset()
+                                    }
+                                    .padding(vertical = 4.dp)
+                            )
                         }
 
                         // Right column: Cancel & Apply
                         Column(
                             modifier = Modifier
-                                .width(60.dp)
-                                .padding(start = 6.dp),
+                                .width(64.dp)
+                                .padding(start = 4.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Bottom
                         ) {
@@ -200,6 +180,7 @@ fun CanvasBlurDetailPage(
                             ) {
                                 Text("Cancel", style = MaterialTheme.typography.caption)
                             }
+                            Spacer(modifier = Modifier.height(2.dp))
                             Button(
                                 onClick = onApply,
                                 modifier = Modifier.fillMaxWidth(),

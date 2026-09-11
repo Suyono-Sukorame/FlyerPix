@@ -21,11 +21,9 @@ import com.flyerpix.editor.ui.compose.CanvasFiltersDetailPage
  * Controller untuk mengelola efek kanvas (Vignette, Noise, Filter, Adjustments, Blur)
  * dengan dukungan Jetpack Compose bottom sheets dan snapshot rollback.
  *
- * Bertanggung jawab untuk:
- * - Inisialisasi panel effects menu
- * - Mengelola adjustment sliders (Brightness, Contrast, Saturation) via Compose
- * - Mengelola effect filters (Vignette, Noise, Monochrome) via Compose
- * - Mengelola blur slider via Compose
+ * Mengikuti arsitektur dan pola visual yang sama persis dengan 3D Shadow & 3D Rotate pada Text:
+ * - Card bottom sheet bersih yang menggantikan panel saat aktif (tanpa tumpukan bar tool strip)
+ * - Translasi navbar ke bawah saat sheet aktif
  * - Snapshot state untuk rollback instan saat dibatalkan (Cancel / Back press)
  * - Pencatatan ke undo/redo history saat diterapkan (Apply)
  */
@@ -52,6 +50,7 @@ class EffectsController(
     private val toolItems = LinkedHashMap<String, ViewGroup>()
     private var activeTag = ""
 
+    var onEffectSettingsOpenChanged: ((Boolean) -> Unit)? = null
     var onDetailExpandedChanged: ((Boolean) -> Unit)? = null
 
     /**
@@ -66,10 +65,6 @@ class EffectsController(
     )
 
     private var initialSnapshot: CanvasEffectsSnapshot? = null
-
-    private fun notifyDetailExpanded() {
-        onDetailExpandedChanged?.invoke(activeTag.isNotEmpty())
-    }
 
     private fun computeComposeSheetHeight(): Int {
         val density = activity.resources.displayMetrics.density
@@ -96,7 +91,7 @@ class EffectsController(
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // TOOL STRIP (ikon menu master, pola sama dengan Text/Objects/Canvas)
+    // TOOL STRIP (ikon menu master)
     // ────────────────────────────────────────────────────────────────────────
 
     private fun buildToolStrip() {
@@ -166,6 +161,7 @@ class EffectsController(
             restoreSnapshot()
             initialSnapshot = null
         }
+        val wasOpen = isSheetOpen()
         activeTag = ""
         for (item in toolItems.values) {
             item.isSelected = false
@@ -174,6 +170,12 @@ class EffectsController(
             (item.getChildAt(1) as? TextView)?.setTextColor(COLOR_INACTIVE)
         }
         composeContainer?.visibility = View.GONE
+        if (binding.bottomNavigation.selectedItemId == R.id.nav_effects) {
+            binding.effectsMenuPanel.visibility = View.VISIBLE
+        }
+        if (wasOpen) {
+            onEffectSettingsOpenChanged?.invoke(false)
+        }
         applyContentVisibility()
     }
 
@@ -206,12 +208,20 @@ class EffectsController(
             binding.effectContentPanel.visibility = View.GONE
             if (activeTag.isEmpty()) {
                 composeContainer?.visibility = View.GONE
+                if (binding.bottomNavigation.selectedItemId == R.id.nav_effects) {
+                    binding.effectsMenuPanel.visibility = View.VISIBLE
+                }
             } else {
                 when (activeTag) {
                     TOOL_ADJUST -> showComposeAdjustSheet()
                     TOOL_EFFECTS -> showComposeFiltersSheet()
                     TOOL_BLUR -> showComposeBlurSheet()
-                    else -> composeContainer?.visibility = View.GONE
+                    else -> {
+                        composeContainer?.visibility = View.GONE
+                        if (binding.bottomNavigation.selectedItemId == R.id.nav_effects) {
+                            binding.effectsMenuPanel.visibility = View.VISIBLE
+                        }
+                    }
                 }
             }
         } else {
@@ -224,20 +234,23 @@ class EffectsController(
                 if (activeTag == TOOL_EFFECTS) View.VISIBLE else View.GONE
             binding.effectContentBlur.visibility =
                 if (activeTag == TOOL_BLUR) View.VISIBLE else View.GONE
+            onDetailExpandedChanged?.invoke(activeTag.isNotEmpty())
         }
-        notifyDetailExpanded()
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // COMPOSE BOTTOM SHEETS
+    // COMPOSE BOTTOM SHEETS (Pola Identik dengan 3D Shadow & 3D Rotate)
     // ────────────────────────────────────────────────────────────────────────
 
     private fun showComposeAdjustSheet() {
         val host = composeHost ?: return
         val container = composeContainer ?: return
 
-        binding.effectContentPanel.visibility = View.GONE
+        // Sembunyikan panel effectsMenuPanel sepenuhnya agar tidak menumpuk / tumpang tindih
+        binding.effectsMenuPanel.visibility = View.GONE
         container.visibility = View.VISIBLE
+        container.bringToFront()
+        onEffectSettingsOpenChanged?.invoke(true)
 
         val sheetMaxH = computeComposeSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
@@ -287,8 +300,11 @@ class EffectsController(
         val host = composeHost ?: return
         val container = composeContainer ?: return
 
-        binding.effectContentPanel.visibility = View.GONE
+        // Sembunyikan panel effectsMenuPanel sepenuhnya agar tidak menumpuk / tumpang tindih
+        binding.effectsMenuPanel.visibility = View.GONE
         container.visibility = View.VISIBLE
+        container.bringToFront()
+        onEffectSettingsOpenChanged?.invoke(true)
 
         val sheetMaxH = computeComposeSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
@@ -338,8 +354,11 @@ class EffectsController(
         val host = composeHost ?: return
         val container = composeContainer ?: return
 
-        binding.effectContentPanel.visibility = View.GONE
+        // Sembunyikan panel effectsMenuPanel sepenuhnya agar tidak menumpuk / tumpang tindih
+        binding.effectsMenuPanel.visibility = View.GONE
         container.visibility = View.VISIBLE
+        container.bringToFront()
+        onEffectSettingsOpenChanged?.invoke(true)
 
         val sheetMaxH = computeComposeSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
@@ -479,6 +498,8 @@ class EffectsController(
         if (activeTag.isEmpty()) {
             binding.effectContentPanel.visibility = View.GONE
             composeContainer?.visibility = View.GONE
+            binding.effectsMenuPanel.visibility = View.VISIBLE
+            onEffectSettingsOpenChanged?.invoke(false)
         } else {
             select(activeTag)
         }

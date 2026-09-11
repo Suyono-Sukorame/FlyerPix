@@ -1,7 +1,6 @@
 package com.flyerpix.editor.ui.compose
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -9,20 +8,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Card
-import androidx.compose.material.Divider
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Slider
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.lightColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,9 +19,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.flyerpix.editor.ui.dialog.RecentEntry
 
@@ -65,7 +52,7 @@ private fun RowScope.ViewTypeSegment(
             .shadow(if (selected) 1.dp else 0.dp, shape)
             .clip(shape)
             .background(if (selected) MaterialTheme.colors.surface else Color.Transparent, shape)
-            .padding(vertical = 9.dp),
+            .padding(vertical = 7.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -77,6 +64,11 @@ private fun RowScope.ViewTypeSegment(
     }
 }
 
+/**
+ * Compose bottom sheet untuk 3D Shadow, gayanya identik 100% dengan 3D Rotate:
+ * Card bawah, drag handle, kolom pengaturan di kiri (label + slider + nilai per baris horizontal)
+ * dengan tombol Reset dan pilihan warna, serta kolom tombol Cancel/Apply di kanan.
+ */
 @Composable
 fun ThreeDShadowDetailPage(
     depth: Int,
@@ -124,7 +116,7 @@ fun ThreeDShadowDetailPage(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
+                        .padding(top = 6.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -137,134 +129,161 @@ fun ThreeDShadowDetailPage(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Kolom Kiri: Scrollable controls (Identik 3D Rotate)
                         Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .verticalScroll(rememberScrollState())
-                                .padding(horizontal = 6.dp, vertical = 4.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Divider(color = Color(PanelDivider), thickness = 1.dp)
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
 
+                            // Segmented View Type (Oblique vs Isometric)
                             Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Color(PanelAlt),
-                                    elevation = 0.dp
-                                ) {
-                                    Row(modifier = Modifier.padding(3.dp)) {
-                                        ViewTypeSegment("Oblique", isOblique) { onViewTypeChange("OBLIQUE") }
-                                        ViewTypeSegment("Isometric", !isOblique) { onViewTypeChange("ISOMETRIC") }
-                                    }
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(PanelAlt),
+                                elevation = 0.dp
+                            ) {
+                                Row(modifier = Modifier.padding(3.dp)) {
+                                    ViewTypeSegment("Oblique", isOblique) { onViewTypeChange("OBLIQUE") }
+                                    ViewTypeSegment("Isometric", !isOblique) { onViewTypeChange("ISOMETRIC") }
                                 }
+                            }
 
-                                Spacer(modifier = Modifier.height(14.dp))
+                            // 1. Depth Row
+                            ShadowRow(
+                                label = "Depth",
+                                value = depthState.toFloat(),
+                                valueRange = 1f..50f,
+                                steps = 49,
+                                displayValue = "$depthState",
+                                onValueChange = { new ->
+                                    depthState = new.toInt()
+                                    onDepthChange(new.toInt())
+                                }
+                            )
 
-                                Text(text = "Depth: $depthState", style = MaterialTheme.typography.body2)
-                                Slider(
-                                    value = depthState.toFloat(),
+                            // 2. Angle Row (hanya jika Oblique)
+                            if (isOblique) {
+                                ShadowRow(
+                                    label = "Angle",
+                                    value = angleState,
+                                    valueRange = 0f..360f,
+                                    steps = 359,
+                                    displayValue = "${angleState.toInt()}°",
                                     onValueChange = { new ->
-                                        depthState = new.toInt()
-                                        onDepthChange(new.toInt())
-                                    },
-                                    valueRange = 1f..50f,
-                                    modifier = Modifier.fillMaxWidth()
+                                        angleState = new
+                                        onAngleChange(new)
+                                    }
                                 )
+                            }
 
-                                if (isOblique) {
-                                    Spacer(modifier = Modifier.height(6.dp))
+                            // 3. Blur Row
+                            ShadowRow(
+                                label = "Blur",
+                                value = blurState,
+                                valueRange = 0f..40f,
+                                steps = 40,
+                                displayValue = "${blurState.toInt()}",
+                                onValueChange = { new ->
+                                    blurState = new
+                                    onBlurChange(new)
+                                }
+                            )
 
-                                    Text(text = "Angle: ${angleState.toInt()}°", style = MaterialTheme.typography.body2)
-                                    Slider(
-                                        value = angleState,
-                                        onValueChange = { new ->
-                                            angleState = new
-                                            onAngleChange(new)
-                                        },
-                                        valueRange = 0f..360f,
-                                        modifier = Modifier.fillMaxWidth()
+                            // 4. Opacity Row
+                            ShadowRow(
+                                label = "Opacity",
+                                value = opacityState,
+                                valueRange = 0f..1f,
+                                steps = 100,
+                                displayValue = "${(opacityState * 100).toInt()}%",
+                                onValueChange = { new ->
+                                    opacityState = new
+                                    onOpacityChange(new)
+                                }
+                            )
+
+                            // Reset Button (Identik 3D Rotate)
+                            Text(
+                                text = "Reset",
+                                style = MaterialTheme.typography.caption,
+                                color = MaterialTheme.colors.primary,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        depthState = 10
+                                        angleState = 45f
+                                        blurState = 0f
+                                        opacityState = 0.6f
+                                        onDepthChange(10)
+                                        onAngleChange(45f)
+                                        onBlurChange(0f)
+                                        onOpacityChange(0.6f)
+                                    }
+                                    .padding(vertical = 4.dp)
+                            )
+
+                            Divider(color = Color(PanelDivider), thickness = 1.dp)
+
+                            // Shadow Color Picker Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Shadow Color",
+                                    style = MaterialTheme.typography.caption,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(PanelTextSecondary),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(
+                                    onClick = onColorPickRequested,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Pick shadow color",
+                                        tint = MaterialTheme.colors.primary,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
+                            }
 
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                Text(text = "Blur: ${Math.round(blurState * 10f) / 10f}", style = MaterialTheme.typography.body2)
-                                Slider(
-                                    value = blurState,
-                                    onValueChange = { new ->
-                                        blurState = new
-                                        onBlurChange(new)
-                                    },
-                                    valueRange = 0f..40f,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                Text(text = "Opacity: ${(opacityState * 100).toInt()}%", style = MaterialTheme.typography.body2)
-                                Slider(
-                                    value = opacityState,
-                                    onValueChange = { new ->
-                                        opacityState = new
-                                        onOpacityChange(new)
-                                    },
-                                    valueRange = 0f..1f,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Divider(color = Color(PanelDivider), thickness = 1.dp)
-                                Spacer(modifier = Modifier.height(12.dp))
-
+                            if (recents.isNotEmpty()) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = "Shadow Color",
-                                        style = MaterialTheme.typography.body2,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    IconButton(
-                                        onClick = onColorPickRequested,
-                                        modifier = Modifier.size(34.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = "Pick shadow color",
-                                            tint = MaterialTheme.colors.primary
-                                        )
-                                    }
-                                }
-
-                                if (recents.isNotEmpty()) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState()),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        recents.forEachIndexed { index, entry ->
-                                            if (entry is RecentEntry.Solid) {
-                                                RecentColorChip(entry, entry.color == colorArgb) { onRecentPicked(entry) }
-                                                if (index < recents.lastIndex) {
-                                                    Spacer(modifier = Modifier.width(6.dp))
-                                                }
+                                    recents.forEachIndexed { index, entry ->
+                                        if (entry is RecentEntry.Solid) {
+                                            RecentColorChip(entry, entry.color == colorArgb) { onRecentPicked(entry) }
+                                            if (index < recents.lastIndex) {
+                                                Spacer(modifier = Modifier.width(6.dp))
                                             }
                                         }
                                     }
                                 }
+                            }
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                         }
 
+                        // Kolom Kanan: Tombol Cancel & Apply (Identik 3D Rotate)
                         Column(
                             modifier = Modifier
-                                .width(64.dp)
-                                .padding(start = 4.dp),
+                                .width(60.dp)
+                                .padding(start = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Bottom
                         ) {
@@ -275,7 +294,6 @@ fun ThreeDShadowDetailPage(
                             ) {
                                 Text("Cancel", style = MaterialTheme.typography.caption)
                             }
-                            Spacer(modifier = Modifier.height(2.dp))
                             Button(
                                 onClick = onApply,
                                 modifier = Modifier.fillMaxWidth(),
@@ -298,5 +316,50 @@ fun ThreeDShadowDetailPage(
                 }
             }
         }
+    }
+}
+
+/**
+ * Baris item kontrol slider horizontal (Label | Slider | Nilai), identik 100% dengan RotateRow di 3D Rotate.
+ */
+@Composable
+private fun ShadowRow(
+    label: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int = 0,
+    displayValue: String,
+    onValueChange: (Float) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.caption,
+            color = Color(PanelTextSecondary),
+            modifier = Modifier.width(52.dp)
+        )
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = steps,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colors.primary,
+                activeTrackColor = MaterialTheme.colors.primary
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .height(30.dp)
+        )
+        Text(
+            text = displayValue,
+            style = MaterialTheme.typography.caption,
+            color = Color(PanelTextSecondary),
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(40.dp)
+        )
     }
 }
