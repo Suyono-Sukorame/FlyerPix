@@ -116,7 +116,7 @@ fun ThreeDShadowDetailPage(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = with(LocalDensity.current) { maxHeightPx.toDp() }),
+                    .height(with(LocalDensity.current) { maxHeightPx.toDp() }),
                 shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
                 elevation = 8.dp,
                 backgroundColor = cardColor
