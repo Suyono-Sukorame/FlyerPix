@@ -841,36 +841,60 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             top.tvTopZoomLabel.alpha = if (percent == 100) 0.9f else 1f
         }
 
-        updateZoomLabel()
-
-        top.btnTopZoom.setOnClickListener {
-            val expanded = top.tvTopZoomLabel.visibility != View.VISIBLE
-            val visibility = if (expanded) View.VISIBLE else View.GONE
+        fun applyZoomModeUi() {
+            val active = pixelCanvasView.isEditorZoomMode
+            val visibility = if (active) View.VISIBLE else View.GONE
             top.btnTopZoomOut.visibility = visibility
             top.tvTopZoomLabel.visibility = visibility
             top.btnTopZoomIn.visibility = visibility
-            top.btnTopZoom.contentDescription = if (expanded) {
-                "Reset zoom to 100 percent"
-            } else {
-                "Show zoom controls"
-            }
-            if (expanded) {
+            top.btnTopZoom.setBackgroundResource(
+                if (active) R.drawable.bg_mode_pill_active else R.drawable.bg_mode_pill
+            )
+            top.btnTopZoom.imageTintList = android.content.res.ColorStateList.valueOf(
+                resources.getColor(if (active) R.color.light_text_primary else android.R.color.white, theme)
+            )
+            top.btnTopZoom.contentDescription =
+                if (active) "Exit zoom mode" else "Enter zoom mode"
+        }
+
+        updateZoomLabel()
+        applyZoomModeUi()
+
+        // Sinkronkan label persentase setiap kali canvasZoom berubah (pinch maupun +/-).
+        pixelCanvasView.onZoomChangedListener = { _ -> updateZoomLabel() }
+
+        // PILL = saklar Edit Mode <-> Zoom Mode. Nilai zoom terakhir dipertahankan.
+        top.btnTopZoom.setOnClickListener {
+            val entering = !pixelCanvasView.isEditorZoomMode
+            pixelCanvasView.setEditorZoomMode(entering)
+            applyZoomModeUi()
+            if (entering) {
                 updateZoomLabel()
+                showSnackbar("Zoom mode: pinch / + untuk memperbesar. Tap % untuk reset 100%")
             } else {
-                pixelCanvasView.resetZoom()
-                updateZoomLabel()
-                showSnackbar("Zoom set to 100%")
+                showSnackbar("Edit mode")
             }
         }
 
         top.btnTopZoomOut.setOnClickListener {
-            pixelCanvasView.zoomOut()
-            updateZoomLabel()
+            if (pixelCanvasView.isEditorZoomMode) {
+                pixelCanvasView.zoomOut()
+            }
         }
 
         top.btnTopZoomIn.setOnClickListener {
-            pixelCanvasView.zoomIn()
-            updateZoomLabel()
+            if (pixelCanvasView.isEditorZoomMode) {
+                pixelCanvasView.zoomIn()
+            }
+        }
+
+        // Tap angka persentase = reset zoom kembali ke 100%
+        top.tvTopZoomLabel.setOnClickListener {
+            if (pixelCanvasView.isEditorZoomMode) {
+                pixelCanvasView.resetZoom()
+                updateZoomLabel()
+                showSnackbar("Zoom reset to 100%")
+            }
         }
 
         top.btnTopGrid.setOnClickListener {

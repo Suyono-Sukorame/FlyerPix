@@ -159,17 +159,25 @@ class PixelCanvasView @JvmOverloads constructor(
     private var textEditMode = false
 
     private var canvasZoom = 1f
-    private val minCanvasZoom = 0.5f
+    // Zoom tidak boleh di bawah 100% (user memilih model zoom naik saja).
+    private val minCanvasZoom = 1f
     private val maxCanvasZoom = 4f
     private val zoomStep = 0.25f
 
     val zoomLevel: Float
         get() = canvasZoom
 
+    /**
+     * Callback setiap kali [canvasZoom] berubah (baik lewat pinch maupun tombol +/-),
+     * dipakai UI (header) untuk memperbarui label persentase.
+     */
+    var onZoomChangedListener: ((Float) -> Unit)? = null
+
     fun setCanvasZoom(zoom: Float) {
         val clamped = zoom.coerceIn(minCanvasZoom, maxCanvasZoom)
         if (canvasZoom != clamped) {
             canvasZoom = clamped
+            onZoomChangedListener?.invoke(canvasZoom)
             invalidate()
         }
     }
@@ -177,6 +185,25 @@ class PixelCanvasView @JvmOverloads constructor(
     fun zoomIn() = setCanvasZoom(canvasZoom + zoomStep)
     fun zoomOut() = setCanvasZoom(canvasZoom - zoomStep)
     fun resetZoom() = setCanvasZoom(1f)
+
+    private var editorZoomMode = false
+
+    /**
+     * true = Zoom Mode: pinch mengubah zoom kanvas, seluruh interaksi objek
+     * (pilih/geser/resize/rotate/handle) dinonaktifkan.
+     */
+    val isEditorZoomMode: Boolean
+        get() = editorZoomMode
+
+    fun setEditorZoomMode(active: Boolean) {
+        if (editorZoomMode == active) return
+        editorZoomMode = active
+        // Batalkan gestur objek yang mungkin masih berjalan saat mode berubah.
+        isDragging = false
+        currentTouchState = TouchState.IDLE
+        activePerspectiveCorner = -1
+        invalidate()
+    }
 
     fun setTextEditMode(active: Boolean) {
         if (textEditMode != active) {
@@ -1466,14 +1493,14 @@ class PixelCanvasView @JvmOverloads constructor(
 
             // 3. Render Bounding Box seleksi garis putus-putus jika ada layer aktif (Prompt 25, 34)
             selectedLayer?.let { layer ->
-                if (layer.isVisible && !layer.isLocked && !layer.perspectiveEnabled) {
+                if (!editorZoomMode && layer.isVisible && !layer.isLocked && !layer.perspectiveEnabled) {
                     drawSelectionBoundingBox(canvas, layer)
                 }
             }
 
             // 4. Render handle interaktif perspektif 4 titik sudut jika layer aktif mengaktifkan perspektif
             selectedLayer?.let { layer ->
-                if (layer.isVisible && layer.perspectiveEnabled && !layer.isLocked) {
+                if (!editorZoomMode && layer.isVisible && layer.perspectiveEnabled && !layer.isLocked) {
                     drawPerspectiveHandles(canvas, layer)
                 }
             }
@@ -1863,6 +1890,20 @@ class PixelCanvasView @JvmOverloads constructor(
 
     private val scaleGestureDetector = ScaleGestureDetector(context, scaleGestureListener)
 
+    /**
+     * Scale gesture khusus Zoom Mode: pinch mengubah zoom KANVAS (bukan skala layer).
+     */
+    private val zoomCanvasScaleListener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            val factor = detector.scaleFactor
+            if (factor.isNaN() || factor.isInfinite() || factor <= 0f) return false
+            setCanvasZoom(canvasZoom * factor)
+            return true
+        }
+    }
+
+    private val zoomCanvasScaleDetector = ScaleGestureDetector(context, zoomCanvasScaleListener)
+
     private val rotationGestureListener = object : RotationGestureDetector.OnRotationGestureListener {
         override fun onRotation(detector: RotationGestureDetector, deltaAngle: Float): Boolean {
             val layer = selectedLayer ?: return false
@@ -1953,6 +1994,18 @@ class PixelCanvasView @JvmOverloads constructor(
                     invalidate()
                 }
             }
+            return true
+        }
+
+        // 0.7. Zoom Mode: pinch mengubah zoom kanvas; seluruh interaksi objek
+        // (pilih/geser/resize/rotate/handle) dinonaktifkan.
+        if (editorZoomMode) {
+            zoomCanvasScaleDetector.onTouchEvent(event)
+            if (zoomCanvasScaleDetector.isInProgress) {
+                invalidate()
+                return true
+            }
+            // Tahan semua sentuhan lain agar objek tidak bisa dipilih/digeser.
             return true
         }
 

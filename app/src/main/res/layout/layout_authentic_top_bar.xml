@@ -146,17 +146,20 @@
 
             <ImageButton
                 android:id="@+id/btnTopZoom"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Show zoom controls"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="@drawable/bg_mode_pill"
+                android:contentDescription="Enter zoom mode"
+                android:padding="6dp"
                 android:src="@drawable/ic_zoom_in_24px"
                 app:tint="@android:color/white" />
 
             <ImageButton
                 android:id="@+id/btnTopZoomOut"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Perkecil zoom canvas"
                 android:src="@drawable/ic_zoom_out_24px"
@@ -165,10 +168,10 @@
 
             <TextView
                 android:id="@+id/tvTopZoomLabel"
-                android:layout_width="52dp"
-                android:layout_height="28dp"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
+                android:layout_width="56dp"
+                android:layout_height="30dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
                 android:background="@drawable/bg_pixellab_badge"
                 android:gravity="center"
                 android:text="100%"
@@ -179,8 +182,8 @@
 
             <ImageButton
                 android:id="@+id/btnTopZoomIn"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Perbesar zoom canvas"
                 android:src="@drawable/ic_zoom_in_24px"
