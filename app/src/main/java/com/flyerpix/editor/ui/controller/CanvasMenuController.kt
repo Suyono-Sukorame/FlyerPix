@@ -23,7 +23,9 @@ import com.flyerpix.editor.canvas.model.GradientColor
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 import com.flyerpix.editor.ui.adapter.GradientPickerAdapter
 import com.flyerpix.editor.ui.compose.CanvasBgDetailPage
+import com.flyerpix.editor.ui.compose.CanvasGridDetailPage
 import com.flyerpix.editor.ui.compose.CanvasSizeDetailPage
+import com.flyerpix.editor.ui.compose.CanvasSnapDetailPage
 import com.flyerpix.editor.ui.dialog.ColorPickerDialog
 
 /**
@@ -33,7 +35,7 @@ import com.flyerpix.editor.ui.dialog.ColorPickerDialog
  * - Inisialisasi panel canvas menu
  * - Mengatur background kanvas (Transparent, Solid Color, Gradient, Image) via Compose bottom sheet
  * - Mengatur ukuran dan rasio aspek kanvas via Compose bottom sheet
- * - Quick toggles untuk Grid dan Snap to Center
+ * - Mengatur Grid dan Magnetic Snap via Compose bottom sheet
  */
 class CanvasMenuController(
     private val activity: Activity,
@@ -51,6 +53,9 @@ class CanvasMenuController(
     private val composeHost: ComposeView? get() = binding.composeThreeDDetail
     private val composeContainer: FrameLayout? get() = binding.composeThreeDSheetContainer
     private var initialBgSnapshot: CanvasBackground? = null
+    private var initialGridEnabled: Boolean = false
+    private var initialGridSpacing: Float = 32f
+    private var initialSnapEnabled: Boolean = true
 
     companion object {
         const val TOOL_BG   = "canvas_bg"
@@ -72,6 +77,12 @@ class CanvasMenuController(
      * mengekspansi panel dan menyembunyikan/memunculkan kembali nav.
      */
     var onDetailExpandedChanged: ((Boolean) -> Unit)? = null
+
+    /**
+     * Callback saat salah satu Compose sheet canvas dibuka/ditutup,
+     * untuk menganimasikan navigasi bawah (translationY 56dp) dan fit canvas viewport.
+     */
+    var onCanvasSettingsOpenChanged: ((Boolean) -> Unit)? = null
 
     private fun notifyDetailExpanded() {
         onDetailExpandedChanged?.invoke(activeTag.isNotEmpty())
@@ -185,22 +196,6 @@ class CanvasMenuController(
     }
 
     private fun onToolClicked(tag: String) {
-        if (tag == TOOL_GRID) {
-            val enabled = !pixelCanvasView.isGridEnabled
-            pixelCanvasView.isGridEnabled = enabled
-            pixelCanvasView.invalidate()
-            showSnackbar(if (enabled) "Guide grid enabled" else "Guide grid disabled")
-            flashSelection(tag)
-            return
-        }
-        if (tag == TOOL_SNAP) {
-            val enabled = !pixelCanvasView.isSnapToCenterEnabled
-            pixelCanvasView.isSnapToCenterEnabled = enabled
-            pixelCanvasView.invalidate()
-            showSnackbar(if (enabled) "Snap to guides enabled" else "Snap to guides disabled")
-            flashSelection(tag)
-            return
-        }
         if (tag == activeTag) deselect() else select(tag)
     }
 
@@ -246,6 +241,12 @@ class CanvasMenuController(
         }
         composeContainer?.visibility = View.GONE
         binding.canvasContentPanel.visibility = View.GONE
+        if (binding.bottomNavigation.selectedItemId == R.id.nav_canvas) {
+            binding.canvasMenuPanel.visibility = View.VISIBLE
+        } else {
+            binding.canvasMenuPanel.visibility = View.GONE
+        }
+        onCanvasSettingsOpenChanged?.invoke(false)
         notifyDetailExpanded()
     }
 
@@ -253,12 +254,22 @@ class CanvasMenuController(
         if (activeTag.isEmpty()) {
             composeContainer?.visibility = View.GONE
             binding.canvasContentPanel.visibility = View.GONE
+            if (binding.bottomNavigation.selectedItemId == R.id.nav_canvas) {
+                binding.canvasMenuPanel.visibility = View.VISIBLE
+            } else {
+                binding.canvasMenuPanel.visibility = View.GONE
+            }
+            onCanvasSettingsOpenChanged?.invoke(false)
             notifyDetailExpanded()
             return
         }
 
         if (composeHost != null && composeContainer != null) {
             binding.canvasContentPanel.visibility = View.GONE
+            binding.canvasMenuPanel.visibility = View.GONE
+            composeContainer?.visibility = View.VISIBLE
+            composeContainer?.bringToFront()
+            onCanvasSettingsOpenChanged?.invoke(true)
             when (activeTag) {
                 TOOL_BG -> {
                     initialBgSnapshot = pixelCanvasView.canvasBackground.copy(
@@ -269,8 +280,23 @@ class CanvasMenuController(
                 TOOL_SIZE -> {
                     showComposeSizeSheet()
                 }
+                TOOL_GRID -> {
+                    initialGridEnabled = pixelCanvasView.isGridEnabled
+                    initialGridSpacing = pixelCanvasView.gridSpacingDp
+                    showComposeGridSheet()
+                }
+                TOOL_SNAP -> {
+                    initialSnapEnabled = pixelCanvasView.isSnapToCenterEnabled
+                    showComposeSnapSheet()
+                }
                 else -> {
                     composeContainer?.visibility = View.GONE
+                    if (binding.bottomNavigation.selectedItemId == R.id.nav_canvas) {
+                        binding.canvasMenuPanel.visibility = View.VISIBLE
+                    } else {
+                        binding.canvasMenuPanel.visibility = View.GONE
+                    }
+                    onCanvasSettingsOpenChanged?.invoke(false)
                 }
             }
         } else {
@@ -290,7 +316,9 @@ class CanvasMenuController(
         val container = composeContainer ?: return
 
         binding.canvasContentPanel.visibility = View.GONE
+        binding.canvasMenuPanel.visibility = View.GONE
         container.visibility = View.VISIBLE
+        container.bringToFront()
 
         val sheetMaxH = computeComposeSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
@@ -381,7 +409,9 @@ class CanvasMenuController(
         val container = composeContainer ?: return
 
         binding.canvasContentPanel.visibility = View.GONE
+        binding.canvasMenuPanel.visibility = View.GONE
         container.visibility = View.VISIBLE
+        container.bringToFront()
 
         val sheetMaxH = computeComposeSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
@@ -396,6 +426,91 @@ class CanvasMenuController(
                     deselect()
                 },
                 onCancel = {
+                    deselect()
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeGridSheet() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.canvasContentPanel.visibility = View.GONE
+        binding.canvasMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            CanvasGridDetailPage(
+                isGridEnabled = pixelCanvasView.isGridEnabled,
+                gridSpacingDp = pixelCanvasView.gridSpacingDp,
+                onGridEnabledChange = { enabled ->
+                    pixelCanvasView.isGridEnabled = enabled
+                    pixelCanvasView.invalidate()
+                },
+                onGridSpacingChange = { spacing ->
+                    pixelCanvasView.gridSpacingDp = spacing
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    pixelCanvasView.isGridEnabled = false
+                    pixelCanvasView.gridSpacingDp = 32f
+                    pixelCanvasView.invalidate()
+                    showComposeGridSheet()
+                },
+                onApply = {
+                    pixelCanvasView.runRecordedAction("Configure Grid") {}
+                    deselect()
+                },
+                onCancel = {
+                    pixelCanvasView.isGridEnabled = initialGridEnabled
+                    pixelCanvasView.gridSpacingDp = initialGridSpacing
+                    pixelCanvasView.invalidate()
+                    deselect()
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeSnapSheet() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.canvasContentPanel.visibility = View.GONE
+        binding.canvasMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            CanvasSnapDetailPage(
+                isSnapEnabled = pixelCanvasView.isSnapToCenterEnabled,
+                onSnapEnabledChange = { enabled ->
+                    pixelCanvasView.isSnapToCenterEnabled = enabled
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    pixelCanvasView.isSnapToCenterEnabled = true
+                    pixelCanvasView.invalidate()
+                    showComposeSnapSheet()
+                },
+                onApply = {
+                    pixelCanvasView.runRecordedAction("Configure Magnetic Snap") {}
+                    deselect()
+                },
+                onCancel = {
+                    pixelCanvasView.isSnapToCenterEnabled = initialSnapEnabled
+                    pixelCanvasView.invalidate()
                     deselect()
                 },
                 maxHeightPx = sheetMaxH
@@ -551,6 +666,7 @@ class CanvasMenuController(
      * Refresh UI canvas menu jika diperlukan.
      */
     fun refreshUI() {
+        binding.canvasMenuPanel.visibility = View.VISIBLE
         binding.canvasToolStripInclude.canvasToolStripScroll.visibility = View.VISIBLE
         if (activeTag.isEmpty()) {
             binding.canvasContentPanel.visibility = View.GONE

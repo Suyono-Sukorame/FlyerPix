@@ -40,6 +40,7 @@ private val CanvasColorScheme = lightColors(
 
 private const val PanelTextSecondary = 0xFF5F6B7A
 private const val PanelDivider = 0xFFE4E8F0
+private const val PanelAlt = 0xFFF0F3F8
 private const val PanelHandle = 0xFFD0D4DE
 
 private val SolidPresetColors = intArrayOf(
@@ -66,6 +67,7 @@ private val SolidPresetColors = intArrayOf(
 
 /**
  * Compose bottom sheet untuk pengaturan latar belakang kanvas (Transparent, Solid, Gradient, Image).
+ * Didesain 100% identik dengan ThreeDRotateDetailPage: 2 kolom (kiri: pengaturan & reset, kanan: Cancel & Apply).
  */
 @Composable
 fun CanvasBgDetailPage(
@@ -84,7 +86,7 @@ fun CanvasBgDetailPage(
     onReset: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
-    maxHeightPx: Int = 450
+    maxHeightPx: Int = 420
 ) {
     var modeState by remember(currentMode) { mutableStateOf(currentMode) }
     var solidColorState by remember(solidColor) { mutableStateOf(solidColor) }
@@ -118,428 +120,394 @@ fun CanvasBgDetailPage(
                             .align(Alignment.CenterHorizontally)
                             .width(32.dp)
                             .height(4.dp)
-                            .background(Color(PanelHandle), CircleShape)
+                            .background(Color(PanelHandle), RoundedCornerShape(50))
                     )
 
-                    // Header
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Canvas Background",
-                            style = MaterialTheme.typography.subtitle1.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colors.onSurface
-                            )
-                        )
-                        TextButton(
-                            onClick = {
-                                modeState = CanvasBackgroundMode.SOLID_COLOR
-                                solidColorState = 0xFFFFFFFF.toInt()
-                                onReset()
-                            },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        // Left Column (Controls & Reset)
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                "Reset",
-                                color = Color(0xFFE53935),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
+                            Divider(color = Color(PanelDivider), thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(2.dp))
 
-                    Divider(color = Color(PanelDivider), thickness = 1.dp)
-
-                    // Segmented Mode Selector
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        val modes = listOf(
-                            CanvasBackgroundMode.TRANSPARENT to "Transparent",
-                            CanvasBackgroundMode.SOLID_COLOR to "Solid",
-                            CanvasBackgroundMode.GRADIENT to "Gradient",
-                            CanvasBackgroundMode.IMAGE to "Image"
-                        )
-                        for ((m, label) in modes) {
-                            val isSelected = modeState == m
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(34.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(
-                                        if (isSelected) MaterialTheme.colors.primary
-                                        else Color(0xFFF0F3F8)
-                                    )
-                                    .clickable {
-                                        modeState = m
-                                        onModeChange(m)
-                                    },
-                                contentAlignment = Alignment.Center
+                            // Segmented Mode Selector
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Text(
-                                    text = label,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) Color.White else Color(PanelTextSecondary)
+                                val modes = listOf(
+                                    CanvasBackgroundMode.TRANSPARENT to "Transparent",
+                                    CanvasBackgroundMode.SOLID_COLOR to "Solid",
+                                    CanvasBackgroundMode.GRADIENT to "Gradient",
+                                    CanvasBackgroundMode.IMAGE to "Image"
                                 )
-                            }
-                        }
-                    }
-
-                    // Content based on selected mode
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    ) {
-                        when (modeState) {
-                            CanvasBackgroundMode.TRANSPARENT -> {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 12.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFFF5F7FA))
-                                        .border(1.dp, Color(PanelDivider), RoundedCornerShape(12.dp))
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_aspect_ratio_24px),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colors.primary,
-                                            modifier = Modifier.size(36.dp)
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = "Checkerboard Transparent Background",
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 14.sp,
-                                            color = MaterialTheme.colors.onSurface
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "Ideal for logos, stickers, and transparent PNG exports without solid background.",
-                                            fontSize = 12.sp,
-                                            color = Color(PanelTextSecondary),
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
-                            }
-
-                            CanvasBackgroundMode.SOLID_COLOR -> {
-                                Text(
-                                    text = "Color Palette",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(PanelTextSecondary),
-                                    modifier = Modifier.padding(bottom = 6.dp)
-                                )
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState())
-                                        .padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Custom color picker button
+                                for ((m, label) in modes) {
+                                    val isSelected = modeState == m
                                     Box(
                                         modifier = Modifier
-                                            .size(38.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFFE8EEF5))
-                                            .border(1.dp, Color(0xFFCCD6E0), CircleShape)
-                                            .clickable { onOpenColorPicker() },
+                                            .weight(1f)
+                                            .height(32.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                if (isSelected) MaterialTheme.colors.primary
+                                                else Color(PanelAlt)
+                                            )
+                                            .clickable {
+                                                modeState = m
+                                                onModeChange(m)
+                                            },
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = "Custom Color",
-                                            tint = MaterialTheme.colors.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    // Swatches
-                                    SolidPresetColors.forEach { c ->
-                                        val isSelected = (solidColorState and 0x00FFFFFF) == (c and 0x00FFFFFF)
-                                        val isLight = (c == 0xFFFFFFFF.toInt() || c == 0xFFFFF9C4.toInt())
-                                        Box(
-                                            modifier = Modifier
-                                                .padding(end = 6.dp)
-                                                .size(38.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(c))
-                                                .border(
-                                                    width = if (isSelected) 2.5.dp else if (isLight) 1.dp else 0.dp,
-                                                    color = if (isSelected) MaterialTheme.colors.primary
-                                                    else if (isLight) Color(0xFFCCD6E0)
-                                                    else Color.Transparent,
-                                                    shape = CircleShape
-                                                )
-                                                .clickable {
-                                                    solidColorState = c
-                                                    onSolidColorChange(c)
-                                                }
+                                        Text(
+                                            text = label,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) Color.White else Color(PanelTextSecondary)
                                         )
                                     }
                                 }
                             }
 
-                            CanvasBackgroundMode.GRADIENT -> {
-                                // Gradient Type selector
-                                Text(
-                                    text = "Gradient Type",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(PanelTextSecondary),
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    listOf(
-                                        GradientType.LINEAR to "Linear",
-                                        GradientType.RADIAL to "Radial",
-                                        GradientType.SWEEP to "Sweep"
-                                    ).forEach { (gt, label) ->
-                                        val sel = gradState.type == gt
+                            // Content based on selected mode
+                            when (modeState) {
+                                CanvasBackgroundMode.TRANSPARENT -> {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Color(0xFFF8FAFC))
+                                            .border(1.dp, Color(PanelDivider), RoundedCornerShape(10.dp))
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_aspect_ratio_24px),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colors.primary,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Column {
+                                                Text(
+                                                    text = "Checkerboard Transparent",
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colors.onSurface
+                                                )
+                                                Text(
+                                                    text = "Ideal for transparent PNGs, logos, and stickers.",
+                                                    fontSize = 10.sp,
+                                                    color = Color(PanelTextSecondary)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                CanvasBackgroundMode.SOLID_COLOR -> {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState())
+                                            .padding(vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Custom color picker button
                                         Box(
                                             modifier = Modifier
-                                                .weight(1f)
-                                                .height(30.dp)
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(if (sel) MaterialTheme.colors.primary else Color(0xFFF0F3F8))
-                                                .clickable {
-                                                    val updated = gradState.copy(type = gt)
-                                                    gradState = updated
-                                                    onGradientChange(updated)
-                                                },
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFE8EEF5))
+                                                .border(1.dp, Color(0xFFCCD6E0), CircleShape)
+                                                .clickable { onOpenColorPicker() },
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text(
-                                                text = label,
-                                                fontSize = 11.sp,
-                                                fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (sel) Color.White else Color(PanelTextSecondary)
+                                            Icon(
+                                                imageVector = Icons.Default.Add,
+                                                contentDescription = "Custom Color",
+                                                tint = MaterialTheme.colors.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(6.dp))
+
+                                        // Swatches
+                                        SolidPresetColors.forEach { c ->
+                                            val isSelected = (solidColorState and 0x00FFFFFF) == (c and 0x00FFFFFF)
+                                            val isLight = (c == 0xFFFFFFFF.toInt() || c == 0xFFFFF9C4.toInt())
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(end = 6.dp)
+                                                    .size(36.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(c))
+                                                    .border(
+                                                        width = if (isSelected) 2.5.dp else if (isLight) 1.dp else 0.dp,
+                                                        color = if (isSelected) MaterialTheme.colors.primary
+                                                        else if (isLight) Color(0xFFCCD6E0)
+                                                        else Color.Transparent,
+                                                        shape = CircleShape
+                                                    )
+                                                    .clickable {
+                                                        solidColorState = c
+                                                        onSolidColorChange(c)
+                                                    }
                                             )
                                         }
                                     }
                                 }
 
-                                // Angle slider if Linear
-                                if (gradState.type == GradientType.LINEAR) {
-                                    Spacer(modifier = Modifier.height(8.dp))
+                                CanvasBackgroundMode.GRADIENT -> {
+                                    // Gradient Type selector
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Text(
-                                            text = "Gradient Angle",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color(PanelTextSecondary)
-                                        )
-                                        Text(
-                                            text = "${gradState.angle.toInt()}°",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colors.primary
-                                        )
-                                    }
-                                    Slider(
-                                        value = gradState.angle,
-                                        onValueChange = { ang ->
-                                            val updated = gradState.copy(angle = ang)
-                                            gradState = updated
-                                            onGradientChange(updated)
-                                        },
-                                        valueRange = 0f..360f,
-                                        colors = SliderDefaults.colors(
-                                            thumbColor = MaterialTheme.colors.primary,
-                                            activeTrackColor = MaterialTheme.colors.primary
-                                        )
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Presets",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(PanelTextSecondary),
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Custom gradient button
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFFE8EEF5))
-                                            .border(1.dp, Color(0xFFCCD6E0), CircleShape)
-                                            .clickable { onOpenGradientPicker() },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = "Custom Gradient",
-                                            tint = MaterialTheme.colors.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    // Presets
-                                    GradientColor.PRESETS.forEach { preset ->
-                                        val isSel = gradState.colors.contentEquals(preset.colors)
-                                        val brushColors = preset.colors.map { Color(it) }
-                                        Box(
-                                            modifier = Modifier
-                                                .padding(end = 8.dp)
-                                                .size(40.dp)
-                                                .clip(CircleShape)
-                                                .background(Brush.horizontalGradient(brushColors))
-                                                .border(
-                                                    width = if (isSel) 2.5.dp else 1.dp,
-                                                    color = if (isSel) MaterialTheme.colors.primary else Color(0x33000000),
-                                                    shape = CircleShape
+                                        listOf(
+                                            GradientType.LINEAR to "Linear",
+                                            GradientType.RADIAL to "Radial",
+                                            GradientType.SWEEP to "Sweep"
+                                        ).forEach { (gt, label) ->
+                                            val sel = gradState.type == gt
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .height(28.dp)
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(if (sel) MaterialTheme.colors.primary else Color(PanelAlt))
+                                                    .clickable {
+                                                        val updated = gradState.copy(type = gt)
+                                                        gradState = updated
+                                                        onGradientChange(updated)
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = label,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (sel) Color.White else Color(PanelTextSecondary)
                                                 )
-                                                .clickable {
-                                                    val updated = preset.copy(
-                                                        type = gradState.type,
-                                                        angle = gradState.angle
-                                                    )
+                                            }
+                                        }
+                                    }
+
+                                    // Angle slider if Linear
+                                    if (gradState.type == GradientType.LINEAR) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Angle",
+                                                style = MaterialTheme.typography.caption,
+                                                color = Color(PanelTextSecondary),
+                                                modifier = Modifier.width(44.dp)
+                                            )
+                                            Slider(
+                                                value = gradState.angle,
+                                                onValueChange = { ang ->
+                                                    val updated = gradState.copy(angle = ang)
                                                     gradState = updated
                                                     onGradientChange(updated)
-                                                }
-                                        )
+                                                },
+                                                valueRange = 0f..360f,
+                                                colors = SliderDefaults.colors(
+                                                    thumbColor = MaterialTheme.colors.primary,
+                                                    activeTrackColor = MaterialTheme.colors.primary
+                                                ),
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .height(28.dp)
+                                            )
+                                            Text(
+                                                text = "${gradState.angle.toInt()}°",
+                                                style = MaterialTheme.typography.caption,
+                                                color = Color(PanelTextSecondary),
+                                                textAlign = TextAlign.End,
+                                                modifier = Modifier.width(36.dp)
+                                            )
+                                        }
+                                    }
+
+                                    // Presets
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Custom gradient button
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFE8EEF5))
+                                                .border(1.dp, Color(0xFFCCD6E0), CircleShape)
+                                                .clickable { onOpenGradientPicker() },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Add,
+                                                contentDescription = "Custom Gradient",
+                                                tint = MaterialTheme.colors.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(6.dp))
+
+                                        GradientColor.PRESETS.forEach { preset ->
+                                            val isSel = gradState.colors.contentEquals(preset.colors)
+                                            val brushColors = preset.colors.map { Color(it) }
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(end = 6.dp)
+                                                    .size(36.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Brush.horizontalGradient(brushColors))
+                                                    .border(
+                                                        width = if (isSel) 2.5.dp else 1.dp,
+                                                        color = if (isSel) MaterialTheme.colors.primary else Color(0x33000000),
+                                                        shape = CircleShape
+                                                    )
+                                                    .clickable {
+                                                        val updated = preset.copy(
+                                                            type = gradState.type,
+                                                            angle = gradState.angle
+                                                        )
+                                                        gradState = updated
+                                                        onGradientChange(updated)
+                                                    }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                CanvasBackgroundMode.IMAGE -> {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = { onGalleryPickRequested() },
+                                            modifier = Modifier.weight(1f).height(38.dp),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_outline_photo_24px),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colors.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Gallery", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = { onCameraRequested() },
+                                            modifier = Modifier.weight(1f).height(38.dp),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_outline_camera_alt_24px),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colors.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Camera", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+
+                                    if (hasImage) {
+                                        TextButton(
+                                            onClick = { onRemoveImage() },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentPadding = PaddingValues(2.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_delete_24px),
+                                                contentDescription = null,
+                                                tint = Color(0xFFE53935),
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                "Remove Background Image",
+                                                color = Color(0xFFE53935),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
                                     }
                                 }
                             }
 
-                            CanvasBackgroundMode.IMAGE -> {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    OutlinedButton(
-                                        onClick = { onGalleryPickRequested() },
-                                        modifier = Modifier.weight(1f).height(44.dp),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_outline_photo_24px),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colors.primary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Gallery", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                    }
+                            Spacer(modifier = Modifier.height(2.dp))
 
-                                    OutlinedButton(
-                                        onClick = { onCameraRequested() },
-                                        modifier = Modifier.weight(1f).height(44.dp),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_outline_camera_alt_24px),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colors.primary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Camera", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            // Reset Action centered
+                            Text(
+                                text = "Reset",
+                                style = MaterialTheme.typography.caption,
+                                color = MaterialTheme.colors.primary,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        modeState = CanvasBackgroundMode.SOLID_COLOR
+                                        solidColorState = 0xFFFFFFFF.toInt()
+                                        onReset()
                                     }
-                                }
+                                    .padding(vertical = 4.dp)
+                            )
+                        }
 
-                                if (hasImage) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    TextButton(
-                                        onClick = { onRemoveImage() },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_delete_24px),
-                                            contentDescription = null,
-                                            tint = Color(0xFFE53935),
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            "Remove Background Image",
-                                            color = Color(0xFFE53935),
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                }
+                        // Right Column (Cancel & Apply)
+                        Column(
+                            modifier = Modifier
+                                .width(60.dp)
+                                .padding(start = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Bottom
+                        ) {
+                            TextButton(
+                                onClick = onCancel,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                            ) {
+                                Text("Cancel", style = MaterialTheme.typography.caption)
                             }
-                        }
-                    }
-
-                    Divider(color = Color(PanelDivider), thickness = 1.dp)
-
-                    // Footer Actions: Cancel & Apply
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onCancel,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(40.dp),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                "Cancel",
-                                color = Color(PanelTextSecondary),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-
-                        Button(
-                            onClick = onApply,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(40.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
-                        ) {
-                            Text(
-                                "Apply",
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Button(
+                                onClick = onApply,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = MaterialTheme.colors.primary,
+                                    contentColor = Color.White
+                                ),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                elevation = ButtonDefaults.elevation(defaultElevation = 1.dp)
+                            ) {
+                                Text(
+                                    text = "Apply",
+                                    style = MaterialTheme.typography.caption,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }

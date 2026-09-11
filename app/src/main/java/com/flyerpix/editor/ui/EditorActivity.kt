@@ -405,6 +405,12 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         canvasMenuController.setBgGalleryLauncher(bgGalleryLauncher)
         canvasMenuController.setOnCameraRequested { checkCameraPermissionForBackground() }
         canvasMenuController.onDetailExpandedChanged = { setDetailExpanded(canvasMenuController.activeTag.isNotEmpty()) }
+        canvasMenuController.onCanvasSettingsOpenChanged = { open ->
+            val density = resources.displayMetrics.density
+            val offset = (56 * density).toInt()
+            animateNavTranslation(if (open) offset else 0)
+            fitCanvasToOpenPanels()
+        }
 
         // Effects Controller - Mengelola efek kanvas
         effectsController = EffectsController(
@@ -731,6 +737,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             textPanelController.hideStripAndPanels()
         }
 
+        if (menuId == R.id.nav_home) {
+            templateController.refreshUI()
+        }
+
         if (menuId == R.id.nav_add) {
             objectMenu.refreshUI()
         } else {
@@ -747,6 +757,16 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             effectsController.refreshUI()
         } else {
             effectsController.deselect()
+        }
+
+        // Jika berpindah ke Home / Add / Canvas / Edit tanpa sheet aktif, pastikan
+        // compose sheet tertutup dan navbar bawah tampil penuh tanpa tergeser.
+        if (menuId == R.id.nav_home || (menuId != R.id.nav_canvas && menuId != R.id.nav_effects)) {
+            if (binding.composeThreeDSheetContainer.visibility == View.VISIBLE) {
+                binding.composeThreeDSheetContainer.visibility = View.GONE
+            }
+            animateNavTranslation(0)
+            isDetailExpanded = false
         }
 
         fitCanvasToOpenPanels()
@@ -780,6 +800,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         binding.bottomNavigation.setOnItemSelectedListener { menuItem: MenuItem ->
             showMenu(menuItem.itemId)
             true
+        }
+        binding.bottomNavigation.setOnItemReselectedListener { menuItem: MenuItem ->
+            showMenu(menuItem.itemId)
         }
         
         // Initialize dengan menu default (Home) untuk set FAB visibility dengan benar
