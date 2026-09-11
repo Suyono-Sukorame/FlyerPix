@@ -328,7 +328,9 @@ initializeMaskControls()
             when {
                 activeTextToolTag == TOOL_3D_TEXT && sel != null -> showCompose3DSheet(sel)
                 activeTextToolTag == TOOL_3D_SHADOW && sel != null -> showComposeShadow3DSheet(sel)
-                activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW -> {
+                activeTextToolTag == TOOL_3D_ROTATE && sel != null -> showComposeRotate3DSheet(sel)
+                activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW ||
+                    activeTextToolTag == TOOL_3D_ROTATE -> {
                     // layer non-3D/berbeda dipilih saat halaman tool 3D terbuka:
                     // tutup halaman settings (paralel dengan perilaku legacy panel)
                     closeEffectSettings()
@@ -529,6 +531,37 @@ initializeMaskControls()
                     val sel = pixelCanvasView.selectedLayer as? TextLayer
                     if (sel != null) showComposeShadow3DSheet(sel)
                 },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() }
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Tampilkan Compose bottom sheet untuk 3D Rotate (sumbu X/Y/Z) dengan gaya
+     * yang sama persis seperti halaman 3D Text / 3D Shadow.
+     */
+    private fun showComposeRotate3DSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.ThreeDRotateDetailPage(
+                rotateX = layer.rotate3DX.coerceIn(-180f, 180f),
+                rotateY = layer.rotate3DY.coerceIn(-180f, 180f),
+                rotateZ = layer.rotate3DZ.coerceIn(-180f, 180f),
+                maxHeightPx = sheetMaxH,
+                onRotateXChange = { v -> applyToTextLayer { it.rotate3DX = v }; pixelCanvasView.invalidate() },
+                onRotateYChange = { v -> applyToTextLayer { it.rotate3DY = v }; pixelCanvasView.invalidate() },
+                onRotateZChange = { v -> applyToTextLayer { it.rotate3DZ = v }; pixelCanvasView.invalidate() },
                 onApply = { applyEffectSettings() },
                 onCancel = { cancelEffectSettings() }
             )
@@ -2241,10 +2274,14 @@ tvAngleLabel.text = "Angle: 0°"
             }
             TOOL_REFLECTION -> syncReflectionUIHook?.invoke(layer)
             TOOL_3D_ROTATE -> {
-                val c = fs.rotate3DControlsInclude
-                c.sliderRotateX.value = layer.rotate3DX.coerceIn(-180f, 180f)
-                c.sliderRotateY.value = layer.rotate3DY.coerceIn(-180f, 180f)
-                c.sliderRotateZ.value = layer.rotate3DZ.coerceIn(-180f, 180f)
+                if (threeDComposeHost != null) {
+                    showComposeRotate3DSheet(layer)
+                } else {
+                    val c = fs.rotate3DControlsInclude
+                    c.sliderRotateX.value = layer.rotate3DX.coerceIn(-180f, 180f)
+                    c.sliderRotateY.value = layer.rotate3DY.coerceIn(-180f, 180f)
+                    c.sliderRotateZ.value = layer.rotate3DZ.coerceIn(-180f, 180f)
+                }
             }
             TOOL_PERSPECTIVE -> syncPerspectiveUIHook?.invoke(layer)
             TOOL_BLEND -> syncBlendUIHook?.invoke(layer)
@@ -2434,9 +2471,11 @@ tvAngleLabel.text = "Angle: 0°"
      * kompleks mendapat ruang yang lebih lega tanpa tumpukan menu.
      */
     private fun updateEffectSettingsVisibility() {
-        // TOOL_3D_TEXT & TOOL_3D_SHADOW ditampilkan via Compose bottom sheet,
-        // bukan panel XML (yang kosong karena inisialisasinya dialihkan ke Compose).
-        val composedPanel = (activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW) &&
+        // TOOL_3D_TEXT, TOOL_3D_SHADOW & TOOL_3D_ROTATE ditampilkan via Compose
+        // bottom sheet, bukan panel XML (yang kosong karena inisialisasinya
+        // dialihkan ke Compose).
+        val composedPanel = (activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW ||
+            activeTextToolTag == TOOL_3D_ROTATE) &&
             threeDComposeHost != null
         val show = effectSettingsOpen && isPageOpen && activeTextToolTag in complexEffectTags &&
             !composedPanel &&
@@ -2464,7 +2503,7 @@ tvAngleLabel.text = "Angle: 0°"
             return
         }
         if (effectSettingsOpen && activeTextToolTag == tag) return
-        if (tag != TOOL_3D_TEXT) hideCompose3DSheet()
+        if (tag != TOOL_3D_TEXT && tag != TOOL_3D_SHADOW && tag != TOOL_3D_ROTATE) hideCompose3DSheet()
         textToolTagBeforeEffect = activeTextToolTag.takeUnless { it in complexEffectTags } ?: ""
         snapshotCurrentState()
         activeTextToolTag = tag
@@ -2503,7 +2542,8 @@ tvAngleLabel.text = "Angle: 0°"
      * Tutup halaman settings (baik via ✓ maupun ✕) dan kembali ke strip tool.
      */
     private fun closeEffectSettings() {
-        val composeOpened = activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW
+        val composeOpened = activeTextToolTag == TOOL_3D_TEXT || activeTextToolTag == TOOL_3D_SHADOW ||
+            activeTextToolTag == TOOL_3D_ROTATE
         settingsSnapshot = null
         effectSettingsOpen = false
         activeTextToolTag = textToolTagBeforeEffect
