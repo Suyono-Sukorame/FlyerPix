@@ -92,7 +92,8 @@ class TextPanelController(
         TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_REFLECTION, TOOL_NEON,
         TOOL_STROKE, TOOL_SHADOW, TOOL_INNER, TOOL_LETTER, TOOL_LINE, TOOL_CURVE, TOOL_BG,
         TOOL_EMBOSS, TOOL_BLEND, TOOL_PERSPECTIVE,
-        TOOL_ALIGN, TOOL_SIZE, TOOL_OPACITY, TOOL_POSITION, TOOL_REL_POS, TOOL_ROTATE
+        TOOL_ALIGN, TOOL_SIZE, TOOL_OPACITY, TOOL_POSITION, TOOL_REL_POS, TOOL_ROTATE,
+        TOOL_COLOR, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_MASK, TOOL_STYLE
     )
     private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncInnerShadowUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
@@ -341,6 +342,11 @@ initializeMaskControls()
             val sel = layer as? TextLayer
             when {
                 activeTextToolTag == TOOL_3D_TEXT && sel != null -> showCompose3DSheet(sel)
+                activeTextToolTag == TOOL_COLOR && sel != null -> showComposeTextColorSheet(sel)
+                activeTextToolTag == TOOL_GRADIENT && sel != null -> showComposeTextGradientSheet(sel)
+                activeTextToolTag == TOOL_TEXTURE && sel != null -> showComposeTextTextureSheet(sel)
+                activeTextToolTag == TOOL_MASK && sel != null -> showComposeTextMaskSheet(sel)
+                activeTextToolTag == TOOL_STYLE && sel != null -> showComposeStyleSheet(sel)
                 activeTextToolTag == TOOL_3D_SHADOW && sel != null -> showComposeShadow3DSheet(sel)
                 activeTextToolTag == TOOL_3D_ROTATE && sel != null -> showComposeRotate3DSheet(sel)
                 activeTextToolTag == TOOL_REFLECTION && sel != null -> showComposeReflectionSheet(sel)
@@ -464,6 +470,163 @@ initializeMaskControls()
             )
         }
         onCanvasChanged()
+    }
+
+    private fun prepareTextAppearanceSheet(): Int? {
+        if (threeDComposeHost == null || threeDComposeContainer == null) return null
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        threeDComposeContainer?.visibility = View.VISIBLE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+        return sheetMaxH
+    }
+
+    private fun showComposeTextColorSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val sheetMaxH = prepareTextAppearanceSheet() ?: return
+        val recents = com.flyerpix.editor.ui.dialog.ColorRecents(activity).recents()
+        host.setContent {
+            com.flyerpix.editor.ui.compose.TextColorDetailPage(
+                color = layer.textColor,
+                currentGradient = layer.gradient,
+                recents = recents,
+                onRecentPicked = { entry ->
+                    applyToTextLayer {
+                        when (entry) {
+                            is com.flyerpix.editor.ui.dialog.RecentEntry.Solid -> {
+                                it.textColor = entry.color
+                                it.gradientEnabled = false
+                                it.textureEnabled = false
+                            }
+                            is com.flyerpix.editor.ui.dialog.RecentEntry.Gradient -> {
+                                it.gradient = entry.gradient
+                                it.gradientEnabled = true
+                                it.textureEnabled = false
+                            }
+                        }
+                    }
+                    pixelCanvasView.invalidate()
+                    (pixelCanvasView.selectedLayer as? TextLayer)?.let { showComposeTextColorSheet(it) }
+                },
+                onPickColor = {
+                    val selected = pixelCanvasView.selectedLayer as? TextLayer
+                    if (selected != null) {
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.newInstance(
+                            initialColor = selected.textColor,
+                            resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.TEXT_RESULT_KEY
+                        ).show(
+                            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                        )
+                    }
+                },
+                onOpenGradient = { selectTextTool(TOOL_GRADIENT) },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    private fun showComposeTextGradientSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val sheetMaxH = prepareTextAppearanceSheet() ?: return
+        host.setContent {
+            com.flyerpix.editor.ui.compose.TextGradientDetailPage(
+                enabled = layer.gradientEnabled,
+                gradient = layer.gradient,
+                onEnabledChange = { enabled ->
+                    applyToTextLayer {
+                        it.gradientEnabled = enabled
+                        if (enabled && it.gradient == null) it.gradient = GradientColor.PRESETS[0].copy()
+                    }
+                    pixelCanvasView.invalidate()
+                    (pixelCanvasView.selectedLayer as? TextLayer)?.let { showComposeTextGradientSheet(it) }
+                },
+                onTypeChange = { type ->
+                    applyToTextLayer {
+                        if (it.gradient == null) it.gradient = GradientColor.PRESETS[0].copy(type = type)
+                        else it.gradient?.type = type
+                    }
+                    pixelCanvasView.invalidate()
+                    (pixelCanvasView.selectedLayer as? TextLayer)?.let { showComposeTextGradientSheet(it) }
+                },
+                onPresetPicked = { preset ->
+                    applyToTextLayer {
+                        it.gradient = preset.copy(angle = it.gradient?.angle ?: preset.angle)
+                        it.gradientEnabled = true
+                    }
+                    pixelCanvasView.invalidate()
+                    (pixelCanvasView.selectedLayer as? TextLayer)?.let { showComposeTextGradientSheet(it) }
+                },
+                onAngleChange = { angle -> applyToTextLayer { it.gradient?.angle = angle }; pixelCanvasView.invalidate() },
+                onReset = {
+                    applyToTextLayer {
+                        it.gradientEnabled = false
+                        it.gradient = GradientColor.PRESETS[0].copy(angle = 0f)
+                    }
+                    pixelCanvasView.invalidate()
+                    (pixelCanvasView.selectedLayer as? TextLayer)?.let { showComposeTextGradientSheet(it) }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    private fun showComposeTextTextureSheet(layer: TextLayer, title: String = "Texture") {
+        val host = threeDComposeHost ?: return
+        val sheetMaxH = prepareTextAppearanceSheet() ?: return
+        host.setContent {
+            com.flyerpix.editor.ui.compose.TextTextureDetailPage(
+                title = title,
+                enabled = layer.textureEnabled,
+                bitmap = layer.textureBitmap,
+                scale = layer.textureScale,
+                rotation = layer.textureRotation,
+                onEnabledChange = { enabled ->
+                    applyToTextLayer { it.textureEnabled = enabled }
+                    pixelCanvasView.invalidate()
+                    (pixelCanvasView.selectedLayer as? TextLayer)?.let { showComposeTextTextureSheet(it, title) }
+                },
+                onChoose = { texturePickerLauncher?.launch("image/*") },
+                onRemove = {
+                    applyToTextLayer {
+                        it.textureBitmap = null
+                        it.textureEnabled = false
+                    }
+                    pixelCanvasView.invalidate()
+                    (pixelCanvasView.selectedLayer as? TextLayer)?.let { showComposeTextTextureSheet(it, title) }
+                },
+                onScaleChange = { value -> applyToTextLayer { it.textureScale = value }; pixelCanvasView.invalidate() },
+                onRotationChange = { value -> applyToTextLayer { it.textureRotation = value }; pixelCanvasView.invalidate() },
+                onReset = {
+                    applyToTextLayer {
+                        it.textureBitmap = null
+                        it.textureEnabled = false
+                        it.textureScale = 1f
+                        it.textureRotation = 0f
+                    }
+                    pixelCanvasView.invalidate()
+                    (pixelCanvasView.selectedLayer as? TextLayer)?.let { showComposeTextTextureSheet(it, title) }
+                    showSnackbar("Texture reset")
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    private fun showComposeTextMaskSheet(layer: TextLayer) {
+        showComposeTextTextureSheet(layer, "Mask")
     }
 
     /**
@@ -1035,7 +1198,7 @@ initializeMaskControls()
         threeDComposeContainer?.post { onCanvasChanged() }
 
         host.setContent {
-            com.flyerpix.editor.ui.compose.CurveDetailPage(
+            com.flyerpix.editor.ui.compose.TextCurveDetailPage(
                 curvePercent = layer.curvePercent.coerceIn(-100, 100),
                 onCurvePercentChange = { cp ->
                     applyToTextLayer { it.curvePercent = cp }
@@ -1044,6 +1207,68 @@ initializeMaskControls()
                 onReset = {
                     applyToTextLayer { it.curvePercent = 0 }
                     pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    private fun showComposeStyleSheet(layer: TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        fun applyStyleChange(actionName: String, change: (TextLayer) -> Unit) {
+            val selected = pixelCanvasView.selectedLayer as? TextLayer ?: return
+            pixelCanvasView.runRecordedAction(actionName) { change(selected) }
+            pixelCanvasView.invalidate()
+            (pixelCanvasView.selectedLayer as? TextLayer)?.let { showComposeStyleSheet(it) }
+        }
+
+        fun applyWeight(weight: Int) {
+            applyStyleChange("Change Font Weight") { textLayer ->
+                val base = textLayer.typeface ?: android.graphics.Typeface.DEFAULT
+                textLayer.typeface = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    android.graphics.Typeface.create(base, weight, textLayer.isItalic)
+                } else {
+                    android.graphics.Typeface.create(base, if (weight >= 700) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+                }
+            }
+        }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.TextStyleDetailPage(
+                bold = layer.isBold,
+                italic = layer.isItalic,
+                underline = layer.isUnderline,
+                strikeThrough = layer.isStrikethrough,
+                weight = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) layer.typeface?.weight ?: 400 else 400,
+                onBoldChange = { applyStyleChange("Change Text Style") { it.isBold = !it.isBold } },
+                onItalicChange = { applyStyleChange("Change Text Style") { it.isItalic = !it.isItalic } },
+                onUnderlineChange = { applyStyleChange("Change Text Style") { it.isUnderline = !it.isUnderline } },
+                onStrikeThroughChange = { applyStyleChange("Change Text Style") { it.isStrikethrough = !it.isStrikethrough } },
+                onWeightChange = ::applyWeight,
+                onReset = {
+                    applyStyleChange("Reset Text Style") {
+                        it.isBold = false
+                        it.isItalic = false
+                        it.isUnderline = false
+                        it.isStrikethrough = false
+                        val base = it.typeface ?: android.graphics.Typeface.DEFAULT
+                        it.typeface = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                            android.graphics.Typeface.create(base, 400, false)
+                        } else {
+                            android.graphics.Typeface.create(base, android.graphics.Typeface.NORMAL)
+                        }
+                    }
                 },
                 onApply = { applyEffectSettings() },
                 onCancel = { cancelEffectSettings() },
@@ -3291,8 +3516,14 @@ tvAngleLabel.text = "Angle: 0°"
                     syncCurveUIHook?.invoke(layer)
                 }
             }
-            TOOL_STYLE -> syncStyleUIHook?.invoke(layer)
-            TOOL_MASK -> syncMaskUIHook?.invoke(layer)
+            TOOL_STYLE -> {
+                if (threeDComposeHost != null) showComposeStyleSheet(layer)
+                else syncStyleUIHook?.invoke(layer)
+            }
+            TOOL_MASK -> {
+                if (threeDComposeHost != null) showComposeTextMaskSheet(layer)
+                else syncMaskUIHook?.invoke(layer)
+            }
             TOOL_OPACITY -> {
                 if (threeDComposeHost != null) {
                     showComposeOpacitySheet(layer)
@@ -3307,7 +3538,10 @@ tvAngleLabel.text = "Angle: 0°"
                     syncRotateUIHook?.invoke(layer)
                 }
             }
-            TOOL_COLOR -> syncColorUIHook?.invoke(layer)
+            TOOL_COLOR -> {
+                if (threeDComposeHost != null) showComposeTextColorSheet(layer)
+                else syncColorUIHook?.invoke(layer)
+            }
             TOOL_PADDING -> syncPaddingUIHook?.invoke(layer)
             TOOL_SIZE -> {
                 if (threeDComposeHost != null) {
@@ -3345,8 +3579,14 @@ tvAngleLabel.text = "Angle: 0°"
                     syncEmbossUIHook?.invoke(layer)
                 }
             }
-            TOOL_GRADIENT -> syncGradientUIHook?.invoke(layer)
-            TOOL_TEXTURE -> syncTextureUIHook?.invoke(layer)
+            TOOL_GRADIENT -> {
+                if (threeDComposeHost != null) showComposeTextGradientSheet(layer)
+                else syncGradientUIHook?.invoke(layer)
+            }
+            TOOL_TEXTURE -> {
+                if (threeDComposeHost != null) showComposeTextTextureSheet(layer)
+                else syncTextureUIHook?.invoke(layer)
+            }
             TOOL_3D_TEXT -> {
                 if (threeDComposeHost != null) {
                     showCompose3DSheet(layer)
@@ -3530,6 +3770,8 @@ tvAngleLabel.text = "Angle: 0°"
             b.switchTextureEnabled.isChecked = true
             b.textureControlsGroup.visibility = View.VISIBLE
             syncMaskUIHook?.invoke(curLayer)
+            if (activeTextToolTag == TOOL_TEXTURE) showComposeTextTextureSheet(curLayer)
+            if (activeTextToolTag == TOOL_MASK) showComposeTextMaskSheet(curLayer)
         }
         showSnackbar("Photo texture applied to text!")
     }
@@ -4724,6 +4966,7 @@ private fun registerTextPanels() {
             if (layer != null) {
                 setupColorPreview(layer)
                 syncGradientUIHook?.invoke(layer)
+                if (activeTextToolTag == TOOL_COLOR) showComposeTextColorSheet(layer)
             }
             pixelCanvasView.invalidate()
         }

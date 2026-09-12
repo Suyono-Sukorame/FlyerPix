@@ -18,6 +18,7 @@ import java.text.SimpleDateFormat
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -795,6 +796,28 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         }
     }
 
+    private fun setZoomModeControlsEnabled(enabled: Boolean) {
+        fun setDescendantsEnabled(view: View) {
+            view.isEnabled = enabled
+            if (view is ViewGroup) {
+                for (index in 0 until view.childCount) {
+                    setDescendantsEnabled(view.getChildAt(index))
+                }
+            }
+        }
+
+        listOf(
+            binding.bottomNavigation,
+            binding.objectMenuPanel,
+            binding.editContainerPanel,
+            binding.canvasMenuPanel,
+            binding.effectsMenuPanel,
+            binding.paletteFab,
+            binding.eyedropperFab,
+            binding.cropFab
+        ).forEach(::setDescendantsEnabled)
+    }
+
     private fun initializeBottomNavigationView() {
         // Halaman awal: Home (default dari XML), sheet dipensiunkan.
         binding.toolsBottomSheet.visibility = View.GONE
@@ -900,14 +923,19 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         // Sinkronkan label persentase setiap kali canvasZoom berubah (pinch maupun reset).
         pixelCanvasView.onZoomChangedListener = { _ -> updateZoomLabel() }
 
-        // PILL = saklar Edit Mode <-> Zoom Mode. Nilai zoom terakhir dipertahankan.
+        pixelCanvasView.onEditorZoomModeChangedListener = { active ->
+            setZoomModeControlsEnabled(!active)
+            applyZoomModeUi()
+        }
+
+        // PILL = saklar Edit Mode <-> Zoom Mode. Masuk selalu dimulai dari 100%.
         top.btnTopZoom.setOnClickListener {
             val entering = !pixelCanvasView.isEditorZoomMode
             pixelCanvasView.setEditorZoomMode(entering)
             applyZoomModeUi()
             if (entering) {
                 updateZoomLabel()
-                showSnackbar("Zoom mode: pinch pada kanvas utk memperbesar. Tap % utk reset 100%")
+                showSnackbar("Zoom mode: pinch dua jari untuk memperbesar. Tap % untuk reset 100%")
             } else {
                 showSnackbar("Edit mode")
             }

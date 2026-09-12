@@ -164,7 +164,7 @@ class PixelCanvasView @JvmOverloads constructor(
     private var canvasPanY = 0f
     // Zoom tidak boleh di bawah 100% (user memilih model zoom naik saja).
     private val minCanvasZoom = 1f
-    private val maxCanvasZoom = 4f
+    private val maxCanvasZoom = 7f
     private val zoomStep = 0.25f
 
     // Matriks transform viewport (identik dengan Canvas translate/scale di onDraw)
@@ -182,6 +182,8 @@ class PixelCanvasView @JvmOverloads constructor(
      */
     var onZoomChangedListener: ((Float) -> Unit)? = null
 
+    var onEditorZoomModeChangedListener: ((Boolean) -> Unit)? = null
+
     fun setCanvasZoom(zoom: Float) {
         val clamped = zoom.coerceIn(minCanvasZoom, maxCanvasZoom)
         if (canvasZoom != clamped) {
@@ -189,6 +191,22 @@ class PixelCanvasView @JvmOverloads constructor(
             onZoomChangedListener?.invoke(canvasZoom)
             invalidate()
         }
+    }
+
+    private fun setCanvasZoomAt(zoom: Float, focusX: Float, focusY: Float) {
+        val oldZoom = canvasZoom
+        val clamped = zoom.coerceIn(minCanvasZoom, maxCanvasZoom)
+        if (oldZoom == clamped) return
+
+        val cx = width / 2f
+        val cy = height / 2f
+        val worldX = (focusX - cx - canvasPanX) / oldZoom + cx
+        val worldY = (focusY - cy - canvasPanY) / oldZoom + cy
+        canvasZoom = clamped
+        canvasPanX = focusX - cx - (worldX - cx) * clamped
+        canvasPanY = focusY - cy - (worldY - cy) * clamped
+        onZoomChangedListener?.invoke(canvasZoom)
+        invalidate()
     }
 
     fun zoomIn() = setCanvasZoom(canvasZoom + zoomStep)
@@ -213,12 +231,14 @@ class PixelCanvasView @JvmOverloads constructor(
     fun setEditorZoomMode(active: Boolean) {
         if (editorZoomMode == active) return
         editorZoomMode = active
+        if (active) resetZoom()
         // Batalkan gestur objek yang mungkin masih berjalan saat mode berubah.
         isDragging = false
         currentTouchState = TouchState.IDLE
         activePerspectiveCorner = -1
         lastTouchX = 0f
         lastTouchY = 0f
+        onEditorZoomModeChangedListener?.invoke(active)
         invalidate()
     }
 
@@ -1908,21 +1928,6 @@ class PixelCanvasView @JvmOverloads constructor(
     private var isDragging = false
     private var activePointerId = MotionEvent.INVALID_POINTER_ID
 
-    private val scaleGestureListener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-        override fun onScale(detector: ScaleGestureDetector): Boolean {
-            val factor = detector.scaleFactor
-            if (factor.isNaN() || factor.isInfinite() || factor <= 0f) return false
-            // Pinch dua jari = zoom KANVAS penuh (background + grid + semua layer)
-            // sekaligus, bukan menskalakan layer/objek yang terseleksi saja.
-            setCanvasZoom(canvasZoom * factor)
-            return true
-        }
-
-        override fun onScaleBegin(detector: ScaleGestureDetector): Boolean = true
-    }
-
-    private val scaleGestureDetector = ScaleGestureDetector(context, scaleGestureListener)
-
     /**
      * Scale gesture khusus Zoom Mode: pinch mengubah zoom KANVAS (bukan skala layer).
      */
@@ -1930,7 +1935,7 @@ class PixelCanvasView @JvmOverloads constructor(
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             val factor = detector.scaleFactor
             if (factor.isNaN() || factor.isInfinite() || factor <= 0f) return false
-            setCanvasZoom(canvasZoom * factor)
+            setCanvasZoomAt(canvasZoom * factor, detector.focusX, detector.focusY)
             return true
         }
     }
@@ -2251,12 +2256,12 @@ class PixelCanvasView @JvmOverloads constructor(
         // Deteksi double-tap untuk membuka dialog edit teks
         gestureDetector.onTouchEvent(event)
 
-        // Teruskan event ke ScaleGestureDetector dan RotationGestureDetector untuk gestur dua jari
-        scaleGestureDetector.onTouchEvent(event)
+        // Rotasi layer tetap tersedia di Edit Mode; pinch zoom hanya tersedia
+        // setelah user mengaktifkan Zoom Mode dari header.
         rotationGestureDetector.onTouchEvent(event)
 
         // Jika gestur skala atau rotasi dua jari sedang berlangsung, hentikan translasi drag
-        if (scaleGestureDetector.isInProgress || rotationGestureDetector.isInProgress) {
+        if (rotationGestureDetector.isInProgress) {
             isDragging = false
             return true
         }
@@ -2376,7 +2381,7 @@ class PixelCanvasView @JvmOverloads constructor(
 
             MotionEvent.ACTION_MOVE -> {
                 // Hanya izinkan drag satu jari jika tidak sedang dalam gestur cubit (scale)
-                if (event.pointerCount == 1 && !scaleGestureDetector.isInProgress) {
+                if (event.pointerCount == 1 && !rotationGestureDetector.isInProgress) {
                     val pointerIndex = event.findPointerIndex(activePointerId)
                     if (pointerIndex != -1 && isDragging) {
                         val currentX = event.getX(pointerIndex)
