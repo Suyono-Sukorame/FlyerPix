@@ -38,7 +38,8 @@ private val ChipUnselectedBg = Color(0xFFF1F5F9)
 @Composable
 fun StickerDetailPage(
     onStickerSelected: (StickerItem) -> Unit,
-    onClose: () -> Unit,
+    onApply: () -> Unit,
+    onCancel: () -> Unit,
     maxHeightPx: Int = 540
 ) {
     var selectedCategory by remember { mutableStateOf<StickerCategory?>(null) }
@@ -204,7 +205,7 @@ fun StickerDetailPage(
                         }
                     }
 
-                    // Right Column: Done / Close Button
+                    // Right Column: Cancel / Apply, matching the 3D Text sheet
                     Column(
                         modifier = Modifier
                             .width(62.dp)
@@ -213,22 +214,25 @@ fun StickerDetailPage(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom
                     ) {
+                        TextButton(
+                            onClick = onCancel,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                        ) {
+                            Text("Cancel", style = MaterialTheme.typography.caption)
+                        }
                         Button(
-                            onClick = onClose,
+                            onClick = onApply,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
                                 backgroundColor = PrimaryBlue,
                                 contentColor = Color.White
                             ),
-                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-                            elevation = ButtonDefaults.elevation(defaultElevation = 2.dp)
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                            elevation = ButtonDefaults.elevation(defaultElevation = 1.dp)
                         ) {
-                            Text(
-                                text = "Done",
-                                style = MaterialTheme.typography.caption,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Text("Apply", style = MaterialTheme.typography.caption, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

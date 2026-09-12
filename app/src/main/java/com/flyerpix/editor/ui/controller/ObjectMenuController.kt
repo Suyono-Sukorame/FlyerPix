@@ -294,7 +294,8 @@ class ObjectMenuController(
                     canvas.addEmojiLayer(stickerItem.emoji)
                     showSnackbar("Added ${stickerItem.emoji} to canvas")
                 },
-                onClose = { deselect(restoreStrip = true) },
+                onApply = { deselect(restoreStrip = true) },
+                onCancel = { deselect(restoreStrip = true) },
                 maxHeightPx = sheetMaxH
             )
         }
@@ -611,7 +612,8 @@ class ObjectMenuController(
                     deselect(restoreStrip = true)
                     onCameraRequested()
                 },
-                onClose = { deselect(restoreStrip = true) },
+                onApply = { deselect(restoreStrip = true) },
+                onCancel = { deselect(restoreStrip = true) },
                 maxHeightPx = sheetMaxH
             )
         }

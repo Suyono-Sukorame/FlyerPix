@@ -29,7 +29,8 @@ private val DragHandleColor = Color(0xFFCBD5E1)
 fun ImportDetailPage(
     onGalleryClick: () -> Unit,
     onCameraClick: () -> Unit,
-    onClose: () -> Unit,
+    onApply: () -> Unit,
+    onCancel: () -> Unit,
     maxHeightPx: Int = 300
 ) {
     Box(
@@ -199,22 +200,25 @@ fun ImportDetailPage(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom
                     ) {
+                        TextButton(
+                            onClick = onCancel,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                        ) {
+                            Text("Cancel", style = MaterialTheme.typography.caption)
+                        }
                         Button(
-                            onClick = onClose,
+                            onClick = onApply,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
                                 backgroundColor = PrimaryBlue,
                                 contentColor = Color.White
                             ),
-                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-                            elevation = ButtonDefaults.elevation(defaultElevation = 2.dp)
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                            elevation = ButtonDefaults.elevation(defaultElevation = 1.dp)
                         ) {
-                            Text(
-                                text = "Close",
-                                style = MaterialTheme.typography.caption,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Text("Apply", style = MaterialTheme.typography.caption, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
