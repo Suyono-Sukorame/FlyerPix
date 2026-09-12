@@ -1,10 +1,15 @@
 package com.flyerpix.editor.project
 
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.PorterDuff
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.text.Layout
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonSyntaxException
@@ -111,6 +116,55 @@ object ProjectSerializer {
         val safeFileName = fileName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
         val file = File(getProjectsDirectory(context), "$safeFileName$FILE_EXTENSION")
         return file.exists() && file.delete()
+    }
+
+    /**
+     * Mengekspor proyek `.plp` ke folder publik **Download/FlyerPix** sehingga
+     * terlihat di direktori internal & dapat dibuka lewat picker/file manager.
+     *
+     * - Android 10+ (Q): menulis via MediaStore ke `Download/FlyerPix/<nama>.plp`
+     *   tanpa butuh permission runtime.
+     * - Android 9 ke bawah: menulis ke
+     *   `Environment.getExternalStoragePublicDirectory(DOWNLOADS)/FlyerPix`.
+     *
+     * @return Uri hasil ekspor, atau null jika gagal menulis.
+     */
+    fun exportProjectToDownloads(context: Context, project: ProjectModel, fileName: String): Uri? {
+        val safeFileName = fileName.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
+        val displayName = "$safeFileName$FILE_EXTENSION"
+        val json = serialize(project)
+
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/FlyerPix")
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+                val collection =
+                    MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                val uri = context.contentResolver.insert(collection, values) ?: return null
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.write(json.toByteArray(Charsets.UTF_8))
+                }
+                values.clear()
+                values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                context.contentResolver.update(uri, values, null, null)
+                uri
+            } else {
+                @Suppress("DEPRECATION")
+                val downloadsDir =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val flyerPixDir = File(downloadsDir, "FlyerPix")
+                if (!flyerPixDir.exists()) flyerPixDir.mkdirs()
+                val target = File(flyerPixDir, displayName)
+                target.writeText(json, Charsets.UTF_8)
+                Uri.fromFile(target)
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     // ── Public API: Serialization ──────────────────────────────────────────────

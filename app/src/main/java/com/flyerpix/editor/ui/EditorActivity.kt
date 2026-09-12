@@ -1221,6 +1221,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         popup.menu.add(0, 1, 0, "Save as Project")
         popup.menu.add(0, 2, 1, "Save as Image")
         popup.menu.add(0, 3, 2, "Open Project (.plp)")
+        popup.menu.add(0, 4, 3, "Export .plp to Downloads")
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -1229,6 +1230,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                 3 -> exportController.showProjectManager {
                     openProjectFileLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
                 }
+                4 -> exportController.showExportProjectToDownloads()
             }
             true
         }

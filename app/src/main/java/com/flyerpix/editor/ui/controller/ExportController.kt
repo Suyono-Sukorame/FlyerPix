@@ -120,6 +120,29 @@ class ExportController(
         )
     }
 
+    /**
+     * Mengekspor proyek `.plp` saat ini ke folder publik **Download/FlyerPix**
+     * (MediaStore Q+ / legacy pre-Q) sehingga file terlihat di direktori internal
+     * perangkat dan dapat dibuka lewat file manager / SAF picker (Prompt: wire UI).
+     */
+    fun showExportProjectToDownloads() {
+        try {
+            val fileName = currentProjectName
+                .takeIf { it.isNotBlank() && it != "Untitled" }
+                ?.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
+                ?: "untitled"
+            val snapshot = canvas.exportProjectSnapshot(currentProjectName)
+            val uri = ProjectSerializer.exportProjectToDownloads(activity, snapshot, fileName)
+            if (uri != null) {
+                showSnackbar("Project exported to Download/FlyerPix/$fileName.plp!")
+            } else {
+                showSnackbar("Failed to export .plp to Downloads")
+            }
+        } catch (e: Exception) {
+            showSnackbar("Failed to export .plp: ${e.localizedMessage}")
+        }
+    }
+
     fun loadProject(project: ProjectModel) {
         currentProjectName = project.projectName
         FontManager.init(activity)
