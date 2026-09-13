@@ -17,22 +17,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.model.ShapeType
 import com.flyerpix.editor.canvas.model.StrokeStyle
 
 private val PrimaryBlue = Color(0xFF1769FF)
-private val TextPrimary = Color(0xFF1E293B)
-private val TextSecondary = Color(0xFF64748B)
-private val SurfaceBg = Color(0xFFFFFFFF)
-private val DragHandleColor = Color(0xFFCBD5E1)
-private val TabSelectedBg = Color(0xFFE8F0FE)
-private val TabUnselectedBg = Color(0xFFF1F5F9)
+private val TextSecondaryColor = Color(0xFF5F6B7A)
+private val DragHandleColor = Color(0xFFD0D4DE)
+private const val PanelDivider = 0xFFE4E8F0
+private const val TextSecondary = 0xFF5F6B7A
 
 private val SWATCH_COLORS = listOf(
     0xFFFFFFFF.toInt(),
@@ -45,12 +41,10 @@ private val SWATCH_COLORS = listOf(
     0xFF212121.toInt()
 )
 
-private enum class ShapeTab {
-    TYPE_RADIUS,
-    FILL,
-    STROKE
-}
-
+/**
+ * Compose bottom sheet untuk Shape detail controls (redesigned to match 3D Rotate pattern).
+ * Linear layout dengan scrollable left column + fixed right column buttons.
+ */
 @Composable
 fun ShapeDetailPage(
     shapeType: ShapeType,
@@ -79,9 +73,17 @@ fun ShapeDetailPage(
     onArcSweepAngleChange: (Float) -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
-    maxHeightPx: Int = 460
+    maxHeightPx: Int = 420  // Same as 3D Rotate
 ) {
-    var activeTab by remember { mutableStateOf(ShapeTab.TYPE_RADIUS) }
+    var shapeTypeState by remember(shapeType) { mutableStateOf(shapeType) }
+    var cornerRadiusState by remember(cornerRadius) { mutableStateOf(cornerRadius) }
+    var opacityState by remember(opacity) { mutableStateOf(opacity) }
+    var fillColorState by remember(fillColor) { mutableStateOf(fillColor) }
+    var strokeWidthState by remember(strokeWidth) { mutableStateOf(strokeWidth) }
+    var strokeOpacityState by remember(strokeOpacity) { mutableStateOf(strokeOpacity) }
+    var strokeColorState by remember(strokeColor) { mutableStateOf(strokeColor) }
+    var arcStartAngleState by remember(arcStartAngle) { mutableStateOf(arcStartAngle) }
+    var arcSweepAngleState by remember(arcSweepAngle) { mutableStateOf(arcSweepAngle) }
 
     Box(
         modifier = Modifier
@@ -95,504 +97,318 @@ fun ShapeDetailPage(
                 .height(with(LocalDensity.current) { maxHeightPx.toDp() }),
             shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
             elevation = 8.dp,
-            backgroundColor = SurfaceBg
+            backgroundColor = Color.White
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .padding(top = 6.dp)
             ) {
-                // Drag handle
+                // Drag handle (same as 3D Rotate)
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
-                        .width(36.dp)
+                        .width(32.dp)
                         .height(4.dp)
-                        .background(DragHandleColor, CircleShape)
+                        .background(DragHandleColor, RoundedCornerShape(50))
                 )
 
                 Row(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left Column (Controls)
+                    // LEFT COLUMN: Scrollable controls
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxHeight()
-                            .padding(end = 4.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Title & Sub-Tabs Header
+                        Divider(color = Color(PanelDivider), thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // SECTION: Shape Preset
+                        Text(
+                            text = "Shape",
+                            style = MaterialTheme.typography.caption,
+                            color = Color(TextSecondary),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_nav_shapes_24px),
-                                    contentDescription = "Shapes",
-                                    tint = PrimaryBlue,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Shape Studio",
-                                    color = TextPrimary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                            listOf(
+                                ShapeType.RECTANGLE to "Rect",
+                                ShapeType.ROUNDED_RECTANGLE to "Round",
+                                ShapeType.CIRCLE to "Ellipse",
+                                ShapeType.ARC to "Arc",
+                                ShapeType.TRIANGLE to "Triangle",
+                                ShapeType.STAR to "Star"
+                            ).forEach { (type, label) ->
+                                val isSelected = shapeTypeState == type
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) Color(0xFFE8F0FE) else Color(0xFFF8FAFC))
+                                        .border(
+                                            width = if (isSelected) 1.5.dp else 1.dp,
+                                            color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .clickable {
+                                            shapeTypeState = type
+                                            onShapeTypeChange(type)
+                                        }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.caption,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) PrimaryBlue else Color(0xFF1A1A2E),
+                                        fontSize = 10.sp
+                                    )
+                                }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        // SECTION: Geometry
+                        Divider(color = Color(PanelDivider), thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(2.dp))
 
-                        // Sub-Tab Switcher
+                        ShapeControlRow(
+                            label = "Corner Radius",
+                            value = cornerRadiusState,
+                            onValueChange = { new ->
+                                cornerRadiusState = new
+                                onCornerRadiusChange(new)
+                            },
+                            valueRange = 0f..100f,
+                            suffix = " px"
+                        )
+
+                        ShapeControlRow(
+                            label = "Opacity",
+                            value = opacityState,
+                            onValueChange = { new ->
+                                opacityState = new
+                                onOpacityChange(new)
+                            },
+                            valueRange = 0f..100f,
+                            suffix = "%"
+                        )
+
+                        if (shapeTypeState == ShapeType.ARC) {
+                            ShapeControlRow(
+                                label = "Arc Start",
+                                value = arcStartAngleState,
+                                onValueChange = { new ->
+                                    arcStartAngleState = new
+                                    onArcStartAngleChange(new)
+                                },
+                                valueRange = -360f..360f,
+                                suffix = "°"
+                            )
+
+                            ShapeControlRow(
+                                label = "Arc Sweep",
+                                value = arcSweepAngleState,
+                                onValueChange = { new ->
+                                    arcSweepAngleState = new
+                                    onArcSweepAngleChange(new)
+                                },
+                                valueRange = -360f..360f,
+                                suffix = "°"
+                            )
+                        }
+
+                        // SECTION: Fill Color
+                        Divider(color = Color(PanelDivider), thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        Text(
+                            text = "Fill Color",
+                            style = MaterialTheme.typography.caption,
+                            color = Color(TextSecondary),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 2.dp),
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SWATCH_COLORS.forEach { colorInt ->
+                                val isSelected = fillColorState == colorInt
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(colorInt))
+                                        .border(
+                                            width = if (isSelected) 2.5.dp else 1.dp,
+                                            color = if (isSelected) PrimaryBlue else Color(0xFFCBD5E1),
+                                            shape = CircleShape
+                                        )
+                                        .clickable {
+                                            fillColorState = colorInt
+                                            onFillColorChange(colorInt)
+                                        }
+                                )
+                            }
+
+                            Button(
+                                onClick = onOpenFillColorPicker,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFFF1F5F9),
+                                    contentColor = PrimaryBlue
+                                ),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                elevation = ButtonDefaults.elevation(0.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("More", style = MaterialTheme.typography.caption, fontSize = 10.sp)
+                            }
+                        }
+
+                        // SECTION: Stroke
+                        Divider(color = Color(PanelDivider), thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        ShapeControlRow(
+                            label = "Stroke Width",
+                            value = strokeWidthState,
+                            onValueChange = { new ->
+                                strokeWidthState = new
+                                onStrokeWidthChange(new)
+                            },
+                            valueRange = 0f..50f,
+                            suffix = " px"
+                        )
+
+                        ShapeControlRow(
+                            label = "Stroke Opacity",
+                            value = strokeOpacityState,
+                            onValueChange = { new ->
+                                strokeOpacityState = new
+                                onStrokeOpacityChange(new)
+                            },
+                            valueRange = 0f..100f,
+                            suffix = "%"
+                        )
+
+                        Text(
+                            text = "Stroke Color",
+                            style = MaterialTheme.typography.caption,
+                            color = Color(TextSecondary),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SWATCH_COLORS.forEach { colorInt ->
+                                val isSelected = strokeColorState == colorInt
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(colorInt))
+                                        .border(
+                                            width = if (isSelected) 2.5.dp else 1.dp,
+                                            color = if (isSelected) PrimaryBlue else Color(0xFFCBD5E1),
+                                            shape = CircleShape
+                                        )
+                                        .clickable {
+                                            strokeColorState = colorInt
+                                            onStrokeColorChange(colorInt)
+                                        }
+                                )
+                            }
+
+                            Button(
+                                onClick = onOpenStrokeColorPicker,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFFF1F5F9),
+                                    contentColor = PrimaryBlue
+                                ),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                elevation = ButtonDefaults.elevation(0.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("More", style = MaterialTheme.typography.caption, fontSize = 10.sp)
+                            }
+                        }
+
+                        Text(
+                            text = "Stroke Style",
+                            style = MaterialTheme.typography.caption,
+                            color = Color(TextSecondary),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            val tabs = listOf(
-                                ShapeTab.TYPE_RADIUS to "Shape & Radius",
-                                ShapeTab.FILL to "Fill Color",
-                                ShapeTab.STROKE to "Stroke / Outline"
-                            )
-                            tabs.forEach { (tab, label) ->
-                                val isSelected = activeTab == tab
+                            listOf(
+                                StrokeStyle.SOLID to "Solid",
+                                StrokeStyle.DASHED to "Dash",
+                                StrokeStyle.DOTTED to "Dot"
+                            ).forEach { (style, label) ->
+                                val isSelected = strokeStyle == style
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSelected) TabSelectedBg else TabUnselectedBg)
-                                        .clickable { activeTab = tab }
+                                        .background(if (isSelected) Color(0xFFE8F0FE) else Color(0xFFF8FAFC))
+                                        .border(
+                                            width = if (isSelected) 1.5.dp else 1.dp,
+                                            color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .clickable { onStrokeStyleChange(style) }
                                         .padding(vertical = 6.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text = label,
-                                        fontSize = 11.sp,
+                                        style = MaterialTheme.typography.caption,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) PrimaryBlue else TextSecondary,
-                                        textAlign = TextAlign.Center
+                                        color = if (isSelected) PrimaryBlue else Color(0xFF1A1A2E),
+                                        fontSize = 10.sp
                                     )
                                 }
                             }
                         }
 
-                        Divider(
-                            color = Color(0xFFF1F5F9),
-                            thickness = 1.dp,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-
-                        // Scrollable content per tab
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                                .verticalScroll(rememberScrollState())
-                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            when (activeTab) {
-                                ShapeTab.TYPE_RADIUS -> {
-                                    // Shape Type Selector
-                                    Text(
-                                        text = "Shape Preset",
-                                        color = TextSecondary,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        val shapeList = listOf(
-                                            ShapeType.RECTANGLE to "Rectangle",
-                                            ShapeType.ROUNDED_RECTANGLE to "Rounded",
-                                            ShapeType.CIRCLE to "Ellipse",
-                                            ShapeType.ARC to "Arc",
-                                            ShapeType.TRIANGLE to "Triangle",
-                                            ShapeType.STAR to "Star"
-                                        )
-                                        shapeList.forEach { (type, label) ->
-                                            val isSelected = shapeType == type
-                                            Card(
-                                                shape = RoundedCornerShape(10.dp),
-                                                backgroundColor = if (isSelected) TabSelectedBg else Color(0xFFF8FAFC),
-                                                elevation = if (isSelected) 2.dp else 0.dp,
-                                                modifier = Modifier
-                                                    .border(
-                                                        width = if (isSelected) 1.5.dp else 1.dp,
-                                                        color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
-                                                        shape = RoundedCornerShape(10.dp)
-                                                    )
-                                                    .clickable { onShapeTypeChange(type) }
-                                            ) {
-                                                Column(
-                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                                    horizontalAlignment = Alignment.CenterHorizontally
-                                                ) {
-                                                    Text(
-                                                        text = label,
-                                                        fontSize = 11.sp,
-                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                        color = if (isSelected) PrimaryBlue else TextPrimary
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // Corner Radius Slider
-                                    Column {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Corner Radius",
-                                                color = TextSecondary,
-                                                fontSize = 11.sp
-                                            )
-                                            Text(
-                                                text = "${cornerRadius.toInt()} px",
-                                                color = PrimaryBlue,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                        Slider(
-                                            value = cornerRadius,
-                                            onValueChange = onCornerRadiusChange,
-                                            valueRange = 0f..100f,
-                                            colors = SliderDefaults.colors(
-                                                thumbColor = PrimaryBlue,
-                                                activeTrackColor = PrimaryBlue
-                                            )
-                                        )
-                                    }
-
-                                    // Opacity Slider
-                                    Column {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Opacity",
-                                                color = TextSecondary,
-                                                fontSize = 11.sp
-                                            )
-                                            Text(
-                                                text = "${opacity.toInt()}%",
-                                                color = PrimaryBlue,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                        Slider(
-                                            value = opacity,
-                                            onValueChange = onOpacityChange,
-                                            valueRange = 0f..100f,
-                                            colors = SliderDefaults.colors(
-                                                thumbColor = PrimaryBlue,
-                                                activeTrackColor = PrimaryBlue
-                                            )
-                                        )
-                                    }
-
-                                    if (shapeType == ShapeType.ARC) {
-                                        listOf(
-                                            Triple("Arc Start Angle", arcStartAngle, onArcStartAngleChange),
-                                            Triple("Arc Sweep Angle", arcSweepAngle, onArcSweepAngleChange)
-                                        ).forEach { (label, value, onChange) ->
-                                            Column {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text(label, color = TextSecondary, fontSize = 11.sp)
-                                                    Text("${value.toInt()}°", color = PrimaryBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                                }
-                                                Slider(
-                                                    value = value,
-                                                    onValueChange = onChange,
-                                                    valueRange = if (label.startsWith("Arc Start")) -360f..360f else -360f..360f,
-                                                    colors = SliderDefaults.colors(thumbColor = PrimaryBlue, activeTrackColor = PrimaryBlue)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                ShapeTab.FILL -> {
-                                    Text(
-                                        text = "Fill Color Palette",
-                                        color = TextSecondary,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-
-                                    // Color Swatches Row
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        SWATCH_COLORS.forEach { colorInt ->
-                                            val isSelected = fillColor == colorInt
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(34.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color(colorInt))
-                                                    .border(
-                                                        width = if (isSelected) 2.5.dp else 1.dp,
-                                                        color = if (isSelected) PrimaryBlue else Color(0xFFCBD5E1),
-                                                        shape = CircleShape
-                                                    )
-                                                    .clickable { onFillColorChange(colorInt) }
-                                            )
-                                        }
-
-                                        // Custom Color Picker Button
-                                        Button(
-                                            onClick = onOpenFillColorPicker,
-                                            shape = RoundedCornerShape(8.dp),
-                                            colors = ButtonDefaults.buttonColors(
-                                                backgroundColor = Color(0xFFF1F5F9),
-                                                contentColor = PrimaryBlue
-                                            ),
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                            elevation = ButtonDefaults.elevation(0.dp)
-                                        ) {
-                                            Text("More...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(Color(0xFFF8FAFC))
-                                            .padding(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text("Current Fill Preview", fontSize = 11.sp, color = TextPrimary)
-                                        Box(
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(Color(fillColor))
-                                                .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(6.dp))
-                                                .clickable { onOpenFillColorPicker() }
-                                        )
-                                    }
-                                }
-
-                                ShapeTab.STROKE -> {
-                                    // Stroke Width Slider
-                                    Column {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Stroke Width",
-                                                color = TextSecondary,
-                                                fontSize = 11.sp
-                                            )
-                                            Text(
-                                                text = "${strokeWidth.toInt()} px",
-                                                color = PrimaryBlue,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                        Slider(
-                                            value = strokeWidth,
-                                            onValueChange = onStrokeWidthChange,
-                                            valueRange = 0f..50f,
-                                            colors = SliderDefaults.colors(
-                                                thumbColor = PrimaryBlue,
-                                                activeTrackColor = PrimaryBlue
-                                            )
-                                        )
-                                    }
-
-                                    // Stroke Opacity Slider
-                                    Column {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "Stroke Opacity",
-                                                color = TextSecondary,
-                                                fontSize = 11.sp
-                                            )
-                                            Text(
-                                                text = "${strokeOpacity.toInt()}%",
-                                                color = PrimaryBlue,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                        Slider(
-                                            value = strokeOpacity,
-                                            onValueChange = onStrokeOpacityChange,
-                                            valueRange = 0f..100f,
-                                            colors = SliderDefaults.colors(
-                                                thumbColor = PrimaryBlue,
-                                                activeTrackColor = PrimaryBlue
-                                            )
-                                        )
-                                    }
-
-                                    // Stroke Color Palette
-                                    Text(
-                                        text = "Stroke Color",
-                                        color = TextSecondary,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        SWATCH_COLORS.forEach { colorInt ->
-                                            val isSelected = strokeColor == colorInt
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(34.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color(colorInt))
-                                                    .border(
-                                                        width = if (isSelected) 2.5.dp else 1.dp,
-                                                        color = if (isSelected) PrimaryBlue else Color(0xFFCBD5E1),
-                                                        shape = CircleShape
-                                                    )
-                                                    .clickable { onStrokeColorChange(colorInt) }
-                                            )
-                                        }
-                                        Button(
-                                            onClick = onOpenStrokeColorPicker,
-                                            shape = RoundedCornerShape(8.dp),
-                                            colors = ButtonDefaults.buttonColors(
-                                                backgroundColor = Color(0xFFF1F5F9),
-                                                contentColor = PrimaryBlue
-                                            ),
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                            elevation = ButtonDefaults.elevation(0.dp)
-                                        ) {
-                                            Text("More...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-
-                                    // Stroke Join Style
-                                    Text(
-                                        text = "Stroke Style",
-                                        color = TextSecondary,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        listOf(
-                                            StrokeStyle.SOLID to "Solid",
-                                            StrokeStyle.DASHED to "Dashed",
-                                            StrokeStyle.DOTTED to "Dotted"
-                                        ).forEach { (style, label) ->
-                                            val isSelected = strokeStyle == style
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(if (isSelected) TabSelectedBg else Color(0xFFF8FAFC))
-                                                    .border(
-                                                        width = if (isSelected) 1.5.dp else 1.dp,
-                                                        color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
-                                                        shape = RoundedCornerShape(8.dp)
-                                                    )
-                                                    .clickable { onStrokeStyleChange(style) }
-                                                    .padding(vertical = 6.dp),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(label, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, color = if (isSelected) PrimaryBlue else TextPrimary)
-                                            }
-                                        }
-                                    }
-
-                                    // Stroke Join Style
-                                    Text(
-                                        text = "Corner / Join Style",
-                                        color = TextSecondary,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        val joins = listOf(
-                                            Paint.Join.MITER to "Miter",
-                                            Paint.Join.BEVEL to "Bevel",
-                                            Paint.Join.ROUND to "Round"
-                                        )
-                                        joins.forEach { (join, label) ->
-                                            val isSelected = strokeJoin == join
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(if (isSelected) TabSelectedBg else Color(0xFFF8FAFC))
-                                                    .border(
-                                                        width = if (isSelected) 1.5.dp else 1.dp,
-                                                        color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
-                                                        shape = RoundedCornerShape(8.dp)
-                                                    )
-                                                    .clickable { onStrokeJoinChange(join) }
-                                                    .padding(vertical = 6.dp),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    text = label,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                    color = if (isSelected) PrimaryBlue else TextPrimary
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
 
-                    // Right Column (Cancel & Apply)
+                    // RIGHT COLUMN: Buttons (Fixed)
                     Column(
                         modifier = Modifier
-                            .width(62.dp)
-                            .fillMaxHeight()
-                            .padding(start = 4.dp),
+                            .width(60.dp)
+                            .padding(start = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom
                     ) {
@@ -603,7 +419,6 @@ fun ShapeDetailPage(
                         ) {
                             Text("Cancel", style = MaterialTheme.typography.caption)
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
                         Button(
                             onClick = onApply,
                             modifier = Modifier.fillMaxWidth(),
@@ -613,17 +428,84 @@ fun ShapeDetailPage(
                                 contentColor = Color.White
                             ),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                            elevation = ButtonDefaults.elevation(defaultElevation = 2.dp)
+                            elevation = ButtonDefaults.elevation(defaultElevation = 1.dp)
                         ) {
                             Text(
                                 text = "Apply",
                                 style = MaterialTheme.typography.caption,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
                             )
+                        }
+                        TextButton(
+                            onClick = {
+                                shapeTypeState = ShapeType.RECTANGLE
+                                cornerRadiusState = 0f
+                                opacityState = 100f
+                                fillColorState = 0xFFFFFFFF.toInt()
+                                strokeWidthState = 0f
+                                strokeOpacityState = 100f
+                                strokeColorState = 0xFF000000.toInt()
+                                arcStartAngleState = 0f
+                                arcSweepAngleState = 90f
+
+                                onShapeTypeChange(ShapeType.RECTANGLE)
+                                onCornerRadiusChange(0f)
+                                onOpacityChange(100f)
+                                onFillColorChange(0xFFFFFFFF.toInt())
+                                onStrokeWidthChange(0f)
+                                onStrokeOpacityChange(100f)
+                                onStrokeColorChange(0xFF000000.toInt())
+                                onArcStartAngleChange(0f)
+                                onArcSweepAngleChange(90f)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)
+                        ) {
+                            Text("Reset", style = MaterialTheme.typography.caption, fontSize = 9.sp)
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ShapeControlRow(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    suffix: String = ""
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.caption,
+            color = Color(TextSecondary),
+            modifier = Modifier.width(60.dp),
+            fontSize = 10.sp
+        )
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = 99,
+            modifier = Modifier
+                .weight(1f)
+                .height(28.dp)
+        )
+        Text(
+            text = "${value.toInt()}$suffix",
+            style = MaterialTheme.typography.caption,
+            color = Color(TextSecondary),
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(38.dp),
+            fontSize = 10.sp
+        )
     }
 }
