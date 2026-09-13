@@ -346,7 +346,7 @@ class ObjectMenuController(
         container.visibility = View.VISIBLE
         container.bringToFront()
 
-        val sheetMaxH = computeSheetHeight(0.38f)
+        val sheetMaxH = computeShapeSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
 
