@@ -1124,4 +1124,55 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
     private fun closeShadowEditor() {
         deselect(restoreStrip = true)
     }
+
+    /**
+     * Show Replace Background panel (Phase 8 - Prompt 08).
+     * Allows user to change canvas background and apply auto color match to layers.
+     */
+    fun showReplaceBackgroundEditor() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = "replace_bg"
+        updateToolStripSelection("replace_bg")
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = 600
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            var autoColorMatchEnabled by remember { mutableStateOf(false) }
+
+            com.flyerpix.editor.ui.composables.ReplaceBackgroundComposable(
+                currentBackground = canvas.canvasBackground,
+                onBackgroundChange = { newBg ->
+                    canvas.canvasBackground = newBg
+                    canvas.invalidate()
+                },
+                onColorMatchToggle = { enabled ->
+                    autoColorMatchEnabled = enabled
+                },
+                onGalleryClick = {
+                    // Gallery integration - placeholder
+                },
+                onClose = {
+                    closeReplaceBackgroundEditor()
+                },
+                autoColorMatchEnabled = autoColorMatchEnabled
+            )
+        }
+    }
+
+    /**
+     * Close Replace Background editor panel.
+     */
+    private fun closeReplaceBackgroundEditor() {
+        deselect(restoreStrip = true)
+    }
 }
