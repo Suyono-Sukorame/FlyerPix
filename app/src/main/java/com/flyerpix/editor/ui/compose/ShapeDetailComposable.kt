@@ -82,6 +82,7 @@ fun ShapeDetailPage(
     var strokeWidthState by remember(strokeWidth) { mutableStateOf(strokeWidth) }
     var strokeOpacityState by remember(strokeOpacity) { mutableStateOf(strokeOpacity) }
     var strokeColorState by remember(strokeColor) { mutableStateOf(strokeColor) }
+    var strokeStyleState by remember(strokeStyle) { mutableStateOf(strokeStyle) }
     var arcStartAngleState by remember(arcStartAngle) { mutableStateOf(arcStartAngle) }
     var arcSweepAngleState by remember(arcSweepAngle) { mutableStateOf(arcSweepAngle) }
 
@@ -375,7 +376,7 @@ fun ShapeDetailPage(
                                 StrokeStyle.DASHED to "Dash",
                                 StrokeStyle.DOTTED to "Dot"
                             ).forEach { (style, label) ->
-                                val isSelected = strokeStyle == style
+                                val isSelected = strokeStyleState == style
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
@@ -386,7 +387,10 @@ fun ShapeDetailPage(
                                             color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
                                             shape = RoundedCornerShape(8.dp)
                                         )
-                                        .clickable { onStrokeStyleChange(style) }
+                                        .clickable { 
+                                            strokeStyleState = style
+                                            onStrokeStyleChange(style) 
+                                        }
                                         .padding(vertical = 6.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -446,6 +450,7 @@ fun ShapeDetailPage(
                                 strokeWidthState = 0f
                                 strokeOpacityState = 100f
                                 strokeColorState = 0xFF000000.toInt()
+                                strokeStyleState = StrokeStyle.SOLID
                                 arcStartAngleState = 0f
                                 arcSweepAngleState = 90f
 
@@ -456,6 +461,7 @@ fun ShapeDetailPage(
                                 onStrokeWidthChange(0f)
                                 onStrokeOpacityChange(100f)
                                 onStrokeColorChange(0xFF000000.toInt())
+                                onStrokeStyleChange(StrokeStyle.SOLID)
                                 onArcStartAngleChange(0f)
                                 onArcSweepAngleChange(90f)
                             },
