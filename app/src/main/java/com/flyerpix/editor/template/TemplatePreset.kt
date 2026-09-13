@@ -2,12 +2,14 @@ package com.flyerpix.editor.template
 
 import android.graphics.Color
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.canvas.model.GradientColor
 import com.flyerpix.editor.canvas.model.GradientType
+import com.flyerpix.editor.canvas.model.ImageLayer
 import com.flyerpix.editor.canvas.model.TextLayer
 import com.flyerpix.editor.R
 
@@ -412,6 +414,65 @@ data class TemplatePreset(
                         shadowRadius = 8f,
                         shadowColor = Color.BLACK,
                         shadowOpacity = 0.75f
+                    )
+                    canvas.addLayer(textLayer)
+                    canvas.selectedLayer = textLayer
+                    canvas.invalidate()
+                }
+            ),
+            TemplatePreset(
+                id = "logo_3d",
+                title = "Logo 3D",
+                previewBgColors = intArrayOf(0xFF123B72.toInt(), 0xFF06152D.toInt()),
+                isRadial = true,
+                previewText = "P\n3D",
+                previewTextSize = 11f,
+                previewTextColor = 0xFFEAFBFF.toInt(),
+                theme = TemplateTheme(
+                    headlineRatio = 0.055f,
+                    headlineTypeface = Typeface.create("sans-serif-black", Typeface.NORMAL),
+                    headlineColor = Color.WHITE,
+                    shadowEnabled = true,
+                    shadowRadius = 5f
+                ),
+                applyToCanvas = { canvas ->
+                    canvas.clearLayers()
+                    canvas.setCanvasSize(1080, 1080)
+                    canvas.setGradientBackground(
+                        GradientColor(
+                            name = "Logo 3D Navy",
+                            colors = intArrayOf(0xFF123B72.toInt(), 0xFF06152D.toInt()),
+                            type = GradientType.RADIAL
+                        )
+                    )
+
+                    val logoBitmap = BitmapFactory.decodeResource(
+                        canvas.resources,
+                        R.drawable.logo3d
+                    )
+                    val logoScale = 0.58f
+                    val logoLayer = ImageLayer(
+                        bitmap = logoBitmap,
+                        x = (1080f - logoBitmap.width * logoScale) / 2f,
+                        y = 115f,
+                        scale = logoScale,
+                        isLocked = true,
+                        layerName = "3D Logo"
+                    )
+                    canvas.addLayer(logoLayer)
+
+                    val textLayer = TextLayer(
+                        text = "CREATE IN 3D",
+                        x = 260f,
+                        y = 900f,
+                        textColor = Color.WHITE,
+                        textSize = responsiveSize(canvas, 0.055f),
+                        typeface = Typeface.create("sans-serif-black", Typeface.NORMAL),
+                        alignment = android.text.Layout.Alignment.ALIGN_CENTER,
+                        shadowEnabled = true,
+                        shadowRadius = 5f,
+                        shadowColor = 0xFF021027.toInt(),
+                        shadowOpacity = 0.8f
                     )
                     canvas.addLayer(textLayer)
                     canvas.selectedLayer = textLayer
