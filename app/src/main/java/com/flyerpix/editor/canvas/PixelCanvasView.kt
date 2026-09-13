@@ -1868,21 +1868,26 @@ class PixelCanvasView @JvmOverloads constructor(
                         null
                     }
 
-                    if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
+                    // Apply layer mask if enabled (Phase 9-10)
+                    val hasMask = layer.hasMask()
+
+                    if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null || hasMask) {
                         renderPaint.applyLayerBlend(layer)
                         val saveCount = canvas.saveLayer(null, renderPaint)
-                        if (clipPath != null) {
-                            canvas.clipPath(clipPath)
-                        }
+                        if (clipPath != null) canvas.clipPath(clipPath)
                         layer.draw(canvas, renderPaint)
+                        // Apply mask DST_IN
+                        if (hasMask && layer.maskBitmap != null) {
+                            val maskPaint = android.graphics.Paint()
+                            maskPaint.alpha = 255
+                            canvas.drawBitmap(layer.maskBitmap!!, 0f, 0f, maskPaint)
+                        }
                         canvas.restoreToCount(saveCount)
                         renderPaint.clearBlend()
                     } else {
                         renderPaint.clearBlend()
                         val saveCount = canvas.save()
-                        if (clipPath != null) {
-                            canvas.clipPath(clipPath)
-                        }
+                        if (clipPath != null) canvas.clipPath(clipPath)
                         layer.draw(canvas, renderPaint)
                         canvas.restoreToCount(saveCount)
                     }

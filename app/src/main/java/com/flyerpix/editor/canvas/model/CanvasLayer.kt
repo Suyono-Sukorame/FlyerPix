@@ -178,6 +178,28 @@ abstract class CanvasLayer(
     // Curved / Arc Path
     open var curvePercent: Int = 0                  // -100 (bawah) s/d +100 (atas), 0 = lurus
 
+    // ── Layer Mask (Phase 9-10 - Prompt 05) ─────────────────────────────────
+    // 8-bit per-layer mask: 0=transparent, 255=visible, gray=partial
+    open var maskBitmap: android.graphics.Bitmap? = null
+    open var maskEnabled: Boolean = false
+    open var maskInverted: Boolean = false
+
+    // Helper API for mask management
+    fun hasMask(): Boolean = maskBitmap != null && maskEnabled
+
+    fun createMask(width: Int, height: Int): android.graphics.Bitmap {
+        maskBitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+        maskEnabled = true
+        return maskBitmap!!
+    }
+
+    fun resetMask() {
+        maskBitmap?.recycle()
+        maskBitmap = null
+        maskEnabled = false
+        maskInverted = false
+    }
+
     /**
      * Menggambar layer pada [canvas] dengan menggunakan [paint].
      *
