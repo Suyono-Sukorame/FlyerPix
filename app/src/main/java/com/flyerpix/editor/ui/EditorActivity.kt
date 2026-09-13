@@ -980,6 +980,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         pixelCanvasView.onLayerSelectedListener = { layer ->
             prevLayerListener?.invoke(layer)
             updateHeaderForLayer(layer)
+            objectMenu.onLayerSelected(layer)
         }
 
         // Initial state

@@ -49,6 +49,7 @@ import com.flyerpix.editor.canvas.model.AnchorType
 import com.flyerpix.editor.canvas.model.ArrowLayer
 import com.flyerpix.editor.canvas.model.CanvasBackground
 import com.flyerpix.editor.canvas.model.CanvasBackgroundMode
+import com.flyerpix.editor.canvas.model.HitAnchor
 import com.flyerpix.editor.canvas.model.CanvasLayer
 import com.flyerpix.editor.canvas.model.ExportFormat
 import com.flyerpix.editor.canvas.model.ExportQuality
@@ -260,6 +261,39 @@ class PixelCanvasView @JvmOverloads constructor(
             invalidate()
         }
     }
+
+    // ── Bezier Edit Mode Methods ────────────────────────────────────────────
+    
+    /**
+     * Masuk ke mode edit Bezier: user dapat menggeser/memanipulasi anchor dan handle.
+     */
+    fun enterBezierEditMode(penLayer: PenLayer) {
+        bezierEditMode = true
+        selectedBezierLayer = penLayer
+        selectedAnchorIndex = -1
+        selectedHandleType = null
+        invalidate()
+    }
+
+    /**
+     * Keluar dari mode edit Bezier: kembalikan ke mode normal.
+     */
+    fun exitBezierEditMode() {
+        bezierEditMode = false
+        selectedBezierLayer = null
+        selectedAnchorIndex = -1
+        selectedHandleType = null
+        invalidate()
+    }
+
+    /** Apakah sedang dalam Bezier edit mode. */
+    fun isBezierEditModeActive(): Boolean = bezierEditMode
+
+    /** Dapatkan PenLayer yang sedang diedit, atau null. */
+    fun getSelectedBezierLayer(): PenLayer? = selectedBezierLayer
+
+    /** Dapatkan indeks anchor yang sedang dipilih, atau -1. */
+    fun getSelectedAnchorIndex(): Int = selectedAnchorIndex
 
     /**
      * Saat true, perubahan [selectedLayer] tetap terjadi (field & invalidate jalan)
@@ -907,6 +941,54 @@ class PixelCanvasView @JvmOverloads constructor(
         get() = freeDrawPaint.strokeWidth
         set(value) { freeDrawPaint.strokeWidth = value }
 
+    // ── Bezier Edit Mode (Phase 1: Anchor Editor) ──────────────────────────
+    /** Apakah Bezier edit mode sedang aktif (user sedang mengedit anchor path). */
+    private var bezierEditMode = false
+
+    /** Layer PenLayer yang sedang diedit dalam Bezier edit mode. */
+    private var selectedBezierLayer: PenLayer? = null
+
+    /** Indeks anchor yang saat ini dipilih (-1 jika tidak ada). */
+    private var selectedAnchorIndex: Int = -1
+
+    /** Jenis hit yang sedang di-drag: HandleIn, HandleOut, atau null (drag anchor). */
+    private var selectedHandleType: HitAnchor? = null
+
+    /** Paint untuk visualisasi anchor point. */
+    private val anchorPointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF18C8F5.toInt()  // Cyan
+        style = Paint.Style.FILL
+    }
+
+    /** Paint untuk anchor point yang dipilih. */
+    private val selectedAnchorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFEB3B.toInt()  // Yellow
+        style = Paint.Style.FILL
+    }
+
+    /** Paint untuk garis handle. */
+    private val handleLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x8818C8F5.toInt()  // Cyan with alpha
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        pathEffect = DashPathEffect(floatArrayOf(5f, 5f), 0f)
+    }
+
+    /** Paint untuk handle control point. */
+    private val handlePointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF18C8F5.toInt()  // Cyan
+        style = Paint.Style.FILL
+    }
+
+    /** Callback ketika anchor dipilih. */
+    var onBezierAnchorSelected: ((Int) -> Unit)? = null
+
+    /** Callback ketika anchor tidak ada yang dipilih. */
+    var onBezierAnchorDeselected: (() -> Unit)? = null
+
+    /** Callback ketika anchor bergerak/berubah. */
+    var onBezierAnchorChanged: ((Int) -> Unit)? = null
+
     /** Bitmap hasil capture kanvas untuk pembacaan pixel. */
     private var capturedBitmap: Bitmap? = null
 
@@ -972,6 +1054,75 @@ class PixelCanvasView @JvmOverloads constructor(
         onBezierInputPointChanged?.invoke(layer.anchors.size)
         invalidate()
         return layer
+    }
+
+    /**
+     * Menangani touch events untuk mode edit Bezier anchor.
+     * User dapat menggeser anchor dan handle untuk memanipulasi path.
+     */
+    private fun handleBezierEditModeTouch(event: MotionEvent): Boolean {
+        val pen = selectedBezierLayer ?: return false
+
+        // Transform koordinat layar → koordinat lokal layer (accounting for zoom/pan)
+        var touchX = event.x
+        var touchY = event.y
+        
+        // If we're zoomed/panned, coordinates have already been transformed by canvasTransformInverse
+        // Now convert from canvas space to layer space
+        val localX = touchX - pen.x
+        val localY = touchY - pen.y
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                // Hit-test: apakah user menyentuh anchor atau handle?
+                val hit = pen.hitTest(localX, localY)
+                when (hit) {
+                    is HitAnchor.Anchor -> {
+                        selectedAnchorIndex = hit.index
+                        selectedHandleType = null
+                        onBezierAnchorSelected?.invoke(hit.index)
+                    }
+                    is HitAnchor.HandleIn -> {
+                        selectedAnchorIndex = hit.index
+                        selectedHandleType = hit
+                    }
+                    is HitAnchor.HandleOut -> {
+                        selectedAnchorIndex = hit.index
+                        selectedHandleType = hit
+                    }
+                    HitAnchor.None -> {
+                        // User tap area kosong → deselect
+                        selectedAnchorIndex = -1
+                        selectedHandleType = null
+                        onBezierAnchorDeselected?.invoke()
+                    }
+                }
+                invalidate()
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (selectedAnchorIndex >= 0) {
+                    when (selectedHandleType) {
+                        is HitAnchor.HandleIn -> {
+                            pen.moveHandleIn(selectedAnchorIndex, localX, localY)
+                        }
+                        is HitAnchor.HandleOut -> {
+                            pen.moveHandleOut(selectedAnchorIndex, localX, localY)
+                        }
+                        else -> {
+                            // Moving anchor itself
+                            pen.moveAnchor(selectedAnchorIndex, localX, localY)
+                        }
+                    }
+                    onBezierAnchorChanged?.invoke(selectedAnchorIndex)
+                    invalidate()
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                selectedHandleType = null
+                invalidate()
+            }
+        }
+        return true
     }
 
     /** Callback yang dipanggil saat user memilih warna dari kanvas. */
@@ -1707,6 +1858,11 @@ class PixelCanvasView @JvmOverloads constructor(
                 }
             }
 
+            // 4b. Render anchor visualization untuk mode edit Bezier (Phase 1)
+            if (bezierEditMode && selectedBezierLayer != null && !editorZoomMode) {
+                drawBezierAnchorOverlay(canvas, selectedBezierLayer!!)
+            }
+
             // 5. Render garis panduan magnetik (Snap Guidelines) biru cyan saat layer mendekati tengah kanvas (Prompt 30)
             if (isSnapGuideXVisible || isSnapGuideYVisible) {
                 drawSnapGuidelines(canvas, vp)
@@ -1732,6 +1888,39 @@ class PixelCanvasView @JvmOverloads constructor(
         } finally {
             canvas.restoreToCount(drawSave)
             drawZoomScrollbars(canvas)
+        }
+    }
+
+    /**
+     * Menggambar overlay visualisasi anchor dan handle untuk mode edit Bezier.
+     * Menampilkan: anchor points (besar/kecil), handle lines (dashed), handle control points.
+     */
+    private fun drawBezierAnchorOverlay(canvas: Canvas, penLayer: PenLayer) {
+        if (penLayer.anchors.isEmpty()) return
+
+        for ((i, anchor) in penLayer.anchors.withIndex()) {
+            val canvasX = penLayer.x + anchor.x
+            val canvasY = penLayer.y + anchor.y
+
+            // Draw anchor point (besar jika selected, kecil jika tidak)
+            val radius = if (i == selectedAnchorIndex) 10f else 7f
+            val paint = if (i == selectedAnchorIndex) selectedAnchorPaint else anchorPointPaint
+            canvas.drawCircle(canvasX, canvasY, radius, paint)
+
+            // Draw handles jika selected dan aktif
+            if (i == selectedAnchorIndex && anchor.hasActiveHandles()) {
+                // Handle In
+                val inCanvasX = penLayer.x + anchor.handleInX
+                val inCanvasY = penLayer.y + anchor.handleInY
+                canvas.drawLine(canvasX, canvasY, inCanvasX, inCanvasY, handleLinePaint)
+                canvas.drawCircle(inCanvasX, inCanvasY, 6f, handlePointPaint)
+
+                // Handle Out
+                val outCanvasX = penLayer.x + anchor.handleOutX
+                val outCanvasY = penLayer.y + anchor.handleOutY
+                canvas.drawLine(canvasX, canvasY, outCanvasX, outCanvasY, handleLinePaint)
+                canvas.drawCircle(outCanvasX, outCanvasY, 6f, handlePointPaint)
+            }
         }
     }
 
@@ -2208,6 +2397,11 @@ class PixelCanvasView @JvmOverloads constructor(
                 addBezierInputPoint(event.x, event.y)
             }
             return true
+        }
+
+        // 0.55. Tangani mode edit Bezier — drag anchor/handle untuk edit path (Phase 1)
+        if (bezierEditMode && selectedBezierLayer != null) {
+            return handleBezierEditModeTouch(event)
         }
 
         // 0.6. Tangani mode gambar bebas — intercept seluruh sentuhan

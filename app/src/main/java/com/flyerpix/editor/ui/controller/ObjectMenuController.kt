@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.FragmentManager
 import com.flyerpix.editor.R
@@ -877,6 +878,93 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 },
                 maxHeightPx = sheetMaxH
             )
+        }
+    }
+
+    /**
+     * Menampilkan panel editor anchor Bézier ketika user memilih PenLayer yang ada di canvas.
+     * Ini memungkinkan user untuk mengedit anchor, handle, dan tipe node (Phase 1).
+     */
+    fun showComposeBezierAnchorEditor(penLayer: PenLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_BEZIER
+        updateToolStripSelection(OBJ_BEZIER)
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeBezierSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        // Enter Bezier edit mode
+        canvas.enterBezierEditMode(penLayer)
+
+        host.setContent {
+            var selectedAnchorIdx by remember { mutableStateOf(-1) }
+            var refreshTrigger by remember { mutableStateOf(0) } // Trigger recomposition
+
+            // Listen to anchor selection from canvas
+            canvas.onBezierAnchorSelected = { index ->
+                selectedAnchorIdx = index
+                refreshTrigger++
+            }
+
+            canvas.onBezierAnchorDeselected = {
+                selectedAnchorIdx = -1
+                refreshTrigger++
+            }
+
+            // Recompose when anchor changes
+            canvas.onBezierAnchorChanged = { index ->
+                refreshTrigger++
+                canvas.invalidate()
+            }
+
+            BezierAnchorEditorPanel(
+                penLayer = penLayer,
+                selectedAnchorIndex = selectedAnchorIdx,
+                onAnchorChanged = {
+                    canvas.invalidate()
+                    // Trigger recomposition
+                    refreshTrigger++
+                },
+                onExitEditMode = {
+                    closeBezierAnchorEditor()
+                },
+                maxHeightPx = sheetMaxH
+            )
+
+            // Force recomposition on refresh trigger change
+            LaunchedEffect(refreshTrigger) {
+                // Intentionally empty - just to trigger recomposition
+            }
+        }
+    }
+
+    /**
+     * Menutup panel editor anchor Bézier dan keluar dari edit mode.
+     */
+    private fun closeBezierAnchorEditor() {
+        canvas.exitBezierEditMode()
+        canvas.onBezierAnchorSelected = null
+        canvas.onBezierAnchorDeselected = null
+        canvas.onBezierAnchorChanged = null
+        deselect(restoreStrip = true)
+    }
+
+    /**
+     * Menangani ketika layer dipilih untuk mengecek apakah itu PenLayer yang perlu edit mode.
+     */
+    fun onLayerSelected(layer: com.flyerpix.editor.canvas.model.CanvasLayer?) {
+        if (layer is PenLayer && layer.anchors.isNotEmpty() && activeTag != OBJ_BEZIER) {
+            // User selected a PenLayer with anchors - enable edit mode
+            showComposeBezierAnchorEditor(layer)
         }
     }
 }
