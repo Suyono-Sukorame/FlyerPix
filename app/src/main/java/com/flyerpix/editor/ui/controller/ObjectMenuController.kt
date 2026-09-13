@@ -102,9 +102,16 @@ class ObjectMenuController(
 
     private fun computeShapeSheetHeight(): Int {
         val density = activity.resources.displayMetrics.density
-        val screenH = activity.resources.displayMetrics.heightPixels
-        val floorPx = (107 * density).toInt()  // Match commit e7e92659: 107dp floor
-        val targetPx = (screenH * 0.12f).toInt()  // 12% screen height as fallback
+        val root = binding.parentLayout
+        val homePanel = binding.bottomControlPanelContainer
+        if (root.height > 0 && homePanel.height > 0) {
+            val homeTop = PanelHeightManager.topInRoot(homePanel, root)
+            val alignedH = root.height - homeTop
+            if (alignedH > 0) return alignedH
+        }
+        // Fallback if home panel not yet measured
+        val floorPx = (107 * density).toInt()
+        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.12f).toInt()
         return targetPx.coerceAtLeast(floorPx)
     }
 
