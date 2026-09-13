@@ -461,9 +461,25 @@ data class PenLayer(
             canvas.drawPath(path, paint)
         }
 
-        // ── Pass 2: Stroke dengan atau tanpa neon/emboss ───────────────────────
+        // ── Pass 2: Stroke dengan drop shadow, neon, emboss, atau inner shadow ───────
         if (strokeWidth > 0f) {
-            if (neonEnabled) {
+            if (shadowEnabled && shadowRadius > 0f) {
+                com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
+                    canvas,
+                    this,
+                    w,
+                    h,
+                    shadowColor,
+                    drawContent = { c, p ->
+                        p.style = Paint.Style.STROKE
+                        p.color = strokeColor
+                        p.strokeWidth = strokeWidth
+                        p.strokeJoin = Paint.Join.ROUND
+                        p.strokeCap = Paint.Cap.ROUND
+                        c.drawPath(path, p)
+                    }
+                )
+            } else if (neonEnabled) {
                 com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
                     canvas,
                     this,
@@ -509,6 +525,24 @@ data class PenLayer(
                 paint.strokeCap = Paint.Cap.ROUND
                 canvas.drawPath(path, paint)
             }
+        }
+
+        // ── Pass 3: Inner Shadow (applies after stroke) ──────────────────────
+        if (innerShadowEnabled && innerShadowRadius > 0f && strokeWidth > 0f) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawInnerShadowEffect(
+                canvas,
+                this,
+                w,
+                h,
+                strokeColor,
+                drawContent = { c, p ->
+                    p.style = Paint.Style.STROKE
+                    p.strokeWidth = strokeWidth
+                    p.strokeJoin = Paint.Join.ROUND
+                    p.strokeCap = Paint.Cap.ROUND
+                    c.drawPath(path, p)
+                }
+            )
         }
 
         canvas.restoreToCount(saveCount)

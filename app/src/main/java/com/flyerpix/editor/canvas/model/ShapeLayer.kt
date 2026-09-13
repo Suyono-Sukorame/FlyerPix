@@ -194,26 +194,35 @@ data class ShapeLayer(
             canvas.concat(pMat)
         }
 
-        // 3. Gambar bentuk dengan atau tanpa emboss
+        // 3. Gambar bentuk dengan drop shadow, neon, emboss, atau inner shadow
         val path = buildPath()
 
-        // Drop Shadow (via setShadowLayer — berfungsi untuk semua draw call)
-        if (shadowEnabled && shadowRadius > 0f) {
-            val a = (shadowOpacity.coerceIn(0f, 1f) * 255).toInt()
-            paint.setShadowLayer(shadowRadius, shadowDx, shadowDy,
-                (shadowColor and 0x00FFFFFF) or (a shl 24))
-        } else {
-            paint.clearShadowLayer()
-        }
-
-        // Arc memakai drawArc agar fill menjadi wedge dan stroke tetap terbuka.
         paint.style = Paint.Style.FILL
         paint.color = fillColor
         paint.alpha = opacity.coerceIn(0, 255)
         paint.strokeWidth = 0f
 
-        // Handle neon effect (takes priority over emboss)
-        if (neonEnabled) {
+        // Handle drop shadow (via generic effect renderer)
+        if (shadowEnabled && shadowRadius > 0f) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
+                canvas,
+                this,
+                width,
+                height,
+                shadowColor,
+                drawContent = { c, p ->
+                    p.style = Paint.Style.FILL
+                    p.color = fillColor
+                    p.alpha = opacity.coerceIn(0, 255)
+                    if (shapeType == ShapeType.ARC) {
+                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
+                    } else {
+                        c.drawPath(path, p)
+                    }
+                }
+            )
+        } else if (neonEnabled) {
+            // Neon effect (no shadow)
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
                 canvas,
                 this,
@@ -231,7 +240,7 @@ data class ShapeLayer(
                 }
             )
         } else if (embossEnabled) {
-            // Use generic emboss renderer dari EffectRenderUtils
+            // Emboss effect (no shadow)
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
                 canvas,
                 this,
@@ -257,7 +266,7 @@ data class ShapeLayer(
                 }
             )
         } else {
-            // Normal rendering tanpa emboss/neon
+            // Normal rendering tanpa shadow/neon/emboss
             if (shapeType == ShapeType.ARC) {
                 canvas.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, paint)
             } else {
@@ -265,8 +274,24 @@ data class ShapeLayer(
             }
         }
 
-        // Clear shadow for stroke pass
-        paint.clearShadowLayer()
+        // Handle inner shadow (applies after main fill)
+        if (innerShadowEnabled && innerShadowRadius > 0f) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawInnerShadowEffect(
+                canvas,
+                this,
+                width,
+                height,
+                fillColor,
+                drawContent = { c, p ->
+                    p.style = Paint.Style.FILL
+                    if (shapeType == ShapeType.ARC) {
+                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
+                    } else {
+                        c.drawPath(path, p)
+                    }
+                }
+            )
+        }
 
         // Stroke
         if (strokeWidth > 0f) {

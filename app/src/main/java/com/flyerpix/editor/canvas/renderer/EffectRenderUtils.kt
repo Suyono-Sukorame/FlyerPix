@@ -427,4 +427,156 @@ object EffectRenderUtils {
         recycleOffscreenBitmap(glowBmp2)
         recycleOffscreenBitmap(glowBmp3)
     }
+
+    /**
+     * Generic drop shadow effect renderer untuk semua layer types.
+     * 
+     * Algoritma:
+     * 1. Draw content ke offscreen bitmap dengan BlurMaskFilter
+     * 2. Blit shadow result ke main canvas di offset position (shadowDx, shadowDy)
+     * 3. Draw crisp content on top
+     * 
+     * PENTING: BlurMaskFilter hanya bekerja di software canvas, bukan hardware-accelerated.
+     * 
+     * @param canvas Target canvas (hardware-accelerated)
+     * @param layer CanvasLayer dengan shadow properties
+     * @param contentWidth Width dari content dalam pixels
+     * @param contentHeight Height dari content dalam pixels
+     * @param shadowColor Color untuk shadow rendering
+     * @param drawContent Lambda untuk render content (akan di-draw untuk shadow & crisp)
+     */
+    fun drawDropShadowEffect(
+        canvas: Canvas,
+        layer: com.flyerpix.editor.canvas.model.CanvasLayer,
+        contentWidth: Float,
+        contentHeight: Float,
+        shadowColor: Int,
+        drawContent: (Canvas, Paint) -> Unit
+    ) {
+        if (!layer.shadowEnabled || contentWidth <= 0f || contentHeight <= 0f) {
+            return
+        }
+
+        val shadowRadius = layer.shadowRadius.coerceIn(0.5f, 40f)
+        val shadowDx = layer.shadowDx
+        val shadowDy = layer.shadowDy
+        val shadowOpacity = layer.shadowOpacity.coerceIn(0f, 1f)
+        val opacity = layer.opacity.coerceIn(0, 255)
+
+        // 1. Calculate offscreen bitmap size dengan padding
+        val pad = (shadowRadius + kotlin.math.abs(shadowDx) + kotlin.math.abs(shadowDy) + 4).toInt().coerceAtLeast(8)
+        val bw = contentWidth.toInt() + pad * 2
+        val bh = contentHeight.toInt() + pad * 2
+
+        if (bw <= 0 || bh <= 0) return
+
+        // 2. Create shadow bitmap
+        val shadowBmp = createOffscreenBitmap(bw, bh)
+        val shadowCanvas = Canvas(shadowBmp)
+
+        val shadowPaint = createQualityPaint().apply {
+            color = shadowColor
+            alpha = ((opacity * shadowOpacity) / 255f * 255).toInt().coerceIn(0, 255)
+            applyBlurMaskFilter(this, shadowRadius, BlurMaskFilter.Blur.NORMAL)
+        }
+
+        // 3. Render shadow to offscreen
+        shadowCanvas.translate(pad.toFloat(), pad.toFloat())
+        drawContent(shadowCanvas, shadowPaint)
+        clearMaskFilter(shadowPaint)
+
+        // 4. Blit shadow to main canvas at offset
+        val blitPaint = createQualityPaint()
+        canvas.drawBitmap(
+            shadowBmp,
+            (-pad + shadowDx).toFloat(),
+            (-pad + shadowDy).toFloat(),
+            blitPaint
+        )
+
+        // 5. Draw crisp content on top
+        val contentPaint = createQualityPaint().apply {
+            alpha = opacity
+        }
+        drawContent(canvas, contentPaint)
+
+        // 6. Cleanup
+        recycleOffscreenBitmap(shadowBmp)
+    }
+
+    /**
+     * Generic inner shadow effect renderer untuk semua layer types.
+     * 
+     * Algoritma:
+     * 1. Draw content normal ke main canvas
+     * 2. Create offscreen shadow mask
+     * 3. Render shadow dengan PorterDuff.Mode.DST_IN (shadow appears INSIDE content)
+     * 4. Blit shadow mask result over content
+     * 
+     * PENTING: Inner shadow creates depth effect di dalam content boundary.
+     * 
+     * @param canvas Target canvas (hardware-accelerated)
+     * @param layer CanvasLayer dengan inner shadow properties
+     * @param contentWidth Width dari content dalam pixels
+     * @param contentHeight Height dari content dalam pixels
+     * @param contentColor Color untuk content (untuk inner shadow masking)
+     * @param drawContent Lambda untuk render content (akan di-draw 3x: base, shadow, final)
+     */
+    fun drawInnerShadowEffect(
+        canvas: Canvas,
+        layer: com.flyerpix.editor.canvas.model.CanvasLayer,
+        contentWidth: Float,
+        contentHeight: Float,
+        contentColor: Int,
+        drawContent: (Canvas, Paint) -> Unit
+    ) {
+        if (!layer.innerShadowEnabled || contentWidth <= 0f || contentHeight <= 0f) {
+            return
+        }
+
+        val innerShadowRadius = layer.innerShadowRadius.coerceIn(0.5f, 40f)
+        val innerShadowDx = layer.innerShadowDx
+        val innerShadowDy = layer.innerShadowDy
+        val innerShadowOpacity = layer.innerShadowOpacity.coerceIn(0f, 1f)
+        val opacity = layer.opacity.coerceIn(0, 255)
+
+        val bw = contentWidth.toInt().coerceAtLeast(1)
+        val bh = contentHeight.toInt().coerceAtLeast(1)
+
+        // 1. Draw base content solid (crisp, no shadow)
+        val basePaint = createQualityPaint().apply {
+            alpha = opacity
+            color = contentColor
+        }
+        drawContent(canvas, basePaint)
+
+        // 2. Create offscreen bitmap untuk inner shadow
+        val innerShadowBmp = createOffscreenBitmap(bw, bh)
+        val innerShadowCanvas = Canvas(innerShadowBmp)
+
+        // 3. Render content ke shadow bitmap
+        val innerPaint = createQualityPaint().apply {
+            color = layer.innerShadowColor
+            alpha = ((opacity * innerShadowOpacity) / 255f * 255).toInt().coerceIn(0, 255)
+            applyBlurMaskFilter(this, innerShadowRadius, BlurMaskFilter.Blur.NORMAL)
+        }
+
+        innerShadowCanvas.translate(innerShadowDx, innerShadowDy)
+        drawContent(innerShadowCanvas, innerPaint)
+        clearMaskFilter(innerPaint)
+
+        // 4. Apply PorterDuff masking: shadow appears only INSIDE content
+        val maskPaint = createQualityPaint().apply {
+            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
+        }
+        innerShadowCanvas.drawBitmap(innerShadowBmp, 0f, 0f, maskPaint)
+
+        // 5. Blit inner shadow to main canvas
+        val blitPaint = createQualityPaint()
+        canvas.drawBitmap(innerShadowBmp, 0f, 0f, blitPaint)
+
+        // 6. Cleanup
+        recycleOffscreenBitmap(innerShadowBmp)
+    }
 }
+

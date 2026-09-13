@@ -148,7 +148,20 @@ data class StickerLayer(
         // 3. Gambar bitmap stiker dengan atau tanpa neon/emboss
         paint.alpha = opacity.coerceIn(0, 255)
 
-        if (neonEnabled) {
+        // Handle drop shadow
+        if (shadowEnabled && shadowRadius > 0f) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
+                canvas,
+                this,
+                w,
+                h,
+                shadowColor,
+                drawContent = { c, p ->
+                    p.alpha = opacity.coerceIn(0, 255)
+                    c.drawBitmap(stickerBitmap, 0f, 0f, p)
+                }
+            )
+        } else if (neonEnabled) {
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
                 canvas,
                 this,
@@ -176,6 +189,20 @@ data class StickerLayer(
             )
         } else {
             canvas.drawBitmap(stickerBitmap, 0f, 0f, paint)
+        }
+
+        // Handle inner shadow (applies after main content)
+        if (innerShadowEnabled && innerShadowRadius > 0f) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawInnerShadowEffect(
+                canvas,
+                this,
+                w,
+                h,
+                0xFF1769FF.toInt(),
+                drawContent = { c, p ->
+                    c.drawBitmap(stickerBitmap, 0f, 0f, p)
+                }
+            )
         }
 
         canvas.restoreToCount(saveCount)

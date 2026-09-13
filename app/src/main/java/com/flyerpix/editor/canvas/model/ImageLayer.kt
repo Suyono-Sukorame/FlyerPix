@@ -74,18 +74,23 @@ open class ImageLayer(
             canvas.concat(pMat)
         }
 
-        // 3. Konfigurasi opasitas dan penggambaran bitmap
+        // 3. Konfigurasi opasitas dan penggambaran bitmap dengan shadow/neon/emboss/inner shadow
         paint.alpha = opacity.coerceIn(0, 255)
-        if (shadowEnabled && shadowRadius > 0f) {
-            val a = (shadowOpacity.coerceIn(0f, 1f) * 255).toInt()
-            paint.setShadowLayer(shadowRadius, shadowDx, shadowDy,
-                (shadowColor and 0x00FFFFFF) or (a shl 24))
-        } else {
-            paint.clearShadowLayer()
-        }
 
-        // Handle neon effect (takes priority over emboss)
-        if (neonEnabled) {
+        // Handle drop shadow
+        if (shadowEnabled && shadowRadius > 0f) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
+                canvas,
+                this,
+                w,
+                h,
+                shadowColor,
+                drawContent = { c, p ->
+                    p.alpha = opacity.coerceIn(0, 255)
+                    c.drawBitmap(bitmap, 0f, 0f, p)
+                }
+            )
+        } else if (neonEnabled) {
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
                 canvas,
                 this,
@@ -115,7 +120,19 @@ open class ImageLayer(
             canvas.drawBitmap(bitmap, 0f, 0f, paint)
         }
 
-        paint.clearShadowLayer()
+        // Handle inner shadow (applies after main content)
+        if (innerShadowEnabled && innerShadowRadius > 0f) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawInnerShadowEffect(
+                canvas,
+                this,
+                w,
+                h,
+                0xFF1769FF.toInt(),
+                drawContent = { c, p ->
+                    c.drawBitmap(bitmap, 0f, 0f, p)
+                }
+            )
+        }
 
         canvas.restoreToCount(saveCount)
     }

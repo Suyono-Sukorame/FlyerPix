@@ -236,9 +236,22 @@ data class ArrowLayer(
             canvas.drawPath(tailPath, paint)
         }
 
-        // ── Pass 2: Batang panah dengan atau tanpa neon/emboss ───────────────
+        // ── Pass 2: Batang panah dengan drop shadow, neon, emboss, atau inner shadow ───
         val stemPath = buildStemPath()
-        if (neonEnabled) {
+        if (shadowEnabled && shadowRadius > 0f) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
+                canvas,
+                this,
+                w,
+                h,
+                shadowColor,
+                drawContent = { c, p ->
+                    p.style = Paint.Style.FILL
+                    p.color = headColor
+                    c.drawPath(stemPath, p)
+                }
+            )
+        } else if (neonEnabled) {
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
                 canvas,
                 this,
@@ -271,6 +284,21 @@ data class ArrowLayer(
             paint.style = Paint.Style.FILL
             paint.color = headColor
             canvas.drawPath(stemPath, paint)
+        }
+
+        // Handle inner shadow (applies after stem)
+        if (innerShadowEnabled && innerShadowRadius > 0f) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawInnerShadowEffect(
+                canvas,
+                this,
+                w,
+                h,
+                headColor,
+                drawContent = { c, p ->
+                    p.style = Paint.Style.FILL
+                    c.drawPath(stemPath, p)
+                }
+            )
         }
 
         // ── Pass 3: Kepala panah (di depan batang) ─────────────────────────
