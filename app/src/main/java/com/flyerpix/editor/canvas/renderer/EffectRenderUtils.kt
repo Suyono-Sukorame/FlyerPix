@@ -186,4 +186,116 @@ object EffectRenderUtils {
         
         return maxOf(embossPad, neonPad, shadowPad, 0)
     }
+
+    /**
+     * Generic emboss effect renderer untuk semua layer types.
+     * 
+     * Algoritma:
+     * 1. Draw base content solid
+     * 2. Create offscreen bitmap dengan padding
+     * 3. Calculate light direction dari embossLightAngle
+     * 4. Apply embossIntensity scaling ke ambient/specular
+     * 5. Render content dengan EmbossMaskFilter ke offscreen
+     * 6. Blit hasil ke main canvas
+     * 7. Recycle bitmap
+     * 
+     * PENTING: EmbossMaskFilter hanya bekerja di software canvas, bukan hardware-accelerated.
+     * 
+     * @param canvas Target canvas (hardware-accelerated)
+     * @param layer CanvasLayer dengan emboss properties
+     * @param contentWidth Width dari content dalam pixels
+     * @param contentHeight Height dari content dalam pixels
+     * @param contentColor Color untuk emboss rendering (fallback jika no texture/gradient)
+     * @param drawContentBase Lambda untuk render base content (solid)
+     * @param drawContentEmboss Lambda untuk render content dengan emboss effect
+     * 
+     * USAGE:
+     * ```kotlin
+     * EffectRenderUtils.drawEmbossEffect(canvas, layer, width, height, fillColor,
+     *     drawContentBase = { c, p ->
+     *         p.color = fillColor
+     *         c.drawPath(path, p)
+     *     },
+     *     drawContentEmboss = { c, p ->
+     *         c.drawPath(path, p)
+     *     }
+     * )
+     * ```
+     */
+    fun drawEmbossEffect(
+        canvas: Canvas,
+        layer: com.flyerpix.editor.canvas.model.CanvasLayer,
+        contentWidth: Float,
+        contentHeight: Float,
+        contentColor: Int,
+        drawContentBase: (Canvas, Paint) -> Unit,
+        drawContentEmboss: (Canvas, Paint) -> Unit
+    ) {
+        if (!layer.embossEnabled || contentWidth <= 0f || contentHeight <= 0f) {
+            return
+        }
+
+        val basePaint = createQualityPaint()
+        
+        // 1. Draw base content solid (crisp base untuk avoid glyph disappear)
+        basePaint.color = contentColor
+        basePaint.alpha = layer.opacity.coerceIn(0, 255)
+        drawContentBase(canvas, basePaint)
+
+        // 2. Calculate offscreen bitmap size dengan padding
+        val bevel = layer.embossBevel.coerceIn(0.5f, 12f)
+        val pad = (bevel * 2 + 4).toInt()
+        val bw = contentWidth.toInt() + pad * 2
+        val bh = contentHeight.toInt() + pad * 2
+
+        if (bw <= 0 || bh <= 0) return
+
+        // 3. Create offscreen bitmap untuk EmbossMaskFilter
+        val bmp = createOffscreenBitmap(bw, bh)
+        val bmpCanvas = Canvas(bmp)  // Software-rendered canvas
+
+        // 4. Calculate light direction dari angle
+        val rad = Math.toRadians(layer.embossLightAngle.toDouble()).toFloat()
+        val lightDir = floatArrayOf(
+            kotlin.math.cos(rad),
+            kotlin.math.sin(rad),
+            0.5f
+        )
+
+        // 5. Apply embossIntensity untuk scale ambient/specular
+        val intensity = layer.embossIntensity.coerceIn(0f, 2.5f)
+        val ambient = (layer.embossAmbient.coerceIn(0f, 1f) / (1f + intensity * 0.5f)).coerceIn(0f, 1f)
+        val specular = layer.embossSpecular.coerceAtLeast(0.1f) * (0.6f + intensity)
+
+        // 6. Create emboss paint dengan EmbossMaskFilter
+        val embossPaint = createQualityPaint().apply {
+            color = contentColor
+            alpha = (layer.opacity.coerceIn(0, 255) * 0.72f).toInt()
+            @Suppress("DEPRECATION")
+            val embossFilter = EmbossMaskFilter(
+                lightDir,
+                ambient,
+                specular,
+                bevel
+            )
+            maskFilter = embossFilter
+        }
+
+        // 7. Render content dengan emboss ke offscreen
+        bmpCanvas.translate(pad.toFloat(), pad.toFloat())
+        drawContentEmboss(bmpCanvas, embossPaint)
+
+        // 8. Blit offscreen result ke main canvas
+        val blitPaint = createQualityPaint()
+        canvas.drawBitmap(
+            bmp,
+            (-pad).toFloat(),
+            (-pad).toFloat(),
+            blitPaint
+        )
+
+        // 9. Cleanup
+        clearMaskFilter(embossPaint)
+        recycleOffscreenBitmap(bmp)
+    }
 }

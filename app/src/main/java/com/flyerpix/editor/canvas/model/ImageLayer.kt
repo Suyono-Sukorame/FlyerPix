@@ -83,7 +83,27 @@ open class ImageLayer(
         } else {
             paint.clearShadowLayer()
         }
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
+
+        // Handle emboss effect
+        if (embossEnabled) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
+                canvas,
+                this,
+                w,
+                h,
+                0xFF1769FF.toInt(), // Default color jika tidak ada texture/gradient
+                drawContentBase = { c, p ->
+                    p.alpha = opacity.coerceIn(0, 255)
+                    c.drawBitmap(bitmap, 0f, 0f, p)
+                },
+                drawContentEmboss = { c, p ->
+                    c.drawBitmap(bitmap, 0f, 0f, p)
+                }
+            )
+        } else {
+            canvas.drawBitmap(bitmap, 0f, 0f, paint)
+        }
+
         paint.clearShadowLayer()
 
         canvas.restoreToCount(saveCount)

@@ -236,11 +236,30 @@ data class ArrowLayer(
             canvas.drawPath(tailPath, paint)
         }
 
-        // ── Pass 2: Batang panah ───────────────────────────────────────────
+        // ── Pass 2: Batang panah dengan atau tanpa emboss ──────────────────
         val stemPath = buildStemPath()
-        paint.style = Paint.Style.FILL
-        paint.color = headColor
-        canvas.drawPath(stemPath, paint)
+        if (embossEnabled) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
+                canvas,
+                this,
+                w,
+                h,
+                headColor,
+                drawContentBase = { c, p ->
+                    p.style = Paint.Style.FILL
+                    p.color = headColor
+                    c.drawPath(stemPath, p)
+                },
+                drawContentEmboss = { c, p ->
+                    p.style = Paint.Style.FILL
+                    c.drawPath(stemPath, p)
+                }
+            )
+        } else {
+            paint.style = Paint.Style.FILL
+            paint.color = headColor
+            canvas.drawPath(stemPath, paint)
+        }
 
         // ── Pass 3: Kepala panah (di depan batang) ─────────────────────────
         if (headEnabled) {

@@ -145,9 +145,27 @@ data class StickerLayer(
             canvas.concat(pMat)
         }
 
-        // 3. Gambar bitmap stiker
+        // 3. Gambar bitmap stiker dengan atau tanpa emboss
         paint.alpha = opacity.coerceIn(0, 255)
-        canvas.drawBitmap(stickerBitmap, 0f, 0f, paint)
+
+        if (embossEnabled) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
+                canvas,
+                this,
+                w,
+                h,
+                0xFF1769FF.toInt(),
+                drawContentBase = { c, p ->
+                    p.alpha = opacity.coerceIn(0, 255)
+                    c.drawBitmap(stickerBitmap, 0f, 0f, p)
+                },
+                drawContentEmboss = { c, p ->
+                    c.drawBitmap(stickerBitmap, 0f, 0f, p)
+                }
+            )
+        } else {
+            canvas.drawBitmap(stickerBitmap, 0f, 0f, paint)
+        }
 
         canvas.restoreToCount(saveCount)
     }

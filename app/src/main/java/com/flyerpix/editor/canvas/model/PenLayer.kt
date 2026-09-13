@@ -461,14 +461,39 @@ data class PenLayer(
             canvas.drawPath(path, paint)
         }
 
-        // ── Pass 2: Stroke ──────────────────────────────────────────────────
+        // ── Pass 2: Stroke dengan atau tanpa emboss ──────────────────────────
         if (strokeWidth > 0f) {
-            paint.style = Paint.Style.STROKE
-            paint.color = strokeColor
-            paint.strokeWidth = strokeWidth
-            paint.strokeJoin = Paint.Join.ROUND
-            paint.strokeCap = Paint.Cap.ROUND
-            canvas.drawPath(path, paint)
+            if (embossEnabled) {
+                com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
+                    canvas,
+                    this,
+                    w,
+                    h,
+                    strokeColor,
+                    drawContentBase = { c, p ->
+                        p.style = Paint.Style.STROKE
+                        p.color = strokeColor
+                        p.strokeWidth = strokeWidth
+                        p.strokeJoin = Paint.Join.ROUND
+                        p.strokeCap = Paint.Cap.ROUND
+                        c.drawPath(path, p)
+                    },
+                    drawContentEmboss = { c, p ->
+                        p.style = Paint.Style.STROKE
+                        p.strokeWidth = strokeWidth
+                        p.strokeJoin = Paint.Join.ROUND
+                        p.strokeCap = Paint.Cap.ROUND
+                        c.drawPath(path, p)
+                    }
+                )
+            } else {
+                paint.style = Paint.Style.STROKE
+                paint.color = strokeColor
+                paint.strokeWidth = strokeWidth
+                paint.strokeJoin = Paint.Join.ROUND
+                paint.strokeCap = Paint.Cap.ROUND
+                canvas.drawPath(path, paint)
+            }
         }
 
         canvas.restoreToCount(saveCount)

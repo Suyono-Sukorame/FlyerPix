@@ -194,7 +194,7 @@ data class ShapeLayer(
             canvas.concat(pMat)
         }
 
-        // 3. Gambar bentuk
+        // 3. Gambar bentuk dengan atau tanpa emboss
         val path = buildPath()
 
         // Drop Shadow (via setShadowLayer — berfungsi untuk semua draw call)
@@ -211,10 +211,41 @@ data class ShapeLayer(
         paint.color = fillColor
         paint.alpha = opacity.coerceIn(0, 255)
         paint.strokeWidth = 0f
-        if (shapeType == ShapeType.ARC) {
-            canvas.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, paint)
+
+        // Handle emboss effect
+        if (embossEnabled) {
+            // Use generic emboss renderer dari EffectRenderUtils
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
+                canvas,
+                this,
+                width,
+                height,
+                fillColor,
+                drawContentBase = { c, p ->
+                    p.style = Paint.Style.FILL
+                    p.color = fillColor
+                    p.alpha = opacity.coerceIn(0, 255)
+                    if (shapeType == ShapeType.ARC) {
+                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
+                    } else {
+                        c.drawPath(path, p)
+                    }
+                },
+                drawContentEmboss = { c, p ->
+                    if (shapeType == ShapeType.ARC) {
+                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
+                    } else {
+                        c.drawPath(path, p)
+                    }
+                }
+            )
         } else {
-            canvas.drawPath(path, paint)
+            // Normal rendering tanpa emboss
+            if (shapeType == ShapeType.ARC) {
+                canvas.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, paint)
+            } else {
+                canvas.drawPath(path, paint)
+            }
         }
 
         // Clear shadow for stroke pass
