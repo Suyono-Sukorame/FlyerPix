@@ -298,4 +298,133 @@ object EffectRenderUtils {
         clearMaskFilter(embossPaint)
         recycleOffscreenBitmap(bmp)
     }
+
+    /**
+     * Generic neon/glow effect renderer untuk semua layer types.
+     * 
+     * Algoritma:
+     * 1. Draw base content dengan neon color
+     * 2. Create multiple glow layers (backer blur passes) dengan decreasing alpha
+     * 3. Stack glow layers dari outer (blurred) ke inner (crisp)
+     * 4. Result: Vibrant neon/glow effect dengan intensity control
+     * 
+     * PENTING: BlurMaskFilter hanya bekerja di software canvas, bukan hardware-accelerated.
+     * 
+     * @param canvas Target canvas (hardware-accelerated)
+     * @param layer CanvasLayer dengan neon properties (neonEnabled, neonColor, neonIntensity, neonRadius)
+     * @param contentWidth Width dari content dalam pixels
+     * @param contentHeight Height dari content dalam pixels
+     * @param drawContent Lambda untuk render content (akan di-draw multiple times untuk glow effect)
+     * 
+     * USAGE:
+     * ```kotlin
+     * EffectRenderUtils.drawNeonEffect(canvas, layer, width, height,
+     *     drawContent = { c, p ->
+     *         p.color = neonColor
+     *         c.drawPath(path, p)
+     *     }
+     * )
+     * ```
+     */
+    fun drawNeonEffect(
+        canvas: Canvas,
+        layer: com.flyerpix.editor.canvas.model.CanvasLayer,
+        contentWidth: Float,
+        contentHeight: Float,
+        drawContent: (Canvas, Paint) -> Unit
+    ) {
+        if (!layer.neonEnabled || contentWidth <= 0f || contentHeight <= 0f) {
+            return
+        }
+
+        val neonColor = layer.neonColor
+        val neonIntensity = layer.neonIntensity.coerceIn(0.5f, 3f)
+        val neonRadius = layer.neonRadius.coerceIn(2f, 50f)
+        val opacity = layer.opacity.coerceIn(0, 255)
+
+        // 1. Calculate offscreen bitmap size dengan padding
+        val pad = (neonRadius + 8).toInt().coerceAtLeast(16)
+        val bw = contentWidth.toInt() + pad * 2
+        val bh = contentHeight.toInt() + pad * 2
+
+        if (bw <= 0 || bh <= 0) return
+
+        // 2. Create paint untuk neon rendering
+        val neonPaint = createQualityPaint().apply {
+            color = neonColor
+        }
+
+        // 3. Draw glow layers (outer blurred passes first, then crisp center)
+        // Multi-pass approach: draw several times dengan increasing blur radius, decreasing alpha
+        
+        // Pass 1: Outer glow (large blur, low alpha)
+        val glowRadius1 = neonRadius * 0.8f
+        val glowAlpha1 = ((opacity * 0.25f * neonIntensity) / 3f).toInt().coerceIn(0, 255)
+        
+        val glowBmp1 = createOffscreenBitmap(bw, bh)
+        val glowCanvas1 = Canvas(glowBmp1)
+        val glowPaint1 = createQualityPaint().apply {
+            color = neonColor
+            alpha = glowAlpha1
+            applyBlurMaskFilter(this, glowRadius1, BlurMaskFilter.Blur.NORMAL)
+        }
+        glowCanvas1.translate(pad.toFloat(), pad.toFloat())
+        drawContent(glowCanvas1, glowPaint1)
+        clearMaskFilter(glowPaint1)
+
+        // Pass 2: Mid glow (medium blur, medium alpha)
+        val glowRadius2 = neonRadius * 0.5f
+        val glowAlpha2 = ((opacity * 0.4f * neonIntensity) / 2f).toInt().coerceIn(0, 255)
+        
+        val glowBmp2 = createOffscreenBitmap(bw, bh)
+        val glowCanvas2 = Canvas(glowBmp2)
+        val glowPaint2 = createQualityPaint().apply {
+            color = neonColor
+            alpha = glowAlpha2
+            applyBlurMaskFilter(this, glowRadius2, BlurMaskFilter.Blur.NORMAL)
+        }
+        glowCanvas2.translate(pad.toFloat(), pad.toFloat())
+        drawContent(glowCanvas2, glowPaint2)
+        clearMaskFilter(glowPaint2)
+
+        // Pass 3: Inner glow (small blur, higher alpha)
+        val glowRadius3 = neonRadius * 0.25f
+        val glowAlpha3 = ((opacity * 0.6f * neonIntensity)).toInt().coerceIn(0, 255)
+        
+        val glowBmp3 = createOffscreenBitmap(bw, bh)
+        val glowCanvas3 = Canvas(glowBmp3)
+        val glowPaint3 = createQualityPaint().apply {
+            color = neonColor
+            alpha = glowAlpha3
+            if (glowRadius3 > 0.1f) {
+                applyBlurMaskFilter(this, glowRadius3, BlurMaskFilter.Blur.NORMAL)
+            }
+        }
+        glowCanvas3.translate(pad.toFloat(), pad.toFloat())
+        drawContent(glowCanvas3, glowPaint3)
+        clearMaskFilter(glowPaint3)
+
+        // Pass 4: Crisp center (no blur, full alpha)
+        val centerAlpha = opacity.coerceIn(0, 255)
+        val centerPaint = createQualityPaint().apply {
+            color = neonColor
+            alpha = centerAlpha
+        }
+
+        // 4. Composite glow layers + center to main canvas
+        val blitPaint = createQualityPaint()
+
+        // Blit glow layers (outer to inner)
+        canvas.drawBitmap(glowBmp1, (-pad).toFloat(), (-pad).toFloat(), blitPaint)
+        canvas.drawBitmap(glowBmp2, (-pad).toFloat(), (-pad).toFloat(), blitPaint)
+        canvas.drawBitmap(glowBmp3, (-pad).toFloat(), (-pad).toFloat(), blitPaint)
+
+        // Draw crisp center on top
+        drawContent(canvas, centerPaint)
+
+        // 5. Cleanup
+        recycleOffscreenBitmap(glowBmp1)
+        recycleOffscreenBitmap(glowBmp2)
+        recycleOffscreenBitmap(glowBmp3)
+    }
 }

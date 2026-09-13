@@ -84,8 +84,19 @@ open class ImageLayer(
             paint.clearShadowLayer()
         }
 
-        // Handle emboss effect
-        if (embossEnabled) {
+        // Handle neon effect (takes priority over emboss)
+        if (neonEnabled) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
+                canvas,
+                this,
+                w,
+                h,
+                drawContent = { c, p ->
+                    p.alpha = opacity.coerceIn(0, 255)
+                    c.drawBitmap(bitmap, 0f, 0f, p)
+                }
+            )
+        } else if (embossEnabled) {
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
                 canvas,
                 this,

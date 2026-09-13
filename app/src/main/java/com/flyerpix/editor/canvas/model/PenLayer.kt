@@ -461,9 +461,24 @@ data class PenLayer(
             canvas.drawPath(path, paint)
         }
 
-        // ── Pass 2: Stroke dengan atau tanpa emboss ──────────────────────────
+        // ── Pass 2: Stroke dengan atau tanpa neon/emboss ───────────────────────
         if (strokeWidth > 0f) {
-            if (embossEnabled) {
+            if (neonEnabled) {
+                com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
+                    canvas,
+                    this,
+                    w,
+                    h,
+                    drawContent = { c, p ->
+                        p.style = Paint.Style.STROKE
+                        p.color = neonColor
+                        p.strokeWidth = strokeWidth
+                        p.strokeJoin = Paint.Join.ROUND
+                        p.strokeCap = Paint.Cap.ROUND
+                        c.drawPath(path, p)
+                    }
+                )
+            } else if (embossEnabled) {
                 com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
                     canvas,
                     this,

@@ -236,9 +236,21 @@ data class ArrowLayer(
             canvas.drawPath(tailPath, paint)
         }
 
-        // ── Pass 2: Batang panah dengan atau tanpa emboss ──────────────────
+        // ── Pass 2: Batang panah dengan atau tanpa neon/emboss ───────────────
         val stemPath = buildStemPath()
-        if (embossEnabled) {
+        if (neonEnabled) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
+                canvas,
+                this,
+                w,
+                h,
+                drawContent = { c, p ->
+                    p.style = Paint.Style.FILL
+                    p.color = neonColor
+                    c.drawPath(stemPath, p)
+                }
+            )
+        } else if (embossEnabled) {
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
                 canvas,
                 this,

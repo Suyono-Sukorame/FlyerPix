@@ -145,10 +145,21 @@ data class StickerLayer(
             canvas.concat(pMat)
         }
 
-        // 3. Gambar bitmap stiker dengan atau tanpa emboss
+        // 3. Gambar bitmap stiker dengan atau tanpa neon/emboss
         paint.alpha = opacity.coerceIn(0, 255)
 
-        if (embossEnabled) {
+        if (neonEnabled) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
+                canvas,
+                this,
+                w,
+                h,
+                drawContent = { c, p ->
+                    p.alpha = opacity.coerceIn(0, 255)
+                    c.drawBitmap(stickerBitmap, 0f, 0f, p)
+                }
+            )
+        } else if (embossEnabled) {
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
                 canvas,
                 this,

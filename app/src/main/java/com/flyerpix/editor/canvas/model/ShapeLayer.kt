@@ -212,8 +212,25 @@ data class ShapeLayer(
         paint.alpha = opacity.coerceIn(0, 255)
         paint.strokeWidth = 0f
 
-        // Handle emboss effect
-        if (embossEnabled) {
+        // Handle neon effect (takes priority over emboss)
+        if (neonEnabled) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
+                canvas,
+                this,
+                width,
+                height,
+                drawContent = { c, p ->
+                    p.style = Paint.Style.FILL
+                    p.color = neonColor
+                    p.alpha = opacity.coerceIn(0, 255)
+                    if (shapeType == ShapeType.ARC) {
+                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
+                    } else {
+                        c.drawPath(path, p)
+                    }
+                }
+            )
+        } else if (embossEnabled) {
             // Use generic emboss renderer dari EffectRenderUtils
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
                 canvas,
@@ -240,7 +257,7 @@ data class ShapeLayer(
                 }
             )
         } else {
-            // Normal rendering tanpa emboss
+            // Normal rendering tanpa emboss/neon
             if (shapeType == ShapeType.ARC) {
                 canvas.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, paint)
             } else {
