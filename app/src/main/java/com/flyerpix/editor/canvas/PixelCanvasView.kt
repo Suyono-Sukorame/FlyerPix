@@ -1870,15 +1870,15 @@ class PixelCanvasView @JvmOverloads constructor(
                 )
             }
 
-        if (hypot(touchX - pts[0], touchY - pts[1]) <= touchRadius) return TransformHandle.DUPLICATE
-        if (hypot(touchX - pts[4], touchY - pts[5]) <= touchRadius) return TransformHandle.SCALE
-
         // Handle lebar wrap teks: titik tengah sisi kanan bounding box
         if (wrapPoint != null) {
             if (hypot(touchX - wrapPoint.first, touchY - wrapPoint.second) <= touchRadius) {
                 return TransformHandle.WRAP
             }
         }
+
+        if (hypot(touchX - pts[0], touchY - pts[1]) <= touchRadius) return TransformHandle.DUPLICATE
+        if (hypot(touchX - pts[4], touchY - pts[5]) <= touchRadius) return TransformHandle.SCALE
 
         return TransformHandle.NONE
     }
@@ -2491,7 +2491,8 @@ class PixelCanvasView @JvmOverloads constructor(
                 val handle = getTransformHandleAt(event.x, event.y)
                 when (handle) {
                     TransformHandle.DELETE -> {
-                        deleteSelectedLayer()
+                        // Delete handle is no longer drawn. Keep this branch non-destructive
+                        // so stale hit-test states cannot remove a text layer by mistake.
                         isDragging = false
                         currentTouchState = TouchState.IDLE
                         return true

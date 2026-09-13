@@ -994,11 +994,18 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         top.btnTopDeleteText.setOnClickListener {
             val textLayer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer
             if (textLayer != null) {
-                pixelCanvasView.runRecordedAction("Delete Text") {
-                    pixelCanvasView.removeLayer(textLayer)
-                }
-                pixelCanvasView.invalidate()
-                showSnackbar("Text layer deleted")
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.AppAlertDialog)
+                    .setTitle("Delete Text?")
+                    .setMessage("This will remove the selected text layer.")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Delete") { _, _ ->
+                        pixelCanvasView.runRecordedAction("Delete Text") {
+                            pixelCanvasView.removeLayer(textLayer)
+                        }
+                        pixelCanvasView.invalidate()
+                        showSnackbar("Text layer deleted")
+                    }
+                    .show()
             }
         }
     }

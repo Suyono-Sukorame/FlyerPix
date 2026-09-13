@@ -4,6 +4,7 @@ import android.app.Dialog
 import android.content.Context
 import android.graphics.Typeface
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.text.InputType
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -13,7 +14,6 @@ import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
 import android.text.style.StrikethroughSpan
 import android.view.LayoutInflater
-import android.widget.EditText
 import android.view.WindowManager
 import androidx.fragment.app.FragmentActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -38,27 +38,30 @@ class EditTextDialog(
 
     fun show(): Dialog {
         val binding = DialogEditTextBinding.inflate(LayoutInflater.from(context))
-        var savedSelectionStart = -1
-        var savedSelectionEnd = -1
+        var savedSelection: IntRange? = null
 
         fun rememberSelection() {
             val start = binding.etTextInput.selectionStart
             val end = binding.etTextInput.selectionEnd
-            if (start >= 0 && end >= start) {
-                savedSelectionStart = start
-                savedSelectionEnd = end
+            if (start >= 0 && end > start) {
+                savedSelection = start until end
             }
         }
 
         fun selectionRange(): IntRange? {
             val start = binding.etTextInput.selectionStart
             val end = binding.etTextInput.selectionEnd
-            return if (start >= 0 && end > start) start until end else null
+            if (start >= 0 && end > start) return start until end
+            val fallback = savedSelection ?: return null
+            val length = binding.etTextInput.text?.length ?: 0
+            return if (fallback.first >= 0 && fallback.last < length) fallback else null
         }
 
         fun preserveSelectionOnClick(view: android.view.View) {
             view.setOnTouchListener { _, event ->
-                if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) rememberSelection()
+                if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+                    rememberSelection()
+                }
                 false
             }
             view.isFocusable = false
@@ -68,7 +71,7 @@ class EditTextDialog(
         fun setFormatButtonState(button: com.google.android.material.button.MaterialButton, active: Boolean) {
             button.isSelected = active
             val activeBackground = Color.parseColor("#EAF3FF")
-            val activeBorder = Color.parseColor("#4A90E2")
+            val activeBorder = Color.parseColor("#1769FF")
             val defaultText = Color.parseColor("#1F2A44")
             val disabledText = Color.parseColor("#9AA3AF")
 
@@ -78,7 +81,13 @@ class EditTextDialog(
             button.setTextColor(if (button.isEnabled) if (active) activeBorder else defaultText else disabledText)
         }
 
+        fun updateCharacterCount() {
+            val count = binding.etTextInput.text?.length ?: 0
+            binding.tvTextCharCount.text = if (count == 1) "1 character" else "$count characters"
+        }
+
         fun updateToolbarState() {
+            rememberSelection()
             val range = selectionRange()
             val hasSelection = range != null
             val editable = binding.etTextInput.editableText
@@ -98,8 +107,8 @@ class EditTextDialog(
 
             listOf(binding.btnBold, binding.btnItalic, binding.btnUnderline, binding.btnStrikethrough, binding.btnTextColor, binding.btnTextSize)
                 .forEach { button ->
-                    button.isEnabled = hasSelection
-                    button.alpha = if (hasSelection) 1f else 0.5f
+                    button.isEnabled = true
+                    button.alpha = if (hasSelection) 1f else 0.85f
                     if (button === binding.btnBold || button === binding.btnItalic || button === binding.btnUnderline || button === binding.btnStrikethrough) {
                         setFormatButtonState(button, if (hasSelection) button.isSelected else false)
                     }
@@ -128,6 +137,7 @@ class EditTextDialog(
             }
 
             binding.etTextInput.setSelection(start, end)
+            rememberSelection()
             updateToolbarState()
         }
 
@@ -147,6 +157,7 @@ class EditTextDialog(
             }
 
             binding.etTextInput.setSelection(start, end)
+            rememberSelection()
             updateToolbarState()
         }
 
@@ -166,6 +177,7 @@ class EditTextDialog(
             }
 
             binding.etTextInput.setSelection(start, end)
+            rememberSelection()
             updateToolbarState()
         }
 
@@ -228,30 +240,32 @@ class EditTextDialog(
             binding.etTextInput.editableText.setSpan(
                 ForegroundColorSpan(color), range.first, range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
             )
+            binding.etTextInput.setSelection(range.first, range.last + 1)
+            rememberSelection()
             updateToolbarState()
         }
 
-        fun applySize(size: Int) {
-            val range = selectionRange() ?: return
+        fun applySize(range: IntRange, size: Int) {
             binding.etTextInput.editableText.setSpan(
                 AbsoluteSizeSpan(size, false), range.first, range.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
             )
+            binding.etTextInput.setSelection(range.first, range.last + 1)
+            rememberSelection()
             updateToolbarState()
         }
 
         fun applyTransformation(transform: (String) -> String) {
             val editable = binding.etTextInput.editableText as SpannableStringBuilder
-            val start = binding.etTextInput.selectionStart
-            val end = binding.etTextInput.selectionEnd
-            val hasSelection = start in 0..end && end > start
+            val preservedRange = selectionRange()
+            val hasSelection = preservedRange != null
 
             val allLen = editable.length
             val spans = editable.getSpans(0, allLen, Any::class.java).map { span ->
                 Triple(span, editable.getSpanStart(span), editable.getSpanEnd(span))
             }
 
-            val targetStart = if (hasSelection) start else 0
-            val targetEnd = if (hasSelection) end else allLen
+            val targetStart = if (hasSelection) preservedRange!!.first else 0
+            val targetEnd = if (hasSelection) preservedRange!!.last + 1 else allLen
             val selected = editable.subSequence(targetStart, targetEnd).toString()
             val transformed = transform(selected)
 
@@ -305,19 +319,38 @@ class EditTextDialog(
         }
 
         binding.btnTextSize.setOnClickListener {
-            val input = EditText(context).apply {
+            val range = selectionRange() ?: return@setOnClickListener
+            val density = context.resources.displayMetrics.density
+            val inputLayout = com.google.android.material.textfield.TextInputLayout(
+                context,
+                null,
+                com.google.android.material.R.attr.textInputOutlinedStyle
+            ).apply {
                 hint = "Size in px"
+                boxBackgroundColor = Color.parseColor("#F8FAFD")
+                setBoxCornerRadii(16f * density, 16f * density, 16f * density, 16f * density)
+                setPadding((20f * density).toInt(), (8f * density).toInt(), (20f * density).toInt(), 0)
+            }
+            val input = com.google.android.material.textfield.TextInputEditText(inputLayout.context).apply {
                 inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
                 setSingleLine(true)
+                setTextColor(Color.parseColor("#07164F"))
+                setHintTextColor(Color.parseColor("#8A94A6"))
             }
-            MaterialAlertDialogBuilder(context)
-                .setTitle("Selected text size")
-                .setView(input)
+            inputLayout.addView(input)
+            val sizeDialog = MaterialAlertDialogBuilder(context, R.style.AppAlertDialog)
+                .setTitle("Text Size")
+                .setView(inputLayout)
                 .setPositiveButton("Apply") { _, _ ->
-                    input.text.toString().toFloatOrNull()?.toInt()?.coerceIn(8, 512)?.let(::applySize)
+                    input.text.toString().toFloatOrNull()?.toInt()?.coerceIn(8, 512)?.let { size ->
+                        applySize(range, size)
+                    }
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
+            sizeDialog.window?.setBackgroundDrawable(ColorDrawable(Color.WHITE))
+            sizeDialog.getButton(Dialog.BUTTON_POSITIVE)?.setTextColor(Color.parseColor("#1769FF"))
+            sizeDialog.getButton(Dialog.BUTTON_NEGATIVE)?.setTextColor(Color.parseColor("#5F6B7A"))
         }
 
         binding.btnMoreText.setOnClickListener {
@@ -345,17 +378,11 @@ class EditTextDialog(
             updateToolbarState()
         }
 
-        binding.etTextInput.customSelectionActionModeCallback = object : android.view.ActionMode.Callback {
-            override fun onCreateActionMode(mode: android.view.ActionMode, menu: android.view.Menu): Boolean = false
-            override fun onPrepareActionMode(mode: android.view.ActionMode, menu: android.view.Menu): Boolean = false
-            override fun onActionItemClicked(mode: android.view.ActionMode, item: android.view.MenuItem): Boolean = false
-            override fun onDestroyActionMode(mode: android.view.ActionMode) {}
-        }
-
         binding.etTextInput.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
             override fun afterTextChanged(s: android.text.Editable?) {
+                updateCharacterCount()
                 updateToolbarState()
             }
         })
@@ -371,20 +398,23 @@ class EditTextDialog(
             dialog.dismiss()
         }
 
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
-
         dialog.setOnShowListener {
             val displayMetrics = context.resources.displayMetrics
-            val width = (displayMetrics.widthPixels * 0.80f).toInt()
+            val width = (displayMetrics.widthPixels * 0.92f).toInt()
             val height = (displayMetrics.heightPixels * 0.72f).toInt()
+            dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             dialog.window?.setLayout(width, height)
+            dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+            binding.btnCancel.setTextColor(Color.parseColor("#5F6B7A"))
+            binding.btnOk.setTextColor(Color.parseColor("#1769FF"))
 
             binding.etTextInput.setTextColor(Color.parseColor("#07164F"))
-            binding.etTextInput.highlightColor = Color.parseColor("#1D3B8F")
+            binding.etTextInput.highlightColor = Color.parseColor("#DCEBFF")
 
             val editable = SpannableStringBuilder(initialText)
             applyInitialSpans(editable)
             binding.etTextInput.setText(editable, android.widget.TextView.BufferType.SPANNABLE)
+            updateCharacterCount()
             binding.etTextInput.requestFocus()
             binding.etTextInput.post {
                 if (initialText.isNotEmpty()) {
