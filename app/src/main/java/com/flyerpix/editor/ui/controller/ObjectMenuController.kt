@@ -160,6 +160,21 @@ class ObjectMenuController(
         return targetPx.coerceAtLeast(floorPx)
     }
 
+    private fun computeArrowSheetHeight(): Int {
+        val density = activity.resources.displayMetrics.density
+        val root = binding.parentLayout
+        val homePanel = binding.bottomControlPanelContainer
+        if (root.height > 0 && homePanel.height > 0) {
+            val homeTop = PanelHeightManager.topInRoot(homePanel, root)
+            val alignedH = root.height - homeTop
+            if (alignedH > 0) return alignedH
+        }
+        // Fallback if home panel not yet measured
+        val floorPx = (107 * density).toInt()
+        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.12f).toInt()
+        return targetPx.coerceAtLeast(floorPx)
+    }
+
     fun initialize() {
         buildToolStrip()
         setupColorResultListeners()
@@ -683,7 +698,7 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 5. Arrow Studio Sheet (~42% Screen Height)
+    // 5. Arrow Studio Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
@@ -695,7 +710,7 @@ class ObjectMenuController(
         container.visibility = View.VISIBLE
         container.bringToFront()
 
-        val sheetMaxH = computeSheetHeight(0.48f)
+        val sheetMaxH = computeArrowSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
 
