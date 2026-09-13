@@ -40,6 +40,7 @@ fun StickerDetailPage(
     onStickerSelected: (StickerItem) -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
+    onReset: () -> Unit = {},
     maxHeightPx: Int = 540
 ) {
     var selectedCategory by remember { mutableStateOf<StickerCategory?>(null) }
@@ -205,7 +206,7 @@ fun StickerDetailPage(
                         }
                     }
 
-                    // Right Column: Cancel / Apply, matching the 3D Text sheet
+                    // Right Column: Cancel / Apply / Reset, matching the Shapes sheet
                     Column(
                         modifier = Modifier
                             .width(62.dp)
@@ -233,6 +234,17 @@ fun StickerDetailPage(
                             elevation = ButtonDefaults.elevation(defaultElevation = 1.dp)
                         ) {
                             Text("Apply", style = MaterialTheme.typography.caption, fontWeight = FontWeight.Bold)
+                        }
+                        TextButton(
+                            onClick = {
+                                selectedCategory = null
+                                lastAddedEmoji = null
+                                onReset()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)
+                        ) {
+                            Text("Reset", style = MaterialTheme.typography.caption, fontSize = 9.sp)
                         }
                     }
                 }

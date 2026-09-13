@@ -115,6 +115,21 @@ class ObjectMenuController(
         return targetPx.coerceAtLeast(floorPx)
     }
 
+    private fun computeStickerSheetHeight(): Int {
+        val density = activity.resources.displayMetrics.density
+        val root = binding.parentLayout
+        val homePanel = binding.bottomControlPanelContainer
+        if (root.height > 0 && homePanel.height > 0) {
+            val homeTop = PanelHeightManager.topInRoot(homePanel, root)
+            val alignedH = root.height - homeTop
+            if (alignedH > 0) return alignedH
+        }
+        // Fallback if home panel not yet measured
+        val floorPx = (107 * density).toInt()
+        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.12f).toInt()
+        return targetPx.coerceAtLeast(floorPx)
+    }
+
     fun initialize() {
         buildToolStrip()
         setupColorResultListeners()
@@ -287,7 +302,7 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 1. Sticker Sheet (~68% Screen Height)
+    // 1. Sticker Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun showComposeStickerSheet() {
@@ -299,7 +314,7 @@ class ObjectMenuController(
         container.visibility = View.VISIBLE
         container.bringToFront()
 
-        val sheetMaxH = computeSheetHeight(0.68f)
+        val sheetMaxH = computeStickerSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
 
@@ -311,6 +326,9 @@ class ObjectMenuController(
                 },
                 onApply = { deselect(restoreStrip = true) },
                 onCancel = { deselect(restoreStrip = true) },
+                onReset = {
+                    // Reset just clears the UI selection state (handled in Composable)
+                },
                 maxHeightPx = sheetMaxH
             )
         }
