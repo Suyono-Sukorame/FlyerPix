@@ -118,18 +118,27 @@ abstract class CanvasLayer(
     open var shadow3DBlur: Float = 0f               // 0–40 (kelembutan ujung bayangan)
     open var shadow3DOpacity: Float = 0.6f          // 0.0–1.0 (kegelapan bayangan)
 
-    // 3D Rotate (Rotasi Sumbu X, Y, Z)
-    open var rotate3DX: Float = 0f                  // Kemiringan atas-bawah (-180° s/d 180°)
-    open var rotate3DY: Float = 0f                  // Kemiringan kiri-kanan (-180° s/d 180°)
-    open var rotate3DZ: Float = 0f                  // Rotasi 3D sumbu Z (-180° s/d 180°)
-
+    // ── Advanced Shadow Effects (Phase 7) ──────────────────────────────────
     // Inner Shadow
     open var innerShadowEnabled: Boolean = false
     open var innerShadowColor: Int = android.graphics.Color.BLACK
     open var innerShadowRadius: Float = 6f
-    open var innerShadowDx: Float = 0f
-    open var innerShadowDy: Float = 4f
-    open var innerShadowOpacity: Float = 0.8f
+    open var innerShadowDx: Float = 2f
+    open var innerShadowDy: Float = 2f
+    open var innerShadowOpacity: Float = 0.4f
+
+    // Long Shadow
+    open var longShadowEnabled: Boolean = false
+    open var longShadowColor: Int = android.graphics.Color.BLACK
+    open var longShadowLength: Float = 50f         // Panjang bayangan (px)
+    open var longShadowAngle: Float = 45f          // Sudut arah bayangan (derajat)
+    open var longShadowOpacity: Float = 0.3f
+    open var longShadowBlur: Float = 2f            // Blur pada bayangan panjang
+
+    // 3D Rotate (Rotasi Sumbu X, Y, Z)
+    open var rotate3DX: Float = 0f                  // Kemiringan atas-bawah (-180° s/d 180°)
+    open var rotate3DY: Float = 0f                  // Kemiringan kiri-kanan (-180° s/d 180°)
+    open var rotate3DZ: Float = 0f                  // Rotasi 3D sumbu Z (-180° s/d 180°)
 
     // Texture Masking
     open var textureBitmap: android.graphics.Bitmap? = null

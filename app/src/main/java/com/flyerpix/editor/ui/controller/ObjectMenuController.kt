@@ -1072,4 +1072,56 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
     private fun closeGradientEditor() {
         deselect(restoreStrip = true)
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Shadow Editor (Phase 7)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Show Shadow editor panel for all layer types (Phase 7).
+     */
+    fun showShadowEditor(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = "obj_shadow"
+        updateToolStripSelection("obj_shadow")
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = 550
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            var refreshTrigger by remember { mutableStateOf(0) }
+
+            ShadowEditorPanel(
+                layer = layer,
+                onChanged = {
+                    canvas.invalidate()
+                    refreshTrigger++
+                },
+                onExitEditMode = {
+                    closeShadowEditor()
+                },
+                maxHeightPx = sheetMaxH
+            )
+
+            LaunchedEffect(refreshTrigger) {
+                // Trigger recomposition
+            }
+        }
+    }
+
+    /**
+     * Close Shadow editor panel.
+     */
+    private fun closeShadowEditor() {
+        deselect(restoreStrip = true)
+    }
 }
