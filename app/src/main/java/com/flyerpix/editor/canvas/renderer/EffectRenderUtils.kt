@@ -578,5 +578,83 @@ object EffectRenderUtils {
         // 6. Cleanup
         recycleOffscreenBitmap(innerShadowBmp)
     }
+
+    /**
+     * Generic 3D extrusion effect renderer untuk semua layer types.
+     * 
+     * Algoritma:
+     * 1. Hitung vektor arah kedalaman dari extrudeViewType & extrudeAngle
+     * 2. Draw depth layers (belakang → depan) dengan offset bertambah
+     * 3. Gradasi color/opacity ke arah kedalaman
+     * 4. Draw crisp front content on top
+     * 
+     * PENTING: Extrusion menciptakan illusi 3D dengan stacking + offset rendering.
+     * 
+     * @param canvas Target canvas (hardware-accelerated)
+     * @param layer CanvasLayer dengan extrude properties
+     * @param contentWidth Width dari content dalam pixels
+     * @param contentHeight Height dari content dalam pixels
+     * @param contentColor Color untuk extrude depth (fallback jika no gradient)
+     * @param drawContent Lambda untuk render content (akan di-draw multiple times untuk depth)
+     */
+    fun draw3DExtrusionEffect(
+        canvas: Canvas,
+        layer: com.flyerpix.editor.canvas.model.CanvasLayer,
+        contentWidth: Float,
+        contentHeight: Float,
+        contentColor: Int,
+        drawContent: (Canvas, Paint) -> Unit
+    ) {
+        if (!layer.extrudeEnabled || layer.extrudeDepth <= 0 || contentWidth <= 0f || contentHeight <= 0f) {
+            return
+        }
+
+        val extrudeDepth = layer.extrudeDepth.coerceIn(1, 50)
+        val extrudeColor = layer.extrudeColor
+        val extrudeGradient = layer.extrudeGradient
+        val extrudeViewType = layer.extrudeViewType
+        val extrudeAngle = layer.extrudeAngle
+        val opacity = layer.opacity.coerceIn(0, 255)
+
+        // 1. Calculate extrude vector direction
+        val (dirX, dirY) = if (extrudeViewType == com.flyerpix.editor.canvas.model.ExtrudeViewType.ISOMETRIC) {
+            // Isometric: standard 30° projection
+            val rad = Math.toRadians(30.0)
+            Pair(kotlin.math.cos(rad).toFloat(), (kotlin.math.sin(rad) * 0.58f).toFloat())
+        } else {
+            // Oblique: dynamic angle
+            val rad = Math.toRadians(extrudeAngle.toDouble())
+            Pair(kotlin.math.cos(rad).toFloat(), kotlin.math.sin(rad).toFloat())
+        }
+
+        // 2. Create depth paint dengan gradient jika ada
+        val depthPaint = createQualityPaint().apply {
+            alpha = opacity
+            if (extrudeGradient != null) {
+                shader = extrudeGradient.createShader(contentWidth, contentHeight)
+            } else {
+                color = extrudeColor
+            }
+        }
+
+        // 3. Draw depth layers (belakang ke depan, dari extrudeDepth downTo 1)
+        for (d in extrudeDepth downTo 1) {
+            val depthAlpha = (opacity * (1f - (d.toFloat() / extrudeDepth) * 0.3f)).toInt().coerceIn(0, 255)
+            depthPaint.alpha = depthAlpha
+
+            canvas.save()
+            canvas.translate(dirX * d, dirY * d)
+            drawContent(canvas, depthPaint)
+            canvas.restore()
+        }
+
+        // 4. Draw crisp front content on top
+        val frontPaint = createQualityPaint().apply {
+            alpha = opacity
+            color = contentColor
+        }
+        drawContent(canvas, frontPaint)
+    }
 }
+
 

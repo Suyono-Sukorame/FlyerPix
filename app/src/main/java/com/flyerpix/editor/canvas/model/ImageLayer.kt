@@ -77,8 +77,19 @@ open class ImageLayer(
         // 3. Konfigurasi opasitas dan penggambaran bitmap dengan shadow/neon/emboss/inner shadow
         paint.alpha = opacity.coerceIn(0, 255)
 
-        // Handle drop shadow
-        if (shadowEnabled && shadowRadius > 0f) {
+        // 3D Extrusion (FIRST — provides depth base)
+        if (extrudeEnabled && extrudeDepth > 0) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.draw3DExtrusionEffect(
+                canvas,
+                this,
+                w,
+                h,
+                0xFF1769FF.toInt(),
+                drawContent = { c, p ->
+                    c.drawBitmap(bitmap, 0f, 0f, p)
+                }
+            )
+        } else if (shadowEnabled && shadowRadius > 0f) {
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
                 canvas,
                 this,

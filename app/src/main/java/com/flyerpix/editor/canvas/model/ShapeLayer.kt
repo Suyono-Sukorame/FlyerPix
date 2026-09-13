@@ -202,8 +202,25 @@ data class ShapeLayer(
         paint.alpha = opacity.coerceIn(0, 255)
         paint.strokeWidth = 0f
 
-        // Handle drop shadow (via generic effect renderer)
-        if (shadowEnabled && shadowRadius > 0f) {
+        // 3D Extrusion (FIRST — provides depth base)
+        if (extrudeEnabled && extrudeDepth > 0) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.draw3DExtrusionEffect(
+                canvas,
+                this,
+                width,
+                height,
+                fillColor,
+                drawContent = { c, p ->
+                    p.style = Paint.Style.FILL
+                    if (shapeType == ShapeType.ARC) {
+                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
+                    } else {
+                        c.drawPath(path, p)
+                    }
+                }
+            )
+        } else if (shadowEnabled && shadowRadius > 0f) {
+            // Handle drop shadow (via generic effect renderer)
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
                 canvas,
                 this,
@@ -266,7 +283,7 @@ data class ShapeLayer(
                 }
             )
         } else {
-            // Normal rendering tanpa shadow/neon/emboss
+            // Normal rendering tanpa extrude/shadow/neon/emboss
             if (shapeType == ShapeType.ARC) {
                 canvas.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, paint)
             } else {

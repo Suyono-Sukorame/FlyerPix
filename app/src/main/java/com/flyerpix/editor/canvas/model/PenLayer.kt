@@ -461,9 +461,24 @@ data class PenLayer(
             canvas.drawPath(path, paint)
         }
 
-        // ── Pass 2: Stroke dengan drop shadow, neon, emboss, atau inner shadow ───────
+        // ── Pass 2: Stroke dengan extrude, drop shadow, neon, emboss, atau inner shadow ────
         if (strokeWidth > 0f) {
-            if (shadowEnabled && shadowRadius > 0f) {
+            if (extrudeEnabled && extrudeDepth > 0) {
+                com.flyerpix.editor.canvas.renderer.EffectRenderUtils.draw3DExtrusionEffect(
+                    canvas,
+                    this,
+                    w,
+                    h,
+                    strokeColor,
+                    drawContent = { c, p ->
+                        p.style = Paint.Style.STROKE
+                        p.strokeWidth = strokeWidth
+                        p.strokeJoin = Paint.Join.ROUND
+                        p.strokeCap = Paint.Cap.ROUND
+                        c.drawPath(path, p)
+                    }
+                )
+            } else if (shadowEnabled && shadowRadius > 0f) {
                 com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
                     canvas,
                     this,

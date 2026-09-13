@@ -236,9 +236,21 @@ data class ArrowLayer(
             canvas.drawPath(tailPath, paint)
         }
 
-        // ── Pass 2: Batang panah dengan drop shadow, neon, emboss, atau inner shadow ───
+        // ── Pass 2: Batang panah dengan extrude, drop shadow, neon, emboss, atau inner shadow ──
         val stemPath = buildStemPath()
-        if (shadowEnabled && shadowRadius > 0f) {
+        if (extrudeEnabled && extrudeDepth > 0) {
+            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.draw3DExtrusionEffect(
+                canvas,
+                this,
+                w,
+                h,
+                headColor,
+                drawContent = { c, p ->
+                    p.style = Paint.Style.FILL
+                    c.drawPath(stemPath, p)
+                }
+            )
+        } else if (shadowEnabled && shadowRadius > 0f) {
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
                 canvas,
                 this,
