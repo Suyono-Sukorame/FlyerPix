@@ -132,6 +132,15 @@ data class PenLayer(
     // ── Stroke ──────────────────────────────────────────────────────────────
     var strokeColor: Int = Color.WHITE,
     var strokeWidth: Float = 4f,
+    // ── Advanced Stroke (Phase 3) ──────────────────────────────────────────
+    var strokeOpacity: Float = 1f,                          // 0-1
+    var strokeCap: Paint.Cap = Paint.Cap.ROUND,            // Butt, Round, Square
+    var strokeJoin: Paint.Join = Paint.Join.ROUND,         // Miter, Round, Bevel
+    var strokeMiterLimit: Float = 4f,
+    var strokeDashPattern: FloatArray? = null,             // e.g., [5f, 5f]
+    var strokeDashPhase: Float = 0f,
+    // ── Advanced Fill (Phase 3) ───────────────────────────────────────────
+    var fillOpacity: Float = 1f,                           // 0-1
     // ── Perspective Warping ────────────────────────────────────────────────
     override var perspectiveEnabled: Boolean = false,
     override var perspectiveCorners: FloatArray = floatArrayOf(
@@ -329,6 +338,111 @@ data class PenLayer(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Path Operations (Phase 2: Split, Join, Reverse)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Membalik urutan anchor dalam path (anchor pertama jadi terakhir, dll).
+     * Juga membalik handle in/out untuk menjaga kurva tetap sama.
+     */
+    fun reversePath(): Boolean {
+        if (anchors.size < 2) return false
+        anchors.reverse()
+        // Balik handle in/out untuk setiap anchor
+        for (anchor in anchors) {
+            val tempIn = anchor.handleInX to anchor.handleInY
+            anchor.handleInX = anchor.handleOutX
+            anchor.handleInY = anchor.handleOutY
+            anchor.handleOutX = tempIn.first
+            anchor.handleOutY = tempIn.second
+        }
+        return true
+    }
+
+    /**
+     * Split path di anchor yang dipilih menjadi dua path terpisah.
+     * Anchor di index tersebut menjadi endpoint kedua path.
+     * 
+     * @param splitIndex Index anchor yang akan menjadi split point
+     * @return PenLayer baru (dari split point ke akhir), atau null jika gagal
+     */
+    fun splitPath(splitIndex: Int): PenLayer? {
+        if (splitIndex < 0 || splitIndex >= anchors.size || anchors.size < 3) {
+            return null  // Need at least 3 anchors to split meaningfully
+        }
+
+        // Create new path dengan anchor dari split index ke akhir
+        val newPath = PenLayer(
+            x = this.x,
+            y = this.y,
+            strokeColor = this.strokeColor,
+            strokeWidth = this.strokeWidth,
+            fillColor = this.fillColor,
+            fillEnabled = this.fillEnabled,
+            isClosed = false  // Split path selalu open
+        )
+
+        // Copy anchors dari split index ke akhir ke path baru
+        for (i in splitIndex until anchors.size) {
+            val anchor = anchors[i]
+            newPath.anchors.add(
+                AnchorPoint(
+                    x = anchor.x,
+                    y = anchor.y,
+                    handleInX = anchor.handleInX,
+                    handleInY = anchor.handleInY,
+                    handleOutX = anchor.handleOutX,
+                    handleOutY = anchor.handleOutY,
+                    type = anchor.type
+                )
+            )
+        }
+
+        // Hapus anchors setelah split point dari path original
+        while (anchors.size > splitIndex + 1) {
+            anchors.removeAt(anchors.size - 1)
+        }
+        this.isClosed = false  // Original path juga jadi open
+
+        return newPath
+    }
+
+    /**
+     * Join path ini dengan path lain - hubungkan endpoint path ini ke startpoint path lain.
+     * Path lain akan ditambahkan sebagai lanjutan dari path ini.
+     *
+     * @param otherPath Path yang akan digabungkan
+     * @return true jika berhasil, false jika tidak valid
+     */
+    fun joinPath(otherPath: PenLayer): Boolean {
+        if (otherPath.anchors.isEmpty() || this.anchors.isEmpty()) {
+            return false
+        }
+
+        // Copy semua anchor dari otherPath ke path ini
+        for (anchor in otherPath.anchors) {
+            this.anchors.add(
+                AnchorPoint(
+                    x = anchor.x,
+                    y = anchor.y,
+                    handleInX = anchor.handleInX,
+                    handleInY = anchor.handleInY,
+                    handleOutX = anchor.handleOutX,
+                    handleOutY = anchor.handleOutY,
+                    type = anchor.type
+                )
+            )
+        }
+
+        // Jika otherPath closed, joined path jadi closed juga
+        if (otherPath.isClosed) {
+            this.isClosed = true
+        }
+
+        return true
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Hit-Testing
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -457,8 +571,10 @@ data class PenLayer(
         if (isClosed && fillEnabled) {
             paint.style = Paint.Style.FILL
             paint.color = fillColor
+            paint.alpha = (opacity * fillOpacity).toInt().coerceIn(0, 255)
             paint.strokeWidth = 0f
             canvas.drawPath(path, paint)
+            paint.alpha = opacity.coerceIn(0, 255)  // Reset alpha
         }
 
         // ── Pass 2: Stroke dengan extrude, drop shadow, neon, emboss, atau inner shadow ────
@@ -472,10 +588,15 @@ data class PenLayer(
                     strokeColor,
                     drawContent = { c, p ->
                         p.style = Paint.Style.STROKE
+                        p.alpha = (opacity * strokeOpacity).toInt().coerceIn(0, 255)
                         p.strokeWidth = strokeWidth
-                        p.strokeJoin = Paint.Join.ROUND
-                        p.strokeCap = Paint.Cap.ROUND
+                        p.strokeJoin = strokeJoin
+                        p.strokeCap = strokeCap
+                        if (strokeDashPattern != null && strokeDashPattern!!.isNotEmpty()) {
+                            p.pathEffect = android.graphics.DashPathEffect(strokeDashPattern!!, strokeDashPhase)
+                        }
                         c.drawPath(path, p)
+                        if (strokeDashPattern != null) p.pathEffect = null
                     }
                 )
             } else if (shadowEnabled && shadowRadius > 0f) {
@@ -488,10 +609,15 @@ data class PenLayer(
                     drawContent = { c, p ->
                         p.style = Paint.Style.STROKE
                         p.color = strokeColor
+                        p.alpha = (opacity * strokeOpacity).toInt().coerceIn(0, 255)
                         p.strokeWidth = strokeWidth
-                        p.strokeJoin = Paint.Join.ROUND
-                        p.strokeCap = Paint.Cap.ROUND
+                        p.strokeJoin = strokeJoin
+                        p.strokeCap = strokeCap
+                        if (strokeDashPattern != null && strokeDashPattern!!.isNotEmpty()) {
+                            p.pathEffect = android.graphics.DashPathEffect(strokeDashPattern!!, strokeDashPhase)
+                        }
                         c.drawPath(path, p)
+                        if (strokeDashPattern != null) p.pathEffect = null
                     }
                 )
             } else if (neonEnabled) {
@@ -503,10 +629,15 @@ data class PenLayer(
                     drawContent = { c, p ->
                         p.style = Paint.Style.STROKE
                         p.color = neonColor
+                        p.alpha = (opacity * strokeOpacity).toInt().coerceIn(0, 255)
                         p.strokeWidth = strokeWidth
-                        p.strokeJoin = Paint.Join.ROUND
-                        p.strokeCap = Paint.Cap.ROUND
+                        p.strokeJoin = strokeJoin
+                        p.strokeCap = strokeCap
+                        if (strokeDashPattern != null && strokeDashPattern!!.isNotEmpty()) {
+                            p.pathEffect = android.graphics.DashPathEffect(strokeDashPattern!!, strokeDashPhase)
+                        }
                         c.drawPath(path, p)
+                        if (strokeDashPattern != null) p.pathEffect = null
                     }
                 )
             } else if (embossEnabled) {
@@ -519,26 +650,50 @@ data class PenLayer(
                     drawContentBase = { c, p ->
                         p.style = Paint.Style.STROKE
                         p.color = strokeColor
+                        p.alpha = (opacity * strokeOpacity).toInt().coerceIn(0, 255)
                         p.strokeWidth = strokeWidth
-                        p.strokeJoin = Paint.Join.ROUND
-                        p.strokeCap = Paint.Cap.ROUND
+                        p.strokeJoin = strokeJoin
+                        p.strokeCap = strokeCap
+                        if (strokeDashPattern != null && strokeDashPattern!!.isNotEmpty()) {
+                            p.pathEffect = android.graphics.DashPathEffect(strokeDashPattern!!, strokeDashPhase)
+                        }
                         c.drawPath(path, p)
+                        if (strokeDashPattern != null) p.pathEffect = null
                     },
                     drawContentEmboss = { c, p ->
                         p.style = Paint.Style.STROKE
+                        p.alpha = (opacity * strokeOpacity).toInt().coerceIn(0, 255)
                         p.strokeWidth = strokeWidth
-                        p.strokeJoin = Paint.Join.ROUND
-                        p.strokeCap = Paint.Cap.ROUND
+                        p.strokeJoin = strokeJoin
+                        p.strokeCap = strokeCap
+                        if (strokeDashPattern != null && strokeDashPattern!!.isNotEmpty()) {
+                            p.pathEffect = android.graphics.DashPathEffect(strokeDashPattern!!, strokeDashPhase)
+                        }
                         c.drawPath(path, p)
+                        if (strokeDashPattern != null) p.pathEffect = null
                     }
                 )
             } else {
                 paint.style = Paint.Style.STROKE
                 paint.color = strokeColor
+                paint.alpha = (opacity * strokeOpacity).toInt().coerceIn(0, 255)
                 paint.strokeWidth = strokeWidth
-                paint.strokeJoin = Paint.Join.ROUND
-                paint.strokeCap = Paint.Cap.ROUND
+                paint.strokeJoin = strokeJoin
+                paint.strokeCap = strokeCap
+                paint.strokeMiter = strokeMiterLimit
+                
+                // Apply dash pattern if set
+                if (strokeDashPattern != null && strokeDashPattern!!.isNotEmpty()) {
+                    paint.pathEffect = android.graphics.DashPathEffect(strokeDashPattern!!, strokeDashPhase)
+                }
+                
                 canvas.drawPath(path, paint)
+                
+                // Clear pathEffect for next draws
+                if (strokeDashPattern != null) {
+                    paint.pathEffect = null
+                }
+                paint.alpha = opacity.coerceIn(0, 255)  // Reset alpha
             }
         }
 
@@ -552,10 +707,15 @@ data class PenLayer(
                 strokeColor,
                 drawContent = { c, p ->
                     p.style = Paint.Style.STROKE
+                    p.alpha = (opacity * strokeOpacity).toInt().coerceIn(0, 255)
                     p.strokeWidth = strokeWidth
-                    p.strokeJoin = Paint.Join.ROUND
-                    p.strokeCap = Paint.Cap.ROUND
+                    p.strokeJoin = strokeJoin
+                    p.strokeCap = strokeCap
+                    if (strokeDashPattern != null && strokeDashPattern!!.isNotEmpty()) {
+                        p.pathEffect = android.graphics.DashPathEffect(strokeDashPattern!!, strokeDashPhase)
+                    }
                     c.drawPath(path, p)
+                    if (strokeDashPattern != null) p.pathEffect = null
                 }
             )
         }

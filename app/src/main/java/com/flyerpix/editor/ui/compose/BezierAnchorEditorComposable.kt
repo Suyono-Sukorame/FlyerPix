@@ -95,6 +95,19 @@ fun BezierAnchorEditorPanel(
                             .background(Color(PanelHandle), RoundedCornerShape(50))
                     )
 
+                    // Tab selector (Phase 3)
+                    var activeTab by remember { mutableStateOf("edit") }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        TabButton("Edit", activeTab == "edit", { activeTab = "edit" }, modifier = Modifier.weight(1f))
+                        TabButton("Stroke", activeTab == "stroke", { activeTab = "stroke" }, modifier = Modifier.weight(1f))
+                    }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -107,6 +120,8 @@ fun BezierAnchorEditorPanel(
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            if (activeTab == "edit") {
+                                // ── EDIT TAB (original anchor editing content) ──
                             Divider(color = Color(PanelDivider), thickness = 1.dp)
                             Spacer(modifier = Modifier.height(4.dp))
 
@@ -235,6 +250,43 @@ fun BezierAnchorEditorPanel(
 
                             Spacer(modifier = Modifier.height(6.dp))
 
+                            // Path Operations (Phase 2)
+                            Text(
+                                text = "Path Operations",
+                                style = MaterialTheme.typography.caption,
+                                color = Color(PanelTextSecondary),
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                SmallIconButton(
+                                    label = "Reverse",
+                                    icon = "↻",
+                                    onClick = {
+                                        penLayer.reversePath()
+                                        onAnchorChanged()
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                SmallIconButton(
+                                    label = "Close",
+                                    icon = "◯",
+                                    onClick = {
+                                        if (penLayer.isClosed) penLayer.openPath()
+                                        else penLayer.closePath()
+                                        onAnchorChanged()
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
                             // Anchor operations
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -274,6 +326,11 @@ fun BezierAnchorEditorPanel(
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
+                        } // Close edit tab
+                        else if (activeTab == "stroke") {
+                            // ── STROKE TAB (stroke & fill settings) ──
+                            StrokeAdvancedPanel(penLayer = penLayer, onChanged = onAnchorChanged)
+                        }
                         }
 
                         // Right-side button
@@ -492,6 +549,34 @@ private fun HandleDistanceDisplay(
 }
 
 /**
+ * Tombol kecil untuk operasi path (icon + label).
+ */
+@Composable
+private fun SmallIconButton(
+    label: String,
+    icon: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(32.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = Color(0xFF4CAF50)
+        ),
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Text(
+            text = "$icon $label",
+            color = Color.White,
+            style = MaterialTheme.typography.caption,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 10.sp
+        )
+    }
+}
+
+/**
  * Baris pengaturan posisi anchor (Label | Slider | Nilai).
  */
 @Composable
@@ -530,6 +615,34 @@ private fun AnchorPositionRow(
             color = Color(PanelTextSecondary),
             textAlign = TextAlign.End,
             modifier = Modifier.width(50.dp)
+        )
+    }
+}
+
+/**
+ * Tab button untuk switch antara Edit dan Stroke tabs.
+ */
+@Composable
+private fun TabButton(
+    label: String,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(28.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = if (isActive) Color(0xFF1769FF) else Color(0xFFE8EAED)
+        ),
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Text(
+            text = label,
+            color = if (isActive) Color.White else Color(PanelTextSecondary),
+            style = MaterialTheme.typography.caption,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp
         )
     }
 }

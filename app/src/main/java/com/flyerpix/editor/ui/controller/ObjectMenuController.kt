@@ -25,6 +25,7 @@ import com.flyerpix.editor.canvas.model.PenLayer
 import com.flyerpix.editor.canvas.model.ShapeLayer
 import com.flyerpix.editor.canvas.model.ShapeType
 import com.flyerpix.editor.canvas.model.StrokeStyle
+import com.flyerpix.editor.canvas.model.TextOnPathLayer
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 import com.flyerpix.editor.ui.EditorActivity
 import com.flyerpix.editor.ui.compose.*
@@ -966,5 +967,57 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
             // User selected a PenLayer with anchors - enable edit mode
             showComposeBezierAnchorEditor(layer)
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Text on Path Editor (Phase 5)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Show Text on Path editor panel (Phase 5 - killer feature).
+     */
+    fun showTextOnPathEditor(textOnPathLayer: com.flyerpix.editor.canvas.model.TextOnPathLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = "obj_text_on_path"
+        updateToolStripSelection("obj_text_on_path")
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = 500
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            var refreshTrigger by remember { mutableStateOf(0) }
+
+            TextOnPathEditorPanel(
+                textOnPathLayer = textOnPathLayer,
+                onTextChanged = {
+                    canvas.invalidate()
+                    refreshTrigger++
+                },
+                onExitEditMode = {
+                    closeTextOnPathEditor()
+                },
+                maxHeightPx = sheetMaxH
+            )
+
+            LaunchedEffect(refreshTrigger) {
+                // Trigger recomposition
+            }
+        }
+    }
+
+    /**
+     * Close Text on Path editor panel.
+     */
+    private fun closeTextOnPathEditor() {
+        deselect(restoreStrip = true)
     }
 }
