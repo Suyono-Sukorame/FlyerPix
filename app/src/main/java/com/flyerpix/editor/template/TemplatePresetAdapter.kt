@@ -58,12 +58,29 @@ class TemplatePresetAdapter(
             if (preset.isMyProjects) {
                 tvPreviewText.visibility = View.GONE
                 imgIcon.visibility = View.VISIBLE
+                itemView.findViewById<View>(R.id.presetPreviewOverlay).visibility = View.GONE
                 imgIcon.setImageResource(R.drawable.ic_outline_photo_24px)
                 previewContainer.setBackgroundColor(0xFFE3ECF9.toInt())
             } else {
                 imgIcon.visibility = View.GONE
                 tvPreviewText.visibility = View.VISIBLE
-                tvPreviewText.text = if (preset.id == "keep_calm") "KEEP\nCALM" else if (preset.id == "three_d") "3D" else "New\nText"
+                tvPreviewText.text = preset.previewText
+                tvPreviewText.setTextColor(preset.previewTextColor)
+                tvPreviewText.textSize = preset.previewTextSize
+                preset.previewTypeface?.let { tvPreviewText.typeface = it }
+
+                if (preset.id == "mountain_flyer") {
+                    previewContainer.setBackgroundResource(R.drawable.bg_template_mountain_pixabay)
+                    itemView.findViewById<View>(R.id.presetPreviewOverlay).apply {
+                        visibility = View.VISIBLE
+                        background = GradientDrawable(
+                            GradientDrawable.Orientation.TOP_BOTTOM,
+                            intArrayOf(Color.TRANSPARENT, Color.argb(175, 0, 0, 0))
+                        )
+                    }
+                } else {
+                    itemView.findViewById<View>(R.id.presetPreviewOverlay).visibility = View.GONE
+                }
 
                 val gd = GradientDrawable().apply {
                     if (preset.isRadial) {
@@ -76,7 +93,9 @@ class TemplatePresetAdapter(
                     colors = preset.previewBgColors
                     cornerRadius = 8f
                 }
-                previewContainer.background = gd
+                if (preset.id != "mountain_flyer") {
+                    previewContainer.background = gd
+                }
             }
 
             itemView.setOnClickListener {

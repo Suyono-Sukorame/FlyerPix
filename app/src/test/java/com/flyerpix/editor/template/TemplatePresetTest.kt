@@ -63,7 +63,7 @@ class TemplatePresetTest {
     }
 
     @Test
-    fun `test applyDefaultPixelLabState configures radial gradient and New Text layer`() {
+    fun `test applyDefaultPixelLabState configures radial gradient and modern headline`() {
         TemplatePreset.applyDefaultPixelLabState(canvasView)
 
         // 1. Verifikasi background gradasi radial
@@ -74,11 +74,12 @@ class TemplatePresetTest {
         assertEquals("PixelLab Default", bg.gradient?.name)
         assertArrayEquals(TemplatePreset.DEFAULT_RADIAL_COLORS, bg.gradient?.colors)
 
-        // 2. Verifikasi layer teks New Text
+        // 2. Verifikasi layer teks modern
         assertEquals(1, canvasView.layers.size)
         val textLayer = canvasView.layers.first() as TextLayer
-        assertEquals("New Text", textLayer.text)
+        assertEquals("Create\nSomething", textLayer.text)
         assertEquals(Color.WHITE, textLayer.textColor)
+        assertTrue(textLayer.textSize >= 32f)
         assertEquals(canvasView.selectedLayer, textLayer)
     }
 
@@ -119,5 +120,27 @@ class TemplatePresetTest {
         val bottom = canvasView.layers[1] as TextLayer
         assertEquals("TOP TEXT", top.text)
         assertEquals("BOTTOM TEXT", bottom.text)
+    }
+
+    @Test
+    fun `test applying emboss preset enables relief styling`() {
+        val embossPreset = TemplatePreset.getBuiltinPresets().first { it.id == "emboss" }
+        embossPreset.applyToCanvas(canvasView)
+
+        val textLayer = canvasView.layers.first() as TextLayer
+        assertTrue(textLayer.embossEnabled)
+        assertEquals(5f, textLayer.embossBevel, 0.01f)
+        assertEquals("MAKE\nAN IMPACT", textLayer.text)
+    }
+
+    @Test
+    fun `test applying neon preset enables glow styling`() {
+        val neonPreset = TemplatePreset.getBuiltinPresets().first { it.id == "neon" }
+        neonPreset.applyToCanvas(canvasView)
+
+        val textLayer = canvasView.layers.first() as TextLayer
+        assertTrue(textLayer.neonEnabled)
+        assertEquals(0xFFFF4FD8.toInt(), textLayer.neonColor)
+        assertEquals("LIGHT\nIT UP", textLayer.text)
     }
 }

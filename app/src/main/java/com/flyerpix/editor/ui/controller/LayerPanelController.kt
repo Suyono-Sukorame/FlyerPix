@@ -62,7 +62,17 @@ class LayerPanelController(
                 showSnackbar("Layer deleted")
             },
             onStartDrag = { vh -> itemTouchHelper?.startDrag(vh) },
-            onCheckedChange = { _, _ -> }
+            onCheckedChange = { _, _ -> },
+            backgroundProvider = { canvas.canvasBackground },
+            backgroundVisibilityProvider = { canvas.isCanvasBackgroundVisible },
+            onToggleBackgroundVisibility = {
+                canvas.isCanvasBackgroundVisible = !canvas.isCanvasBackgroundVisible
+                canvas.invalidate()
+                adapter.submitLayers(canvas.layers, canvas.selectedLayer)
+            },
+            onEditBackground = {
+                showSnackbar("Edit background from the Canvas menu")
+            }
         )
 
         binding.rvAuthenticLayers.apply {

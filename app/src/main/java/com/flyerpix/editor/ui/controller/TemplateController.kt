@@ -1,10 +1,12 @@
 package com.flyerpix.editor.ui.controller
 
 import android.app.Activity
+import android.graphics.Color
 import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 import com.flyerpix.editor.template.TemplatePreset
 import com.flyerpix.editor.template.TemplatePresetAdapter
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * Controller untuk mengelola template presets dan project actions.
@@ -58,13 +60,33 @@ class TemplateController(
             // Preset khusus "My Projects" membuka project manager
             onProjectOpen()
         } else {
-            // Apply preset normal ke canvas. Seleksi layer di-suppress sementara
-            // agar auto-switch menu navigasi (mis. ke Text) tidak menyambar:
-            // halaman Presets tetap tampil, teks preset tetap terpilih.
-            pixelCanvasView.runWithLayerSelectSuppressed {
-                preset.applyToCanvas(pixelCanvasView)
+            val apply = {
+                pixelCanvasView.runWithLayerSelectSuppressed {
+                    preset.applyToCanvas(pixelCanvasView)
+                }
+                showSnackbar("Preset '${preset.title}' applied")
             }
-            showSnackbar("Preset '${preset.title}' applied")
+            if (pixelCanvasView.layers.isEmpty()) {
+                apply()
+            } else {
+                val dialog = MaterialAlertDialogBuilder(activity, com.flyerpix.editor.R.style.AppAlertDialog)
+                    .setTitle("Apply template?")
+                    .setMessage("Current canvas will be replaced by '${preset.title}'.")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Apply") { _, _ -> apply() }
+                    .create()
+                dialog.setOnShowListener {
+                    val density = activity.resources.displayMetrics.density
+                    val compactWidth = (320f * density).toInt()
+                        .coerceAtMost((activity.resources.displayMetrics.widthPixels * 0.86f).toInt())
+                    dialog.window?.setLayout(compactWidth, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+                    dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
+                        ?.setTextColor(Color.rgb(31, 42, 68))
+                    dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+                        ?.setTextColor(Color.rgb(23, 105, 255))
+                }
+                dialog.show()
+            }
         }
     }
 

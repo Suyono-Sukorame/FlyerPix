@@ -88,6 +88,11 @@ class PixelCanvasView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    init {
+        isFocusable = true
+        isFocusableInTouchMode = true
+    }
+
     /**
      * Daftar seluruh layer pada kanvas, diurutkan dari z-index terendah (bawah)
      * ke z-index tertinggi (atas).
@@ -162,6 +167,9 @@ class PixelCanvasView @JvmOverloads constructor(
     private var canvasZoom = 1f
     private var canvasPanX = 0f
     private var canvasPanY = 0f
+    private val zoomScrollbarPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var activeZoomScrollbar = 0
+    private var zoomScrollbarTouchOffset = 0f
     // Zoom tidak boleh di bawah 100% (user memilih model zoom naik saja).
     private val minCanvasZoom = 1f
     private val maxCanvasZoom = 7f
@@ -188,6 +196,7 @@ class PixelCanvasView @JvmOverloads constructor(
         val clamped = zoom.coerceIn(minCanvasZoom, maxCanvasZoom)
         if (canvasZoom != clamped) {
             canvasZoom = clamped
+            clampCanvasPan()
             onZoomChangedListener?.invoke(canvasZoom)
             invalidate()
         }
@@ -205,6 +214,7 @@ class PixelCanvasView @JvmOverloads constructor(
         canvasZoom = clamped
         canvasPanX = focusX - cx - (worldX - cx) * clamped
         canvasPanY = focusY - cy - (worldY - cy) * clamped
+        clampCanvasPan()
         onZoomChangedListener?.invoke(canvasZoom)
         invalidate()
     }
@@ -231,7 +241,10 @@ class PixelCanvasView @JvmOverloads constructor(
     fun setEditorZoomMode(active: Boolean) {
         if (editorZoomMode == active) return
         editorZoomMode = active
-        if (active) resetZoom()
+        if (active) {
+            resetZoom()
+            requestFocus()
+        }
         // Batalkan gestur objek yang mungkin masih berjalan saat mode berubah.
         isDragging = false
         currentTouchState = TouchState.IDLE
@@ -391,6 +404,12 @@ class PixelCanvasView @JvmOverloads constructor(
      * Konfigurasi objek latar belakang kanvas terpadu (Transparan, Solid Color, Gradient).
      */
     var canvasBackground: CanvasBackground = CanvasBackground.solid(Color.WHITE)
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    var isCanvasBackgroundVisible: Boolean = true
         set(value) {
             field = value
             invalidate()
@@ -1206,12 +1225,14 @@ class PixelCanvasView @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         updateViewport()
+        clampCanvasPan()
     }
 
     /**
      * Merender latar belakang kanvas independen (transparan, warna solid, atau gradasi) ke dalam area [vp] (Prompt 44).
      */
     fun drawBackgroundOnCanvas(canvas: Canvas, vp: RectF) {
+        if (!isCanvasBackgroundVisible) return
         when (canvasBackground.mode) {
             CanvasBackgroundMode.TRANSPARENT -> {
                 canvas.drawRect(vp, checkerboardPaint)
@@ -1448,6 +1469,107 @@ class PixelCanvasView @JvmOverloads constructor(
         return RectF(0f, 0f, width.toFloat(), height.toFloat())
     }
 
+    private fun canvasPanBounds(vp: RectF = viewportRectOrFull()): FloatArray {
+        val cx = width / 2f
+        val cy = height / 2f
+        val transformedLeft = cx + (vp.left - cx) * canvasZoom
+        val transformedRight = cx + (vp.right - cx) * canvasZoom
+        val transformedTop = cy + (vp.top - cy) * canvasZoom
+        val transformedBottom = cy + (vp.bottom - cy) * canvasZoom
+        val horizontalRange = transformedRight - transformedLeft - width
+        val verticalRange = transformedBottom - transformedTop - height
+
+        val minPanX = if (horizontalRange > 0f) width - transformedRight else 0f
+        val maxPanX = if (horizontalRange > 0f) -transformedLeft else 0f
+        val minPanY = if (verticalRange > 0f) height - transformedBottom else 0f
+        val maxPanY = if (verticalRange > 0f) -transformedTop else 0f
+        return floatArrayOf(minPanX, maxPanX, minPanY, maxPanY)
+    }
+
+    private fun clampCanvasPan() {
+        val bounds = canvasPanBounds()
+        canvasPanX = canvasPanX.coerceIn(bounds[0], bounds[1])
+        canvasPanY = canvasPanY.coerceIn(bounds[2], bounds[3])
+    }
+
+    /** Returns trackStart, trackEnd, thumbStart and thumbEnd for one scrollbar. */
+    private fun zoomScrollbarMetrics(horizontal: Boolean): FloatArray? {
+        if (!editorZoomMode || canvasZoom <= minCanvasZoom || width <= 0 || height <= 0) return null
+        val vp = viewportRectOrFull()
+        val bounds = canvasPanBounds(vp)
+        val minPan = if (horizontal) bounds[0] else bounds[2]
+        val maxPan = if (horizontal) bounds[1] else bounds[3]
+        if (maxPan <= minPan) return null
+
+        val density = resources.displayMetrics.density
+        val inset = 8f * density
+        val thickness = 4f * density
+        val minimumThumb = 24f * density
+        val trackStart = inset
+        val trackEnd = (if (horizontal) width else height).toFloat() - inset - thickness
+        val trackLength = trackEnd - trackStart
+        val contentLength = if (horizontal) vp.width() * canvasZoom else vp.height() * canvasZoom
+        val viewportLength = if (horizontal) width.toFloat() else height.toFloat()
+        val thumbLength = (trackLength * (viewportLength / contentLength))
+            .coerceIn(minimumThumb, trackLength)
+        val progress = ((if (horizontal) canvasPanX else canvasPanY) - minPan) / (maxPan - minPan)
+        val thumbStart = trackStart + (trackLength - thumbLength) * progress.coerceIn(0f, 1f)
+        return floatArrayOf(trackStart, trackEnd, thumbStart, thumbStart + thumbLength)
+    }
+
+    private fun drawZoomScrollbars(canvas: Canvas) {
+        val horizontal = zoomScrollbarMetrics(horizontal = true)
+        val vertical = zoomScrollbarMetrics(horizontal = false)
+        if (horizontal == null && vertical == null) return
+
+        val density = resources.displayMetrics.density
+        val inset = 8f * density
+        val thickness = 4f * density
+        zoomScrollbarPaint.color = Color.argb(72, 255, 255, 255)
+        horizontal?.let {
+            canvas.drawRoundRect(
+                it[0], height - inset - thickness, it[1], height - inset,
+                thickness, thickness, zoomScrollbarPaint
+            )
+        }
+        vertical?.let {
+            canvas.drawRoundRect(
+                width - inset - thickness, it[0], width - inset, it[1],
+                thickness, thickness, zoomScrollbarPaint
+            )
+        }
+
+        zoomScrollbarPaint.color = Color.argb(220, 255, 255, 255)
+        horizontal?.let {
+            canvas.drawRoundRect(
+                it[2], height - inset - thickness, it[3], height - inset,
+                thickness, thickness, zoomScrollbarPaint
+            )
+        }
+        vertical?.let {
+            canvas.drawRoundRect(
+                width - inset - thickness, it[2], width - inset, it[3],
+                thickness, thickness, zoomScrollbarPaint
+            )
+        }
+    }
+
+    private fun moveFromZoomScrollbar(horizontal: Boolean, coordinate: Float, touchOffset: Float) {
+        val metrics = zoomScrollbarMetrics(horizontal) ?: return
+        val bounds = canvasPanBounds()
+        val trackLength = metrics[1] - metrics[0]
+        val thumbLength = metrics[3] - metrics[2]
+        val progress = ((coordinate - touchOffset - metrics[0]) /
+            (trackLength - thumbLength)).coerceIn(0f, 1f)
+        if (horizontal) {
+            canvasPanX = bounds[0] + (bounds[1] - bounds[0]) * progress
+        } else {
+            canvasPanY = bounds[2] + (bounds[3] - bounds[2]) * progress
+        }
+        clampCanvasPan()
+        invalidate()
+    }
+
     /**
      * Ambil buffer output blur dari double-buffer (buat saat pertama/ukuran
      * berubah), bergantian tiap rebuild untuk menghindari alokasi bitmap
@@ -1593,6 +1715,7 @@ class PixelCanvasView @JvmOverloads constructor(
             }
         } finally {
             canvas.restoreToCount(drawSave)
+            drawZoomScrollbars(canvas)
         }
     }
 
@@ -1923,6 +2046,24 @@ class PixelCanvasView @JvmOverloads constructor(
         return null
     }
 
+    private fun screenToCanvasPoint(screenX: Float, screenY: Float): Pair<Float, Float> {
+        if (canvasZoom == 1f && canvasPanX == 0f && canvasPanY == 0f) {
+            return screenX to screenY
+        }
+        val cx = width / 2f
+        val cy = height / 2f
+        canvasTransformMatrix.reset()
+        canvasTransformMatrix.postTranslate(cx + canvasPanX, cy + canvasPanY)
+        canvasTransformMatrix.postScale(canvasZoom, canvasZoom)
+        canvasTransformMatrix.postTranslate(-cx, -cy)
+        if (!canvasTransformMatrix.invert(canvasTransformInverse)) {
+            return screenX to screenY
+        }
+        val point = floatArrayOf(screenX, screenY)
+        canvasTransformInverse.mapPoints(point)
+        return point[0] to point[1]
+    }
+
     private var lastTouchX = 0f
     private var lastTouchY = 0f
     private var isDragging = false
@@ -1984,7 +2125,27 @@ class PixelCanvasView @JvmOverloads constructor(
         }
     })
 
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (editorZoomMode && event.actionMasked == MotionEvent.ACTION_SCROLL) {
+            val verticalDelta = event.getAxisValue(MotionEvent.AXIS_VSCROLL)
+            val horizontalDelta = event.getAxisValue(MotionEvent.AXIS_HSCROLL)
+            val scrollDelta = if (verticalDelta != 0f) verticalDelta else horizontalDelta
+            if (scrollDelta != 0f && !scrollDelta.isNaN() && !scrollDelta.isInfinite()) {
+                setCanvasZoomAt(
+                    canvasZoom + scrollDelta.coerceIn(-1f, 1f) * zoomStep,
+                    event.x,
+                    event.y
+                )
+                return true
+            }
+        }
+        return super.onGenericMotionEvent(event)
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        val screenTouchX = event.x
+        val screenTouchY = event.y
+
         // 0.1. Edit Mode: selaraskan koordinat sentuh dengan transform viewport
         // (zoom + pan) yang dipakai di onDraw, sehingga objek tetap bisa dipilih
         // & diedit walau kanvas sedang diperbesar/digeser. Zoom Mode memakai
@@ -2073,6 +2234,36 @@ class PixelCanvasView @JvmOverloads constructor(
         if (editorZoomMode) {
             zoomCanvasScaleDetector.onTouchEvent(event)
 
+            val density = resources.displayMetrics.density
+            val scrollbarHitSize = 16f * density
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                val horizontal = zoomScrollbarMetrics(horizontal = true)
+                val vertical = zoomScrollbarMetrics(horizontal = false)
+                if (horizontal != null && event.y >= height - 8f * density - scrollbarHitSize &&
+                    event.x >= horizontal[0] - scrollbarHitSize && event.x <= horizontal[1] + scrollbarHitSize
+                ) {
+                    activeZoomScrollbar = 1
+                    zoomScrollbarTouchOffset = if (event.x in horizontal[2]..horizontal[3]) {
+                        event.x - horizontal[2]
+                    } else {
+                        (horizontal[3] - horizontal[2]) / 2f
+                    }
+                    moveFromZoomScrollbar(true, event.x, zoomScrollbarTouchOffset)
+                } else if (vertical != null && event.x >= width - 8f * density - scrollbarHitSize &&
+                    event.y >= vertical[0] - scrollbarHitSize && event.y <= vertical[1] + scrollbarHitSize
+                ) {
+                    activeZoomScrollbar = 2
+                    zoomScrollbarTouchOffset = if (event.y in vertical[2]..vertical[3]) {
+                        event.y - vertical[2]
+                    } else {
+                        (vertical[3] - vertical[2]) / 2f
+                    }
+                    moveFromZoomScrollbar(false, event.y, zoomScrollbarTouchOffset)
+                } else {
+                    activeZoomScrollbar = 0
+                }
+            }
+
             // Satu jari hanya menggeser viewport; object tetap tidak interaktif.
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -2080,17 +2271,25 @@ class PixelCanvasView @JvmOverloads constructor(
                     lastTouchY = event.y
                 }
                 MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_POINTER_UP -> {
+                    activeZoomScrollbar = 0
                     // Jumlah jari berubah (mulai/selesai pinch): segarkan posisi acuan
                     // agar pan tidak meloncat setelah pinch selesai.
                     lastTouchX = event.x
                     lastTouchY = event.y
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    if (!zoomCanvasScaleDetector.isInProgress) {
+                    if (activeZoomScrollbar != 0 && !zoomCanvasScaleDetector.isInProgress) {
+                        moveFromZoomScrollbar(
+                            activeZoomScrollbar == 1,
+                            if (activeZoomScrollbar == 1) event.x else event.y,
+                            zoomScrollbarTouchOffset
+                        )
+                    } else if (!zoomCanvasScaleDetector.isInProgress) {
                         val dx = event.x - lastTouchX
                         val dy = event.y - lastTouchY
                         canvasPanX += dx
                         canvasPanY += dy
+                        clampCanvasPan()
                         invalidate()
                     }
                     lastTouchX = event.x
@@ -2099,6 +2298,7 @@ class PixelCanvasView @JvmOverloads constructor(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     lastTouchX = 0f
                     lastTouchY = 0f
+                    activeZoomScrollbar = 0
                 }
             }
             if (zoomCanvasScaleDetector.isInProgress) invalidate()
@@ -2354,7 +2554,8 @@ class PixelCanvasView @JvmOverloads constructor(
                     }
                 }
 
-                val touchedLayer = findTopLayerAt(event.x, event.y)
+                val (canvasTouchX, canvasTouchY) = screenToCanvasPoint(screenTouchX, screenTouchY)
+                val touchedLayer = findTopLayerAt(canvasTouchX, canvasTouchY)
                 if (touchedLayer != null) {
                     if (!touchedLayer.isLocked) {
                         selectedLayer = touchedLayer

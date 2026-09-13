@@ -51,7 +51,9 @@
             <com.flyerpix.editor.canvas.PixelCanvasView
                     android:id="@+id/pixelCanvasView"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
+                    android:layout_height="match_parent"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
 
         </com.google.android.material.card.MaterialCardView>
 
@@ -867,7 +869,7 @@
             android:id="@+id/layoutLayerSidePanel"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:background="#99FFFFFF"
+            android:background="#40FFFFFF"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="@+id/guidelineCenterVertical"
             app:layout_constraintTop_toTopOf="parent"

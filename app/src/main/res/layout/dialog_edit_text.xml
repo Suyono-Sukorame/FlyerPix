@@ -15,31 +15,27 @@
         android:paddingStart="6dp"
         android:paddingEnd="6dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnClearText"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="36dp"
-            android:layout_height="26dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:minWidth="0dp"
-            android:padding="0dp"
-            android:text="TT"
-            android:textColor="@android:color/white"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+        <ImageButton
+            android:id="@+id/btnTextIndicator"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Text editor"
+            android:padding="6dp"
+            android:src="@drawable/ic_text_fields_24px"
+            android:clickable="true"
+            android:focusable="true"
+            app:tint="@android:color/white" />
 
-        <TextView
-            android:id="@+id/dialogTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="@string/edit_text_title"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
+        <ImageButton
+            android:id="@+id/btnClearText"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Clear text"
+            android:padding="6dp"
+            android:src="@drawable/ic_delete_24px"
+            app:tint="@android:color/white" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnTextColor"
@@ -50,7 +46,8 @@
             android:paddingHorizontal="6dp"
             android:text="Color"
             android:textColor="@android:color/white"
-            android:textSize="9sp" />
+            android:textSize="9sp"
+            android:visibility="gone" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnTextSize"
@@ -61,7 +58,8 @@
             android:paddingHorizontal="6dp"
             android:text="Size"
             android:textColor="@android:color/white"
-            android:textSize="9sp" />
+            android:textSize="9sp"
+            android:visibility="gone" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnMoreText"
@@ -72,10 +70,41 @@
             android:paddingHorizontal="6dp"
             android:text="More"
             android:textColor="@android:color/white"
-            android:textSize="9sp" />
+            android:textSize="9sp"
+            android:visibility="gone" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancel"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp"
+            android:text="CANCEL"
+            android:textColor="@android:color/white"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOk"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp"
+            android:text="OK"
+            android:textColor="@android:color/white"
+            android:textSize="10sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <LinearLayout
+        android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/brand_blue"
@@ -97,6 +126,7 @@
             android:text="B"
             android:textColor="@android:color/white"
             android:textSize="13sp"
+            android:visibility="gone"
             android:textStyle="bold" />
 
         <com.google.android.material.button.MaterialButton
@@ -112,6 +142,7 @@
             android:text="I"
             android:textColor="@android:color/white"
             android:textSize="13sp"
+            android:visibility="gone"
             android:textStyle="italic" />
 
         <com.google.android.material.button.MaterialButton
@@ -126,7 +157,8 @@
             android:padding="0dp"
             android:text="U"
             android:textColor="@android:color/white"
-            android:textSize="13sp" />
+            android:textSize="13sp"
+            android:visibility="gone" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStrikethrough"
@@ -140,36 +172,9 @@
             android:padding="0dp"
             android:text="S"
             android:textColor="@android:color/white"
-            android:textSize="13sp" />
+            android:textSize="13sp"
+            android:visibility="gone" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCancel"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="24dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="8dp"
-            android:text="CANCEL"
-            android:textColor="@android:color/white"
-            android:textSize="10sp"
-            android:textStyle="bold" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOk"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="24dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="8dp"
-            android:text="OK"
-            android:textColor="@android:color/white"
-            android:textSize="10sp"
-            android:textStyle="bold" />
     </LinearLayout>
 
     <LinearLayout

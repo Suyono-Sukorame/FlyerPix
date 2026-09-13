@@ -171,6 +171,8 @@
 
     <style name="AppAlertDialog" parent="Theme.MaterialComponents.Light.Dialog.Alert">
         <item name="android:colorPrimary">@color/brand_blue</item>
+        <item name="colorOnSurface">@color/brand_navy</item>
+        <item name="android:textColorPrimary">@color/brand_navy</item>
     </style>
 
 </resources>

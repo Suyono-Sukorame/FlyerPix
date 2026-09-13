@@ -814,7 +814,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             binding.effectsMenuPanel,
             binding.paletteFab,
             binding.eyedropperFab,
-            binding.cropFab
+            binding.cropFab,
+            binding.layoutAuthenticLayerOverlay
         ).forEach(::setDescendantsEnabled)
     }
 

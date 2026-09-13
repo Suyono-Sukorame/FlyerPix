@@ -269,6 +269,13 @@ class EditTextDialog(
         binding.btnItalic.setOnClickListener { toggleStyle(Typeface.ITALIC) }
         binding.btnUnderline.setOnClickListener { toggleUnderline() }
         binding.btnStrikethrough.setOnClickListener { toggleStrikethrough() }
+        binding.btnTextIndicator.setOnClickListener {
+            val currentText = binding.etTextInput.text?.toString().orEmpty()
+            val shouldUppercase = currentText != currentText.uppercase()
+            applyTransformation { value ->
+                if (shouldUppercase) value.uppercase() else value.lowercase()
+            }
+        }
 
         listOf(
             binding.btnBold,
