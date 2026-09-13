@@ -2,6 +2,7 @@ package com.flyerpix.editor.font
 
 import android.graphics.Color
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.flyerpix.editor.databinding.ItemFontPickerBinding
@@ -36,17 +37,19 @@ class FontPickerAdapter(
 
             // Indikator visual seleksi font
             if (isSelected) {
-                cardFont.setCardBackgroundColor(Color.parseColor("#EAF7FF"))
-                cardFont.strokeColor = Color.parseColor("#1E88E5")
-                cardFont.strokeWidth = 2
+                cardFont.setCardBackgroundColor(Color.parseColor("#EEF6FF"))
+                cardFont.strokeColor = Color.parseColor("#1769FF")
+                cardFont.strokeWidth = (holder.itemView.resources.displayMetrics.density * 1).toInt()
                 cardFont.cardElevation = 1f
-                tvFontName.setTextColor(Color.parseColor("#1E88E5"))
+                tvFontName.setTextColor(Color.parseColor("#1769FF"))
+                ivFontSelected.visibility = View.VISIBLE
             } else {
                 cardFont.setCardBackgroundColor(Color.WHITE)
                 cardFont.strokeColor = Color.parseColor("#E3E8F0")
-                cardFont.strokeWidth = 0
+                cardFont.strokeWidth = (holder.itemView.resources.displayMetrics.density * 1).toInt()
                 cardFont.cardElevation = 0f
                 tvFontName.setTextColor(Color.parseColor("#26344D"))
+                ivFontSelected.visibility = View.GONE
             }
 
             root.setOnClickListener {

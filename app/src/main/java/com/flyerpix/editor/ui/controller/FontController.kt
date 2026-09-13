@@ -2,7 +2,9 @@ package com.flyerpix.editor.ui.controller
 
 import android.app.Activity
 import android.app.Dialog
+import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.view.LayoutInflater
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -96,6 +98,7 @@ class FontController(
     fun openFontPicker(textLayer: TextLayer) {
         val dialogBinding = DialogFontPickerBinding.inflate(LayoutInflater.from(activity))
         val originalTypeface = textLayer.typeface
+        val originalFontName = textLayer.fontName
         var confirmed = false
         val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(activity)
             .setView(dialogBinding.root)
@@ -106,6 +109,7 @@ class FontController(
             applyFont(textLayer, fontItem)
             FontManager.recordRecent(activity, fontItem.name)
             dialogBinding.tvFontPreview.typeface = fontItem.typeface
+            dialogBinding.tvSelectedFontName.text = fontItem.name
             pixelCanvasView.invalidate()
         }
         dialogPreview = dialogBinding.tvFontPreview
@@ -113,7 +117,10 @@ class FontController(
         dialogBinding.rvFontPicker.adapter = dialogAdapter
         dialogBinding.tvFontPreview.text = textLayer.text.ifBlank { "New Text" }
         dialogBinding.tvFontPreview.typeface = originalTypeface
-        textLayer.fontName?.let { dialogAdapter.setSelectedFont(it) }
+        val initialFont = FontManager.findFont(textLayer.fontName)
+            ?: FontManager.getFonts().find { fontItem -> fontItem.typeface == originalTypeface }
+        dialogBinding.tvSelectedFontName.text = initialFont?.name ?: "Current font"
+        initialFont?.name?.let { dialogAdapter.setSelectedFont(it) }
 
         var activeFontFilter: (FontItem) -> Boolean = { it.category != "My Fonts" }
         var activeFontLabel = "Basic"
@@ -125,7 +132,7 @@ class FontController(
             val fonts = FontManager.getFonts().filter(filter).filter { font ->
                 query.isBlank() || font.name.contains(query, ignoreCase = true)
             }
-            dialogBinding.tvFontCategory.text = label
+            dialogBinding.tvFontCategory.text = label.uppercase()
             dialogAdapter.updateFonts(fonts)
             textLayer.fontName?.let { dialogAdapter.setSelectedFont(it) }
         }
@@ -144,23 +151,15 @@ class FontController(
         })
 
         fun selectTab(tab: android.view.View, filter: (com.flyerpix.editor.font.FontItem) -> Boolean, label: String) {
+            dialogBinding.tabFonts.isSelected = false
+            dialogBinding.tabMyFonts.isSelected = false
+            dialogBinding.tabRecent.isSelected = false
             dialogBinding.tabFonts.setTextColor(0xFF616161.toInt())
             dialogBinding.tabMyFonts.setTextColor(0xFF616161.toInt())
             dialogBinding.tabRecent.setTextColor(0xFF616161.toInt())
+            tab.isSelected = true
             (tab as android.widget.TextView).setTextColor(0xFF1769FF.toInt())
             showFonts(filter, label)
-            val tabIndex = when (tab.id) {
-                dialogBinding.tabMyFonts.id -> 1
-                dialogBinding.tabRecent.id -> 2
-                else -> 0
-            }
-            dialogBinding.root.post {
-                val tabWidth = dialogBinding.root.width / 3
-                dialogBinding.fontTabIndicator.layoutParams = dialogBinding.fontTabIndicator.layoutParams.apply {
-                    width = tabWidth
-                }
-                dialogBinding.fontTabIndicator.translationX = (tabWidth * tabIndex).toFloat()
-            }
         }
 
         dialogBinding.tabFonts.setOnClickListener {
@@ -176,6 +175,7 @@ class FontController(
         dialogBinding.btnAddCustomFontFolder.setOnClickListener { openFolderFontPicker() }
         dialogBinding.btnFontCancel.setOnClickListener {
             textLayer.typeface = originalTypeface
+            textLayer.fontName = originalFontName
             pixelCanvasView.invalidate()
             dialog.dismiss()
         }
@@ -183,15 +183,11 @@ class FontController(
             confirmed = true
             dialog.dismiss()
         }
-        dialogBinding.root.post {
-            val tabWidth = dialogBinding.root.width / 3
-            dialogBinding.fontTabIndicator.layoutParams = dialogBinding.fontTabIndicator.layoutParams.apply {
-                width = tabWidth
-            }
-        }
+        selectTab(dialogBinding.tabFonts, { font -> font.category != "My Fonts" }, "Basic")
         dialog.setOnDismissListener {
             if (!confirmed) {
                 textLayer.typeface = originalTypeface
+                textLayer.fontName = originalFontName
                 pixelCanvasView.invalidate()
             }
             fontDialog = null
@@ -199,6 +195,7 @@ class FontController(
             dialogRefresh = null
         }
         dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setLayout(
             (activity.resources.displayMetrics.widthPixels * 0.94f).toInt(),
             (activity.resources.displayMetrics.heightPixels * 0.90f).toInt()

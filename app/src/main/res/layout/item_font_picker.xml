@@ -3,15 +3,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/cardFont"
     android:layout_width="match_parent"
-    android:layout_height="44dp"
+    android:layout_height="64dp"
     android:layout_marginHorizontal="2dp"
-    android:layout_marginVertical="0dp"
+    android:layout_marginVertical="3dp"
     android:clickable="true"
     android:focusable="true"
-    app:cardCornerRadius="4dp"
+    app:cardCornerRadius="8dp"
     app:cardElevation="0dp"
     app:strokeColor="#E3E8F0"
-    app:strokeWidth="0dp"
+    app:strokeWidth="1dp"
     android:foreground="?attr/selectableItemBackground">
 
     <LinearLayout
@@ -19,36 +19,44 @@
         android:layout_height="match_parent"
         android:gravity="center"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp">
+        android:paddingStart="14dp"
+        android:paddingEnd="12dp">
 
-        <!-- Preview visual langsung font -->
         <TextView
             android:id="@+id/tvFontPreview"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:layout_weight="1.15"
             android:ellipsize="end"
-            android:gravity="center"
+            android:gravity="center_vertical"
             android:maxLines="1"
-            android:text="Aaaarqh"
-            android:textColor="@android:color/black"
-            android:textSize="16sp" />
+            android:text="AaAaAa"
+            android:textColor="#101828"
+            android:textSize="24sp" />
 
-        <!-- Nama Font -->
         <TextView
             android:id="@+id/tvFontName"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:layout_weight="0.95"
             android:ellipsize="end"
-            android:gravity="center"
-            android:maxLines="1"
+            android:gravity="center_vertical|end"
+            android:maxLines="2"
             android:text="Font Name"
             android:textColor="#26344D"
-            android:textSize="11sp"
+            android:textSize="13sp"
             android:textStyle="normal" />
 
-        <!-- Kategori Font -->
+        <ImageView
+            android:id="@+id/ivFontSelected"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginStart="10dp"
+            android:contentDescription="Selected"
+            android:src="@drawable/ic_check_24px"
+            android:tint="@color/brand_blue"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/tvFontCategory"
             android:layout_width="0dp"
