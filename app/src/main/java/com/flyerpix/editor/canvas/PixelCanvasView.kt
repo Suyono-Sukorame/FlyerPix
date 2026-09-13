@@ -677,6 +677,66 @@ class PixelCanvasView @JvmOverloads constructor(
         canvas.drawRect(target, vignettePaint)
     }
 
+    /**
+     * Helper untuk mengekstrak clipping path dari layer source berdasarkan clipping mode.
+     * Mengembalikan Path dalam koordinat layer yang akan di-clip, atau null jika tidak valid.
+     */
+    private fun getClipPathForLayer(layer: CanvasLayer): Path? {
+        val clipLayer = layers.find { it.id == layer.clipLayerId } ?: return null
+        
+        return when (layer.clippingMode) {
+            com.flyerpix.editor.canvas.model.ClippingMode.CLIP_TO_SHAPE_PATH -> {
+                if (clipLayer is ShapeLayer) {
+                    val (w, h) = clipLayer.getUnwarpedDimensions()
+                    val clipPath = clipLayer.buildPath()
+                    
+                    // Transform clip path ke koordinat canvas
+                    val transformMatrix = Matrix()
+                    transformMatrix.setTranslate(clipLayer.x, clipLayer.y)
+                    transformMatrix.preScale(clipLayer.scale, clipLayer.scale, clipLayer.x + w / 2f, clipLayer.y + h / 2f)
+                    transformMatrix.preRotate(clipLayer.rotation, clipLayer.x + w / 2f, clipLayer.y + h / 2f)
+                    
+                    val perspectiveMatrix = clipLayer.getPerspectiveMatrix(w, h)
+                    if (perspectiveMatrix != null) {
+                        perspectiveMatrix.postConcat(transformMatrix)
+                        clipPath.transform(perspectiveMatrix)
+                    } else {
+                        clipPath.transform(transformMatrix)
+                    }
+                    clipPath
+                } else null
+            }
+            com.flyerpix.editor.canvas.model.ClippingMode.CLIP_TO_PEN_PATH -> {
+                if (clipLayer is PenLayer) {
+                    val clipPath = clipLayer.buildPath()
+                    val (w, h) = clipLayer.getUnwarpedDimensions()
+                    val transformMatrix = Matrix()
+                    transformMatrix.setTranslate(clipLayer.x, clipLayer.y)
+                    transformMatrix.preScale(clipLayer.scale, clipLayer.scale, clipLayer.x + w / 2f, clipLayer.y + h / 2f)
+                    transformMatrix.preRotate(clipLayer.rotation, clipLayer.x + w / 2f, clipLayer.y + h / 2f)
+                    
+                    val perspectiveMatrix = clipLayer.getPerspectiveMatrix(w, h)
+                    if (perspectiveMatrix != null) {
+                        perspectiveMatrix.postConcat(transformMatrix)
+                        clipPath.transform(perspectiveMatrix)
+                    } else {
+                        clipPath.transform(transformMatrix)
+                    }
+                    clipPath
+                } else null
+            }
+            com.flyerpix.editor.canvas.model.ClippingMode.CLIP_TO_TEXT_BOUNDS -> {
+                if (clipLayer is TextLayer) {
+                    val bounds = clipLayer.getBounds()
+                    val clipPath = Path()
+                    clipPath.addRect(bounds, Path.Direction.CW)
+                    clipPath
+                } else null
+            }
+            com.flyerpix.editor.canvas.model.ClippingMode.NONE -> null
+        }
+    }
+
     private fun drawNoiseEffect(canvas: Canvas, target: RectF) {
         if (target.isEmpty()) return
         noisePaint.shader = noiseShader
@@ -1801,15 +1861,28 @@ class PixelCanvasView @JvmOverloads constructor(
             for (i in 0 until layers.size) {
                 val layer = layers[i]
                 if (layer.isVisible) {
+                    // Apply clipping path jika layer memiliki clipping active (Phase 8)
+                    val clipPath = if (layer.clippingMode != com.flyerpix.editor.canvas.model.ClippingMode.NONE && layer.clipLayerId != null) {
+                        getClipPathForLayer(layer)
+                    } else {
+                        null
+                    }
+
                     if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
                         renderPaint.applyLayerBlend(layer)
                         val saveCount = canvas.saveLayer(null, renderPaint)
+                        if (clipPath != null) {
+                            canvas.clipPath(clipPath)
+                        }
                         layer.draw(canvas, renderPaint)
                         canvas.restoreToCount(saveCount)
                         renderPaint.clearBlend()
                     } else {
                         renderPaint.clearBlend()
                         val saveCount = canvas.save()
+                        if (clipPath != null) {
+                            canvas.clipPath(clipPath)
+                        }
                         layer.draw(canvas, renderPaint)
                         canvas.restoreToCount(saveCount)
                     }

@@ -26,6 +26,7 @@ import com.flyerpix.editor.ui.compose.CanvasBgDetailPage
 import com.flyerpix.editor.ui.compose.CanvasGridDetailPage
 import com.flyerpix.editor.ui.compose.CanvasSizeDetailPage
 import com.flyerpix.editor.ui.compose.CanvasSnapDetailPage
+import com.flyerpix.editor.ui.composables.ReplaceBackgroundComposable
 import com.flyerpix.editor.ui.dialog.ColorPickerDialog
 
 /**
@@ -56,12 +57,14 @@ class CanvasMenuController(
     private var initialGridEnabled: Boolean = false
     private var initialGridSpacing: Float = 32f
     private var initialSnapEnabled: Boolean = true
+    private var replaceBgAutoColorMatch: Boolean = false
 
     companion object {
-        const val TOOL_BG   = "canvas_bg"
-        const val TOOL_SIZE = "canvas_size"
-        const val TOOL_GRID = "canvas_grid"
-        const val TOOL_SNAP = "canvas_snap"
+        const val TOOL_BG        = "canvas_bg"
+        const val TOOL_REPLACE_BG = "canvas_replace_bg"
+        const val TOOL_SIZE      = "canvas_size"
+        const val TOOL_GRID      = "canvas_grid"
+        const val TOOL_SNAP      = "canvas_snap"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
@@ -158,6 +161,7 @@ class CanvasMenuController(
         data class Spec(val tag: String, val label: String, val iconRes: Int)
         val specs = listOf(
             Spec(TOOL_BG,   "Background", R.drawable.ic_background_24px),
+            Spec(TOOL_REPLACE_BG, "Replace BG", R.drawable.ic_background_24px),
             Spec(TOOL_SIZE, "Canvas Size", R.drawable.ic_aspect_ratio_24px),
             Spec(TOOL_GRID, "Grid", R.drawable.ic_grid_on_24px),
             Spec(TOOL_SNAP, "Snap", R.drawable.ic_snap_24px)
@@ -270,6 +274,12 @@ class CanvasMenuController(
                         imageBitmap = pixelCanvasView.canvasBackground.imageBitmap
                     )
                     showComposeBgSheet()
+                }
+                TOOL_REPLACE_BG -> {
+                    initialBgSnapshot = pixelCanvasView.canvasBackground.copy(
+                        imageBitmap = pixelCanvasView.canvasBackground.imageBitmap
+                    )
+                    showReplaceBackgroundSheet()
                 }
                 TOOL_SIZE -> {
                     showComposeSizeSheet()
@@ -390,6 +400,38 @@ class CanvasMenuController(
                     deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showReplaceBackgroundSheet() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            ReplaceBackgroundComposable(
+                currentBackground = pixelCanvasView.canvasBackground,
+                onBackgroundChange = { newBg ->
+                    pixelCanvasView.canvasBackground = newBg
+                    pixelCanvasView.invalidate()
+                },
+                onColorMatchToggle = { enabled ->
+                    replaceBgAutoColorMatch = enabled
+                },
+                onGalleryClick = {
+                    bgGalleryLauncher?.launch("image/*")
+                },
+                onClose = {
+                    pixelCanvasView.runRecordedAction("Replace Canvas Background") {}
+                    replaceBgAutoColorMatch = false
+                    initialBgSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                autoColorMatchEnabled = replaceBgAutoColorMatch
             )
         }
     }

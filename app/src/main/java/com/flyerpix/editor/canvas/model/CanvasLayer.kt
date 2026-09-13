@@ -36,6 +36,17 @@ enum class ExtendedBlendMode(val modeName: String) {
 }
 
 /**
+ * Mode clipping path untuk layer — non-destruktif masking menggunakan bentuk atau path
+ * dari layer lain sebagai mask.
+ */
+enum class ClippingMode {
+    NONE,                    // Tidak ada clipping
+    CLIP_TO_SHAPE_PATH,      // Clip menggunakan path dari ShapeLayer
+    CLIP_TO_PEN_PATH,        // Clip menggunakan bezier path dari PenLayer
+    CLIP_TO_TEXT_BOUNDS      // Clip menggunakan bounding box dari TextLayer
+}
+
+/**
  * Base abstract class untuk semua elemen layer pada Pixel-Lab canvas.
  * Menyediakan properti transformasi dasar (posisi x & y, skala, rotasi, opasitas),
  * kontrol status (terkunci/isLocked, terlihat/isVisible), transformasi perspektif warping
@@ -65,6 +76,11 @@ abstract class CanvasLayer(
      * Null berarti pakai [blendMode] standar PorterDuff.
      */
     open var blendExtra: ExtendedBlendMode? = null
+
+    // ── Clipping Path Properties (Phase 8) ──────────────────────────────────
+    // Non-destruktif masking menggunakan bentuk/path layer lain sebagai clip
+    open var clippingMode: ClippingMode = ClippingMode.NONE
+    open var clipLayerId: String? = null  // Referensi layer yang dipakai sebagai clip source
 
     // ── Shared Effect Properties ───────────────────────────────────────────
     // Dipakai oleh semua layer type (text, shape, image, sticker, pen, arrow).

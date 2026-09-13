@@ -101,7 +101,7 @@ data class ShapeLayer(
     // Path builders
     // ─────────────────────────────────────────────────────────────────────────
 
-    internal fun buildPath(): Path {
+    fun buildPath(): Path {
         return when (shapeType) {
             ShapeType.RECTANGLE        -> buildRectanglePath()
             ShapeType.ROUNDED_RECTANGLE -> buildRoundedRectanglePath()
