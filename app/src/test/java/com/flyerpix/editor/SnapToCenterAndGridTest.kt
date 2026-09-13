@@ -195,4 +195,50 @@ class SnapToCenterAndGridTest {
         assertEquals(canvasW / 2f, finalCenterX, 0.001f)
         assertEquals(canvasH / 2f, finalCenterY, 0.001f)
     }
+
+    @Test
+    fun `layer snaps to canvas edges when bounds are within tolerance`() {
+        val result = SnapCalculator.calculateWithEdges(
+            layerX = 795f,
+            layerY = 696f,
+            boundsLeft = 795f,
+            boundsTop = 696f,
+            boundsRight = 995f,
+            boundsBottom = 796f,
+            tolerance = 8f,
+            canvasLeft = 0f,
+            canvasTop = 0f,
+            canvasRight = 1000f,
+            canvasBottom = 800f
+        )
+
+        assertTrue(result.isSnappedX)
+        assertTrue(result.isSnappedY)
+        assertEquals(800f, result.snappedX, 0.001f)
+        assertEquals(700f, result.snappedY, 0.001f)
+        assertEquals(1000f, result.guideX!!, 0.001f)
+        assertEquals(800f, result.guideY!!, 0.001f)
+    }
+
+    @Test
+    fun `edge snap chooses closest target when center is also nearby`() {
+        val result = SnapCalculator.calculateWithEdges(
+            layerX = 448f,
+            layerY = 100f,
+            boundsLeft = 448f,
+            boundsTop = 100f,
+            boundsRight = 548f,
+            boundsBottom = 200f,
+            tolerance = 55f,
+            canvasLeft = 0f,
+            canvasTop = 0f,
+            canvasRight = 1000f,
+            canvasBottom = 800f
+        )
+
+        assertTrue(result.isSnappedX)
+        assertEquals(450f, result.snappedX, 0.001f)
+        assertEquals(500f, result.guideX!!, 0.001f)
+        assertFalse(result.isSnappedY)
+    }
 }

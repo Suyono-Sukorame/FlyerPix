@@ -242,7 +242,6 @@ class PixelCanvasView @JvmOverloads constructor(
         if (editorZoomMode == active) return
         editorZoomMode = active
         if (active) {
-            resetZoom()
             requestFocus()
         }
         // Batalkan gestur objek yang mungkin masih berjalan saat mode berubah.
@@ -1164,6 +1163,9 @@ class PixelCanvasView @JvmOverloads constructor(
     var isSnapGuideYVisible: Boolean = false
         internal set
 
+    private var snapGuideXPosition: Float? = null
+    private var snapGuideYPosition: Float? = null
+
     var isGridEnabled: Boolean = false
         set(value) {
             if (field != value) {
@@ -1185,6 +1187,13 @@ class PixelCanvasView @JvmOverloads constructor(
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
         pathEffect = DashPathEffect(floatArrayOf(12f, 8f), 0f)
+    }
+
+    private fun clearSnapGuides() {
+        isSnapGuideXVisible = false
+        isSnapGuideYVisible = false
+        snapGuideXPosition = null
+        snapGuideYPosition = null
     }
 
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -1731,17 +1740,14 @@ class PixelCanvasView @JvmOverloads constructor(
     ) {
         if (!isSnapToCenterEnabled || vp.spanX <= 0 || vp.spanY <= 0) return
 
-        val canvasCenterX = vp.midX
-        val canvasCenterY = vp.midY
-
         if (isSnapGuideXVisible) {
-            // Garis vertikal melalui tengah kanvas
-            canvas.drawLine(canvasCenterX, vp.top, canvasCenterX, vp.bottom, snapGuidePaint)
+            val guideX = snapGuideXPosition ?: vp.midX
+            canvas.drawLine(guideX, vp.top, guideX, vp.bottom, snapGuidePaint)
         }
 
         if (isSnapGuideYVisible) {
-            // Garis horizontal melalui tengah kanvas
-            canvas.drawLine(vp.left, canvasCenterY, vp.right, canvasCenterY, snapGuidePaint)
+            val guideY = snapGuideYPosition ?: vp.midY
+            canvas.drawLine(vp.left, guideY, vp.right, guideY, snapGuidePaint)
         }
     }
 
@@ -1855,17 +1861,21 @@ class PixelCanvasView @JvmOverloads constructor(
         val pts = layer.getSelectionBoxPoints(padding)
         if (pts.size < 8) return TransformHandle.NONE
 
-        val touchRadius = 32f * resources.displayMetrics.density
+        val wrapPoint = if (selectedLayer is TextLayer) wrapHandleCanvasPoint() else null
+        val touchRadius = adaptiveTransformHandleRadius(pts, wrapPoint)
+            .let { radius ->
+                (radius * 1.8f).coerceIn(
+                    12f * resources.displayMetrics.density,
+                    24f * resources.displayMetrics.density
+                )
+            }
 
         if (hypot(touchX - pts[0], touchY - pts[1]) <= touchRadius) return TransformHandle.DUPLICATE
-        if (hypot(touchX - pts[2], touchY - pts[3]) <= touchRadius) return TransformHandle.DELETE
         if (hypot(touchX - pts[4], touchY - pts[5]) <= touchRadius) return TransformHandle.SCALE
-        if (hypot(touchX - pts[6], touchY - pts[7]) <= touchRadius) return TransformHandle.ROTATE
 
         // Handle lebar wrap teks: titik tengah sisi kanan bounding box
-        if (selectedLayer is TextLayer) {
-            val wp = wrapHandleCanvasPoint()
-            if (wp != null && hypot(touchX - wp.first, touchY - wp.second) <= touchRadius) {
+        if (wrapPoint != null) {
+            if (hypot(touchX - wrapPoint.first, touchY - wrapPoint.second) <= touchRadius) {
                 return TransformHandle.WRAP
             }
         }
@@ -1888,32 +1898,50 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     /**
-     * Menggambar 4 tombol handle di setiap sudut Bounding Box (Prompt 26):
-     *  1. Kanan bawah: Handle Scale / Resize (ikon panah diagonal)
-     *  2. Kiri bawah: Handle Rotate (ikon panah melingkar)
-     *  3. Kanan atas: Handle Delete (ikon silang merah)
-     *  4. Kiri atas: Handle Duplicate (ikon copy)
+     * Menggambar handle aktif pada Bounding Box:
+     *  1. Kiri atas: Handle Duplicate (ikon copy)
+     *  2. Kanan bawah: Handle Scale / Resize (ikon panah diagonal)
+     *  3. Tengah-kanan: Handle Wrap untuk teks
      */
     private fun drawTransformHandles(canvas: Canvas, pts: FloatArray) {
         if (pts.size < 8) return
-        val r = 13f * resources.displayMetrics.density
+        val wrapPoint = wrapHandleCanvasPoint()
+        val r = adaptiveTransformHandleRadius(pts, wrapPoint)
 
         // 1. Kiri atas (Top-Left): Duplicate (ikon copy)
         drawDuplicateHandle(canvas, pts[0], pts[1], r)
 
-        // 2. Kanan atas (Top-Right): Delete (ikon silang merah)
-        drawDeleteHandle(canvas, pts[2], pts[3], r)
-
-        // 3. Kanan bawah (Bottom-Right): Scale / Resize (ikon panah diagonal)
+        // 2. Kanan bawah (Bottom-Right): Scale / Resize (ikon panah diagonal)
         drawScaleHandle(canvas, pts[4], pts[5], r)
 
-        // 4. Kiri bawah (Bottom-Left): Rotate (ikon panah melingkar)
-        drawRotateHandle(canvas, pts[6], pts[7], r)
-
-        // 5. Tengah-kanan: aktifkan dan resize lebar wrap teks
-        wrapHandleCanvasPoint()?.let { wp ->
+        // 3. Tengah-kanan: aktifkan dan resize lebar wrap teks
+        wrapPoint?.let { wp ->
             drawWidthHandle(canvas, wp.first, wp.second, r)
         }
+    }
+
+    private fun adaptiveTransformHandleRadius(pts: FloatArray, wrapPoint: Pair<Float, Float>?): Float {
+        val density = resources.displayMetrics.density
+        val maxRadius = 13f * density
+        val minRadius = 5f * density
+        val centers = mutableListOf(
+            pts[0] to pts[1], // duplicate
+            pts[4] to pts[5]  // scale
+        )
+        wrapPoint?.let { centers.add(it) }
+
+        var nearestDistance = Float.POSITIVE_INFINITY
+        for (i in centers.indices) {
+            for (j in i + 1 until centers.size) {
+                nearestDistance = min(
+                    nearestDistance,
+                    hypot(centers[i].first - centers[j].first, centers[i].second - centers[j].second)
+                )
+            }
+        }
+
+        val fitRadius = if (nearestDistance.isFinite()) nearestDistance * 0.28f else maxRadius
+        return fitRadius.coerceIn(minRadius, maxRadius)
     }
 
     private fun drawWidthHandle(canvas: Canvas, cx: Float, cy: Float, r: Float) {
@@ -2046,22 +2074,21 @@ class PixelCanvasView @JvmOverloads constructor(
         return null
     }
 
-    private fun screenToCanvasPoint(screenX: Float, screenY: Float): Pair<Float, Float> {
-        if (canvasZoom == 1f && canvasPanX == 0f && canvasPanY == 0f) {
-            return screenX to screenY
-        }
+    private fun updateCanvasTransformMatrices() {
         val cx = width / 2f
         val cy = height / 2f
-        canvasTransformMatrix.reset()
-        canvasTransformMatrix.postTranslate(cx + canvasPanX, cy + canvasPanY)
-        canvasTransformMatrix.postScale(canvasZoom, canvasZoom)
-        canvasTransformMatrix.postTranslate(-cx, -cy)
+        val tx = cx + canvasPanX - cx * canvasZoom
+        val ty = cy + canvasPanY - cy * canvasZoom
+        canvasTransformMatrix.setValues(
+            floatArrayOf(
+                canvasZoom, 0f, tx,
+                0f, canvasZoom, ty,
+                0f, 0f, 1f
+            )
+        )
         if (!canvasTransformMatrix.invert(canvasTransformInverse)) {
-            return screenX to screenY
+            canvasTransformInverse.reset()
         }
-        val point = floatArrayOf(screenX, screenY)
-        canvasTransformInverse.mapPoints(point)
-        return point[0] to point[1]
     }
 
     private var lastTouchX = 0f
@@ -2143,23 +2170,13 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val screenTouchX = event.x
-        val screenTouchY = event.y
-
         // 0.1. Edit Mode: selaraskan koordinat sentuh dengan transform viewport
         // (zoom + pan) yang dipakai di onDraw, sehingga objek tetap bisa dipilih
         // & diedit walau kanvas sedang diperbesar/digeser. Zoom Mode memakai
         // koordinat layar mentah dan keluar lebih dulu di blok 0.7.
         if (!editorZoomMode && (canvasZoom != 1f || canvasPanX != 0f || canvasPanY != 0f)) {
-            val cx = width / 2f
-            val cy = height / 2f
-            canvasTransformMatrix.reset()
-            canvasTransformMatrix.postTranslate(cx + canvasPanX, cy + canvasPanY)
-            canvasTransformMatrix.postScale(canvasZoom, canvasZoom)
-            canvasTransformMatrix.postTranslate(-cx, -cy)
-            if (canvasTransformMatrix.invert(canvasTransformInverse)) {
-                event.transform(canvasTransformInverse)
-            }
+            updateCanvasTransformMatrices()
+            event.transform(canvasTransformInverse)
         }
 
         // 0. Tangani mode eyedropper — intercept seluruh sentuhan (Prompt 42)
@@ -2554,8 +2571,7 @@ class PixelCanvasView @JvmOverloads constructor(
                     }
                 }
 
-                val (canvasTouchX, canvasTouchY) = screenToCanvasPoint(screenTouchX, screenTouchY)
-                val touchedLayer = findTopLayerAt(canvasTouchX, canvasTouchY)
+                val touchedLayer = findTopLayerAt(event.x, event.y)
                 if (touchedLayer != null) {
                     if (!touchedLayer.isLocked) {
                         selectedLayer = touchedLayer
@@ -2596,31 +2612,34 @@ class PixelCanvasView @JvmOverloads constructor(
                                 layer.y += dy
                                 hasTouchTransformed = true
 
-                                // Terapkan kunci otomatis ke tengah kanvas (Snap-to-Center) (Prompt 30, 43)
+                                // Terapkan kunci otomatis ke tengah dan tepi kanvas.
                                 val vp = if (viewportRect.spanX > 0 && viewportRect.spanY > 0) viewportRect else RectF().apply {
                                     left = 0f; top = 0f; right = width.toFloat(); bottom = height.toFloat()
                                 }
                                 if (isSnapToCenterEnabled && vp.spanX > 0 && vp.spanY > 0) {
-                                    val (w, h) = layer.getUnwarpedDimensions()
+                                    val bounds = layer.getBounds()
                                     val snapTolerance = 5f * resources.displayMetrics.density
-                                    val snapResult = SnapCalculator.calculate(
+                                    val snapResult = SnapCalculator.calculateWithEdges(
                                         layerX = layer.x,
                                         layerY = layer.y,
-                                        layerWidth = w,
-                                        layerHeight = h,
-                                        canvasWidth = vp.spanX,
-                                        canvasHeight = vp.spanY,
+                                        boundsLeft = bounds.left,
+                                        boundsTop = bounds.top,
+                                        boundsRight = bounds.right,
+                                        boundsBottom = bounds.bottom,
                                         tolerance = snapTolerance,
-                                        canvasCenterX = vp.midX,
-                                        canvasCenterY = vp.midY
+                                        canvasLeft = vp.left,
+                                        canvasTop = vp.top,
+                                        canvasRight = vp.right,
+                                        canvasBottom = vp.bottom
                                     )
                                     layer.x = snapResult.snappedX
                                     layer.y = snapResult.snappedY
                                     isSnapGuideXVisible = snapResult.isSnappedX
                                     isSnapGuideYVisible = snapResult.isSnappedY
+                                    snapGuideXPosition = snapResult.guideX
+                                    snapGuideYPosition = snapResult.guideY
                                 } else {
-                                    isSnapGuideXVisible = false
-                                    isSnapGuideYVisible = false
+                                    clearSnapGuides()
                                 }
 
                                 invalidate()
@@ -2670,8 +2689,7 @@ class PixelCanvasView @JvmOverloads constructor(
                 currentTouchState = TouchState.IDLE
                 isDragging = false
                 val needInvalidate = isSnapGuideXVisible || isSnapGuideYVisible
-                isSnapGuideXVisible = false
-                isSnapGuideYVisible = false
+                clearSnapGuides()
                 if (needInvalidate) {
                     invalidate()
                 }

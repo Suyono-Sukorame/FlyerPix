@@ -131,7 +131,18 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
         if (uri != null) {
-            fontController.handleFolderFontResult(uri)
+            showLoadingDialog("Importing fonts from folder...")
+
+            lifecycleScope.launch {
+                try {
+                    val imported = fontController.importFontsFromFolder(uri)
+                    dismissLoadingDialog()
+                    fontController.handleFolderFontImportResult(imported)
+                } catch (e: Exception) {
+                    dismissLoadingDialog()
+                    showSnackbar("Error importing fonts: ${e.message}")
+                }
+            }
         }
     }
 
@@ -907,7 +918,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
         fun applyZoomModeUi() {
             val active = pixelCanvasView.isEditorZoomMode
-            top.tvTopZoomLabel.visibility = if (active) View.VISIBLE else View.GONE
+            top.tvTopZoomLabel.visibility =
+                if (active || pixelCanvasView.zoomLevel != 1f) View.VISIBLE else View.GONE
             top.btnTopZoom.setBackgroundResource(
                 if (active) R.drawable.bg_mode_pill_active else R.drawable.bg_mode_pill
             )
@@ -922,14 +934,17 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         applyZoomModeUi()
 
         // Sinkronkan label persentase setiap kali canvasZoom berubah (pinch maupun reset).
-        pixelCanvasView.onZoomChangedListener = { _ -> updateZoomLabel() }
+        pixelCanvasView.onZoomChangedListener = { _ ->
+            updateZoomLabel()
+            applyZoomModeUi()
+        }
 
         pixelCanvasView.onEditorZoomModeChangedListener = { active ->
             setZoomModeControlsEnabled(!active)
             applyZoomModeUi()
         }
 
-        // PILL = saklar Edit Mode <-> Zoom Mode. Masuk selalu dimulai dari 100%.
+        // PILL = saklar Edit Mode <-> Zoom Mode. Zoom/pan dipertahankan saat berpindah mode.
         top.btnTopZoom.setOnClickListener {
             val entering = !pixelCanvasView.isEditorZoomMode
             pixelCanvasView.setEditorZoomMode(entering)
@@ -944,11 +959,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
         // Badge persentase di header (menampilkan % zoom) = tap utk reset zoom ke 100%
         top.tvTopZoomLabel.setOnClickListener {
-            if (pixelCanvasView.isEditorZoomMode) {
-                pixelCanvasView.resetZoom()
-                updateZoomLabel()
-                showSnackbar("Zoom reset to 100%")
-            }
+            pixelCanvasView.resetZoom()
+            updateZoomLabel()
+            applyZoomModeUi()
+            showSnackbar("Zoom reset to 100%")
         }
 
         top.btnTopGrid.setOnClickListener {

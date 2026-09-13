@@ -14,6 +14,8 @@ import com.flyerpix.editor.databinding.DialogFontPickerBinding
 import com.flyerpix.editor.font.FontItem
 import com.flyerpix.editor.font.FontManager
 import com.flyerpix.editor.font.FontPickerAdapter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Controller untuk mengelola font picker dan custom fonts.
@@ -199,7 +201,7 @@ class FontController(
         dialog.show()
         dialog.window?.setLayout(
             (activity.resources.displayMetrics.widthPixels * 0.94f).toInt(),
-            (activity.resources.displayMetrics.heightPixels * 0.82f).toInt()
+            (activity.resources.displayMetrics.heightPixels * 0.90f).toInt()
         )
     }
 
@@ -262,6 +264,16 @@ class FontController(
      */
     fun handleFolderFontResult(folderUri: Uri) {
         val imported = FontManager.loadFontsFromFolder(activity, folderUri)
+        handleFolderFontImportResult(imported)
+    }
+
+    suspend fun importFontsFromFolder(folderUri: Uri): Int {
+        return withContext(Dispatchers.IO) {
+            FontManager.loadFontsFromFolder(activity, folderUri)
+        }
+    }
+
+    fun handleFolderFontImportResult(imported: Int) {
         if (imported > 0) {
             onFontsImported(emptyList())
             showSnackbar("$imported fonts imported from folder to 'My Fonts'!")

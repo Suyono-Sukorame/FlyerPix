@@ -13,7 +13,9 @@ object SnapCalculator {
         val snappedX: Float,
         val snappedY: Float,
         val isSnappedX: Boolean,
-        val isSnappedY: Boolean
+        val isSnappedY: Boolean,
+        val guideX: Float? = null,
+        val guideY: Float? = null
     )
 
     /**
@@ -52,5 +54,72 @@ object SnapCalculator {
         val newY = if (snapY) canvasCenterY - layerHeight / 2f else layerY
 
         return SnapResult(newX, newY, snapX, snapY)
+    }
+
+    /**
+     * Menghitung snap berdasarkan bounding box aktual layer, sehingga akurat untuk
+     * layer yang sudah diskalakan atau dirotasi. Target magnet mencakup center
+     * canvas serta tepi canvas kiri/kanan/atas/bawah.
+     */
+    fun calculateWithEdges(
+        layerX: Float,
+        layerY: Float,
+        boundsLeft: Float,
+        boundsTop: Float,
+        boundsRight: Float,
+        boundsBottom: Float,
+        tolerance: Float,
+        canvasLeft: Float,
+        canvasTop: Float,
+        canvasRight: Float,
+        canvasBottom: Float
+    ): SnapResult {
+        val boundsCenterX = (boundsLeft + boundsRight) / 2f
+        val boundsCenterY = (boundsTop + boundsBottom) / 2f
+        val canvasCenterX = (canvasLeft + canvasRight) / 2f
+        val canvasCenterY = (canvasTop + canvasBottom) / 2f
+
+        val snapX = closestSnapDelta(
+            boundsLeft to canvasLeft,
+            boundsCenterX to canvasCenterX,
+            boundsRight to canvasRight,
+            tolerance = tolerance
+        )
+        val snapY = closestSnapDelta(
+            boundsTop to canvasTop,
+            boundsCenterY to canvasCenterY,
+            boundsBottom to canvasBottom,
+            tolerance = tolerance
+        )
+
+        return SnapResult(
+            snappedX = layerX + (snapX?.delta ?: 0f),
+            snappedY = layerY + (snapY?.delta ?: 0f),
+            isSnappedX = snapX != null,
+            isSnappedY = snapY != null,
+            guideX = snapX?.target,
+            guideY = snapY?.target
+        )
+    }
+
+    private data class SnapDelta(val delta: Float, val target: Float)
+
+    private fun closestSnapDelta(
+        vararg candidates: Pair<Float, Float>,
+        tolerance: Float
+    ): SnapDelta? {
+        var best: SnapDelta? = null
+        var bestDistance = Float.POSITIVE_INFINITY
+
+        for ((source, target) in candidates) {
+            val delta = target - source
+            val distance = kotlin.math.abs(delta)
+            if (distance <= tolerance && distance < bestDistance) {
+                best = SnapDelta(delta, target)
+                bestDistance = distance
+            }
+        }
+
+        return best
     }
 }
