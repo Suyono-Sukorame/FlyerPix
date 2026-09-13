@@ -82,6 +82,77 @@ abstract class CanvasLayer(
     open var gradientEnabled: Boolean = false
     open var gradient: GradientColor? = null
 
+    // ── Advanced Effect Properties (Unified Effects System) ────────────────
+    // Moved from TextLayer untuk shared implementation across all layer types.
+    // Prompt 1: Architecture Foundation
+
+    // Emboss / Bevel
+    open var embossEnabled: Boolean = false
+    open var embossLightAngle: Float = 45f   // derajat 0–360 (arah cahaya)
+    open var embossAmbient: Float = 0.2f     // 0.0–1.0  (cahaya ambient)
+    open var embossSpecular: Float = 8f      // 0–20     (kilap specular / bevel)
+    open var embossIntensity: Float = 1f     // 0–2.5    (penguat kontras cahaya)
+    open var embossBevel: Float = 3f         // 0.5–12   (ketebalan/lebar relief bevel)
+
+    // Neon / Glow
+    open var neonEnabled: Boolean = false
+    open var neonColor: Int = 0xFF00E5FF.toInt()    // Warna cahaya neon
+    open var neonRadius: Float = 12f                // 1–40 (sebaran/blur lingkaran cahaya)
+    open var neonIntensity: Float = 1f              // 0.1–2 (kekuatan/opacity cahaya)
+    open var neonCoreEnabled: Boolean = true        // true=isi terang; false=hollow neon
+
+    // 3D Extrusion
+    open var extrudeEnabled: Boolean = false
+    open var extrudeDepth: Int = 10                 // 1 s/d 50
+    open var extrudeColor: Int = 0xFF333333.toInt() // Warna sisi kedalaman 3D
+    open var extrudeGradient: GradientColor? = null // Gradasi sisi kedalaman 3D
+    open var extrudeViewType: ExtrudeViewType = ExtrudeViewType.OBLIQUE
+    open var extrudeAngle: Float = 45f              // 0° - 360° arah kedalaman
+
+    // 3D Shadow
+    open var shadow3DEnabled: Boolean = false
+    open var shadow3DDepth: Int = 12                // 1 s/d 50 (ketebalan bayangan)
+    open var shadow3DColor: Int = 0xB3000000.toInt()// Warna bayangan 3D (ARGB)
+    open var shadow3DViewType: ExtrudeViewType = ExtrudeViewType.OBLIQUE
+    open var shadow3DAngle: Float = 45f             // 0° - 360° arah bayangan
+    open var shadow3DBlur: Float = 0f               // 0–40 (kelembutan ujung bayangan)
+    open var shadow3DOpacity: Float = 0.6f          // 0.0–1.0 (kegelapan bayangan)
+
+    // 3D Rotate (Rotasi Sumbu X, Y, Z)
+    open var rotate3DX: Float = 0f                  // Kemiringan atas-bawah (-180° s/d 180°)
+    open var rotate3DY: Float = 0f                  // Kemiringan kiri-kanan (-180° s/d 180°)
+    open var rotate3DZ: Float = 0f                  // Rotasi 3D sumbu Z (-180° s/d 180°)
+
+    // Inner Shadow
+    open var innerShadowEnabled: Boolean = false
+    open var innerShadowColor: Int = android.graphics.Color.BLACK
+    open var innerShadowRadius: Float = 6f
+    open var innerShadowDx: Float = 0f
+    open var innerShadowDy: Float = 4f
+    open var innerShadowOpacity: Float = 0.8f
+
+    // Texture Masking
+    open var textureBitmap: android.graphics.Bitmap? = null
+    open var textureEnabled: Boolean = false
+    open var textureScale: Float = 1.0f
+    open var textureRotation: Float = 0f
+
+    // Reflection
+    open var reflectionEnabled: Boolean = false
+    open var reflectionOpacity: Float = 0.4f
+    open var reflectionDistance: Float = 10f
+    open var reflectionFade: Float = 0.5f
+
+    // Background Layer
+    open var bgEnabled: Boolean = false
+    open var bgColor: Int = android.graphics.Color.BLACK
+    open var bgOpacity: Float = 1f
+    open var bgPadding: Float = 0f
+    open var bgCornerRadius: Float = 0f
+
+    // Curved / Arc Path
+    open var curvePercent: Int = 0                  // -100 (bawah) s/d +100 (atas), 0 = lurus
+
     /**
      * Menggambar layer pada [canvas] dengan menggunakan [paint].
      *

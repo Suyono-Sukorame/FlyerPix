@@ -80,16 +80,16 @@ data class TextLayer(
     var paddingLeft: Float = 0f,
     var paddingRight: Float = 0f,
     // ── Text Background ────────────────────────────────────────────────────
-    var bgEnabled: Boolean = false,
-    var bgColor: Int = Color.BLACK,
-    var bgOpacity: Float = 1f,
-    var bgPadding: Float = 0f,
-    var bgCornerRadius: Float = 0f,
+    override var bgEnabled: Boolean = false,
+    override var bgColor: Int = Color.BLACK,
+    override var bgOpacity: Float = 1f,
+    override var bgPadding: Float = 0f,
+    override var bgCornerRadius: Float = 0f,
     // ── Reflection ─────────────────────────────────────────────────────────
-    var reflectionEnabled: Boolean = false,
-    var reflectionOpacity: Float = 0.4f,
-    var reflectionDistance: Float = 10f,
-    var reflectionFade: Float = 0.5f,
+    override var reflectionEnabled: Boolean = false,
+    override var reflectionOpacity: Float = 0.4f,
+    override var reflectionDistance: Float = 10f,
+    override var reflectionFade: Float = 0.5f,
     // ── Stroke / Outline ─────────────────────────────────────────────────────
     var strokeColor: Int = Color.BLACK,
     var strokeWidth: Float = 0f,
@@ -101,54 +101,54 @@ data class TextLayer(
     override var shadowDy: Float = 4f,
     override var shadowOpacity: Float = 0.6f,
     // ── Inner Shadow ─────────────────────────────────────────────────────────
-    var innerShadowEnabled: Boolean = false,
-    var innerShadowColor: Int = Color.BLACK,
-    var innerShadowRadius: Float = 6f,
-    var innerShadowDx: Float = 0f,
-    var innerShadowDy: Float = 4f,
-    var innerShadowOpacity: Float = 0.8f,
+    override var innerShadowEnabled: Boolean = false,
+    override var innerShadowColor: Int = Color.BLACK,
+    override var innerShadowRadius: Float = 6f,
+    override var innerShadowDx: Float = 0f,
+    override var innerShadowDy: Float = 4f,
+    override var innerShadowOpacity: Float = 0.8f,
     // ── Emboss / Bevel ───────────────────────────────────────────────────────
-    var embossEnabled: Boolean = false,
-    var embossLightAngle: Float = 45f,   // derajat 0–360 (arah cahaya)
-    var embossAmbient: Float = 0.2f,     // 0.0–1.0  (cahaya ambient)
-    var embossSpecular: Float = 8f,      // 0–20     (kilap specular / bevel)
-    var embossIntensity: Float = 1f,     // 0–2.5    (penguat kontras cahaya: highlight & bayangan)
-    var embossBevel: Float = 3f,         // 0.5–12   (ketebalan/lebar relief bevel)
+    override var embossEnabled: Boolean = false,
+    override var embossLightAngle: Float = 45f,   // derajat 0–360 (arah cahaya)
+    override var embossAmbient: Float = 0.2f,     // 0.0–1.0  (cahaya ambient)
+    override var embossSpecular: Float = 8f,      // 0–20     (kilap specular / bevel)
+    override var embossIntensity: Float = 1f,     // 0–2.5    (penguat kontras cahaya: highlight & bayangan)
+    override var embossBevel: Float = 3f,         // 0.5–12   (ketebalan/lebar relief bevel)
     // ── Gradient Fill ────────────────────────────────────────────────────────
     override var gradientEnabled: Boolean = false,
     override var gradient: GradientColor? = null,
     // ── Texture Masking ──────────────────────────────────────────────────────
-    var textureBitmap: Bitmap? = null,
-    var textureEnabled: Boolean = false,
-    var textureScale: Float = 1.0f,
-    var textureRotation: Float = 0f,
+    override var textureBitmap: Bitmap? = null,
+    override var textureEnabled: Boolean = false,
+    override var textureScale: Float = 1.0f,
+    override var textureRotation: Float = 0f,
     // ── 3D Extrusion ─────────────────────────────────────────────────────────
-    var extrudeEnabled: Boolean = false,
-    var extrudeDepth: Int = 10,                 // 1 s/d 50
-    var extrudeColor: Int = 0xFF333333.toInt(), // Warna sisi kedalaman 3D
-    var extrudeGradient: GradientColor? = null, // Gradasi sisi kedalaman 3D (menggantikan warna solid)
-    var extrudeViewType: ExtrudeViewType = ExtrudeViewType.OBLIQUE,
-    var extrudeAngle: Float = 45f,              // 0° - 360° arah kedalaman
+    override var extrudeEnabled: Boolean = false,
+    override var extrudeDepth: Int = 10,                 // 1 s/d 50
+    override var extrudeColor: Int = 0xFF333333.toInt(), // Warna sisi kedalaman 3D
+    override var extrudeGradient: GradientColor? = null, // Gradasi sisi kedalaman 3D (menggantikan warna solid)
+    override var extrudeViewType: ExtrudeViewType = ExtrudeViewType.OBLIQUE,
+    override var extrudeAngle: Float = 45f,              // 0° - 360° arah kedalaman
     // ── 3D Shadow ────────────────────────────────────────────────────────────
-    var shadow3DEnabled: Boolean = false,
-    var shadow3DDepth: Int = 12,                // 1 s/d 50 (ketebalan bayangan)
-    var shadow3DColor: Int = 0xB3000000.toInt(),// Warna bayangan 3D (ARGB, default hitam semi-transparan)
-    var shadow3DViewType: ExtrudeViewType = ExtrudeViewType.OBLIQUE,
-    var shadow3DAngle: Float = 45f,             // 0° - 360° arah bayangan
-    var shadow3DBlur: Float = 0f,               // 0–40 (kelembutan ujung bayangan)
-    var shadow3DOpacity: Float = 0.6f,          // 0.0–1.0 (kegelapan bayangan)
+    override var shadow3DEnabled: Boolean = false,
+    override var shadow3DDepth: Int = 12,                // 1 s/d 50 (ketebalan bayangan)
+    override var shadow3DColor: Int = 0xB3000000.toInt(),// Warna bayangan 3D (ARGB, default hitam semi-transparan)
+    override var shadow3DViewType: ExtrudeViewType = ExtrudeViewType.OBLIQUE,
+    override var shadow3DAngle: Float = 45f,             // 0° - 360° arah bayangan
+    override var shadow3DBlur: Float = 0f,               // 0–40 (kelembutan ujung bayangan)
+    override var shadow3DOpacity: Float = 0.6f,          // 0.0–1.0 (kegelapan bayangan)
     // ── 3D Rotate (Rotasi Sumbu X dan Y) ──────────────────────────────────
-    var rotate3DX: Float = 0f,                  // Kemiringan atas-bawah (-180° s/d 180°)
-    var rotate3DY: Float = 0f,                  // Kemiringan kiri-kanan (-180° s/d 180°)
-    var rotate3DZ: Float = 0f,                  // Rotasi 3D sumbu Z (-180° s/d 180°)
+    override var rotate3DX: Float = 0f,                  // Kemiringan atas-bawah (-180° s/d 180°)
+    override var rotate3DY: Float = 0f,                  // Kemiringan kiri-kanan (-180° s/d 180°)
+    override var rotate3DZ: Float = 0f,                  // Rotasi 3D sumbu Z (-180° s/d 180°)
     // ── Neon / Glow ────────────────────────────────────────────────────────
-    var neonEnabled: Boolean = false,
-    var neonColor: Int = 0xFF00E5FF.toInt(),    // Warna cahaya neon
-    var neonRadius: Float = 12f,                // 1–40     (sebaran/blur lingkaran cahaya)
-    var neonIntensity: Float = 1f,              // 0.1–2    (kekuatan/opacity cahaya)
-    var neonCoreEnabled: Boolean = true,        // true=isi teks terang; false=hollow neon
+    override var neonEnabled: Boolean = false,
+    override var neonColor: Int = 0xFF00E5FF.toInt(),    // Warna cahaya neon
+    override var neonRadius: Float = 12f,                // 1–40     (sebaran/blur lingkaran cahaya)
+    override var neonIntensity: Float = 1f,              // 0.1–2    (kekuatan/opacity cahaya)
+    override var neonCoreEnabled: Boolean = true,        // true=isi teks terang; false=hollow neon
     // ── Curved / Arc Text ────────────────────────────────────────────────────
-    var curvePercent: Int = 0,                  // -100 (bawah) s/d +100 (atas), 0 = lurus
+    override var curvePercent: Int = 0,                  // -100 (bawah) s/d +100 (atas), 0 = lurus
     // ── Perspective Warping ──────────────────────────────────────────────────
     override var perspectiveEnabled: Boolean = false,
     override var perspectiveCorners: FloatArray = floatArrayOf(
