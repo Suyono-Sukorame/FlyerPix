@@ -1239,9 +1239,16 @@ class PixelCanvasView @JvmOverloads constructor(
 
     /**
      * Merender latar belakang kanvas independen (transparan, warna solid, atau gradasi) ke dalam area [vp] (Prompt 44).
+     * 
+     * Ketika background di-hide ([isCanvasBackgroundVisible] = false), secara otomatis menampilkan
+     * checkerboard pattern untuk menunjukkan area transparan (konsisten dengan UX standar editor grafis).
      */
     fun drawBackgroundOnCanvas(canvas: Canvas, vp: RectF) {
-        if (!isCanvasBackgroundVisible) return
+        if (!isCanvasBackgroundVisible) {
+            // Tampilkan checkerboard pattern saat background di-hide
+            canvas.drawRect(vp, checkerboardPaint)
+            return
+        }
         when (canvasBackground.mode) {
             CanvasBackgroundMode.TRANSPARENT -> {
                 canvas.drawRect(vp, checkerboardPaint)
