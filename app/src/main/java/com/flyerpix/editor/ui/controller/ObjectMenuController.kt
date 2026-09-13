@@ -100,6 +100,14 @@ class ObjectMenuController(
         return targetPx.coerceAtLeast(floorPx)
     }
 
+    private fun computeShapeSheetHeight(): Int {
+        val density = activity.resources.displayMetrics.density
+        val screenH = activity.resources.displayMetrics.heightPixels
+        val floorPx = (107 * density).toInt()  // Match commit e7e92659: 107dp floor
+        val targetPx = (screenH * 0.12f).toInt()  // 12% screen height as fallback
+        return targetPx.coerceAtLeast(floorPx)
+    }
+
     fun initialize() {
         buildToolStrip()
         setupColorResultListeners()
@@ -384,7 +392,7 @@ class ObjectMenuController(
         container.visibility = View.VISIBLE
         container.bringToFront()
 
-        val sheetMaxH = computeSheetHeight(0.58f)
+        val sheetMaxH = computeShapeSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
 
