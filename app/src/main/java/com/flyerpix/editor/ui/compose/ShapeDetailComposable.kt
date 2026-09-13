@@ -146,9 +146,9 @@ fun ShapeDetailPage(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             listOf(
-                                ShapeType.RECTANGLE to "Rect",
-                                ShapeType.ROUNDED_RECTANGLE to "Round",
-                                ShapeType.CIRCLE to "Ellipse",
+                                ShapeType.RECTANGLE to "Rectangle",
+                                ShapeType.ROUNDED_RECTANGLE to "Rounded",
+                                ShapeType.CIRCLE to "Circle",
                                 ShapeType.ARC to "Arc",
                                 ShapeType.TRIANGLE to "Triangle",
                                 ShapeType.STAR to "Star"
@@ -287,6 +287,80 @@ fun ShapeDetailPage(
                         // SECTION: Stroke
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
+
+                        // NEW: Effects Quick Buttons
+                        Text(
+                            text = "Effects",
+                            style = MaterialTheme.typography.caption,
+                            color = Color(TextSecondary),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Button(
+                                onClick = { 
+                                    // Will be handled by parent activity to show shadow editor
+                                },
+                                modifier = Modifier.weight(1f).height(32.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFFF0F7FF),
+                                    contentColor = PrimaryBlue
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Shadow", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = { 
+                                    // Will be handled by parent activity to show emboss editor
+                                },
+                                modifier = Modifier.weight(1f).height(32.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFFF0F7FF),
+                                    contentColor = PrimaryBlue
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Emboss", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Button(
+                                onClick = { 
+                                    // Will be handled by parent activity to show gradient editor
+                                    // TODO: Open GradientEditorComposable
+                                },
+                                modifier = Modifier.weight(1f).height(32.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFFE8F5FF),
+                                    contentColor = Color(0xFF00A8FF)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Gradient", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = { 
+                                    // Will be handled by parent activity to show neon editor
+                                },
+                                modifier = Modifier.weight(1f).height(32.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFFF0F7FF),
+                                    contentColor = PrimaryBlue
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Neon", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         ShapeControlRow(
                             label = "Stroke Width",

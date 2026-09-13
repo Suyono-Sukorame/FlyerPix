@@ -8,7 +8,10 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.RectF
+import android.graphics.Shader
 import java.util.UUID
+import com.flyerpix.editor.canvas.model.GradientColor
+import com.flyerpix.editor.canvas.model.GradientType
 
 /**
  * Tipe bentuk geometris yang didukung oleh [ShapeLayer].
@@ -198,9 +201,16 @@ data class ShapeLayer(
         val path = buildPath()
 
         paint.style = Paint.Style.FILL
-        paint.color = fillColor
         paint.alpha = opacity.coerceIn(0, 255)
         paint.strokeWidth = 0f
+        
+        // Apply gradient shader if available
+        val currentGradient = gradient
+        if (currentGradient != null) {
+            paint.shader = currentGradient.createShader(RectF(0f, 0f, width, height))
+        } else {
+            paint.color = fillColor
+        }
 
         // 3D Extrusion (FIRST — provides depth base)
         if (extrudeEnabled && extrudeDepth > 0) {
@@ -310,6 +320,9 @@ data class ShapeLayer(
             )
         }
 
+        // Reset shader before stroke rendering
+        paint.shader = null
+
         // Stroke
         if (strokeWidth > 0f) {
             paint.style = Paint.Style.STROKE
@@ -330,6 +343,7 @@ data class ShapeLayer(
         }
 
         paint.pathEffect = null
+        paint.shader = null
 
         canvas.restoreToCount(saveCount)
     }
