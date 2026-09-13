@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
@@ -65,6 +68,17 @@ fun ShapePickerPage(
 ) {
     var selectedType by remember { mutableStateOf<ShapeType?>(null) }
 
+    val shapeEntries = remember {
+        listOf(
+            ShapeType.RECTANGLE to "Rectangle",
+            ShapeType.ROUNDED_RECTANGLE to "Rounded",
+            ShapeType.CIRCLE to "Ellipse",
+            ShapeType.ARC to "Arc",
+            ShapeType.TRIANGLE to "Triangle",
+            ShapeType.STAR to "Star"
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -81,19 +95,19 @@ fun ShapePickerPage(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 6.dp, bottom = 10.dp, start = 14.dp, end = 14.dp),
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Drag handle
+                // Drag handle (centered)
                 Box(
                     modifier = Modifier
-                        .width(36.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .width(32.dp)
                         .height(4.dp)
-                        .background(PickerDragHandle, CircleShape)
+                        .background(PickerDragHandle, RoundedCornerShape(50))
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Header row
                 Row(
@@ -104,62 +118,65 @@ fun ShapePickerPage(
                     Text(
                         text = "Pilih Bentuk",
                         color = PickerTextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
                     TextButton(
                         onClick = onClose,
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = "Batal",
                             color = PickerTextSecondary,
-                            fontSize = 12.sp
+                            fontSize = 11.sp
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = "Pilih bentuk yang ingin ditambahkan ke canvas",
                     color = PickerTextSecondary,
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Shape grid — 5 items in a single row
-                Row(
+                // Shape grid — 6 items scrollable
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                 ) {
-                    SHAPE_ENTRIES.forEach { (type, label) ->
+                    items(shapeEntries.size) { index ->
+                        val (type, label) = shapeEntries[index]
                         val isSelected = selectedType == type
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(if (isSelected) PickerSelectedBg else PickerUnselectedBg)
                                 .border(
                                     width = if (isSelected) 2.dp else 1.dp,
                                     color = if (isSelected) PickerSelectedBorder else PickerUnselectedBorder,
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = RoundedCornerShape(10.dp)
                                 )
                                 .clickable {
                                     selectedType = type
                                     onShapeTypeSelected(type)
                                 }
-                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 // Visual shape preview using Compose Canvas
-                                Canvas(modifier = Modifier.size(36.dp)) {
+                                Canvas(modifier = Modifier.size(30.dp)) {
                                     drawShapePreview(
                                         type = type,
                                         fillColor = if (isSelected) PickerPrimaryBlue else Color(0xFFCBD5E1)
@@ -167,7 +184,7 @@ fun ShapePickerPage(
                                 }
                                 Text(
                                     text = label,
-                                    fontSize = 10.sp,
+                                    fontSize = 9.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                     color = if (isSelected) PickerPrimaryBlue else PickerTextSecondary,
                                     textAlign = TextAlign.Center,
@@ -178,15 +195,17 @@ fun ShapePickerPage(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = "Setelah memilih, Anda bisa mengatur warna dan ukurannya",
                     color = PickerTextSecondary,
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(6.dp))
             }
         }
     }
