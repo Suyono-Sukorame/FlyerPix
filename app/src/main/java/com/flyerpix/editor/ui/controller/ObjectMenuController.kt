@@ -1020,4 +1020,56 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
     private fun closeTextOnPathEditor() {
         deselect(restoreStrip = true)
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Gradient Editor (Phase 6)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Show Gradient editor panel for Pen/Shape layers (Phase 6).
+     */
+    fun showGradientEditor(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = "obj_gradient"
+        updateToolStripSelection("obj_gradient")
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = 500
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            var refreshTrigger by remember { mutableStateOf(0) }
+
+            GradientEditorPanel(
+                layer = layer,
+                onChanged = {
+                    canvas.invalidate()
+                    refreshTrigger++
+                },
+                onExitEditMode = {
+                    closeGradientEditor()
+                },
+                maxHeightPx = sheetMaxH
+            )
+
+            LaunchedEffect(refreshTrigger) {
+                // Trigger recomposition
+            }
+        }
+    }
+
+    /**
+     * Close Gradient editor panel.
+     */
+    private fun closeGradientEditor() {
+        deselect(restoreStrip = true)
+    }
 }

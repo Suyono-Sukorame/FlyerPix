@@ -655,6 +655,32 @@ object EffectRenderUtils {
         }
         drawContent(canvas, frontPaint)
     }
+
+    /**
+     * Create gradient shader untuk fill (Phase 6).
+     */
+    fun createGradientShader(
+        gradientType: com.flyerpix.editor.canvas.model.GradientType,
+        startX: Float, startY: Float,
+        endX: Float, endY: Float,
+        color1: Int, color2: Int
+    ): android.graphics.Shader {
+        val colors = intArrayOf(color1, color2)
+        val positions = floatArrayOf(0f, 1f)
+        
+        return when (gradientType) {
+            com.flyerpix.editor.canvas.model.GradientType.LINEAR ->
+                android.graphics.LinearGradient(startX, startY, endX, endY, colors, positions, android.graphics.Shader.TileMode.CLAMP)
+            
+            com.flyerpix.editor.canvas.model.GradientType.RADIAL -> {
+                val radius = kotlin.math.sqrt((endX - startX) * (endX - startX) + (endY - startY) * (endY - startY))
+                android.graphics.RadialGradient(startX, startY, radius, colors, positions, android.graphics.Shader.TileMode.CLAMP)
+            }
+            
+            com.flyerpix.editor.canvas.model.GradientType.SWEEP ->
+                android.graphics.SweepGradient(startX, startY, colors, positions)
+        }
+    }
 }
 
 
