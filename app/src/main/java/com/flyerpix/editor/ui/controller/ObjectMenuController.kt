@@ -92,14 +92,6 @@ class ObjectMenuController(
      */
     var onAddSettingsOpenChanged: ((Boolean) -> Unit)? = null
 
-    private fun computeSheetHeight(ratio: Float): Int {
-        val displayMetrics = activity.resources.displayMetrics
-        val density = displayMetrics.density
-        val targetPx = (displayMetrics.heightPixels * ratio).toInt()
-        val floorPx = (300 * density).toInt()
-        return targetPx.coerceAtLeast(floorPx)
-    }
-
     private fun computeShapeSheetHeight(): Int {
         val density = activity.resources.displayMetrics.density
         val root = binding.parentLayout
@@ -161,6 +153,21 @@ class ObjectMenuController(
     }
 
     private fun computeArrowSheetHeight(): Int {
+        val density = activity.resources.displayMetrics.density
+        val root = binding.parentLayout
+        val homePanel = binding.bottomControlPanelContainer
+        if (root.height > 0 && homePanel.height > 0) {
+            val homeTop = PanelHeightManager.topInRoot(homePanel, root)
+            val alignedH = root.height - homeTop
+            if (alignedH > 0) return alignedH
+        }
+        // Fallback if home panel not yet measured
+        val floorPx = (107 * density).toInt()
+        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.12f).toInt()
+        return targetPx.coerceAtLeast(floorPx)
+    }
+
+    private fun computeImportSheetHeight(): Int {
         val density = activity.resources.displayMetrics.density
         val root = binding.parentLayout
         val homePanel = binding.bottomControlPanelContainer
@@ -664,7 +671,7 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 4. Import Sheet (~38% Screen Height)
+    // 4. Import Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun showComposeImportSheet() {
@@ -676,7 +683,7 @@ class ObjectMenuController(
         container.visibility = View.VISIBLE
         container.bringToFront()
 
-        val sheetMaxH = computeSheetHeight(0.38f)
+        val sheetMaxH = computeImportSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
 
@@ -701,23 +708,24 @@ class ObjectMenuController(
     // 5. Arrow Studio Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
+private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
         val host = composeHost ?: return
         val container = composeContainer ?: return
 
         binding.objectContentPanel.visibility = View.GONE
         binding.objectMenuPanel.visibility = View.GONE
+
+        val arrow = existingArrow ?: draftArrow ?: canvas.addArrowLayer().also {
+            canvas.selectedLayer = it
+        }
+        draftArrow = arrow
+
         container.visibility = View.VISIBLE
         container.bringToFront()
 
         val sheetMaxH = computeArrowSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
-
-        val arrow = existingArrow ?: draftArrow ?: canvas.addArrowLayer().also {
-            canvas.selectedLayer = it
-        }
-        draftArrow = arrow
 
         host.setContent {
             var currentStyle by remember { mutableStateOf(arrow.arrowStyle) }
@@ -781,16 +789,9 @@ class ObjectMenuController(
 
         binding.objectContentPanel.visibility = View.GONE
         binding.objectMenuPanel.visibility = View.GONE
-        container.visibility = View.VISIBLE
-        android.util.Log.i("BEZDEBUG", "bezier container set VISIBLE")
-        container.bringToFront()
-
-        val sheetMaxH = computeBezierSheetHeight()
-        PanelHeightManager.setHeight(container, sheetMaxH)
-        container.post { canvas.invalidate() }
 
         val pen = existingPen ?: draftPen ?: PenLayer(isClosed = false).apply {
-            strokeColor = Color.WHITE
+            strokeColor = 0xFF1769FF.toInt()
             strokeWidth = 6f
             x = (canvas.width / 2f)
             y = (canvas.height / 2f)
@@ -798,6 +799,14 @@ class ObjectMenuController(
             canvas.addLayer(it)
             canvas.selectedLayer = it
         }
+
+        android.util.Log.i("BEZDEBUG", "bezier container set VISIBLE")
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeBezierSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
         draftPen = pen
         bezierFlow.clear()
         pen.anchors.forEach { anchor -> bezierFlow.addPoint(anchor.x, anchor.y) }

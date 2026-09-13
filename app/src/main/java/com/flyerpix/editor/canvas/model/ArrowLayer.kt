@@ -55,12 +55,12 @@ data class ArrowLayer(
     // ── Arrowhead (Kepala Panah — ujung akhir) ─────────────────────────────
     var headEnabled: Boolean = true,
     var headSize: Float = 30f,
-    var headColor: Int = Color.WHITE,
+    var headColor: Int = 0xFF1769FF.toInt(),
     var headFilled: Boolean = true,
     // ── Arrow Tail (Ekor Panah — ujung awal) ──────────────────────────────
     var tailEnabled: Boolean = false,
     var tailSize: Float = 24f,
-    var tailColor: Int = Color.WHITE,
+    var tailColor: Int = 0xFF1769FF.toInt(),
     var tailFilled: Boolean = true,
     // ── Curve Bend ──────────────────────────────────────────────────────────
     /** Jarak belokan untuk mode CURVED (0 = lurus, positif = belok kanan, negatif = belok kiri). */

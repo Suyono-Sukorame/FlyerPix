@@ -896,7 +896,7 @@ class PixelCanvasView @JvmOverloads constructor(
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
         strokeWidth = 6f
-        color = Color.WHITE
+        color = 0xFF1769FF.toInt()
     }
 
     var freeDrawColor: Int
@@ -2204,17 +2204,8 @@ class PixelCanvasView @JvmOverloads constructor(
 
         // 0.5. Tangani mode input titik Bézier — tap di kanvas menambah titik baru.
         if (bezierInputEnabled) {
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    addBezierInputPoint(event.x, event.y)
-                    return true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    bezierInputEnabled = false
-                    bezierInputLayer = null
-                    onBezierInputPointChanged = null
-                    invalidate()
-                }
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                addBezierInputPoint(event.x, event.y)
             }
             return true
         }
@@ -3378,7 +3369,7 @@ class PixelCanvasView @JvmOverloads constructor(
             angle = 0f,
             headSize = head,
             headEnabled = true,
-            headColor = Color.WHITE,
+            headColor = 0xFF1769FF.toInt(),
             x = cx - w / 2f,
             y = cy - h / 2f
         )
