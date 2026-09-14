@@ -1202,7 +1202,7 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
             com.flyerpix.editor.ui.composables.LayerMaskEditorComposable(
                 layer = layer,
                 onMaskChange = { canvas.invalidate() },
-                onClose = { closeMaskEditor() },
+                onClose = { canvas.endMaskPaint(); closeMaskEditor() },
                 onGradientMaskApply = { type, params ->
                     // Apply gradient mask to maskBitmap
                     layer.maskBitmap?.let { bitmap ->
@@ -1236,6 +1236,16 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                         // TODO: Use FpNative.blurPixels for feather effect
                         canvas.invalidate()
                     }
+                },
+                onBrushConfig = { size, opacity, color, isEraser ->
+                    canvas.updateMaskBrush(size, opacity, color, isEraser)
+                },
+                onEnableMaskPaint = {
+                    canvas.startMaskPaint(layer)
+                },
+                onFinish = {
+                    canvas.endMaskPaint()
+                    closeMaskEditor()
                 }
             )
         }

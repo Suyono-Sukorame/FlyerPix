@@ -802,6 +802,22 @@ class PixelCanvasView @JvmOverloads constructor(
         return Paint().apply { colorFilter = ColorMatrixColorFilter(satMatrix) }
     }
 
+    /**
+     * Menerapkan transform standar layer: translate(x,y) + scale(S) about center +
+     * rotate(R) about center — konsisten dengan drawContent() tiap subkelas.
+     * Dipakai untuk overlay mask & komposit mask agar sejajar dengan konten layer.
+     */
+    private fun applyLayerStandardTransform(canvas: android.graphics.Canvas, layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+        val (wRaw, hRaw) = layer.getUnwarpedDimensions()
+        val w = if (wRaw > 0f) wRaw else 1f
+        val h = if (hRaw > 0f) hRaw else 1f
+        val cx = w / 2f
+        val cy = h / 2f
+        canvas.translate(layer.x, layer.y)
+        canvas.scale(layer.scale, layer.scale, cx, cy)
+        canvas.rotate(layer.rotation, cx, cy)
+    }
+
     /** Merender seluruh layer terlihat secara berurutan sesuai z-index. */
     private fun drawVisibleLayers(canvas: Canvas) {
         for (i in 0 until layers.size) {
@@ -826,7 +842,10 @@ class PixelCanvasView @JvmOverloads constructor(
                     if (hasMask && layer.maskBitmap != null) {
                         val maskPaint = android.graphics.Paint()
                         maskPaint.alpha = 255
+                        canvas.save()
+                        applyLayerStandardTransform(canvas, layer)
                         canvas.drawBitmap(layer.maskBitmap!!, 0f, 0f, maskPaint)
+                        canvas.restore()
                     }
                     canvas.restoreToCount(saveCount)
                     renderPaint.clearBlend()
@@ -1017,6 +1036,125 @@ class PixelCanvasView @JvmOverloads constructor(
         }
 
     // ── Mode Gambar Bebas (Freehand) ────────────────────────────────────────
+
+    // ── Mode Lukis Mask (Prompt 06) ─────────────────────────────────────────
+    /** Konfigurasi brush mask saat mode lukis mask aktif. */
+    class MaskPaintBrushState(
+        var brushSize: Float = 30f,
+        var brushOpacity: Int = 255,
+        var brushColor: Int = 0xFFFFFFFF.toInt(),
+        var isEraser: Boolean = false
+    )
+
+    /** Layer target yang sedang dilukis mask-nya; null = mode tidak aktif. */
+    private var maskPaintLayer: com.flyerpix.editor.canvas.model.CanvasLayer? = null
+
+    /** State brush mask aktif. */
+    private val maskPaintBrush = MaskPaintBrushState()
+
+    /** Snapshot riwayat sebelum sesi lukis dimulai (commit undo saat Selesai). */
+    private var maskPaintBeforeSnapshot: CanvasStateSnapshot? = null
+
+    /** Titik brush terakhir (untuk interpolasi garis antar MOVE). */
+    private var lastMaskPaintPoint: android.graphics.PointF? = null
+
+    /** Apakah mode lukis mask sedang aktif. */
+    val isMaskPaintActive: Boolean get() = maskPaintLayer != null
+
+    /**
+     * Memulai sesi lukis mask [layer] dengan konfigurasi brush. Mask dibuat otomatis
+     * bila belum ada. Undo dicatat hanya saat [endMaskPaint] dipanggil (tombol Selesai).
+     */
+    fun startMaskPaint(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+        if (layer.maskBitmap == null) {
+            val (w, h) = layer.getUnwarpedDimensions()
+            if (w > 0 && h > 0) layer.createMask(w.toInt(), h.toInt())
+        }
+        maskPaintLayer = layer
+        lastMaskPaintPoint = null
+        maskPaintBeforeSnapshot = captureCurrentState("Mask Paint")
+        invalidate()
+    }
+
+    /** Memperbarui konfigurasi brush mask secara live dari panel. */
+    fun updateMaskBrush(
+        brushSize: Float,
+        brushOpacity: Int,
+        brushColor: Int,
+        isEraser: Boolean
+    ) {
+        maskPaintBrush.brushSize = brushSize.coerceIn(2f, 400f)
+        maskPaintBrush.brushOpacity = brushOpacity.coerceIn(0, 255)
+        maskPaintBrush.brushColor = brushColor
+        maskPaintBrush.isEraser = isEraser
+    }
+
+    /** Mengakhiri sesi lukis mask dan mencatat satu entri undo (aksi seluruh sesi). */
+    fun endMaskPaint(newState: com.flyerpix.editor.canvas.model.CanvasLayer? = null) {
+        val layer = maskPaintLayer ?: newState ?: return
+        if (layer.maskBitmap != null && maskPaintBeforeSnapshot != null) {
+            try {
+                recordAction("Mask Paint", maskPaintBeforeSnapshot!!)
+            } catch (_: Throwable) {
+            }
+        }
+        maskPaintLayer = null
+        maskPaintBeforeSnapshot = null
+        lastMaskPaintPoint = null
+        maskPaintLayer = null
+        invalidate()
+    }
+
+    /** Melukis goresan mask di [canvasX]/[canvasY] (koordinat kanvas, sudah bebas zoom). */
+    private fun maskPaintAt(canvasX: Float, canvasY: Float) {
+        val layer = maskPaintLayer ?: return
+        val mask = layer.maskBitmap ?: return
+        val (lx, ly) = canvasToMaskLocal(layer, canvasX, canvasY)
+
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC)
+            if (maskPaintBrush.isEraser) {
+                color = 0xFFFFFFFF.toInt()
+                alpha = 255
+            } else {
+                color = maskPaintBrush.brushColor
+                alpha = maskPaintBrush.brushOpacity
+            }
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = maskPaintBrush.brushSize
+            strokeCap = android.graphics.Paint.Cap.ROUND
+            strokeJoin = android.graphics.Paint.Join.ROUND
+            isAntiAlias = true
+        }
+
+        android.graphics.Canvas(mask).apply {
+            val last = lastMaskPaintPoint
+            if (last != null) {
+                drawLine(last.x, last.y, lx, ly, paint)
+            } else {
+                drawCircle(lx, ly, maskPaintBrush.brushSize / 2f, paint)
+            }
+            drawCircle(lx, ly, maskPaintBrush.brushSize / 2f, paint)
+        }
+        lastMaskPaintPoint = android.graphics.PointF(lx, ly)
+        invalidate()
+    }
+
+    /** Menanggalkan transformasi zoom/pan & memetakan titik kanvas ke ruang lokal mask. */
+    private fun canvasToMaskLocal(layer: com.flyerpix.editor.canvas.model.CanvasLayer, px: Float, py: Float): Pair<Float, Float> {
+        val (wRaw, hRaw) = layer.getUnwarpedDimensions()
+        val w = if (wRaw > 0f) wRaw else 1f
+        val h = if (hRaw > 0f) hRaw else 1f
+        val cx = w / 2f
+        val cy = h / 2f
+        val m = android.graphics.Matrix()
+        m.postTranslate(-layer.x, -layer.y)
+        m.postRotate(-layer.rotation, cx, cy)
+        m.postScale(1f / layer.scale, 1f / layer.scale, cx, cy)
+        val pts = floatArrayOf(px, py)
+        m.mapPoints(pts)
+        return pts[0] to pts[1]
+    }
 
     /** Apakah mode gambar bebas aktif: semua sentuhan di kanvas menjadi goresan pena. */
     var freeDrawEnabled: Boolean = false
@@ -1994,6 +2132,19 @@ class PixelCanvasView @JvmOverloads constructor(
                     pfTotalMs = 0; pfFrameCount = 0
                 }
             }
+
+            // Overlay merah semi-transparan pada area tersembunyi mask saat mode lukis mask aktif (Prompt 06)
+            if (isMaskPaintActive && maskPaintLayer?.let { it.hasMask() && it.maskBitmap != null } == true) {
+                val mLayer = maskPaintLayer!!
+                canvas.save()
+                applyLayerStandardTransform(canvas, mLayer)
+                val overlayPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    color = 0x66FF0000.toInt() // merah semi-transparan pada area tersembunyi
+                    xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN)
+                }
+                canvas.drawBitmap(mLayer.maskBitmap!!, 0f, 0f, overlayPaint)
+                canvas.restore()
+            }
         } finally {
             canvas.restoreToCount(drawSave)
             drawZoomScrollbars(canvas)
@@ -2495,6 +2646,21 @@ class PixelCanvasView @JvmOverloads constructor(
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     isEyedropperMode = false
+                }
+            }
+            return true
+        }
+
+        // 0.4. Tangani mode lukis mask — lukis goresan ke maskBitmap layer target (Prompt 06)
+        if (maskPaintLayer != null) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    touchEventX = event.x
+                    touchEventY = event.y
+                    maskPaintAt(event.x, event.y)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    lastMaskPaintPoint = null
                 }
             }
             return true
