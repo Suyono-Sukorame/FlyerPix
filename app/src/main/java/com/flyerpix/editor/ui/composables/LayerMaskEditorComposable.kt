@@ -149,19 +149,37 @@ fun LayerMaskEditorComposable(
             item {
                 Text("Auto Masks", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFBBBBBB))
                 Spacer(modifier = Modifier.height(8.dp))
-                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { onGradientMaskApply(GradientType.LINEAR, floatArrayOf(0f, 1f)) },
-                        modifier = Modifier.fillMaxWidth().height(40.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF333333))) {
-                        Text("Gradient Mask (Top->Bottom)", fontSize = 12.sp)
+
+                Text("Gradient Direction", fontSize = 12.sp, color = Color(0xFF999999))
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        com.flyerpix.editor.canvas.model.MaskUtils.DIR_TOP_BOTTOM to "Top",
+                        com.flyerpix.editor.canvas.model.MaskUtils.DIR_BOTTOM_TOP to "Bottom",
+                        com.flyerpix.editor.canvas.model.MaskUtils.DIR_LEFT_RIGHT to "Left",
+                        com.flyerpix.editor.canvas.model.MaskUtils.DIR_RIGHT_LEFT to "Right"
+                    ).forEach { (dir, label) ->
+                        Button(onClick = { onGradientMaskApply(GradientType.LINEAR, floatArrayOf(dir.toFloat())) },
+                            modifier = Modifier.weight(1f).height(34.dp),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF333333)),
+                            contentPadding = PaddingValues(0.dp)) {
+                            Text(label, fontSize = 11.sp, color = Color.White)
+                        }
                     }
-                    Button(onClick = { onGradientMaskApply(GradientType.RADIAL, floatArrayOf(0.5f, 0.5f, 0.5f)) },
-                        modifier = Modifier.fillMaxWidth().height(40.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF333333))) {
-                        Text("Gradient Mask (Radial)", fontSize = 12.sp)
-                    }
-                    Button(onClick = { onFeatherApply(10f) },
-                        modifier = Modifier.fillMaxWidth().height(40.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF333333))) {
-                        Text("Feather (10px)", fontSize = 12.sp)
-                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Button(onClick = { onGradientMaskApply(GradientType.RADIAL, floatArrayOf(0.5f)) },
+                    modifier = Modifier.fillMaxWidth().height(38.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF333333))) {
+                    Text("Gradient Mask (Radial Center)", fontSize = 12.sp)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("Feather Radius", fontSize = 12.sp, color = Color(0xFF999999))
+                var featherRadius by remember { mutableStateOf(10f) }
+                Slider(value = featherRadius, onValueChange = { featherRadius = it }, valueRange = 0f..100f)
+                Button(onClick = { if (featherRadius > 0f) onFeatherApply(featherRadius) },
+                    modifier = Modifier.fillMaxWidth().height(38.dp), colors = ButtonDefaults.buttonColors(backgroundColor = if (featherRadius > 0f) Color(0xFF0066FF) else Color(0xFF333333))) {
+                    Text("Feather (${featherRadius.toInt()}px)", fontSize = 12.sp)
                 }
             }
 

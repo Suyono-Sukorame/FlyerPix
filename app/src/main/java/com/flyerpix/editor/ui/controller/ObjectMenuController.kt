@@ -1204,36 +1204,19 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 onMaskChange = { canvas.invalidate() },
                 onClose = { canvas.endMaskPaint(); closeMaskEditor() },
                 onGradientMaskApply = { type, params ->
-                    // Apply gradient mask to maskBitmap
+                    if (layer.maskBitmap == null) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0 && h > 0) layer.createMask(w.toInt(), h.toInt())
+                    }
                     layer.maskBitmap?.let { bitmap ->
-                        val w = bitmap.width
-                        val h = bitmap.height
-                        val pixels = IntArray(w * h)
-                        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
-                        
-                        for (y in 0 until h) {
-                            for (x in 0 until w) {
-                                val alpha = when (type) {
-                                    GradientType.LINEAR -> ((1f - (y.toFloat() / h)) * 255).toInt()
-                                    GradientType.RADIAL -> {
-                                        val dx = (x.toFloat() / w) - 0.5f
-                                        val dy = (y.toFloat() / h) - 0.5f
-                                        ((1f - kotlin.math.sqrt(dx*dx + dy*dy) * 2f) * 255).toInt().coerceIn(0, 255)
-                                    }
-                                    else -> 255
-                                }
-                                val idx = y * w + x
-                                pixels[idx] = (alpha shl 24) or (pixels[idx] and 0x00FFFFFF)
-                            }
-                        }
-                        bitmap.setPixels(pixels, 0, w, 0, 0, w, h)
+                        val direction = if (params.isNotEmpty()) params[0].toInt() else 0
+                        com.flyerpix.editor.canvas.model.MaskUtils.generateGradientMask(bitmap, type, direction)
                         canvas.invalidate()
                     }
                 },
                 onFeatherApply = { radius ->
-                    // Apply gaussian blur to mask (placeholder - requires native blur)
                     layer.maskBitmap?.let { bitmap ->
-                        // TODO: Use FpNative.blurPixels for feather effect
+                        com.flyerpix.editor.canvas.model.MaskUtils.featherMask(bitmap, radius.toInt())
                         canvas.invalidate()
                     }
                 },
