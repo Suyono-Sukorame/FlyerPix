@@ -270,7 +270,11 @@ object ProjectSerializer {
         hue                = layer.adjustments.hue,
         contrast           = layer.adjustments.contrast,
         saturation         = layer.adjustments.saturation,
-        preset             = layer.adjustments.preset
+        preset             = layer.adjustments.preset,
+        maskEnabled        = layer.maskEnabled,
+        maskInverted       = layer.maskInverted,
+        maskBase64         = layer.maskBitmap?.let { bitmapToBase64(it) },
+        maskGeneration     = layer.maskGeneration
     )
 
     private fun textLayerToDto(l: TextLayer): LayerDto = baseLayerFields(l).copy(
@@ -783,6 +787,10 @@ object ProjectSerializer {
                 saturation   = dto.saturation ?: 0f,
                 preset       = dto.preset
             )
+            it.maskBitmap = dto.maskBase64?.let { base64ToBitmap(it) }
+            it.maskEnabled = dto.maskEnabled
+            it.maskInverted = dto.maskInverted
+            it.maskGeneration = dto.maskGeneration
         }
     }
 

@@ -994,7 +994,7 @@ data class TextLayer(
         }
         h = h * 31 + (if (adjustmentsEnabled) 1 else 0)
         h = h * 31 + adjustments.hashCode()
-        return h
+        return maskBlurSignature(h)
     }
 
     override fun copyLayer(): TextLayer = this.copy(

@@ -184,6 +184,7 @@ abstract class CanvasLayer(
     open var maskBitmap: android.graphics.Bitmap? = null
     open var maskEnabled: Boolean = false
     open var maskInverted: Boolean = false
+    open var maskGeneration: Int = 0
 
     // Helper API for mask management
     fun hasMask(): Boolean = maskBitmap != null && maskEnabled
@@ -191,6 +192,7 @@ abstract class CanvasLayer(
     fun createMask(width: Int, height: Int): android.graphics.Bitmap {
         maskBitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
         maskEnabled = true
+        maskGeneration++
         return maskBitmap!!
     }
 
@@ -199,6 +201,7 @@ abstract class CanvasLayer(
         maskBitmap = null
         maskEnabled = false
         maskInverted = false
+        maskGeneration++
     }
 
     // ── Per-Layer Color Adjustment (Prompt 03) ────────────────────────────────
@@ -292,6 +295,10 @@ abstract class CanvasLayer(
         copy.y = this.y
         copy.adjustmentsEnabled = this.adjustmentsEnabled
         copy.adjustments = this.adjustments.copy()
+        copy.maskBitmap = this.maskBitmap?.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+        copy.maskEnabled = this.maskEnabled
+        copy.maskInverted = this.maskInverted
+        copy.maskGeneration = this.maskGeneration
         return copy
     }
 
@@ -513,7 +520,15 @@ abstract class CanvasLayer(
         var h = hashCode()
         h = h * 31 + (if (adjustmentsEnabled) 1 else 0)
         h = h * 31 + adjustments.hashCode()
-        return h
+        return maskBlurSignature(h)
+    }
+
+    protected fun maskBlurSignature(h: Int): Int {
+        var hh = h * 31 + (if (maskEnabled) 1 else 0)
+        hh = hh * 31 + (if (maskInverted) 1 else 0)
+        hh = hh * 31 + System.identityHashCode(maskBitmap)
+        hh = hh * 31 + maskGeneration
+        return hh
     }
 
     /**

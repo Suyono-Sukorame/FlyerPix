@@ -198,7 +198,7 @@ open class ImageLayer(
         h = h * 31 + bitmap.height
         h = h * 31 + (if (adjustmentsEnabled) 1 else 0)
         h = h * 31 + adjustments.hashCode()
-        return h
+        return maskBlurSignature(h)
     }
 
     override fun copyLayer(): ImageLayer {

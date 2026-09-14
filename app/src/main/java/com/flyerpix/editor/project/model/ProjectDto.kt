@@ -243,7 +243,14 @@ data class LayerDto(
     val hue: Float? = null,
     val contrast: Float? = null,
     val saturation: Float? = null,
-    val preset: String? = null
+    val preset: String? = null,
+
+    // ── Layer Mask (Prompt 05) ───────────────────────────────────────────────
+    val maskEnabled: Boolean = false,
+    val maskInverted: Boolean = false,
+    /** Bitmap mask 8-bit dikodekan Base64 PNG; null jika tidak ada mask. */
+    val maskBase64: String? = null,
+    val maskGeneration: Int = 0
 )
 
 /**
