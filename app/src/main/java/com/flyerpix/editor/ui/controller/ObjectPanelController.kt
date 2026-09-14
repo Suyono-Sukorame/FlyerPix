@@ -51,18 +51,19 @@ class ObjectPanelController(
         const val OBJ_GRADIENT    = "obj_gradient"
         const val OBJ_BLEND       = "obj_blend"
         const val OBJ_PERSPECTIVE = "obj_perspective"
+        const val OBJ_ADJUST      = "obj_adjust"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
 
         val sharedCoreEffectTags = setOf(
             OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE, OBJ_COLOR,
-            OBJ_STROKE, OBJ_SHADOW, OBJ_GRADIENT, OBJ_BLEND, OBJ_PERSPECTIVE
+            OBJ_STROKE, OBJ_SHADOW, OBJ_GRADIENT, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST
         )
 
         val composedObjectTags = setOf(
             OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE,
-            OBJ_SHADOW, OBJ_STROKE, OBJ_BLEND, OBJ_PERSPECTIVE
+            OBJ_SHADOW, OBJ_STROKE, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST
         )
     }
 
@@ -123,7 +124,8 @@ class ObjectPanelController(
             Spec(OBJ_SHADOW,      "Shadow",      R.drawable.ic_shadow_24px),
             Spec(OBJ_GRADIENT,    "Gradient",    R.drawable.ic_gradient_24px),
             Spec(OBJ_BLEND,       "Blend",       R.drawable.ic_layers_24px),
-            Spec(OBJ_PERSPECTIVE, "Perspective", R.drawable.ic_perspective_24px)
+            Spec(OBJ_PERSPECTIVE, "Perspective", R.drawable.ic_perspective_24px),
+            Spec(OBJ_ADJUST,      "Adjust",      R.drawable.ic_sharp_palette_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectPropertyStripInclude.objectToolStripContainer
@@ -254,6 +256,8 @@ class ObjectPanelController(
         layer.shadowOpacity = snapshot.shadowOpacity
         layer.gradientEnabled = snapshot.gradientEnabled
         layer.gradient = snapshot.gradient?.copy()
+        layer.adjustmentsEnabled = snapshot.adjustmentsEnabled
+        layer.adjustments = snapshot.adjustments.copy()
         when (layer) {
             is ShapeLayer -> {
                 val s = snapshot as? ShapeLayer
@@ -302,6 +306,9 @@ class ObjectPanelController(
             OBJ_PERSPECTIVE -> {
                 if (composeHost != null) showComposePerspectiveSheet(layer)
                 else syncPerspectiveUI(layer)
+            }
+            OBJ_ADJUST -> {
+                showComposeLayerAdjustSheet(layer)
             }
         }
         if (tag !in composedObjectTags) {
@@ -1178,12 +1185,86 @@ class ObjectPanelController(
         }
     }
 
+    /** Sheet Compose untuk Adjustment per-layer (Prompt 04): switch, 10 slider, preset color match. */
+    private fun showComposeLayerAdjustSheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        val adj = layer.adjustments
+        host.setContent {
+            com.flyerpix.editor.ui.compose.LayerAdjustDetailPage(
+                enabled = layer.adjustmentsEnabled,
+                contrast = adj.contrast,
+                saturation = adj.saturation,
+                exposure = adj.exposure,
+                highlights = adj.highlights,
+                shadows = adj.shadows,
+                temperature = adj.temperature,
+                tint = adj.tint,
+                gamma = adj.gamma,
+                vibrance = adj.vibrance,
+                hue = adj.hue,
+                activePreset = adj.preset,
+                onEnabledChange = { en ->
+                    applyToLayer { it.adjustmentsEnabled = en }
+                },
+                onContrastChange = { v -> applyToLayer { it.adjustments.contrast = v } },
+                onSaturationChange = { v -> applyToLayer { it.adjustments.saturation = v } },
+                onExposureChange = { v -> applyToLayer { it.adjustments.exposure = v } },
+                onHighlightsChange = { v -> applyToLayer { it.adjustments.highlights = v } },
+                onShadowsChange = { v -> applyToLayer { it.adjustments.shadows = v } },
+                onTemperatureChange = { v -> applyToLayer { it.adjustments.temperature = v } },
+                onTintChange = { v -> applyToLayer { it.adjustments.tint = v } },
+                onGammaChange = { v -> applyToLayer { it.adjustments.gamma = v } },
+                onVibranceChange = { v -> applyToLayer { it.adjustments.vibrance = v } },
+                onHueChange = { v -> applyToLayer { it.adjustments.hue = v } },
+                onPreset = { preset ->
+                    val p = com.flyerpix.editor.ui.compose.layerAdjustPresetParams(preset)
+                    applyToLayer {
+                        val a = it.adjustments
+                        a.contrast = p.contrast
+                        a.saturation = p.saturation
+                        a.exposure = p.exposure
+                        a.highlights = p.highlights
+                        a.shadows = p.shadows
+                        a.temperature = p.temperature
+                        a.tint = p.tint
+                        a.gamma = p.gamma
+                        a.vibrance = p.vibrance
+                        a.hue = p.hue
+                        a.preset = if (preset == "Normal") null else preset
+                        it.adjustmentsEnabled = true
+                    }
+                },
+                onReset = {
+                    applyToLayer {
+                        val a = it.adjustments
+                        a.contrast = 0f; a.saturation = 0f
+                        a.exposure = 0f; a.highlights = 0f; a.shadows = 0f
+                        a.temperature = 0f; a.tint = 0f; a.gamma = 0f
+                        a.vibrance = 0f; a.hue = 0f
+                        a.preset = null
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
     private fun hideComposeSheet() {
         composeContainer?.visibility = View.GONE
         composeHost?.setContent {}
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
 
     fun hideStripAndPanels() {
         hideComposeSheet()

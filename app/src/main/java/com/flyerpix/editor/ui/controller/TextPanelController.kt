@@ -87,13 +87,13 @@ class TextPanelController(
     private var effectSettingsOpen = false
     private var textToolTagBeforeEffect = ""
     private var toolIsTextPage = false
-    private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_REFLECTION, TOOL_BLEND, TOOL_NEON, TOOL_STROKE, TOOL_LINE, TOOL_LETTER, TOOL_ALIGN, TOOL_BG, TOOL_CURVE, TOOL_STYLE, TOOL_MASK, TOOL_OPACITY, TOOL_ROTATE, TOOL_COLOR, TOOL_PADDING, TOOL_SIZE, TOOL_POSITION, TOOL_REL_POS, TOOL_STYLES)
+    private val complexEffectTags = setOf(TOOL_SHADOW, TOOL_INNER, TOOL_EMBOSS, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_PERSPECTIVE, TOOL_REFLECTION, TOOL_BLEND, TOOL_NEON, TOOL_STROKE, TOOL_LINE, TOOL_LETTER, TOOL_ALIGN, TOOL_BG, TOOL_CURVE, TOOL_STYLE, TOOL_MASK, TOOL_OPACITY, TOOL_ROTATE, TOOL_COLOR, TOOL_PADDING, TOOL_SIZE, TOOL_POSITION, TOOL_REL_POS, TOOL_STYLES, TOOL_ADJUST)
     private val composedEffectTags = setOf(
         TOOL_3D_TEXT, TOOL_3D_SHADOW, TOOL_3D_ROTATE, TOOL_REFLECTION, TOOL_NEON,
         TOOL_STROKE, TOOL_SHADOW, TOOL_INNER, TOOL_LETTER, TOOL_LINE, TOOL_CURVE, TOOL_BG,
         TOOL_EMBOSS, TOOL_BLEND, TOOL_PERSPECTIVE,
         TOOL_ALIGN, TOOL_SIZE, TOOL_OPACITY, TOOL_POSITION, TOOL_REL_POS, TOOL_ROTATE,
-        TOOL_COLOR, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_MASK, TOOL_STYLE
+        TOOL_COLOR, TOOL_GRADIENT, TOOL_TEXTURE, TOOL_MASK, TOOL_STYLE, TOOL_ADJUST
     )
     private var syncTextureUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
     private var syncInnerShadowUIHook: ((com.flyerpix.editor.canvas.model.TextLayer) -> Unit)? = null
@@ -162,6 +162,7 @@ class TextPanelController(
         const val TOOL_REFLECTION   = "reflection"
         const val TOOL_BLEND        = "blend"
         const val TOOL_NEON         = "neon"
+        const val TOOL_ADJUST       = "adjust"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY      = 0xFF616161.toInt()
@@ -360,6 +361,7 @@ initializeMaskControls()
                 activeTextToolTag == TOOL_EMBOSS && sel != null -> showComposeEmbossSheet(sel)
                 activeTextToolTag == TOOL_BLEND && layer != null -> showComposeBlendSheet(layer)
                 activeTextToolTag == TOOL_PERSPECTIVE && layer != null -> showComposePerspectiveSheet(layer)
+                activeTextToolTag == TOOL_ADJUST && sel != null -> showComposeLayerAdjustSheet(sel)
                 activeTextToolTag == TOOL_ALIGN && sel != null -> showComposeAlignSheet(sel)
                 activeTextToolTag == TOOL_SIZE && sel != null -> showComposeSizeSheet(sel)
                 activeTextToolTag == TOOL_OPACITY && sel != null -> showComposeOpacitySheet(sel)
@@ -1463,6 +1465,86 @@ initializeMaskControls()
                         if (!l.isLocked) {
                             l.blendMode = android.graphics.PorterDuff.Mode.SRC_OVER
                             l.blendExtra = null
+                            pixelCanvasView.invalidate()
+                        }
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
+    /**
+     * Compose bottom sheet Adjustment per-layer (Prompt 04) untuk TextLayer.
+     */
+    private fun showComposeLayerAdjustSheet(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+        val host = threeDComposeHost ?: return
+        val alreadyVisible = threeDComposeContainer?.visibility == View.VISIBLE
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        if (!alreadyVisible) onEffectSettingsOpenChanged(true)
+        threeDComposeContainer?.visibility = View.VISIBLE
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
+        threeDComposeContainer?.post { onCanvasChanged() }
+
+        val adj = layer.adjustments
+        host.setContent {
+            com.flyerpix.editor.ui.compose.LayerAdjustDetailPage(
+                enabled = layer.adjustmentsEnabled,
+                contrast = adj.contrast,
+                saturation = adj.saturation,
+                exposure = adj.exposure,
+                highlights = adj.highlights,
+                shadows = adj.shadows,
+                temperature = adj.temperature,
+                tint = adj.tint,
+                gamma = adj.gamma,
+                vibrance = adj.vibrance,
+                hue = adj.hue,
+                activePreset = adj.preset,
+                onEnabledChange = { en ->
+                    pixelCanvasView.selectedLayer?.let { l ->
+                        if (!l.isLocked) { l.adjustmentsEnabled = en; pixelCanvasView.invalidate() }
+                    }
+                },
+                onContrastChange = { v -> pixelCanvasView.selectedLayer?.let { l -> if (!l.isLocked) { l.adjustments.contrast = v; pixelCanvasView.invalidate() } } },
+                onSaturationChange = { v -> pixelCanvasView.selectedLayer?.let { l -> if (!l.isLocked) { l.adjustments.saturation = v; pixelCanvasView.invalidate() } } },
+                onExposureChange = { v -> pixelCanvasView.selectedLayer?.let { l -> if (!l.isLocked) { l.adjustments.exposure = v; pixelCanvasView.invalidate() } } },
+                onHighlightsChange = { v -> pixelCanvasView.selectedLayer?.let { l -> if (!l.isLocked) { l.adjustments.highlights = v; pixelCanvasView.invalidate() } } },
+                onShadowsChange = { v -> pixelCanvasView.selectedLayer?.let { l -> if (!l.isLocked) { l.adjustments.shadows = v; pixelCanvasView.invalidate() } } },
+                onTemperatureChange = { v -> pixelCanvasView.selectedLayer?.let { l -> if (!l.isLocked) { l.adjustments.temperature = v; pixelCanvasView.invalidate() } } },
+                onTintChange = { v -> pixelCanvasView.selectedLayer?.let { l -> if (!l.isLocked) { l.adjustments.tint = v; pixelCanvasView.invalidate() } } },
+                onGammaChange = { v -> pixelCanvasView.selectedLayer?.let { l -> if (!l.isLocked) { l.adjustments.gamma = v; pixelCanvasView.invalidate() } } },
+                onVibranceChange = { v -> pixelCanvasView.selectedLayer?.let { l -> if (!l.isLocked) { l.adjustments.vibrance = v; pixelCanvasView.invalidate() } } },
+                onHueChange = { v -> pixelCanvasView.selectedLayer?.let { l -> if (!l.isLocked) { l.adjustments.hue = v; pixelCanvasView.invalidate() } } },
+                onPreset = { preset ->
+                    val p = com.flyerpix.editor.ui.compose.layerAdjustPresetParams(preset)
+                    pixelCanvasView.selectedLayer?.let { l ->
+                        if (!l.isLocked) {
+                            val a = l.adjustments
+                            a.contrast = p.contrast; a.saturation = p.saturation
+                            a.exposure = p.exposure; a.highlights = p.highlights; a.shadows = p.shadows
+                            a.temperature = p.temperature; a.tint = p.tint; a.gamma = p.gamma
+                            a.vibrance = p.vibrance; a.hue = p.hue
+                            a.preset = if (preset == "Normal") null else preset
+                            l.adjustmentsEnabled = true
+                            pixelCanvasView.invalidate()
+                        }
+                    }
+                },
+                onReset = {
+                    pixelCanvasView.selectedLayer?.let { l ->
+                        if (!l.isLocked) {
+                            val a = l.adjustments
+                            a.contrast = 0f; a.saturation = 0f
+                            a.exposure = 0f; a.highlights = 0f; a.shadows = 0f
+                            a.temperature = 0f; a.tint = 0f; a.gamma = 0f
+                            a.vibrance = 0f; a.hue = 0f
+                            a.preset = null
                             pixelCanvasView.invalidate()
                         }
                     }
@@ -3639,6 +3721,9 @@ tvAngleLabel.text = "Angle: 0°"
                     syncNeonUIHook?.invoke(layer)
                 }
             }
+            TOOL_ADJUST -> {
+                if (threeDComposeHost != null) showComposeLayerAdjustSheet(layer)
+            }
         }
         val title = textToolLabels[tag] ?: "Effect Settings"
         (binding.effectSettingsInclude.root as? com.flyerpix.editor.ui.view.DetailPanel)?.setTitle(title)
@@ -4002,6 +4087,8 @@ tvAngleLabel.text = "Angle: 0°"
         layer.paddingBottom        = snapshot.paddingBottom
         layer.paddingLeft          = snapshot.paddingLeft
         layer.paddingRight         = snapshot.paddingRight
+        layer.adjustmentsEnabled   = snapshot.adjustmentsEnabled
+        layer.adjustments          = snapshot.adjustments.copy()
     }
 
     /**
@@ -4088,7 +4175,8 @@ private fun registerTextPanels() {
             TextToolSpec(TOOL_3D_SHADOW,   "3D Shadow",   R.drawable.ic_3d_shadow_24px),
             TextToolSpec(TOOL_REFLECTION,  "Reflection",  R.drawable.ic_reflection_24px),
             TextToolSpec(TOOL_BLEND,       "Blend",       R.drawable.ic_layers_24px),
-            TextToolSpec(TOOL_NEON,        "Neon",        R.drawable.ic_neon_24px)
+            TextToolSpec(TOOL_NEON,        "Neon",        R.drawable.ic_neon_24px),
+            TextToolSpec(TOOL_ADJUST,      "Adjust",      R.drawable.ic_sharp_palette_24px)
         )
 
         val density = activity.resources.displayMetrics.density

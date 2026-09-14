@@ -18,14 +18,18 @@ data class LayerAdjustments(
     var tint: Float = 0f,
     var gamma: Float = 0f,
     var vibrance: Float = 0f,
-    var hue: Float = 0f
+    var hue: Float = 0f,
+    var contrast: Float = 0f,
+    var saturation: Float = 0f,
+    var preset: String? = null
 ) {
 
     /** True bila setidaknya satu parameter tidak netral → perlu di-render terpisah. */
     val isActive: Boolean
         get() = exposure != 0f || highlights != 0f || shadows != 0f ||
             temperature != 0f || tint != 0f || gamma != 0f ||
-            vibrance != 0f || hue != 0f
+            vibrance != 0f || hue != 0f ||
+            contrast != 0f || saturation != 0f
 
     /**
      * Mengeksekusi pipeline color adjustment pada piksel [pixels] (in-place).
@@ -37,7 +41,7 @@ data class LayerAdjustments(
         runCatching {
             FilterEngine.applyColorAdjustPixels(
                 pixels, width, height,
-                0f, 0f, 0f, hue,
+                0f, contrast / 100f, saturation / 100f, hue,
                 exposure / 100f, highlights / 100f, shadows / 100f,
                 temperature / 100f, tint / 100f,
                 (1f + gamma / 100f * 3f).coerceIn(0.1f, 4f),

@@ -34,8 +34,11 @@ class LayerAdjustmentsTest {
         assertTrue(LayerAdjustments(gamma = 12f).isActive)
         assertTrue(LayerAdjustments(vibrance = 30f).isActive)
         assertTrue(LayerAdjustments(hue = 45f).isActive)
+        assertTrue(LayerAdjustments(contrast = 20f).isActive)
+        assertTrue(LayerAdjustments(saturation = -60f).isActive)
         assertTrue(LayerAdjustments(exposure = 0f, highlights = 0f, shadows = 0f,
-            temperature = 0f, tint = 0f, gamma = 0f, vibrance = 0f, hue = 0f).isActive.not())
+            temperature = 0f, tint = 0f, gamma = 0f, vibrance = 0f, hue = 0f,
+            contrast = 0f, saturation = 0f).isActive.not())
     }
 
     @Test
@@ -86,6 +89,29 @@ class LayerAdjustmentsTest {
     }
 
     @Test
+    fun `preset params fill multiple fields at once`() {
+        val faded = com.flyerpix.editor.ui.compose.layerAdjustPresetParams("Faded")
+        assertEquals(-45f, faded.vibrance, 0f)
+        assertEquals(-25f, faded.contrast, 0f)
+        assertEquals(0f, faded.saturation, 0f)
+        assertEquals(0f, faded.temperature, 0f)
+
+        val punchy = com.flyerpix.editor.ui.compose.layerAdjustPresetParams("Punchy")
+        assertEquals(45f, punchy.vibrance, 0f)
+        assertEquals(25f, punchy.contrast, 0f)
+
+        val warm = com.flyerpix.editor.ui.compose.layerAdjustPresetParams("Warm")
+        assertEquals(35f, warm.temperature, 0f)
+        assertEquals(0f, warm.contrast, 0f)
+
+        val bw = com.flyerpix.editor.ui.compose.layerAdjustPresetParams("B&W")
+        assertEquals(-95f, bw.saturation, 0f)
+
+        val normal = com.flyerpix.editor.ui.compose.layerAdjustPresetParams("Normal")
+        assertFalse(normal.saturation != 0f || normal.vibrance != 0f || normal.contrast != 0f || normal.temperature != 0f)
+    }
+
+    @Test
     fun `layer adjustment fields survive gson round trip`() {
         val dto = ProjectDto(
             projectName  = "P3",
@@ -100,7 +126,10 @@ class LayerAdjustmentsTest {
                     exposure = 12.5f,
                     shadows = -7f,
                     gamma = 20f,
-                    hue = 45f
+                    hue = 45f,
+                    contrast = 15f,
+                    saturation = -30f,
+                    preset = "Punchy"
                 )
             )
         )
@@ -115,6 +144,9 @@ class LayerAdjustmentsTest {
         assertEquals(-7f, layer.shadows!!, 0f)
         assertEquals(20f, layer.gamma!!, 0f)
         assertEquals(45f, layer.hue!!, 0f)
+        assertEquals(15f, layer.contrast!!, 0f)
+        assertEquals(-30f, layer.saturation!!, 0f)
+        assertEquals("Punchy", layer.preset)
         assertEquals(null, layer.tint)
         assertEquals(null, layer.temperature)
     }

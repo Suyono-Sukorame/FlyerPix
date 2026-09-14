@@ -240,7 +240,10 @@ data class LayerDto(
     val tint: Float? = null,
     val gamma: Float? = null,
     val vibrance: Float? = null,
-    val hue: Float? = null
+    val hue: Float? = null,
+    val contrast: Float? = null,
+    val saturation: Float? = null,
+    val preset: String? = null
 )
 
 /**

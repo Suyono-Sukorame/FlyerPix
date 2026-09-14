@@ -267,7 +267,10 @@ object ProjectSerializer {
         tint               = layer.adjustments.tint,
         gamma              = layer.adjustments.gamma,
         vibrance           = layer.adjustments.vibrance,
-        hue                = layer.adjustments.hue
+        hue                = layer.adjustments.hue,
+        contrast           = layer.adjustments.contrast,
+        saturation         = layer.adjustments.saturation,
+        preset             = layer.adjustments.preset
     )
 
     private fun textLayerToDto(l: TextLayer): LayerDto = baseLayerFields(l).copy(
@@ -775,7 +778,10 @@ object ProjectSerializer {
                 tint         = dto.tint ?: 0f,
                 gamma        = dto.gamma ?: 0f,
                 vibrance     = dto.vibrance ?: 0f,
-                hue          = dto.hue ?: 0f
+                hue          = dto.hue ?: 0f,
+                contrast     = dto.contrast ?: 0f,
+                saturation   = dto.saturation ?: 0f,
+                preset       = dto.preset
             )
         }
     }
