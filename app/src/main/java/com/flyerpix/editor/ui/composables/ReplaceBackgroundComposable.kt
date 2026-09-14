@@ -31,10 +31,12 @@ fun ReplaceBackgroundComposable(
     onColorMatchToggle: (Boolean) -> Unit,
     onGalleryClick: () -> Unit,
     onClose: () -> Unit,
+    onApply: (autoColorMatch: Boolean, blendToBackground: Boolean) -> Unit,
     autoColorMatchEnabled: Boolean = false
 ) {
     var selectedMode by remember { mutableStateOf(currentBackground.mode) }
     var autoColorMatch by remember { mutableStateOf(autoColorMatchEnabled) }
+    var blendToBackground by remember { mutableStateOf(false) }
     var selectedSolidColor by remember { mutableStateOf(currentBackground.solidColor) }
     var selectedGradient by remember { mutableStateOf(currentBackground.gradient ?: GradientColor(colors = intArrayOf(0xFF0066FF.toInt(), 0xFF00AAFF.toInt()), type = GradientType.LINEAR)) }
 
@@ -64,7 +66,7 @@ fun ReplaceBackgroundComposable(
                 Button(onClick = { selectedMode = CanvasBackgroundMode.GRADIENT }, modifier = Modifier.height(40.dp).weight(1f), colors = ButtonDefaults.buttonColors(backgroundColor = selectedColor2)) {
                     Text("Gradient", fontSize = 13.sp)
                 }
-                Button(onClick = { selectedMode = CanvasBackgroundMode.IMAGE }, modifier = Modifier.height(40.dp).weight(1f), colors = ButtonDefaults.buttonColors(backgroundColor = selectedColor3)) {
+                Button(onClick = { selectedMode = CanvasBackgroundMode.IMAGE; onGalleryClick() }, modifier = Modifier.height(40.dp).weight(1f), colors = ButtonDefaults.buttonColors(backgroundColor = selectedColor3)) {
                     Text("Gallery", fontSize = 13.sp)
                 }
             }
@@ -121,7 +123,16 @@ fun ReplaceBackgroundComposable(
         }
 
         item {
-            Button(onClick = { onClose() }, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF0066FF))) {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
+                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column { Text("Blend ke Background", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White); Text("Gradient bottom-top mask otomatis", fontSize = 11.sp, color = Color(0xFF999999)) }
+                    Switch(checked = blendToBackground, onCheckedChange = { blendToBackground = it })
+                }
+            }
+        }
+
+        item {
+            Button(onClick = { onApply(autoColorMatch, blendToBackground) }, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF0066FF))) {
                 Text("Apply", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(modifier = Modifier.height(16.dp))

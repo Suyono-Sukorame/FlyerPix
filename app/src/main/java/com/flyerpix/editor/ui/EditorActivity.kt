@@ -198,6 +198,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     // ── Pre-Edit Gambar (Foto / Galeri → Sesuaikan → menjadi Layer) ───────────
 
+    /** Saat true, image galeri berikutnya dipakai sebagai background canvas, bukan layer baru. */
+    private var loadImageAsBackground = false
+
     private val preEditImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             showLoadingDialog("Loading image...")
@@ -208,7 +211,15 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
                     dismissLoadingDialog()
                     
                     if (bmp != null) {
-                        showImagePreEdit(bmp)
+                        if (loadImageAsBackground) {
+                            loadImageAsBackground = false
+                            pixelCanvasView.canvasBackground =
+                                com.flyerpix.editor.canvas.model.CanvasBackground.image(bmp)
+                            pixelCanvasView.invalidate()
+                            showSnackbar("Background image set")
+                        } else {
+                            showImagePreEdit(bmp)
+                        }
                     } else {
                         showSnackbar("Failed to load image from gallery.")
                     }
@@ -480,6 +491,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             pixelCanvasView,
             { showSnackbar(it) },
             onGalleryRequested = { preEditImageLauncher.launch("image/*") },
+            onBackgroundGalleryRequested = { loadImageAsBackground = true; preEditImageLauncher.launch("image/*") },
             onCameraRequested = { checkCameraPermissionForBackground() },
             onPanelChanged = { fitCanvasToOpenPanels() },
             onShapeCreated = {}

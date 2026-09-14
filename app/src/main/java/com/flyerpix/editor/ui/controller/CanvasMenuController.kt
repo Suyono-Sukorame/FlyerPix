@@ -431,6 +431,27 @@ class CanvasMenuController(
                     initialBgSnapshot = null
                     deselect(restoreStrip = true)
                 },
+                onApply = { autoMatch, _ ->
+                    if (autoMatch) {
+                        pixelCanvasView.selectedLayer?.let { layer ->
+                            if (!layer.isLocked) {
+                                val p = com.flyerpix.editor.ui.compose.layerAdjustPresetParams("Punchy")
+                                val a = layer.adjustments
+                                a.contrast = p.contrast; a.saturation = p.saturation
+                                a.exposure = p.exposure; a.highlights = p.highlights; a.shadows = p.shadows
+                                a.temperature = p.temperature; a.tint = p.tint; a.gamma = p.gamma
+                                a.vibrance = p.vibrance; a.hue = p.hue
+                                a.preset = "Punchy"
+                                layer.adjustmentsEnabled = true
+                                pixelCanvasView.invalidate()
+                            }
+                        }
+                    }
+                    pixelCanvasView.runRecordedAction("Replace Canvas Background") {}
+                    replaceBgAutoColorMatch = false
+                    initialBgSnapshot = null
+                    deselect(restoreStrip = true)
+                },
                 autoColorMatchEnabled = replaceBgAutoColorMatch
             )
         }

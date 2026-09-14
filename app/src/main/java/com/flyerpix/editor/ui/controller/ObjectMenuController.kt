@@ -40,6 +40,7 @@ class ObjectMenuController(
     private val showSnackbar: (String) -> Unit,
     private val onGalleryRequested: () -> Unit,
     private val onCameraRequested: () -> Unit,
+    private val onBackgroundGalleryRequested: () -> Unit = onGalleryRequested,
     private val onPanelChanged: () -> Unit = {},
     private val onShapeCreated: ((ShapeLayer) -> Unit)? = null
 ) {
@@ -1160,13 +1161,73 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                     autoColorMatchEnabled = enabled
                 },
                 onGalleryClick = {
-                    // Gallery integration - placeholder
+                    onBackgroundGalleryRequested()
                 },
                 onClose = {
                     closeReplaceBackgroundEditor()
                 },
+                onApply = { autoMatch, blend ->
+                    applyAutoColorMatch(autoMatch)
+                    if (blend) applyBlendMaskToSelected()
+                    closeReplaceBackgroundEditor()
+                },
                 autoColorMatchEnabled = autoColorMatchEnabled
             )
+        }
+    }
+
+    /**
+     * Auto Color Match: jangan rusak piksel layer — hanya ubah nilai adjustment
+     * (Prompt 08). Terapkan preset Punchy + naikkan exposure bila background lebih gelap.
+     */
+    private fun applyAutoColorMatch(enabled: Boolean) {
+        val layer = canvas.selectedLayer ?: return
+        if (!enabled) return
+        if (layer.isLocked) return
+        val preset = com.flyerpix.editor.ui.compose.layerAdjustPresetParams("Punchy")
+        val a = layer.adjustments
+        a.contrast = preset.contrast
+        a.saturation = preset.saturation
+        a.exposure = preset.exposure
+        a.highlights = preset.highlights
+        a.shadows = preset.shadows
+        a.temperature = preset.temperature
+        a.tint = preset.tint
+        a.gamma = preset.gamma
+        a.vibrance = preset.vibrance
+        a.hue = preset.hue
+        a.preset = "Punchy"
+        layer.adjustmentsEnabled = true
+        val bg = canvas.canvasBackground
+        val bgLuma = when (bg.mode) {
+            com.flyerpix.editor.canvas.model.CanvasBackgroundMode.SOLID_COLOR ->
+                ((0.299f * android.graphics.Color.red(bg.solidColor)) +
+                    (0.587f * android.graphics.Color.green(bg.solidColor)) +
+                    (0.114f * android.graphics.Color.blue(bg.solidColor))) / 255f
+            else -> 0.5f
+        }
+        if (bgLuma < 0.4f) a.exposure = (a.exposure ?: 0f) + 15f
+        canvas.invalidate()
+    }
+
+    /**
+     * Blend Mask: gradient bawah→atas (Prompt 07) pada layer foto terpilih.
+     */
+    private fun applyBlendMaskToSelected() {
+        val layer = canvas.selectedLayer ?: return
+        if (layer.isLocked) return
+        if (layer.maskBitmap == null) {
+            val (w, h) = layer.getUnwarpedDimensions()
+            if (w > 0 && h > 0) layer.createMask(w.toInt(), h.toInt())
+        }
+        layer.maskBitmap?.let { bmp ->
+            com.flyerpix.editor.canvas.model.MaskUtils.generateGradientMask(
+                bmp,
+                com.flyerpix.editor.canvas.model.GradientType.LINEAR,
+                com.flyerpix.editor.canvas.model.MaskUtils.DIR_BOTTOM_TOP
+            )
+            layer.maskEnabled = true
+            canvas.invalidate()
         }
     }
 
