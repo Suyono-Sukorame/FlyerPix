@@ -70,7 +70,9 @@ class ImagePreEditView @JvmOverloads constructor(
     fun setImage(bitmap: Bitmap) {
         image = bitmap
         selection.reset()
-        activeAspect = null
+        // Set default aspect ratio to 1:1 (square)
+        activeAspect = 1 to 1
+        selection.rect = CropMath.fitRatioToCanvas(1, 1)
         
         // Smart Initial Zoom: Auto-detect optimal zoom level based on image size
         // If image is much larger than view, start with zoom level 1 or 2

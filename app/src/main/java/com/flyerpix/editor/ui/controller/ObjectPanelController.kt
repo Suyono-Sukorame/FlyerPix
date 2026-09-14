@@ -45,6 +45,7 @@ class ObjectPanelController(
         const val OBJ_SCALE       = "obj_scale"
         const val OBJ_OPACITY     = "obj_opacity"
         const val OBJ_ROTATE      = "obj_rotate"
+        const val OBJ_SELECT      = "obj_select"
         const val OBJ_COLOR       = "obj_color"
         const val OBJ_STROKE      = "obj_stroke"
         const val OBJ_SHADOW      = "obj_shadow"
@@ -62,7 +63,7 @@ class ObjectPanelController(
         )
 
         val composedObjectTags = setOf(
-            OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE,
+            OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE, OBJ_SELECT, OBJ_COLOR,
             OBJ_SHADOW, OBJ_STROKE, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST, OBJ_GRADIENT
         )
     }
@@ -289,7 +290,13 @@ class ObjectPanelController(
                 if (composeHost != null) showComposeRotateSheet(layer)
                 else syncRotateUI(layer)
             }
-            OBJ_COLOR       -> syncColorUI(layer)
+            OBJ_SELECT      -> {
+                if (composeHost != null && layer is ShapeLayer) showComposeSelectSheet(layer)
+            }
+            OBJ_COLOR       -> {
+                if (composeHost != null) showComposeColorSheet(layer)
+                else syncColorUI(layer)
+            }
             OBJ_STROKE      -> {
                 if (composeHost != null && (layer is ShapeLayer || layer is PenLayer)) showComposeStrokeSheet(layer)
                 else syncStrokeUI(layer)
@@ -989,6 +996,68 @@ class ObjectPanelController(
                 },
                 onReset = {
                     applyToLayer { it.rotation = 0f }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeSelectSheet(layer: CanvasLayer) {
+        if (layer !is com.flyerpix.editor.canvas.model.ShapeLayer) return
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.SelectDetailPage(
+                selectedShape = layer.shapeType,
+                onShapeSelect = { shapeType ->
+                    applyToLayer { l ->
+                        if (l is com.flyerpix.editor.canvas.model.ShapeLayer) {
+                            l.shapeType = shapeType
+                        }
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showComposeColorSheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.ColorDetailPage(
+                fillColor = fillColorOf(layer),
+                onColorChange = { color ->
+                    applyToLayer { setFillColor(it, color) }
+                },
+                onColorPickRequested = { launchFillColorPicker() },
+                onGradientRequested = {
+                    activeToolTag = OBJ_GRADIENT
+                    toolBeforeEffect = OBJ_COLOR
+                    effectSettingsOpen = true
+                    showComposeGradientSheet(layer)
                 },
                 onApply = { applyEffectSettings() },
                 onCancel = { cancelEffectSettings() },

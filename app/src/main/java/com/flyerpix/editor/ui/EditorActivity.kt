@@ -245,11 +245,18 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         val viewH = if (pixelCanvasView.height > 0) pixelCanvasView.height.toFloat() else 1080f
         val bmpW = bitmap.width.toFloat()
         val bmpH = bitmap.height.toFloat()
+        
+        // Scale image to fit canvas, but ensure it fits perfectly when sized to canvas
+        // If image is smaller or similar size to canvas, don't scale down
+        // If image is much larger, scale to fit with small margin
         var scale = 1f
-        if (bmpW > viewW * 0.9f || bmpH > viewH * 0.9f) {
-            scale = min((viewW * 0.9f) / bmpW, (viewH * 0.9f) / bmpH)
+        if (bmpW > viewW * 1.1f || bmpH > viewH * 1.1f) {
+            // Image is significantly larger than canvas, scale down to fit with margin
+            scale = min(viewW / bmpW, viewH / bmpH) * 0.95f
         }
+        
         val layer = ImageLayer(bitmap = bitmap, scale = scale, layerName = "Image")
+        // Center image on canvas
         layer.x = (viewW - bmpW * scale) / 2f
         layer.y = (viewH - bmpH * scale) / 2f
         pixelCanvasView.addLayer(layer)
