@@ -61,7 +61,15 @@ class EffectsController(
         val contrast: Float,
         val saturation: Float,
         val blur: Float,
-        val activeEffects: Set<PixelCanvasView.CanvasEffect>
+        val activeEffects: Set<PixelCanvasView.CanvasEffect>,
+        val exposure: Float = 0f,
+        val highlights: Float = 0f,
+        val shadows: Float = 0f,
+        val temperature: Float = 0f,
+        val tint: Float = 0f,
+        val gamma: Float = 0f,
+        val vibrance: Float = 0f,
+        val hue: Float = 0f
     )
 
     private var initialSnapshot: CanvasEffectsSnapshot? = null
@@ -185,7 +193,15 @@ class EffectsController(
             contrast = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.CONTRAST),
             saturation = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.SATURATION),
             blur = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.BLUR),
-            activeEffects = pixelCanvasView.activeEffectList.toSet()
+            activeEffects = pixelCanvasView.activeEffectList.toSet(),
+            exposure = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.EXPOSURE),
+            highlights = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.HIGHLIGHTS),
+            shadows = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.SHADOWS),
+            temperature = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.TEMPERATURE),
+            tint = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.TINT),
+            gamma = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.GAMMA),
+            vibrance = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.VIBRANCE),
+            hue = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.HUE)
         )
     }
 
@@ -195,6 +211,14 @@ class EffectsController(
         pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.CONTRAST, snap.contrast)
         pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.SATURATION, snap.saturation)
         pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.BLUR, snap.blur)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.EXPOSURE, snap.exposure)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.HIGHLIGHTS, snap.highlights)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.SHADOWS, snap.shadows)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.TEMPERATURE, snap.temperature)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.TINT, snap.tint)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.GAMMA, snap.gamma)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.VIBRANCE, snap.vibrance)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.HUE, snap.hue)
 
         for (effect in PixelCanvasView.CanvasEffect.values()) {
             pixelCanvasView.setEffectEnabled(effect, snap.activeEffects.contains(effect))
@@ -259,12 +283,28 @@ class EffectsController(
         val brightness = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.BRIGHTNESS)
         val contrast = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.CONTRAST)
         val saturation = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.SATURATION)
+        val exposure = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.EXPOSURE)
+        val highlights = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.HIGHLIGHTS)
+        val shadows = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.SHADOWS)
+        val temperature = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.TEMPERATURE)
+        val tint = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.TINT)
+        val gamma = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.GAMMA)
+        val vibrance = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.VIBRANCE)
+        val hue = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.HUE)
 
         host.setContent {
             CanvasAdjustDetailPage(
                 brightness = brightness,
                 contrast = contrast,
                 saturation = saturation,
+                exposure = exposure,
+                highlights = highlights,
+                shadows = shadows,
+                temperature = temperature,
+                tint = tint,
+                gamma = gamma,
+                vibrance = vibrance,
+                hue = hue,
                 onBrightnessChange = { b ->
                     pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.BRIGHTNESS, b)
                     refreshLegacyUI()
@@ -277,11 +317,40 @@ class EffectsController(
                     pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.SATURATION, s)
                     refreshLegacyUI()
                 },
-                onReset = {
-                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.BRIGHTNESS, 0f)
-                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.CONTRAST, 0f)
-                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.SATURATION, 0f)
+                onExposureChange = { v ->
+                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.EXPOSURE, v)
                     refreshLegacyUI()
+                },
+                onHighlightsChange = { v ->
+                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.HIGHLIGHTS, v)
+                    refreshLegacyUI()
+                },
+                onShadowsChange = { v ->
+                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.SHADOWS, v)
+                    refreshLegacyUI()
+                },
+                onTemperatureChange = { v ->
+                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.TEMPERATURE, v)
+                    refreshLegacyUI()
+                },
+                onTintChange = { v ->
+                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.TINT, v)
+                    refreshLegacyUI()
+                },
+                onGammaChange = { v ->
+                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.GAMMA, v)
+                    refreshLegacyUI()
+                },
+                onVibranceChange = { v ->
+                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.VIBRANCE, v)
+                    refreshLegacyUI()
+                },
+                onHueChange = { v ->
+                    pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.HUE, v)
+                    refreshLegacyUI()
+                },
+                onReset = {
+                    resetAllAdjustments()
                 },
                 onApply = {
                     pixelCanvasView.runRecordedAction("Adjust Canvas Colors") {}
@@ -427,17 +496,74 @@ class EffectsController(
             binding.tvAdjustSaturation.text = "Saturation: ${value.toInt()}"
             pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.SATURATION, value)
         }
+
+        binding.sliderExposure.addOnChangeListener { _, value, _ ->
+            binding.tvAdjustExposure.text = "Exposure: ${value.toInt()}"
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.EXPOSURE, value)
+        }
+
+        binding.sliderHighlights.addOnChangeListener { _, value, _ ->
+            binding.tvAdjustHighlights.text = "Highlights: ${value.toInt()}"
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.HIGHLIGHTS, value)
+        }
+
+        binding.sliderShadows.addOnChangeListener { _, value, _ ->
+            binding.tvAdjustShadows.text = "Shadows: ${value.toInt()}"
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.SHADOWS, value)
+        }
+
+        binding.sliderTemperature.addOnChangeListener { _, value, _ ->
+            binding.tvAdjustTemperature.text = "Temperature: ${value.toInt()}"
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.TEMPERATURE, value)
+        }
+
+        binding.sliderTint.addOnChangeListener { _, value, _ ->
+            binding.tvAdjustTint.text = "Tint: ${value.toInt()}"
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.TINT, value)
+        }
+
+        binding.sliderGamma.addOnChangeListener { _, value, _ ->
+            binding.tvAdjustGamma.text = "Gamma: ${value.toInt()}"
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.GAMMA, value)
+        }
+
+        binding.sliderVibrance.addOnChangeListener { _, value, _ ->
+            binding.tvAdjustVibrance.text = "Vibrance: ${value.toInt()}"
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.VIBRANCE, value)
+        }
+
+        binding.sliderHue.addOnChangeListener { _, value, _ ->
+            binding.tvAdjustHue.text = "Hue: ${value.toInt()}"
+            pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.HUE, value)
+        }
     }
 
     private fun resetAllAdjustments() {
         binding.sliderBrightness.value = 0f
         binding.sliderContrast.value = 0f
         binding.sliderSaturation.value = 0f
+        binding.sliderExposure.value = 0f
+        binding.sliderHighlights.value = 0f
+        binding.sliderShadows.value = 0f
+        binding.sliderTemperature.value = 0f
+        binding.sliderTint.value = 0f
+        binding.sliderGamma.value = 0f
+        binding.sliderVibrance.value = 0f
+        binding.sliderHue.value = 0f
 
         pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.BRIGHTNESS, 0f)
         pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.CONTRAST, 0f)
         pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.SATURATION, 0f)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.EXPOSURE, 0f)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.HIGHLIGHTS, 0f)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.SHADOWS, 0f)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.TEMPERATURE, 0f)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.TINT, 0f)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.GAMMA, 0f)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.VIBRANCE, 0f)
+        pixelCanvasView.setAdjustment(PixelCanvasView.CanvasAdjustment.HUE, 0f)
 
+        refreshLegacyUI()
         showSnackbar("Semua adjustment direset")
     }
 
@@ -511,16 +637,40 @@ class EffectsController(
         val contrast = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.CONTRAST)
         val saturation = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.SATURATION)
         val blur = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.BLUR)
+        val exposure = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.EXPOSURE)
+        val highlights = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.HIGHLIGHTS)
+        val shadows = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.SHADOWS)
+        val temperature = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.TEMPERATURE)
+        val tint = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.TINT)
+        val gamma = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.GAMMA)
+        val vibrance = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.VIBRANCE)
+        val hue = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.HUE)
 
         if (binding.sliderBrightness.value != brightness) binding.sliderBrightness.value = brightness
         if (binding.sliderContrast.value != contrast) binding.sliderContrast.value = contrast
         if (binding.sliderSaturation.value != saturation) binding.sliderSaturation.value = saturation
         if (binding.sliderBlurRadius.value != blur) binding.sliderBlurRadius.value = blur
+        if (binding.sliderExposure.value != exposure) binding.sliderExposure.value = exposure
+        if (binding.sliderHighlights.value != highlights) binding.sliderHighlights.value = highlights
+        if (binding.sliderShadows.value != shadows) binding.sliderShadows.value = shadows
+        if (binding.sliderTemperature.value != temperature) binding.sliderTemperature.value = temperature
+        if (binding.sliderTint.value != tint) binding.sliderTint.value = tint
+        if (binding.sliderGamma.value != gamma) binding.sliderGamma.value = gamma
+        if (binding.sliderVibrance.value != vibrance) binding.sliderVibrance.value = vibrance
+        if (binding.sliderHue.value != hue) binding.sliderHue.value = hue
 
         binding.tvAdjustBrightness.text = "Brightness: ${brightness.toInt()}"
         binding.tvAdjustContrast.text = "Contrast: ${contrast.toInt()}"
         binding.tvAdjustSaturation.text = "Saturation: ${saturation.toInt()}"
         binding.tvBlurRadius.text = "Blur Radius: ${blur.toInt()}"
+        binding.tvAdjustExposure.text = "Exposure: ${exposure.toInt()}"
+        binding.tvAdjustHighlights.text = "Highlights: ${highlights.toInt()}"
+        binding.tvAdjustShadows.text = "Shadows: ${shadows.toInt()}"
+        binding.tvAdjustTemperature.text = "Temperature: ${temperature.toInt()}"
+        binding.tvAdjustTint.text = "Tint: ${tint.toInt()}"
+        binding.tvAdjustGamma.text = "Gamma: ${gamma.toInt()}"
+        binding.tvAdjustVibrance.text = "Vibrance: ${vibrance.toInt()}"
+        binding.tvAdjustHue.text = "Hue: ${hue.toInt()}"
 
         val vig = pixelCanvasView.isEffectEnabled(PixelCanvasView.CanvasEffect.VIGNETTE)
         val noise = pixelCanvasView.isEffectEnabled(PixelCanvasView.CanvasEffect.NOISE)
@@ -549,8 +699,18 @@ class EffectsController(
         val contrast = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.CONTRAST)
         val saturation = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.SATURATION)
         val blur = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.BLUR)
+        val exposure = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.EXPOSURE)
+        val highlights = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.HIGHLIGHTS)
+        val shadows = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.SHADOWS)
+        val temperature = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.TEMPERATURE)
+        val tint = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.TINT)
+        val gamma = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.GAMMA)
+        val vibrance = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.VIBRANCE)
+        val hue = pixelCanvasView.getAdjustment(PixelCanvasView.CanvasAdjustment.HUE)
 
-        val hasAdjustments = brightness != 0f || contrast != 0f || saturation != 0f || blur != 0f
+        val hasAdjustments = brightness != 0f || contrast != 0f || saturation != 0f || blur != 0f ||
+                exposure != 0f || highlights != 0f || shadows != 0f ||
+                temperature != 0f || tint != 0f || gamma != 0f || vibrance != 0f || hue != 0f
         val hasEffects = pixelCanvasView.isEffectEnabled(PixelCanvasView.CanvasEffect.VIGNETTE) ||
                 pixelCanvasView.isEffectEnabled(PixelCanvasView.CanvasEffect.NOISE) ||
                 pixelCanvasView.isEffectEnabled(PixelCanvasView.CanvasEffect.FILTER)

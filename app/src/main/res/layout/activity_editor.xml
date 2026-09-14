@@ -540,6 +540,166 @@
                     app:trackColorActive="#18C8F5"
                     app:trackColorInactive="@color/light_track"
                     app:haloColor="#2218C8F5" />
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustExposure"
+                    android:text="Exposure: 0"
+                    android:textColor="@color/light_text_secondary"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderExposure"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1"
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="@color/light_track"
+                    app:haloColor="#2218C8F5" />
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustHighlights"
+                    android:text="Highlights: 0"
+                    android:textColor="@color/light_text_secondary"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderHighlights"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1"
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="@color/light_track"
+                    app:haloColor="#2218C8F5" />
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustShadows"
+                    android:text="Shadows: 0"
+                    android:textColor="@color/light_text_secondary"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderShadows"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1"
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="@color/light_track"
+                    app:haloColor="#2218C8F5" />
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustTemperature"
+                    android:text="Temperature: 0"
+                    android:textColor="@color/light_text_secondary"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderTemperature"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1"
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="@color/light_track"
+                    app:haloColor="#2218C8F5" />
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustTint"
+                    android:text="Tint: 0"
+                    android:textColor="@color/light_text_secondary"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderTint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1"
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="@color/light_track"
+                    app:haloColor="#2218C8F5" />
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustGamma"
+                    android:text="Gamma: 0"
+                    android:textColor="@color/light_text_secondary"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderGamma"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1"
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="@color/light_track"
+                    app:haloColor="#2218C8F5" />
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustVibrance"
+                    android:text="Vibrance: 0"
+                    android:textColor="@color/light_text_secondary"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderVibrance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1"
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="@color/light_track"
+                    app:haloColor="#2218C8F5" />
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tvAdjustHue"
+                    android:text="Hue: 0"
+                    android:textColor="@color/light_text_secondary"
+                    android:textSize="11sp" />
+            <com.google.android.material.slider.Slider
+                    android:id="@+id/sliderHue"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:valueFrom="-100"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1"
+                    app:thumbColor="#18C8F5"
+                    app:trackColorActive="#18C8F5"
+                    app:trackColorInactive="@color/light_track"
+                    app:haloColor="#2218C8F5" />
         </LinearLayout>
 
         <!-- Konten: Effects (Vignette / Noise / Filter) -->

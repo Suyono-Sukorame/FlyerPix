@@ -42,6 +42,57 @@ class FilterEngine private constructor() {
         init {
             System.loadLibrary("flyerpix_engine")
         }
+
+        /**
+         * Pipeline adjustment per-pixel in-place (Prompt 02) tanpa alokasi Bitmap.
+         *
+         * Memodifikasi [pixels] (ARGB_8888) sesuai pipeline extended yang sama dengan
+         * [applyColorAdjustExtended]. Parameter netral => pixel tidak berubah.
+         */
+        fun applyColorAdjustPixels(
+            pixels: IntArray,
+            width: Int,
+            height: Int,
+            brightness: Float = 0.0f,
+            contrast: Float = 0.0f,
+            saturation: Float = 0.0f,
+            hue: Float = 0.0f,
+            exposure: Float = 0.0f,
+            highlights: Float = 0.0f,
+            shadows: Float = 0.0f,
+            temperature: Float = 0.0f,
+            tint: Float = 0.0f,
+            gamma: Float = 1.0f,
+            vibrance: Float = 0.0f
+        ) {
+            nativeApplyColorAdjustPixels(
+                pixels, width, height,
+                brightness.coerceIn(-1f, 1f), contrast.coerceIn(-1f, 1f),
+                saturation.coerceIn(-1f, 1f), hue.coerceIn(-180f, 180f),
+                exposure.coerceIn(-1f, 1f), highlights.coerceIn(-1f, 1f),
+                shadows.coerceIn(-1f, 1f), temperature.coerceIn(-1f, 1f),
+                tint.coerceIn(-1f, 1f), gamma.coerceIn(0.1f, 4f),
+                vibrance.coerceIn(-1f, 1f)
+            )
+        }
+
+        @JvmStatic
+        private external fun nativeApplyColorAdjustPixels(
+            pixels: IntArray,
+            width: Int,
+            height: Int,
+            brightness: Float,
+            contrast: Float,
+            saturation: Float,
+            hue: Float,
+            exposure: Float,
+            highlights: Float,
+            shadows: Float,
+            temperature: Float,
+            tint: Float,
+            gamma: Float,
+            vibrance: Float
+        )
         
         /**
          * Create new FilterEngine instance dengan specified thread count

@@ -30,19 +30,37 @@ private const val PanelDivider = 0xFFE4E8F0
 private const val PanelHandle = 0xFFD0D4DE
 
 /**
- * Compose bottom sheet untuk Canvas Adjustments (Brightness, Contrast, Saturation).
+ * Compose bottom sheet untuk Canvas Adjustments (12 slider).
  * Gayanya identik 100% dengan halaman 3D Rotate:
  * Card bawah, drag handle, divider, daftar baris slider (Label | Slider | Nilai) + tombol Reset
  * di kolom kiri (scrollable), dan tombol Cancel / Apply di kolom kanan.
+ *
+ * Seluruh nilai menggunakan skala UI percent -100..100 (GAMMA netral di 0).
  */
 @Composable
 fun CanvasAdjustDetailPage(
     brightness: Float, // -100f..100f
     contrast: Float,   // -100f..100f
     saturation: Float, // -100f..100f
+    exposure: Float,   // -100f..100f
+    highlights: Float, // -100f..100f
+    shadows: Float,    // -100f..100f
+    temperature: Float, // -100f..100f
+    tint: Float,       // -100f..100f
+    gamma: Float,      // -100f..100f (0 = netral)
+    vibrance: Float,   // -100f..100f
+    hue: Float,        // -100f..100f
     onBrightnessChange: (Float) -> Unit,
     onContrastChange: (Float) -> Unit,
     onSaturationChange: (Float) -> Unit,
+    onExposureChange: (Float) -> Unit,
+    onHighlightsChange: (Float) -> Unit,
+    onShadowsChange: (Float) -> Unit,
+    onTemperatureChange: (Float) -> Unit,
+    onTintChange: (Float) -> Unit,
+    onGammaChange: (Float) -> Unit,
+    onVibranceChange: (Float) -> Unit,
+    onHueChange: (Float) -> Unit,
     onReset: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
@@ -51,6 +69,14 @@ fun CanvasAdjustDetailPage(
     var brightnessState by remember(brightness) { mutableStateOf(brightness) }
     var contrastState by remember(contrast) { mutableStateOf(contrast) }
     var saturationState by remember(saturation) { mutableStateOf(saturation) }
+    var exposureState by remember(exposure) { mutableStateOf(exposure) }
+    var highlightsState by remember(highlights) { mutableStateOf(highlights) }
+    var shadowsState by remember(shadows) { mutableStateOf(shadows) }
+    var temperatureState by remember(temperature) { mutableStateOf(temperature) }
+    var tintState by remember(tint) { mutableStateOf(tint) }
+    var gammaState by remember(gamma) { mutableStateOf(gamma) }
+    var vibranceState by remember(vibrance) { mutableStateOf(vibrance) }
+    var hueState by remember(hue) { mutableStateOf(hue) }
 
     MaterialTheme(colors = AdjustColorScheme) {
         Box(
@@ -123,6 +149,78 @@ fun CanvasAdjustDetailPage(
                                 }
                             )
 
+                            AdjustRow(
+                                label = "Exposure",
+                                value = exposureState,
+                                onValueChange = { new ->
+                                    exposureState = new
+                                    onExposureChange(new)
+                                }
+                            )
+
+                            AdjustRow(
+                                label = "Highlights",
+                                value = highlightsState,
+                                onValueChange = { new ->
+                                    highlightsState = new
+                                    onHighlightsChange(new)
+                                }
+                            )
+
+                            AdjustRow(
+                                label = "Shadows",
+                                value = shadowsState,
+                                onValueChange = { new ->
+                                    shadowsState = new
+                                    onShadowsChange(new)
+                                }
+                            )
+
+                            AdjustRow(
+                                label = "Temperature",
+                                value = temperatureState,
+                                onValueChange = { new ->
+                                    temperatureState = new
+                                    onTemperatureChange(new)
+                                }
+                            )
+
+                            AdjustRow(
+                                label = "Tint",
+                                value = tintState,
+                                onValueChange = { new ->
+                                    tintState = new
+                                    onTintChange(new)
+                                }
+                            )
+
+                            AdjustRow(
+                                label = "Gamma",
+                                value = gammaState,
+                                onValueChange = { new ->
+                                    gammaState = new
+                                    onGammaChange(new)
+                                }
+                            )
+
+                            AdjustRow(
+                                label = "Vibrance",
+                                value = vibranceState,
+                                onValueChange = { new ->
+                                    vibranceState = new
+                                    onVibranceChange(new)
+                                }
+                            )
+
+                            AdjustRow(
+                                label = "Hue",
+                                value = hueState,
+                                onValueChange = { new ->
+                                    hueState = new
+                                    onHueChange(new)
+                                }
+                            )
+
                             Spacer(modifier = Modifier.height(2.dp))
 
                             Text(
@@ -137,9 +235,25 @@ fun CanvasAdjustDetailPage(
                                         brightnessState = 0f
                                         contrastState = 0f
                                         saturationState = 0f
+                                        exposureState = 0f
+                                        highlightsState = 0f
+                                        shadowsState = 0f
+                                        temperatureState = 0f
+                                        tintState = 0f
+                                        gammaState = 0f
+                                        vibranceState = 0f
+                                        hueState = 0f
                                         onBrightnessChange(0f)
                                         onContrastChange(0f)
                                         onSaturationChange(0f)
+                                        onExposureChange(0f)
+                                        onHighlightsChange(0f)
+                                        onShadowsChange(0f)
+                                        onTemperatureChange(0f)
+                                        onTintChange(0f)
+                                        onGammaChange(0f)
+                                        onVibranceChange(0f)
+                                        onHueChange(0f)
                                         onReset()
                                     }
                                     .padding(vertical = 4.dp)

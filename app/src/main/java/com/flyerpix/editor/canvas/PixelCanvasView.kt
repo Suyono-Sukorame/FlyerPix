@@ -19,6 +19,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.util.AttributeSet
 import android.util.Log
+import com.flyerpix.editor.filter.FilterEngine
 import com.flyerpix.editor.nativepix.FpNative
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -799,6 +800,60 @@ class PixelCanvasView @JvmOverloads constructor(
         satMatrix.preConcat(contrastMatrix)
 
         return Paint().apply { colorFilter = ColorMatrixColorFilter(satMatrix) }
+    }
+
+    /** Merender seluruh layer terlihat secara berurutan sesuai z-index. */
+    private fun drawVisibleLayers(canvas: Canvas) {
+        for (i in 0 until layers.size) {
+            val layer = layers[i]
+            if (layer.isVisible) {
+                // Apply clipping path jika layer memiliki clipping active (Phase 8)
+                val clipPath = if (layer.clippingMode != com.flyerpix.editor.canvas.model.ClippingMode.NONE && layer.clipLayerId != null) {
+                    getClipPathForLayer(layer)
+                } else {
+                    null
+                }
+
+                // Apply layer mask if enabled (Phase 9-10)
+                val hasMask = layer.hasMask()
+
+                if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null || hasMask) {
+                    renderPaint.applyLayerBlend(layer)
+                    val saveCount = canvas.saveLayer(null, renderPaint)
+                    if (clipPath != null) canvas.clipPath(clipPath)
+                    layer.draw(canvas, renderPaint)
+                    // Apply mask DST_IN
+                    if (hasMask && layer.maskBitmap != null) {
+                        val maskPaint = android.graphics.Paint()
+                        maskPaint.alpha = 255
+                        canvas.drawBitmap(layer.maskBitmap!!, 0f, 0f, maskPaint)
+                    }
+                    canvas.restoreToCount(saveCount)
+                    renderPaint.clearBlend()
+                } else {
+                    renderPaint.clearBlend()
+                    val saveCount = canvas.save()
+                    if (clipPath != null) canvas.clipPath(clipPath)
+                    layer.draw(canvas, renderPaint)
+                    canvas.restoreToCount(saveCount)
+                }
+            }
+        }
+    }
+
+    /** Merender konten komposisi: background, grid, layer, free draw. */
+    private fun drawCompositionContent(canvas: Canvas, vp: RectF) {
+        drawBackgroundOnCanvas(canvas, vp)
+        if (isGridEnabled) drawGridGuidelines(canvas, vp)
+        val tLayers = System.nanoTime()
+        drawVisibleLayers(canvas)
+        if (profileEnabled) pfLayersMs += profileMark(tLayers)
+        if (freeDrawActive && freeDrawPoints.size >= 2) {
+            val path = android.graphics.Path()
+            path.moveTo(freeDrawPoints[0].first, freeDrawPoints[0].second)
+            for (p in freeDrawPoints) path.lineTo(p.first, p.second)
+            canvas.drawPath(path, freeDrawPaint)
+        }
     }
 
     // ── Crop Canvas (Prompt 46) ─────────────────────────────────────────────
@@ -1588,6 +1643,15 @@ class PixelCanvasView @JvmOverloads constructor(
         h = h * 31 + (adjustments[CanvasAdjustment.BRIGHTNESS] ?: 0f).toRawBits()
         h = h * 31 + (adjustments[CanvasAdjustment.CONTRAST] ?: 0f).toRawBits()
         h = h * 31 + (adjustments[CanvasAdjustment.SATURATION] ?: 0f).toRawBits()
+        // Parameter extended (Prompt 02) ikut dibakar ke overlay blur.
+        h = h * 31 + (adjustments[CanvasAdjustment.HUE] ?: 0f).toRawBits()
+        h = h * 31 + (adjustments[CanvasAdjustment.EXPOSURE] ?: 0f).toRawBits()
+        h = h * 31 + (adjustments[CanvasAdjustment.HIGHLIGHTS] ?: 0f).toRawBits()
+        h = h * 31 + (adjustments[CanvasAdjustment.SHADOWS] ?: 0f).toRawBits()
+        h = h * 31 + (adjustments[CanvasAdjustment.TEMPERATURE] ?: 0f).toRawBits()
+        h = h * 31 + (adjustments[CanvasAdjustment.TINT] ?: 0f).toRawBits()
+        h = h * 31 + (adjustments[CanvasAdjustment.GAMMA] ?: 0f).toRawBits()
+        h = h * 31 + (adjustments[CanvasAdjustment.VIBRANCE] ?: 0f).toRawBits()
         // Noise & vignette ikut dibakar ke overlay saat blur aktif.
         h = h * 31 + (if (isEffectEnabled(CanvasEffect.NOISE)) 1 else 0)
         h = h * 31 + (if (isEffectEnabled(CanvasEffect.VIGNETTE)) 1 else 0)
@@ -1643,11 +1707,18 @@ class PixelCanvasView @JvmOverloads constructor(
                 bmp.getPixels(pixels, 0, bw, 0, 0, bw, bh)
                 runCatching { FpNative.blurPixels(pixels, bw, bh, radius) }
                 val t1 = System.nanoTime()
-                val brightness = adjustments[CanvasAdjustment.BRIGHTNESS] ?: 0f
-                val contrast = adjustments[CanvasAdjustment.CONTRAST] ?: 0f
-                val saturation = adjustments[CanvasAdjustment.SATURATION] ?: 0f
-                if (brightness != 0f || contrast != 0f || saturation != 0f) {
-                    runCatching { FpNative.applyColorMatrix(pixels, brightness, contrast, saturation) }
+                // Adjustment extended (Prompt 02): satu pipeline yang sama dengan
+                // jalur preview, dibakar langsung ke overlay blur.
+                val adjParams = currentAdjustmentParams()
+                if (adjParams.isActive) {
+                    runCatching {
+                        FilterEngine.applyColorAdjustPixels(
+                            pixels, bw, bh,
+                            adjParams.brightness, adjParams.contrast, adjParams.saturation, adjParams.hue,
+                            adjParams.exposure, adjParams.highlights, adjParams.shadows,
+                            adjParams.temperature, adjParams.tint, adjParams.gamma, adjParams.vibrance
+                        )
+                    }
                 }
                 val noiseAlpha = if (isEffectEnabled(CanvasEffect.NOISE)) NOISE_OVERLAY_ALPHA else 0
                 val vignette = isEffectEnabled(CanvasEffect.VIGNETTE)
@@ -1836,78 +1907,38 @@ class PixelCanvasView @JvmOverloads constructor(
         canvas.translate(-cx, -cy)
 
         try {
-            // Efek Filter (monokrom) dibungkus sebagai layer komposit di atas
-            // background, grid, dan seluruh layer (Prompt 51).
-            val tFilter = System.nanoTime()
-            val filterEffectLayer = beginFilterEffectLayer(canvas)
-            if (profiling) pfFilterMs += profileMark(tFilter)
-
-            // Adjustment layer: brightness/contrast/saturation via ColorMatrix saveLayer
+            // Adjustment extended (Prompt 02): render komposisi lewat pipeline
+            // native extended (off-screen snapshot). Blur path ini jalur preview
+            // saat blur = 0; bila ada parameter aktif selain blur, snapshot
+            // dipakai dua-duanya sehingga hasil konsisten.
             val tAdjust = System.nanoTime()
-            val adjPaint = buildAdjustmentPaint()
-            val adjSaveIndex = if (adjPaint != null) canvas.saveLayer(null, adjPaint) else -1
+            val colorParams = currentAdjustmentParams()
+            if (colorParams.isActive) {
+                drawAdjustedContent(canvas, vp, colorParams)
+            } else {
+                // Efek Filter (monokrom) dibungkus sebagai layer komposit di atas
+                // background, grid, dan seluruh layer (Prompt 51).
+                val tFilter = System.nanoTime()
+                val filterEffectLayer = beginFilterEffectLayer(canvas)
+                if (profiling) pfFilterMs += profileMark(tFilter)
+
+                // Adjustment layer: brightness/contrast/saturation via ColorMatrix saveLayer
+                val adjPaint = buildAdjustmentPaint()
+                val adjSaveIndex = if (adjPaint != null) canvas.saveLayer(null, adjPaint) else -1
+
+                // 1. Render background kanvas independen (Prompt 44)
+                // 1b. Kisi grid penjajaran (Prompt 30)
+                // 2. Seluruh layer sesuai z-index
+                // 2b. Live preview free draw
+                drawCompositionContent(canvas, vp)
+
+                // Tutup layer komposit filter bila aktif (Prompt 51).
+                endFilterEffectLayer(canvas, filterEffectLayer)
+
+                // Tutup adjustment layer (brightness/contrast/saturation)
+                if (adjSaveIndex >= 0) canvas.restoreToCount(adjSaveIndex)
+            }
             if (profiling) pfAdjustMs += profileMark(tAdjust)
-
-            // 1. Render background kanvas independen (Prompt 44)
-            drawBackgroundOnCanvas(canvas, vp)
-
-            // 1b. Render kisi grid penjajaran jika diaktifkan (Prompt 30)
-            if (isGridEnabled) {
-                drawGridGuidelines(canvas, vp)
-            }
-
-            // 2. Render seluruh layer secara berurutan sesuai z-index jika isVisible bernilai true
-            val tLayers = System.nanoTime()
-            for (i in 0 until layers.size) {
-                val layer = layers[i]
-                if (layer.isVisible) {
-                    // Apply clipping path jika layer memiliki clipping active (Phase 8)
-                    val clipPath = if (layer.clippingMode != com.flyerpix.editor.canvas.model.ClippingMode.NONE && layer.clipLayerId != null) {
-                        getClipPathForLayer(layer)
-                    } else {
-                        null
-                    }
-
-                    // Apply layer mask if enabled (Phase 9-10)
-                    val hasMask = layer.hasMask()
-
-                    if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null || hasMask) {
-                        renderPaint.applyLayerBlend(layer)
-                        val saveCount = canvas.saveLayer(null, renderPaint)
-                        if (clipPath != null) canvas.clipPath(clipPath)
-                        layer.draw(canvas, renderPaint)
-                        // Apply mask DST_IN
-                        if (hasMask && layer.maskBitmap != null) {
-                            val maskPaint = android.graphics.Paint()
-                            maskPaint.alpha = 255
-                            canvas.drawBitmap(layer.maskBitmap!!, 0f, 0f, maskPaint)
-                        }
-                        canvas.restoreToCount(saveCount)
-                        renderPaint.clearBlend()
-                    } else {
-                        renderPaint.clearBlend()
-                        val saveCount = canvas.save()
-                        if (clipPath != null) canvas.clipPath(clipPath)
-                        layer.draw(canvas, renderPaint)
-                        canvas.restoreToCount(saveCount)
-                    }
-                }
-            }
-            if (profiling) pfLayersMs += profileMark(tLayers)
-
-            // 2b. Live preview goresan gambar bebas yang sedang aktif
-            if (freeDrawActive && freeDrawPoints.size >= 2) {
-                val path = android.graphics.Path()
-                path.moveTo(freeDrawPoints[0].first, freeDrawPoints[0].second)
-                for (p in freeDrawPoints) path.lineTo(p.first, p.second)
-                canvas.drawPath(path, freeDrawPaint)
-            }
-
-            // Tutup layer komposit filter bila aktif (Prompt 51).
-            endFilterEffectLayer(canvas, filterEffectLayer)
-
-            // Tutup adjustment layer (brightness/contrast/saturation)
-            if (adjSaveIndex >= 0) canvas.restoreToCount(adjSaveIndex)
 
             // Blur overlay: snapshot konten, blur via native (NDK), gambar darinya
             val blurRadius = adjustments[CanvasAdjustment.BLUR] ?: 0f
@@ -3673,13 +3704,24 @@ class PixelCanvasView @JvmOverloads constructor(
 
     // ── Canvas Adjustments ───────────────────────────────────────────────────
 
-    enum class CanvasAdjustment { BRIGHTNESS, CONTRAST, SATURATION, BLUR }
+    enum class CanvasAdjustment {
+        BRIGHTNESS, CONTRAST, SATURATION, BLUR,
+        EXPOSURE, HIGHLIGHTS, SHADOWS, TEMPERATURE, TINT, GAMMA, VIBRANCE, HUE
+    }
 
     private val adjustments = mutableMapOf(
         CanvasAdjustment.BRIGHTNESS to 0f,
         CanvasAdjustment.CONTRAST   to 0f,
         CanvasAdjustment.SATURATION to 0f,
-        CanvasAdjustment.BLUR       to 0f
+        CanvasAdjustment.BLUR       to 0f,
+        CanvasAdjustment.EXPOSURE   to 0f,
+        CanvasAdjustment.HIGHLIGHTS to 0f,
+        CanvasAdjustment.SHADOWS    to 0f,
+        CanvasAdjustment.TEMPERATURE to 0f,
+        CanvasAdjustment.TINT       to 0f,
+        CanvasAdjustment.GAMMA      to 0f,
+        CanvasAdjustment.VIBRANCE   to 0f,
+        CanvasAdjustment.HUE        to 0f
     )
 
     fun setAdjustment(type: CanvasAdjustment, value: Float) {
@@ -3688,6 +3730,90 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     fun getAdjustment(type: CanvasAdjustment): Float = adjustments[type] ?: 0f
+
+    private data class AdjustmentParams(
+        val brightness: Float = 0f,
+        val contrast: Float = 0f,
+        val saturation: Float = 0f,
+        val hue: Float = 0f,
+        val exposure: Float = 0f,
+        val highlights: Float = 0f,
+        val shadows: Float = 0f,
+        val temperature: Float = 0f,
+        val tint: Float = 0f,
+        val gamma: Float = 1f,
+        val vibrance: Float = 0f
+    ) {
+        val isActive: Boolean
+            get() = brightness != 0f || contrast != 0f || saturation != 0f || hue != 0f ||
+                exposure != 0f || highlights != 0f || shadows != 0f ||
+                temperature != 0f || tint != 0f || gamma != 1f || vibrance != 0f
+    }
+
+    private var adjustSnapshotBitmap: Bitmap? = null
+    private var adjustSnapshotPixels: IntArray? = null
+
+    /**
+     * Membaca nilai adjustment (skala UI percent -100..100; GAMMA netral di 0)
+     * menjadi parameter pipeline native (skala -1..1; GAMMA netral di 1).
+     */
+    private fun currentAdjustmentParams(): AdjustmentParams = AdjustmentParams(
+        brightness = (adjustments[CanvasAdjustment.BRIGHTNESS] ?: 0f) / 100f,
+        contrast = (adjustments[CanvasAdjustment.CONTRAST] ?: 0f) / 100f,
+        saturation = (adjustments[CanvasAdjustment.SATURATION] ?: 0f) / 100f,
+        hue = adjustments[CanvasAdjustment.HUE] ?: 0f,
+        exposure = (adjustments[CanvasAdjustment.EXPOSURE] ?: 0f) / 100f,
+        highlights = (adjustments[CanvasAdjustment.HIGHLIGHTS] ?: 0f) / 100f,
+        shadows = (adjustments[CanvasAdjustment.SHADOWS] ?: 0f) / 100f,
+        temperature = (adjustments[CanvasAdjustment.TEMPERATURE] ?: 0f) / 100f,
+        tint = (adjustments[CanvasAdjustment.TINT] ?: 0f) / 100f,
+        gamma = (adjustments[CanvasAdjustment.GAMMA] ?: 0f).let { g ->
+            (1f + g / 100f * 3f).coerceIn(0.1f, 4f)
+        },
+        vibrance = (adjustments[CanvasAdjustment.VIBRANCE] ?: 0f) / 100f
+    )
+
+    private fun obtainAdjustSnapshotBitmap(): Bitmap {
+        val w = if (width > 0) width else 1
+        val h = if (height > 0) height else 1
+        val cur = adjustSnapshotBitmap
+        if (cur != null && cur.width == w && cur.height == h && !cur.isRecycled) return cur
+        adjustSnapshotBitmap?.recycle()
+        adjustSnapshotBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        adjustSnapshotPixels = IntArray(w * h)
+        return adjustSnapshotBitmap!!
+    }
+
+    /**
+     * Render komposisi ke snapshot offscreen ukuran view, proses pipeline
+     * extended adjustment via native, lalu gambar balik ke canvas (Prompt 02).
+     */
+    private fun drawAdjustedContent(canvas: Canvas, vp: RectF, params: AdjustmentParams) {
+        val bmp = obtainAdjustSnapshotBitmap()
+        val w = bmp.width
+        val h = bmp.height
+        if (w <= 0 || h <= 0 || vp.width() <= 0f || vp.height() <= 0f) return
+        val off = Canvas(bmp)
+        off.scale(w / vp.width(), h / vp.height())
+        off.translate(-vp.left, -vp.top)
+        val filterEffectLayer = beginFilterEffectLayer(off)
+        drawCompositionContent(off, vp)
+        endFilterEffectLayer(off, filterEffectLayer)
+        off.setBitmap(null)
+
+        val pixels = adjustSnapshotPixels ?: return
+        bmp.getPixels(pixels, 0, w, 0, 0, w, h)
+        runCatching {
+            FilterEngine.applyColorAdjustPixels(
+                pixels, w, h,
+                params.brightness, params.contrast, params.saturation, params.hue,
+                params.exposure, params.highlights, params.shadows,
+                params.temperature, params.tint, params.gamma, params.vibrance
+            )
+        }
+        bmp.setPixels(pixels, 0, w, 0, 0, w, h)
+        canvas.drawBitmap(bmp, null, vp, null)
+    }
 
     companion object {
         private const val PROFILE_TAG = "FlyerPixProfile"

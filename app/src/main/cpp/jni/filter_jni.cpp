@@ -417,6 +417,52 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeApplyColorAdjustExtended(
     }
 }
 
+/**
+ * static native void nativeApplyColorAdjustPixels(int[] pixels, int width, int height,
+ *   float brightness, float contrast, float saturation, float hue,
+ *   float exposure, float highlights, float shadows,
+ *   float temperature, float tint, float gamma, float vibrance)
+ *
+ * Per-pixel in-place execution dari pipeline extended (Prompt 01) tanpa
+ * marshalling Bitmap. Dipakai adjustment global kanvas (Prompt 02) pada
+ * jalur preview dan blur overlay.
+ */
+extern "C" JNIEXPORT void JNICALL
+Java_com_flyerpix_editor_filter_FilterEngine_nativeApplyColorAdjustPixels(
+    JNIEnv* env,
+    jclass clazz,
+    jintArray pixels,
+    jint width,
+    jint height,
+    jfloat brightness,
+    jfloat contrast,
+    jfloat saturation,
+    jfloat hue,
+    jfloat exposure,
+    jfloat highlights,
+    jfloat shadows,
+    jfloat temperature,
+    jfloat tint,
+    jfloat gamma,
+    jfloat vibrance) {
+
+    jsize len = env->GetArrayLength(pixels);
+    if (len <= 0) return;
+    jint* buf = env->GetIntArrayElements(pixels, nullptr);
+    if (buf == nullptr) return;
+
+    for (jsize i = 0; i < len; i++) {
+        Color32 adjusted = ColorFilter::adjustPixelAdvanced(
+            static_cast<Color32>(buf[i]),
+            brightness, contrast, saturation, hue,
+            exposure, highlights, shadows,
+            temperature, tint, gamma, vibrance);
+        buf[i] = static_cast<jint>(adjusted);
+    }
+
+    env->ReleaseIntArrayElements(pixels, buf, 0);
+}
+
 // ============================================================================
 // Emboss Filter
 // ============================================================================
