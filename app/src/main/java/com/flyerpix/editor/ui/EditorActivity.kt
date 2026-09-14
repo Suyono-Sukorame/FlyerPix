@@ -497,6 +497,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             onShapeCreated = {}
         )
         objectMenu.initialize()
+        layerPanel.onMaskEditRequested = { layer -> objectMenu.showMaskEditor(layer) }
         objectMenu.onAddSettingsOpenChanged = { open ->
             val density = resources.displayMetrics.density
             val offset = (56 * density).toInt()

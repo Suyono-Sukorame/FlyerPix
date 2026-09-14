@@ -21,6 +21,9 @@ class LayerPanelController(
     private val showSnackbar: (String) -> Unit,
     private val showEditTextDialog: (TextLayer) -> Unit
 ) {
+    /** Callback saat user menekan tombol Mask — membuka Layer Mask Editor (Prompt 06/07). */
+    var onMaskEditRequested: ((CanvasLayer) -> Unit)? = null
+
     var isOpen = false
         private set
 
@@ -145,6 +148,11 @@ class LayerPanelController(
         }
 
         binding.btnLayerClip.setOnClickListener { showClipMenu(binding.btnLayerClip) }
+        binding.btnLayerMask.setOnClickListener {
+            val l = canvas.selectedLayer
+            if (l == null || l.isLocked) { showSnackbar("Select an unlocked layer first"); return@setOnClickListener }
+            onMaskEditRequested?.invoke(l)
+        }
 
         binding.btnBatchDelete.setOnClickListener {
             val checked = adapter.getCheckedLayers()
@@ -279,6 +287,7 @@ class LayerPanelController(
         binding.btnLayerToFront.isEnabled = layer != null && !layer.isLocked && canvas.canBringSelectedLayerToFront()
         binding.btnLayerToBack.isEnabled = layer != null && !layer.isLocked && canvas.canSendSelectedLayerToBack()
         binding.btnLayerClip.isEnabled = layer != null && !layer.isLocked
+        binding.btnLayerMask.isEnabled = layer != null && !layer.isLocked
     }
 
     private fun showClipMenu(anchor: View) {

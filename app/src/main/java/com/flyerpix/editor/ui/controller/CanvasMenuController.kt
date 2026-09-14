@@ -431,7 +431,7 @@ class CanvasMenuController(
                     initialBgSnapshot = null
                     deselect(restoreStrip = true)
                 },
-                onApply = { autoMatch, _ ->
+                onApply = { autoMatch, blend ->
                     if (autoMatch) {
                         pixelCanvasView.selectedLayer?.let { layer ->
                             if (!layer.isLocked) {
@@ -444,6 +444,25 @@ class CanvasMenuController(
                                 a.preset = "Punchy"
                                 layer.adjustmentsEnabled = true
                                 pixelCanvasView.invalidate()
+                            }
+                        }
+                    }
+                    if (blend) {
+                        pixelCanvasView.selectedLayer?.let { layer ->
+                            if (!layer.isLocked) {
+                                if (layer.maskBitmap == null) {
+                                    val (w, h) = layer.getUnwarpedDimensions()
+                                    if (w > 0 && h > 0) layer.createMask(w.toInt(), h.toInt())
+                                }
+                                layer.maskBitmap?.let { bmp ->
+                                    com.flyerpix.editor.canvas.model.MaskUtils.generateGradientMask(
+                                        bmp,
+                                        com.flyerpix.editor.canvas.model.GradientType.LINEAR,
+                                        com.flyerpix.editor.canvas.model.MaskUtils.DIR_BOTTOM_TOP
+                                    )
+                                    layer.maskEnabled = true
+                                    pixelCanvasView.invalidate()
+                                }
                             }
                         }
                     }
