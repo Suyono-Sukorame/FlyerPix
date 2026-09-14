@@ -359,7 +359,7 @@ data class TextLayer(
     // Render pipeline
     // ─────────────────────────────────────────────────────────────────────────
 
-    override fun draw(canvas: Canvas, paint: Paint) {
+    override fun drawContent(canvas: Canvas, paint: Paint) {
         val fillPaint = obtainTextPaint(Paint.Style.FILL, textColor)
         val layout    = createLayout(fillPaint)
         val w = layout.width.toFloat()
@@ -992,6 +992,8 @@ data class TextLayer(
             h = h * 31 + System.identityHashCode(bmp)
             h = h * 31 + bmp.generationId
         }
+        h = h * 31 + (if (adjustmentsEnabled) 1 else 0)
+        h = h * 31 + adjustments.hashCode()
         return h
     }
 

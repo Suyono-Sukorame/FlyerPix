@@ -1,5 +1,6 @@
 package com.flyerpix.editor.canvas.model
 
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
@@ -200,13 +201,69 @@ abstract class CanvasLayer(
         maskInverted = false
     }
 
+    // ── Per-Layer Color Adjustment (Prompt 03) ────────────────────────────────
+    // Adjustment warna non-destruktif yang diterapkan saat draw() layer.
+    // adjustmentsEnabled memaksa pipeline terpisah walau saat ini netral.
+    open var adjustmentsEnabled: Boolean = false
+    open var adjustments: LayerAdjustments = LayerAdjustments()
+
     /**
-     * Menggambar layer pada [canvas] dengan menggunakan [paint].
+     * Entry-point render kelas. Menerapkan pipeline adjustment warna per-layer
+     * (Prompt 03) bila [adjustmentsEnabled] aktif dan bernilai, lalu mendelegasikan
+     * konten asli ke [drawContent].
      *
      * @param canvas Target canvas untuk rendering layer.
      * @param paint Objek paint dasar yang dapat dikonfigurasi selama penggambaran.
      */
-    abstract fun draw(canvas: Canvas, paint: Paint)
+    final fun draw(canvas: Canvas, paint: Paint) {
+        if (adjustmentsEnabled && adjustments.isActive) drawWithAdjustment(canvas, paint)
+        else drawContent(canvas, paint)
+    }
+
+    /**
+     * Menggambar konten asli layer ke [canvas] (tanpa adjustment warna).
+     * Seluruh logika render tiap subclass ada di sini.
+     */
+    abstract fun drawContent(canvas: Canvas, paint: Paint)
+
+    /**
+     * Padding (kanvas-space) di sekitar bounds layer untuk snapshot adjustment
+     * agar efek dekorasi (drop shadow, neon, emboss, extrude, long shadow,
+     * reflection, dsb.) yang menggambar di luar [getBounds] ikut ter-adjust
+     * tanpa terpotong.
+     */
+    open fun getAdjustmentRenderPadding(): Float = 256f
+
+    /**
+     * Pipeline adjustment per-layer non-destruktif: konten digambar ke bitmap
+     * offscreen viewport lokal, piksel diproses via native [LayerAdjustments.applyTo],
+     * lalu dikomposit kembali ke [canvas] pada posisi semula.
+     */
+    private fun drawWithAdjustment(canvas: Canvas, paint: Paint) {
+        val bounds = getBounds()
+        if (bounds.width() <= 0f || bounds.height() <= 0f) {
+            drawContent(canvas, paint)
+            return
+        }
+        val pad = getAdjustmentRenderPadding()
+        var w = (bounds.width() + pad * 2).toInt().coerceIn(1, 8192)
+        var h = (bounds.height() + pad * 2).toInt().coerceIn(1, 8192)
+        if (w * h > (8192 * 8192) / 2) return drawContent(canvas, paint)
+        w = (w / 4) * 4
+        h = (h / 4) * 4
+        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val off = Canvas(bitmap)
+        off.drawColor(android.graphics.Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+        off.translate(pad - bounds.left, pad - bounds.top)
+        drawContent(off, paint)
+        off.setBitmap(null)
+        val pixels = IntArray(w * h)
+        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+        adjustments.applyTo(pixels, w, h)
+        bitmap.setPixels(pixels, 0, w, 0, 0, w, h)
+        canvas.drawBitmap(bitmap, bounds.left - pad, bounds.top - pad, null)
+        bitmap.recycle()
+    }
 
     /**
      * Menghitung dan mengembalikan batas koordinat (bounding box) dari layer
@@ -233,6 +290,8 @@ abstract class CanvasLayer(
         copy.id = this.id
         copy.x = this.x
         copy.y = this.y
+        copy.adjustmentsEnabled = this.adjustmentsEnabled
+        copy.adjustments = this.adjustments.copy()
         return copy
     }
 
@@ -450,7 +509,12 @@ abstract class CanvasLayer(
      * menghitung hash struktural (mis. [com.flyerpix.editor.canvas.model.ImageLayer])
      * atau yang memegang Bitmap yang bisa berubah piksel secara in-place.
      */
-    open fun contentBlurSignature(): Int = hashCode()
+    open fun contentBlurSignature(): Int {
+        var h = hashCode()
+        h = h * 31 + (if (adjustmentsEnabled) 1 else 0)
+        h = h * 31 + adjustments.hashCode()
+        return h
+    }
 
     /**
      * Mengembalikan nama deskriptif dari [blendMode] / [blendExtra] saat ini.

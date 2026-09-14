@@ -202,7 +202,7 @@ data class ArrowLayer(
     // Render pipeline
     // ─────────────────────────────────────────────────────────────────────────
 
-    override fun draw(canvas: Canvas, paint: Paint) {
+    override fun drawContent(canvas: Canvas, paint: Paint) {
         if (!isVisible) return
         val (w, h) = getUnwarpedDimensions()
         if (w <= 0f || h <= 0f) return

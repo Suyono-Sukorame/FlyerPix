@@ -45,13 +45,13 @@ class MergeLayersTest {
     @Test
     fun `calculateMergedBoundingBox encompasses all constituent layers`() {
         val layer1 = object : CanvasLayer(x = 20f, y = 30f) {
-            override fun draw(canvas: android.graphics.Canvas, paint: android.graphics.Paint) {}
+            override fun drawContent(canvas: android.graphics.Canvas, paint: android.graphics.Paint) {}
             override fun getBounds(): RectF = RectF().apply { left = 20f; top = 30f; right = 150f; bottom = 100f }
             override fun copyLayer(): CanvasLayer = this
         }
 
         val layer2 = object : CanvasLayer(x = 80f, y = 50f) {
-            override fun draw(canvas: android.graphics.Canvas, paint: android.graphics.Paint) {}
+            override fun drawContent(canvas: android.graphics.Canvas, paint: android.graphics.Paint) {}
             override fun getBounds(): RectF = RectF().apply { left = 80f; top = 10f; right = 240f; bottom = 180f }
             override fun copyLayer(): CanvasLayer = this
         }

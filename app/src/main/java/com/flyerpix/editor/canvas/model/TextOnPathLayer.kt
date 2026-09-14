@@ -171,7 +171,7 @@ data class TextOnPathLayer(
     // Rendering
     // ─────────────────────────────────────────────────────────────────────────
 
-    override fun draw(canvas: Canvas, paint: Paint) {
+    override fun drawContent(canvas: Canvas, paint: Paint) {
         if (!isVisible || text.isEmpty() || referencePath == null) return
         
         val saveCount = canvas.save()

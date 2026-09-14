@@ -543,7 +543,7 @@ data class PenLayer(
     // Render Pipeline
     // ─────────────────────────────────────────────────────────────────────────
 
-    override fun draw(canvas: Canvas, paint: Paint) {
+    override fun drawContent(canvas: Canvas, paint: Paint) {
         if (!isVisible || anchors.isEmpty()) return
         val (w, h) = getUnwarpedDimensions()
         if (w <= 0f || h <= 0f) return

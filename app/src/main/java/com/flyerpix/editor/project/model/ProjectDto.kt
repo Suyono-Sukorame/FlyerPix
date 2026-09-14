@@ -228,7 +228,19 @@ data class LayerDto(
     val penFillColor: Int? = null,
     val fillEnabled: Boolean? = null,
     val penStrokeColor: Int? = null,
-    val penStrokeWidth: Float? = null
+    val penStrokeWidth: Float? = null,
+
+    // ── Per-Layer Color Adjustment (Prompt 03) ────────────────────────────────
+    /** Skala UI percent -100..100, netral di 0. */
+    val adjustmentsEnabled: Boolean = false,
+    val exposure: Float? = null,
+    val highlights: Float? = null,
+    val shadows: Float? = null,
+    val temperature: Float? = null,
+    val tint: Float? = null,
+    val gamma: Float? = null,
+    val vibrance: Float? = null,
+    val hue: Float? = null
 )
 
 /**

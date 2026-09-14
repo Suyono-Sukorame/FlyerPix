@@ -125,7 +125,7 @@ data class StickerLayer(
     // Render Pipeline
     // ─────────────────────────────────────────────────────────────────────────
 
-    override fun draw(canvas: Canvas, paint: Paint) {
+    override fun drawContent(canvas: Canvas, paint: Paint) {
         if (!isVisible) return
         val (w, h) = getUnwarpedDimensions()
         if (w <= 0f || h <= 0f) return
@@ -235,6 +235,8 @@ data class StickerLayer(
         var h = hashCode()
         h = h * 31 + System.identityHashCode(stickerBitmap)
         h = h * 31 + stickerBitmap.generationId
+        h = h * 31 + (if (adjustmentsEnabled) 1 else 0)
+        h = h * 31 + adjustments.hashCode()
         return h
     }
 

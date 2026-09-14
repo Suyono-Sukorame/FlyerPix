@@ -258,7 +258,16 @@ object ProjectSerializer {
         blendMode          = blendModeToString(layer.blendMode),
         blendExtra         = layer.blendExtra?.name,
         perspectiveEnabled = layer.perspectiveEnabled,
-        perspectiveCorners = cornersToString(layer.perspectiveCorners)
+        perspectiveCorners = cornersToString(layer.perspectiveCorners),
+        adjustmentsEnabled = layer.adjustmentsEnabled,
+        exposure           = layer.adjustments.exposure,
+        highlights         = layer.adjustments.highlights,
+        shadows            = layer.adjustments.shadows,
+        temperature        = layer.adjustments.temperature,
+        tint               = layer.adjustments.tint,
+        gamma              = layer.adjustments.gamma,
+        vibrance           = layer.adjustments.vibrance,
+        hue                = layer.adjustments.hue
     )
 
     private fun textLayerToDto(l: TextLayer): LayerDto = baseLayerFields(l).copy(
@@ -755,7 +764,20 @@ object ProjectSerializer {
             )
 
             else -> throw IllegalArgumentException("Unknown layer type: '${dto.type}'")
-        }.also { it.blendExtra = blendExtraFromString(dto.blendExtra) }
+        }.also {
+            it.blendExtra = blendExtraFromString(dto.blendExtra)
+            it.adjustmentsEnabled = dto.adjustmentsEnabled
+            it.adjustments = LayerAdjustments(
+                exposure     = dto.exposure ?: 0f,
+                highlights   = dto.highlights ?: 0f,
+                shadows      = dto.shadows ?: 0f,
+                temperature  = dto.temperature ?: 0f,
+                tint         = dto.tint ?: 0f,
+                gamma        = dto.gamma ?: 0f,
+                vibrance     = dto.vibrance ?: 0f,
+                hue          = dto.hue ?: 0f
+            )
+        }
     }
 
     // ── Bitmap Encoding/Decoding ───────────────────────────────────────────────

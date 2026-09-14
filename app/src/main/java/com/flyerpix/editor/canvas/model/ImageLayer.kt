@@ -54,7 +54,7 @@ open class ImageLayer(
     blendMode = blendMode
 ) {
 
-    override fun draw(canvas: Canvas, paint: Paint) {
+    override fun drawContent(canvas: Canvas, paint: Paint) {
         if (!isVisible) return
         val (w, h) = getUnwarpedDimensions()
         if (w <= 0f || h <= 0f) return
@@ -196,6 +196,8 @@ open class ImageLayer(
         h = h * 31 + bitmap.generationId
         h = h * 31 + bitmap.width
         h = h * 31 + bitmap.height
+        h = h * 31 + (if (adjustmentsEnabled) 1 else 0)
+        h = h * 31 + adjustments.hashCode()
         return h
     }
 
