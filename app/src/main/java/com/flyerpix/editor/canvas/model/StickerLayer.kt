@@ -65,7 +65,12 @@ data class StickerLayer(
         0f, 1f
     ),
     // ── Blending Mode ──────────────────────────────────────────────────────
-    override var blendMode: PorterDuff.Mode = PorterDuff.Mode.SRC_OVER
+    override var blendMode: PorterDuff.Mode = PorterDuff.Mode.SRC_OVER,
+    // Fill & Stroke properties (for color/stroke effects on sticker)
+    var fillColor: Int = Color.WHITE,
+    var strokeColor: Int = Color.BLACK,
+    var strokeWidth: Float = 0f,
+    var strokeOpacity: Int = 255
 ) : CanvasLayer(
     id = id,
     x = x,

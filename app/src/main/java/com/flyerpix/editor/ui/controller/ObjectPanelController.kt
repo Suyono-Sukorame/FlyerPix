@@ -13,9 +13,11 @@ import com.flyerpix.editor.ui.compose.ColorControls
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.canvas.model.CanvasLayer
+import com.flyerpix.editor.canvas.model.ImageLayer
 import com.flyerpix.editor.canvas.model.PenLayer
 import com.flyerpix.editor.canvas.model.PerspectivePreset
 import com.flyerpix.editor.canvas.model.ShapeLayer
+import com.flyerpix.editor.canvas.model.StickerLayer
 import com.flyerpix.editor.canvas.model.TextLayer
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 import java.util.Locale
@@ -575,12 +577,16 @@ class ObjectPanelController(
     private fun fillColorOf(l: CanvasLayer): Int = when (l) {
         is ShapeLayer -> l.fillColor
         is PenLayer -> l.fillColor
+        is ImageLayer -> l.fillColor
+        is StickerLayer -> l.fillColor
         else -> Color.WHITE
     }
 
     private fun setFillColor(l: CanvasLayer, c: Int) = when (l) {
         is ShapeLayer -> l.fillColor = c
         is PenLayer -> l.fillColor = c
+        is ImageLayer -> l.fillColor = c
+        is StickerLayer -> l.fillColor = c
         else -> {}
     }
 
@@ -602,24 +608,8 @@ class ObjectPanelController(
             b.tvStrokeColorValue.text = String.format(Locale.US, "#%08X", strokeColorOf(l))
             b.switchStrokeEnabled.isChecked = strokeWidthOf(l) > 0f
             b.strokeSliderGroup.visibility = if (strokeWidthOf(l) > 0f) View.VISIBLE else View.GONE
-            // update compose host if present
-            try {
-                objectStrokeComposeHost?.setContent {
-                    com.flyerpix.editor.ui.compose.StrokeControls(
-                        initialEnabled = strokeWidthOf(l) > 0f,
-                        initialWidth = strokeWidthOf(l),
-                        initialOpacityPct = strokeOpacityPercent(l).toFloat(),
-                        initialColor = strokeColorOf(l),
-                        onEnabledChanged = { v -> if (v) applyToLayer { setStrokeWidth(it, 4f) } else applyToLayer { setStrokeWidth(it, 0f) } },
-                        onWidthChanged = { v -> applyToLayer { setStrokeWidth(it, v) } },
-                        onOpacityChanged = { v -> applyToLayer { l2 -> val a = (v * 255 / 100).toInt(); setStrokeColor(l2, (strokeColorOf(l2) and 0x00FFFFFF) or (a shl 24)) } },
-                        onPickColor = { launchStrokeColorPicker() },
-                        onReset = { applyToLayer { setStrokeWidth(it, 0f); setStrokeColor(it, Color.BLACK) } }
-                    )
-                }
-                objectStrokeComposeHost?.visibility = View.VISIBLE
-                b.root.visibility = View.GONE
-            } catch (_: Exception) {}
+            // Old Compose host setup removed - now using unified composeHost/composeContainer
+            // for StrokeDetailPage in showComposeStrokeSheet()
         }
 
         b.sliderStrokeWidth.addOnChangeListener { _, v, _ -> applyToLayer { setStrokeWidth(it, v) }; syncStrokeLabels() }
@@ -661,24 +651,32 @@ class ObjectPanelController(
     private fun strokeColorOf(l: CanvasLayer): Int = when (l) {
         is ShapeLayer -> l.strokeColor
         is PenLayer -> l.strokeColor
+        is ImageLayer -> l.strokeColor
+        is StickerLayer -> l.strokeColor
         else -> Color.BLACK
     }
 
     private fun strokeWidthOf(l: CanvasLayer): Float = when (l) {
         is ShapeLayer -> l.strokeWidth
         is PenLayer -> l.strokeWidth
+        is ImageLayer -> l.strokeWidth
+        is StickerLayer -> l.strokeWidth
         else -> 0f
     }
 
     private fun setStrokeWidth(l: CanvasLayer, w: Float) = when (l) {
         is ShapeLayer -> l.strokeWidth = w
         is PenLayer -> l.strokeWidth = w
+        is ImageLayer -> l.strokeWidth = w
+        is StickerLayer -> l.strokeWidth = w
         else -> {}
     }
 
     private fun setStrokeColor(l: CanvasLayer, c: Int) = when (l) {
         is ShapeLayer -> l.strokeColor = c
         is PenLayer -> l.strokeColor = c
+        is ImageLayer -> l.strokeColor = c
+        is StickerLayer -> l.strokeColor = c
         else -> {}
     }
 

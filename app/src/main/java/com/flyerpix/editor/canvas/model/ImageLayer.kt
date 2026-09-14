@@ -2,6 +2,7 @@ package com.flyerpix.editor.canvas.model
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PorterDuff
@@ -39,7 +40,12 @@ open class ImageLayer(
     ),
     override var blendMode: PorterDuff.Mode = PorterDuff.Mode.SRC_OVER,
     var bitmap: Bitmap,
-    var layerName: String = "Image Layer"
+    var layerName: String = "Image Layer",
+    // Fill & Stroke properties (for color/stroke effects on image)
+    var fillColor: Int = Color.WHITE,
+    var strokeColor: Int = Color.BLACK,
+    var strokeWidth: Float = 0f,
+    var strokeOpacity: Int = 255
 ) : CanvasLayer(
     id = id,
     x = x,
