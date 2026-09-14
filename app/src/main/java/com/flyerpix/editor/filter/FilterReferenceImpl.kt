@@ -13,6 +13,7 @@ package com.flyerpix.editor.filter
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import kotlin.math.abs
 import kotlin.math.pow
 
 /**
@@ -203,6 +204,162 @@ object FilterReferenceImpl {
 
             out[i] = (a shl 24) or (satR.toInt() shl 16) or (satG.toInt() shl 8) or satB.toInt()
         }
+        return out
+    }
+
+    // ========================================================================
+    // Extended Color Adjust Reference (Prompt 01)
+    //
+    // Mirror C++ ColorFilter::adjustPixelAdvanced / applyExtended.
+    // Semua parameter baru bernilai netral => output identik dengan input
+    // (dan identik dengan colorAdjust() legacy pipeline).
+    // ========================================================================
+
+    private fun clamp01(v: Float): Float = v.coerceIn(0f, 1f)
+
+    private fun clamp255(v: Float): Int = v.toInt().coerceIn(0, 255)
+
+    private fun smoothstep(e0: Float, e1: Float, x: Float): Float {
+        val t = ((x - e0) / (e1 - e0)).coerceIn(0f, 1f)
+        return t * t * (3f - 2f * t)
+    }
+
+    private fun rgbToHsv(r: Int, g: Int, b: Int): FloatArray {
+        val rf = r / 255f
+        val gf = g / 255f
+        val bf = b / 255f
+
+        val cmax = maxOf(rf, gf, bf)
+        val cmin = minOf(rf, gf, bf)
+        val delta = cmax - cmin
+
+        val v = cmax
+        val s = if (cmax > 0f) delta / cmax else 0f
+
+        var h = 0f
+        if (delta == 0f) {
+            h = 0f
+        } else if (cmax == rf) {
+            h = 60f * (((gf - bf) / delta) % 6f)
+        } else if (cmax == gf) {
+            h = 60f * (((bf - rf) / delta) + 2f)
+        } else {
+            h = 60f * (((rf - gf) / delta) + 4f)
+        }
+        h = if (h < 0f) h + 360f else h
+        return floatArrayOf(h, s, v)
+    }
+
+    private fun hsvToRgb(hIn: Float, s: Float, v: Float): Triple<Int, Int, Int> {
+        var h = hIn
+        while (h < 0f) h += 360f
+        while (h >= 360f) h -= 360f
+
+        val c = v * s
+        val hh = h / 60f
+        val x = c * (1f - abs(hh % 2f - 1f))
+
+        val (rf, gf, bf) = when {
+            hh >= 0f && hh < 1f -> Triple(c, x, 0f)
+            hh >= 1f && hh < 2f -> Triple(x, c, 0f)
+            hh >= 2f && hh < 3f -> Triple(0f, c, x)
+            hh >= 3f && hh < 4f -> Triple(0f, x, c)
+            hh >= 4f && hh < 5f -> Triple(x, 0f, c)
+            else -> Triple(c, 0f, x)
+        }
+
+        val m = v - c
+        return Triple(
+            ((rf + m) * 255f).toInt().coerceIn(0, 255),
+            ((gf + m) * 255f).toInt().coerceIn(0, 255),
+            ((bf + m) * 255f).toInt().coerceIn(0, 255)
+        )
+    }
+
+    fun colorAdjustExtended(
+        pixels: IntArray,
+        brightness: Float,
+        contrast: Float,
+        saturation: Float,
+        hue: Float,
+        exposure: Float = 0f,
+        highlights: Float = 0f,
+        shadows: Float = 0f,
+        temperature: Float = 0f,
+        tint: Float = 0f,
+        gamma: Float = 1f,
+        vibrance: Float = 0f
+    ): IntArray {
+        val out = IntArray(pixels.size)
+
+        val cb = brightness.coerceIn(-1f, 1f)
+        val cc = contrast.coerceIn(-1f, 1f)
+        val cs = saturation.coerceIn(-1f, 1f)
+        val ce = exposure.coerceIn(-1f, 1f)
+        val chi = highlights.coerceIn(-1f, 1f)
+        val csh = shadows.coerceIn(-1f, 1f)
+        val ct = temperature.coerceIn(-1f, 1f)
+        val ctn = tint.coerceIn(-1f, 1f)
+        val cg = gamma.coerceIn(0.1f, 4f)
+        val cv = vibrance.coerceIn(-1f, 1f)
+
+        for (i in pixels.indices) {
+            val argb = pixels[i]
+            val a = (argb ushr 24) and 0xFF
+            val r = (argb ushr 16) and 0xFF
+            val g = (argb ushr 8) and 0xFF
+            val b = argb and 0xFF
+
+            val hsv = rgbToHsv(r, g, b)
+            var h = hsv[0]
+            var s = hsv[1]
+            var v = hsv[2]
+
+            // Exposure: multiplicative in stops
+            v = clamp01(v * 2f.pow(ce))
+
+            // Highlights / Shadows: smooth weight curves
+            val shadowW = 1f - smoothstep(0f, 0.5f, v)
+            val hiW = smoothstep(0.5f, 1f, v)
+            v = if (csh > 0f) clamp01(v + csh * shadowW * (1f - v))
+            else clamp01(v + csh * shadowW * v)
+            v = if (chi > 0f) clamp01(v + chi * hiW * (1f - v))
+            else clamp01(v + chi * hiW * v)
+
+            // Brightness (legacy)
+            v = clamp01(v + cb)
+
+            // Contrast (legacy)
+            v = clamp01(0.5f + (v - 0.5f) * (1f + cc))
+
+            // Gamma: power curve centered pada luma
+            v = clamp01(v).pow(1f / cg)
+
+            // Saturation (legacy)
+            s = clamp01(s * (1f + cs))
+
+            // Vibrance: selective saturation
+            s = clamp01(s * (1f + cv * (1f - s)))
+
+            // Hue (legacy): rotate warna
+            h = (h + hue) % 360f
+            if (h < 0f) h += 360f
+
+            val rgb = hsvToRgb(h, s, v)
+            var outR = rgb.first
+            var outG = rgb.second
+            var outB = rgb.third
+
+            // White balance: temperature + tint
+            val tb = ct * 0.15f
+            val tn = ctn * 0.15f
+            outR = clamp255(outR * (1f + tb + tn))
+            outG = clamp255(outG * (1f - tn))
+            outB = clamp255(outB * (1f - tb + tn))
+
+            out[i] = (a shl 24) or (outR shl 16) or (outG shl 8) or outB
+        }
+
         return out
     }
 

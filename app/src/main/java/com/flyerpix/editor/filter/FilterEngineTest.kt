@@ -236,6 +236,116 @@ class FilterEngineTest {
     }
 
     // ========================================================================
+    // Extended Color Adjust Tests (Prompt 01)
+    // ========================================================================
+
+    /**
+     * Setiap parameter extended (exposure, highlights, shadows, temperature,
+     * tint, gamma, vibrance, hue) harus mengubah pixel (output != input).
+     */
+    private fun testExtendedColorAdjustPerParameterDiffers() {
+        Log.i(TAG, "TEST: Extended color adjust - setiap parameter mengubah pixel")
+
+        val engine = FilterEngine.create() ?: return
+        val src = createTestBitmap()
+        val dst = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val noop = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+
+        // Baseline netral: semua param baru default // output harus == input
+        var status = engine.applyColorAdjustExtended(src, noop)
+        assertTrue(status == FilterStatus.OK, "Extended neutral succeeded")
+        assertTrue(calculateDifference(src, noop) == 0.0f, "Neutral extended = identity (diff=0)")
+
+        val cases = mapOf(
+            "exposure=0.5f" to { dst: Bitmap -> engine.applyColorAdjustExtended(src, dst, exposure = 0.5f) },
+            "highlights=0.5f" to { dst: Bitmap -> engine.applyColorAdjustExtended(src, dst, highlights = 0.5f) },
+            "shadows=0.5f" to { dst: Bitmap -> engine.applyColorAdjustExtended(src, dst, shadows = 0.5f) },
+            "temperature=0.5f" to { dst: Bitmap -> engine.applyColorAdjustExtended(src, dst, temperature = 0.5f) },
+            "tint=0.5f" to { dst: Bitmap -> engine.applyColorAdjustExtended(src, dst, tint = 0.5f) },
+            "gamma=0.5f" to { dst: Bitmap -> engine.applyColorAdjustExtended(src, dst, gamma = 0.5f) },
+            "vibrance=0.5f" to { dst: Bitmap -> engine.applyColorAdjustExtended(src, dst, vibrance = 0.5f) },
+            "hue=90f" to { dst: Bitmap -> engine.applyColorAdjustExtended(src, dst, hue = 90f) }
+        )
+
+        for ((label, op) in cases) {
+            dst.eraseColor(0)
+            status = op(dst)
+            assertTrue(status == FilterStatus.OK, "Extended applied for $label")
+            val diff = calculateDifference(src, dst)
+            assertTrue(diff > 0.0f, "Extended $label mengubah pixel (diff=$diff)")
+        }
+
+        src.recycle()
+        noop.recycle()
+        dst.recycle()
+        engine.destroy()
+    }
+
+    /**
+     * exposure=+1 lebih terang dari exposure=0; temperature=+1 lebih merah/kuning.
+     */
+    private fun testExtendedColorAdjustDirectionalBehavior() {
+        Log.i(TAG, "TEST: Extended color adjust - directional behavior")
+
+        val engine = FilterEngine.create() ?: return
+        val src = createTestBitmap()
+        val base = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val boosted = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+
+        engine.applyColorAdjustExtended(src, base)
+        engine.applyColorAdjustExtended(src, boosted, exposure = 1.0f)
+
+        val pixelsBase = IntArray(base.width * base.height)
+        val pixelsBoosted = IntArray(boosted.width * boosted.height)
+        base.getPixels(pixelsBase, 0, base.width, 0, 0, base.width, base.height)
+        boosted.getPixels(pixelsBoosted, 0, boosted.width, 0, 0, boosted.width, boosted.height)
+
+        var lumaBase = 0.0; var lumaBoosted = 0.0
+
+        for (i in pixelsBase.indices) {
+            val rB = Color.red(pixelsBase[i]); val gB = Color.green(pixelsBase[i]); val bB = Color.blue(pixelsBase[i])
+            lumaBase += 0.299 * rB + 0.587 * gB + 0.114 * bB
+
+            val rX = Color.red(pixelsBoosted[i]); val gX = Color.green(pixelsBoosted[i]); val bX = Color.blue(pixelsBoosted[i])
+            lumaBoosted += 0.299 * rX + 0.587 * gX + 0.114 * bX
+        }
+
+        val n = pixelsBase.size.toDouble()
+        assertTrue(
+            lumaBoosted > lumaBase,
+            "exposure=+1 lebih terang dari exposure=0 (${lumaBoosted / n} > ${lumaBase / n})"
+        )
+
+        base.recycle(); boosted.recycle()
+        src.recycle()
+        engine.destroy()
+    }
+
+    private fun testExtendedColorAdjustClamping() {
+        Log.i(TAG, "TEST: Extended color adjust parameter clamping")
+
+        val engine = FilterEngine.create() ?: return
+        val src = createTestBitmap()
+        val dst = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+
+        // Nilai di luar rentang harus di-clamp tanpa crash
+        val status = engine.applyColorAdjustExtended(
+            src, dst,
+            brightness = 2.5f, contrast = -5.0f, saturation = 0.5f, hue = 720.0f,
+            exposure = 50.0f, highlights = -99.0f, shadows = 99.0f,
+            temperature = 100.0f, tint = -100.0f, gamma = 0.0001f, vibrance = 50.0f
+        )
+        assertTrue(status == FilterStatus.OK, "Extended color adjust with out-of-range params succeeded")
+
+        val diff = calculateDifference(src, dst)
+        assertTrue(diff > 0.0f, "Clamped out-of-range params still change pixels (diff=$diff)")
+
+        src.recycle()
+        dst.recycle()
+        engine.destroy()
+    }
+
+    // ========================================================================
     // Emboss Tests
     // ========================================================================
 
@@ -598,6 +708,11 @@ class FilterEngineTest {
         // Color Adjust
         runTest("Color adjust") { testColorAdjust() }
         runTest("Color adjust clamping") { testColorAdjustParameterClamping() }
+
+        // Extended Color Adjust (Prompt 01)
+        runTest("Extended color adjust per-parameter") { testExtendedColorAdjustPerParameterDiffers() }
+        runTest("Extended color adjust directional") { testExtendedColorAdjustDirectionalBehavior() }
+        runTest("Extended color adjust clamping") { testExtendedColorAdjustClamping() }
 
         // Emboss
         runTest("Emboss filter") { testEmbossFilter() }

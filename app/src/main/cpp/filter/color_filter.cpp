@@ -110,6 +110,25 @@ void ColorFilter::hsvToRgb(float h, float s, float v, uint8_t& r, uint8_t& g, ui
 // ============================================================================
 
 /**
+ * Smoothstep curve: 0 -> 1 between e0 and e1, used untuk halus mask
+ * pada highlights/shadows sehingga transisi tidak meninggalkan banding.
+ */
+static inline float smoothstep(float e0, float e1, float x) {
+    float t = std::min(1.0f, std::max(0.0f, (x - e0) / (e1 - e0)));
+    return t * t * (3.0f - 2.0f * t);
+}
+
+static inline float clamp01(float v) {
+    return std::min(1.0f, std::max(0.0f, v));
+}
+
+static inline uint8_t clamp255(float v) {
+    if (v < 0.0f) return 0;
+    if (v > 255.0f) return 255;
+    return static_cast<uint8_t>(v);
+}
+
+/**
  * Adjust single pixel dengan brightness, contrast, saturation, hue
  */
 Color32 ColorFilter::adjustPixel(
@@ -146,6 +165,86 @@ Color32 ColorFilter::adjustPixel(
     // Convert HSV back to RGB
     hsvToRgb(h, s, v, r, g, b);
     
+    // Reconstruct color with original alpha
+    return (a << 24) | (r << 16) | (g << 8) | b;
+}
+
+/**
+ * Extended per-pixel adjustment (Prompt 01).
+ *
+ * Pipeline (semua parameter netral => hasil identik dengan adjustPixel):
+ * 1. Exposure     : v * 2^exposure (stop-based multiplicative brightness)
+ * 2. Highlights   : smooth curve pada range terang
+ * 3. Shadows      : smooth curve pada range gelap
+ * 4. Brightness   : additive offset (legacy)
+ * 5. Contrast     : scale around 0.5 (legacy)
+ * 6. Gamma        : power curve terpusat pada luma
+ * 7. Saturation   : multiplicatif (legacy)
+ * 8. Vibrance     : selektif, memprioritaskan warna kurang jenuh
+ * 9. Hue          : rotasi roda warna (legacy)
+ * 10. Temperature : white balance +warm / -cool
+ * 11. Tint        : magenta <-> green
+ */
+Color32 ColorFilter::adjustPixelAdvanced(
+    Color32 pixel,
+    float brightness, float contrast, float saturation, float hue,
+    float exposure, float highlights, float shadows,
+    float temperature, float tint, float gamma, float vibrance) {
+
+    // Extract ARGB
+    uint8_t a = (pixel >> 24) & 0xFF;
+    uint8_t r = (pixel >> 16) & 0xFF;
+    uint8_t g = (pixel >> 8) & 0xFF;
+    uint8_t b = pixel & 0xFF;
+
+    // Convert RGB to HSV
+    float h, s, v;
+    rgbToHsv(r, g, b, h, s, v);
+
+    // Exposure: multiplicative in stops (v * 2^exposure)
+    v = v * std::pow(2.0f, exposure);
+    v = clamp01(v);
+
+    // Highlights / Shadows: smooth weight curves on brightness range
+    float shadowW = 1.0f - smoothstep(0.0f, 0.5f, v);
+    float hiW = smoothstep(0.5f, 1.0f, v);
+
+    if (shadows > 0.0f)      v = clamp01(v + shadows * shadowW * (1.0f - v));
+    else                     v = clamp01(v + shadows * shadowW * v);
+    if (highlights > 0.0f)   v = clamp01(v + highlights * hiW * (1.0f - v));
+    else                     v = clamp01(v + highlights * hiW * v);
+
+    // Brightness (legacy): additive offset on V
+    v = clamp01(v + brightness);
+
+    // Contrast (legacy): scale around midpoint
+    v = clamp01(0.5f + (v - 0.5f) * (1.0f + contrast));
+
+    // Gamma: power curve centered on luma (gamma=1 -> identity)
+    v = std::pow(clamp01(v), 1.0f / gamma);
+
+    // Saturation (legacy)
+    s = clamp01(s * (1.0f + saturation));
+
+    // Vibrance: selective saturation. Faktor (1 - s) memberi bobot lebih
+    // besar pada warna yang kurang jenuh; netral di vibrance = 0.
+    s = clamp01(s * (1.0f + vibrance * (1.0f - s)));
+
+    // Hue (legacy): rotate in color wheel
+    h = std::fmod(h + hue, 360.0f);
+    if (h < 0.0f) h += 360.0f;
+
+    // Convert HSV back to RGB
+    hsvToRgb(h, s, v, r, g, b);
+
+    // White balance: temperature (+ warm orange / - cool blue) dan
+    // tint (magenta <-> green). Nilai netral tidak mengubah pixel.
+    float tb = temperature * 0.15f;
+    float tn = tint * 0.15f;
+    r = clamp255(r * (1.0f + tb + tn));
+    g = clamp255(g * (1.0f - tn));
+    b = clamp255(b * (1.0f - tb + tn));
+
     // Reconstruct color with original alpha
     return (a << 24) | (r << 16) | (g << 8) | b;
 }
@@ -218,5 +317,90 @@ Status ColorFilter::apply(
         active_pool->submit(task);
     }
     
+    return active_pool->waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
+}
+
+/**
+ * Extended color adjust (Prompt 01) dengan parallel processing.
+ *
+ * Menerima 8 parameter (brightness, contrast, saturation, hue) + parameter baru
+ * (exposure, highlights, shadows, temperature, tint, gamma, vibrance). Nilai
+ * default netral di semua parameter baru => output identik dengan apply() lama.
+ */
+Status ColorFilter::applyExtended(
+    const Bitmap& src,
+    Bitmap& dst,
+    float brightness, float contrast, float saturation, float hue,
+    float exposure, float highlights, float shadows,
+    float temperature, float tint, float gamma, float vibrance,
+    int threadCount,
+    ThreadPool* pool) {
+
+    LOGD("Applying extended color adjust (B=%.2f, C=%.2f, S=%.2f, H=%.1f, "
+         "E=%.2f, Hi=%.2f, Sh=%.2f, T=%.2f, Ti=%.2f, G=%.2f, V=%.2f)",
+         brightness, contrast, saturation, hue, exposure, highlights, shadows,
+         temperature, tint, gamma, vibrance);
+
+    if (src.getWidth() <= 0 || src.getHeight() <= 0) {
+        return Status::ERROR_INVALID_PARAM;
+    }
+
+    if (dst.getWidth() != src.getWidth() || dst.getHeight() != src.getHeight()) {
+        return Status::ERROR_INVALID_PARAM;
+    }
+
+    // Clamp parameters (mencegah crash / artefak saat nilai out-of-range)
+    brightness = std::min(1.0f, std::max(-1.0f, brightness));
+    contrast = std::min(1.0f, std::max(-1.0f, contrast));
+    saturation = std::min(1.0f, std::max(-1.0f, saturation));
+    exposure = std::min(1.0f, std::max(-1.0f, exposure));
+    highlights = std::min(1.0f, std::max(-1.0f, highlights));
+    shadows = std::min(1.0f, std::max(-1.0f, shadows));
+    temperature = std::min(1.0f, std::max(-1.0f, temperature));
+    tint = std::min(1.0f, std::max(-1.0f, tint));
+    gamma = std::min(4.0f, std::max(0.1f, gamma));
+    vibrance = std::min(1.0f, std::max(-1.0f, vibrance));
+
+    // Jika semua adjustment netral, cukup copy (kompatibilitas perilaku lama)
+    if (brightness == 0.0f && contrast == 0.0f && saturation == 0.0f && hue == 0.0f &&
+        exposure == 0.0f && highlights == 0.0f && shadows == 0.0f &&
+        temperature == 0.0f && tint == 0.0f && gamma == 1.0f && vibrance == 0.0f) {
+        dst.copyFrom(src);
+        return Status::OK;
+    }
+
+    std::unique_ptr<ThreadPool> owned_pool;
+    ThreadPool* active_pool = pool;
+    if (!active_pool) {
+        owned_pool = std::make_unique<ThreadPool>(threadCount);
+        active_pool = owned_pool.get();
+    }
+
+    int height = src.getHeight();
+    int chunk_size = (height + threadCount - 1) / threadCount;
+
+    for (int t = 0; t < threadCount; t++) {
+        int y0 = t * chunk_size;
+        int y1 = (t == threadCount - 1) ? height : (t + 1) * chunk_size;
+
+        auto task = [&src, &dst, y0, y1,
+                     brightness, contrast, saturation, hue,
+                     exposure, highlights, shadows,
+                     temperature, tint, gamma, vibrance]() {
+            for (int y = y0; y < y1; y++) {
+                for (int x = 0; x < src.getWidth(); x++) {
+                    Color32 pixel = *src.getPixelAt(x, y);
+                    Color32 adjusted = adjustPixelAdvanced(
+                        pixel, brightness, contrast, saturation, hue,
+                        exposure, highlights, shadows,
+                        temperature, tint, gamma, vibrance);
+                    *dst.getPixelAt(x, y) = adjusted;
+                }
+            }
+        };
+
+        active_pool->submit(task);
+    }
+
     return active_pool->waitAll() ? Status::OK : Status::ERROR_RENDERING_FAILED;
 }

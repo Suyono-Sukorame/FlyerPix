@@ -59,6 +59,16 @@ public:
         float contrast = 0.0f;     // -1.0 to 1.0
         float saturation = 0.0f;   // -1.0 to 1.0
         float hue = 0.0f;          // -180 to 180 degrees
+
+        // Extended parameters (Prompt 01). Defaults are neutral so an
+        // extended call behaves identically to the legacy 4-param pipeline.
+        float exposure = 0.0f;     // -1.0 to +1.0 stops (v * 2^exposure)
+        float highlights = 0.0f;   // -1.0 to +1.0 (smooth curve on bright range)
+        float shadows = 0.0f;      // -1.0 to +1.0 (smooth curve on dark range)
+        float temperature = 0.0f;  // -1.0 to +1.0 (+ warm orange, - cool blue)
+        float tint = 0.0f;         // -1.0 to +1.0 (magenta <-> green)
+        float gamma = 1.0f;        // 0.1 to 4.0 (power curve centered on luma)
+        float vibrance = 0.0f;     // -1.0 to +1.0 (selective saturation)
     };
     
     Status applyColorAdjust(const Bitmap& src, Bitmap& dst, const ColorAdjustParams& params);
@@ -66,6 +76,16 @@ public:
     Status applyColorAdjust(Bitmap& bitmap, const ColorAdjustParams& params) {
         Bitmap temp = bitmap;
         return applyColorAdjust(temp, bitmap, params);
+    }
+    
+    // Extended color adjust (Prompt 01): 8-param pipeline (4 legacy + exposure,
+    // highlights, shadows, temperature, tint, gamma, vibrance). Legacy
+    // applyColorAdjust stays intact sebagai overload guna compatibility.
+    Status applyColorAdjustExtended(const Bitmap& src, Bitmap& dst, const ColorAdjustParams& params);
+    
+    Status applyColorAdjustExtended(Bitmap& bitmap, const ColorAdjustParams& params) {
+        Bitmap temp = bitmap;
+        return applyColorAdjustExtended(temp, bitmap, params);
     }
     
     // ========== Emboss Filter ==========
@@ -155,16 +175,30 @@ public:
     static Status apply(const Bitmap& src, Bitmap& dst, float brightness, float contrast, 
                        float saturation, float hue, int threadCount = 4, ThreadPool* pool = nullptr);
     
-private:
+    // Extended color adjust (Prompt 01): legacy 4 params + exposure, highlights,
+    // shadows, temperature, tint, gamma, vibrance
+    static Status applyExtended(const Bitmap& src, Bitmap& dst,
+                                float brightness, float contrast, float saturation, float hue,
+                                float exposure, float highlights, float shadows,
+                                float temperature, float tint, float gamma, float vibrance,
+                                int threadCount = 4, ThreadPool* pool = nullptr);
+    
     // RGB to HSV conversion
     static void rgbToHsv(uint8_t r, uint8_t g, uint8_t b, float& h, float& s, float& v);
     
     // HSV to RGB conversion
     static void hsvToRgb(float h, float s, float v, uint8_t& r, uint8_t& g, uint8_t& b);
     
-    // Apply adjustment to single pixel
+    // Apply adjustment to single pixel (legacy 4-param)
     static Color32 adjustPixel(Color32 pixel, float brightness, float contrast, 
                               float saturation, float hue);
+    
+    // Apply extended adjustment to single pixel (Prompt 01)
+    static Color32 adjustPixelAdvanced(
+        Color32 pixel,
+        float brightness, float contrast, float saturation, float hue,
+        float exposure, float highlights, float shadows,
+        float temperature, float tint, float gamma, float vibrance);
 };
 
 /**

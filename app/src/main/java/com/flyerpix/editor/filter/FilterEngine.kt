@@ -222,6 +222,78 @@ class FilterEngine private constructor() {
         return FilterStatus.fromCode(statusCode)
     }
     
+    /**
+     * Apply extended color adjustment filter (Prompt 01).
+     *
+     * Pipeline 8 parameter klasik (brightness, contrast, saturation, hue) plus
+     * parameter photo-editing modern: exposure, highlights, shadows,
+     * temperature, tint, gamma, vibrance.
+     *
+     * Seluruh parameter baru bernilai default netral => hasil identik dengan
+     * [applyColorAdjust] (kompatibilitas perilaku lama).
+     *
+     * @param srcBitmap source bitmap
+     * @param dstBitmap destination bitmap
+     * @param brightness -1.0f to +1.0f (negative=darker, positive=brighter)
+     * @param contrast -1.0f to +1.0f (negative=less contrast, positive=more)
+     * @param saturation -1.0f to +1.0f (negative=less saturated, positive=more)
+     * @param hue -180f to +180f degrees (color rotation)
+     * @param exposure -1.0f to +1.0f stops (v * 2^exposure)
+     * @param highlights -1.0f to +1.0f (adjust pada range terang)
+     * @param shadows -1.0f to +1.0f (adjust pada range gelap)
+     * @param temperature -1.0f to +1.0f (+ warm orange, - cool blue)
+     * @param tint -1.0f to +1.0f (magenta <-> green)
+     * @param gamma 0.1f to 4.0f (power curve centered pada luma)
+     * @param vibrance -1.0f to +1.0f (saturasi selektif)
+     * @return FilterStatus.OK jika sukses
+     */
+    fun applyColorAdjustExtended(
+        srcBitmap: Bitmap,
+        dstBitmap: Bitmap,
+        brightness: Float = 0.0f,
+        contrast: Float = 0.0f,
+        saturation: Float = 0.0f,
+        hue: Float = 0.0f,
+        exposure: Float = 0.0f,
+        highlights: Float = 0.0f,
+        shadows: Float = 0.0f,
+        temperature: Float = 0.0f,
+        tint: Float = 0.0f,
+        gamma: Float = 1.0f,
+        vibrance: Float = 0.0f
+    ): FilterStatus {
+        checkNotDestroyed()
+        validateBitmaps(srcBitmap, dstBitmap)
+        
+        val brightnessClamped = brightness.coerceIn(-1.0f, 1.0f)
+        val contrastClamped = contrast.coerceIn(-1.0f, 1.0f)
+        val saturationClamped = saturation.coerceIn(-1.0f, 1.0f)
+        val hueClamped = hue.coerceIn(-180f, 180f)
+        val exposureClamped = exposure.coerceIn(-1.0f, 1.0f)
+        val highlightsClamped = highlights.coerceIn(-1.0f, 1.0f)
+        val shadowsClamped = shadows.coerceIn(-1.0f, 1.0f)
+        val temperatureClamped = temperature.coerceIn(-1.0f, 1.0f)
+        val tintClamped = tint.coerceIn(-1.0f, 1.0f)
+        val gammaClamped = gamma.coerceIn(0.1f, 4.0f)
+        val vibranceClamped = vibrance.coerceIn(-1.0f, 1.0f)
+        
+        Log.d(
+            TAG,
+            "Applying extended color adjust: B=$brightnessClamped, C=$contrastClamped, " +
+            "S=$saturationClamped, H=$hueClamped, E=$exposureClamped, Hi=$highlightsClamped, " +
+            "Sh=$shadowsClamped, T=$temperatureClamped, Ti=$tintClamped, G=$gammaClamped, " +
+            "V=$vibranceClamped"
+        )
+        
+        val statusCode = nativeApplyColorAdjustExtended(
+            srcBitmap, dstBitmap,
+            brightnessClamped, contrastClamped, saturationClamped, hueClamped,
+            exposureClamped, highlightsClamped, shadowsClamped,
+            temperatureClamped, tintClamped, gammaClamped, vibranceClamped
+        )
+        return FilterStatus.fromCode(statusCode)
+    }
+    
     // ========================================================================
     // Emboss Filter
     // ========================================================================
@@ -373,6 +445,22 @@ class FilterEngine private constructor() {
         contrast: Float,
         saturation: Float,
         hue: Float
+    ): Int
+    
+    private external fun nativeApplyColorAdjustExtended(
+        srcBitmap: Bitmap,
+        dstBitmap: Bitmap,
+        brightness: Float,
+        contrast: Float,
+        saturation: Float,
+        hue: Float,
+        exposure: Float,
+        highlights: Float,
+        shadows: Float,
+        temperature: Float,
+        tint: Float,
+        gamma: Float,
+        vibrance: Float
     ): Int
     
     private external fun nativeApplyEmboss(

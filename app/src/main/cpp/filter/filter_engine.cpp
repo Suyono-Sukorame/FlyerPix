@@ -67,6 +67,19 @@ Status FilterEngine::applyColorAdjust(const Bitmap& src, Bitmap& dst, const Colo
                              params.saturation, params.hue, thread_count_, pool_.get());
 }
 
+Status FilterEngine::applyColorAdjustExtended(const Bitmap& src, Bitmap& dst, const ColorAdjustParams& params) {
+    LOGD("Applying extended color adjust (E=%.2f, Hi=%.2f, Sh=%.2f, T=%.2f, Ti=%.2f, G=%.2f, V=%.2f)",
+         params.exposure, params.highlights, params.shadows,
+         params.temperature, params.tint, params.gamma, params.vibrance);
+    
+    return ColorFilter::applyExtended(
+        src, dst,
+        params.brightness, params.contrast, params.saturation, params.hue,
+        params.exposure, params.highlights, params.shadows,
+        params.temperature, params.tint, params.gamma, params.vibrance,
+        thread_count_, pool_.get());
+}
+
 Status FilterEngine::applyEmboss(const Bitmap& src, Bitmap& dst, const EmbossParams& params) {
     LOGD("Applying emboss (amount=%.2f, angle=%.1f)", params.amount, params.angle);
     

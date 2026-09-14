@@ -16,7 +16,6 @@
 #include "filter_engine.h"
 #include "bitmap.h"
 #include "thread_pool.h"
-#include "color_filter.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -257,6 +256,139 @@ static bool testColorAdjust() {
 }
 
 // ============================================================================
+// Test Cases - Extended Color Adjust (Prompt 01)
+// ============================================================================
+
+static bool testExtendedColorAdjustNeutralIsIdentity() {
+    std::cout << "TEST: Extended color adjust neutral = identity... ";
+
+    auto src = createTestBitmap(TEST_WIDTH, TEST_HEIGHT);
+    auto dst = std::make_shared<Bitmap>(TEST_WIDTH, TEST_HEIGHT, PixelFormat::ARGB_8888);
+
+    FilterEngine::ColorAdjustParams params;  // semua default netral
+    FilterEngine engine;
+    Status result = engine.applyColorAdjustExtended(*src, *dst, params);
+
+    assert(result == Status::OK);
+    float diff = calculateDifference(*src, *dst);
+    assert(diff == 0.0f);  // netral harus identik dengan input
+
+    std::cout << "PASS\n";
+    return true;
+}
+
+static bool testExtendedColorAdjustPerParameterDiffers() {
+    std::cout << "TEST: Extended color adjust - setiap parameter mengubah pixel... ";
+
+    auto src = createTestBitmap(TEST_WIDTH, TEST_HEIGHT);
+    auto dst = std::make_shared<Bitmap>(TEST_WIDTH, TEST_HEIGHT, PixelFormat::ARGB_8888);
+
+    FilterEngine engine;
+    bool all_passed = true;
+    const char* cases[] = {
+        "exposure", "highlights", "shadows",
+        "temperature", "tint", "gamma", "vibrance", "hue"
+    };
+
+    for (size_t i = 0; i < 8; i++) {
+        FilterEngine::ColorAdjustParams params;
+        switch (i) {
+            case 0: params.exposure = 0.5f; break;
+            case 1: params.highlights = 0.5f; break;
+            case 2: params.shadows = 0.5f; break;
+            case 3: params.temperature = 0.5f; break;
+            case 4: params.tint = 0.5f; break;
+            case 5: params.gamma = 0.5f; break;
+            case 6: params.vibrance = 0.5f; break;
+            case 7: params.hue = 90.0f; break;
+        }
+
+        dst->clear();
+        Status st = engine.applyColorAdjustExtended(*src, *dst, params);
+        float diff = calculateDifference(*src, *dst);
+        if (st != Status::OK || diff <= 0.0f) {
+            std::cout << "[" << cases[i] << " diff=" << diff << "] ";
+            all_passed = false;
+        }
+    }
+
+    assert(all_passed);
+    std::cout << "PASS\n";
+    return true;
+}
+
+static bool testExtendedColorAdjustDirectional() {
+    std::cout << "TEST: Extended color adjust directional (exposure/temperature)... ";
+
+    auto src = createTestBitmap(TEST_WIDTH, TEST_HEIGHT);
+    FilterEngine engine;
+
+    // exposure=+1 harus menghasilkan image lebih terang (luma naik)
+    auto base = std::make_shared<Bitmap>(TEST_WIDTH, TEST_HEIGHT, PixelFormat::ARGB_8888);
+    FilterEngine::ColorAdjustParams neutral_params;
+    assert(engine.applyColorAdjustExtended(*src, *base, neutral_params) == Status::OK);
+
+    auto boosted = std::make_shared<Bitmap>(TEST_WIDTH, TEST_HEIGHT, PixelFormat::ARGB_8888);
+    FilterEngine::ColorAdjustParams exp_params;
+    exp_params.exposure = 1.0f;
+    assert(engine.applyColorAdjustExtended(*src, *boosted, exp_params) == Status::OK);
+
+    double luma_base = 0.0, luma_boosted = 0.0;
+    double red_base = 0.0, blue_base = 0.0;
+    double red_warm = 0.0, blue_warm = 0.0;
+
+    auto warm = std::make_shared<Bitmap>(TEST_WIDTH, TEST_HEIGHT, PixelFormat::ARGB_8888);
+    FilterEngine::ColorAdjustParams temp_params;
+    temp_params.temperature = 1.0f;
+    assert(engine.applyColorAdjustExtended(*src, *warm, temp_params) == Status::OK);
+
+    for (int y = 0; y < TEST_HEIGHT; y++) {
+        for (int x = 0; x < TEST_WIDTH; x++) {
+            Color32 pb = *base->getPixelAt(x, y);
+            Color32 px = *boosted->getPixelAt(x, y);
+            Color32 pw = *warm->getPixelAt(x, y);
+            luma_base += 0.299 * ((pb >> 16) & 0xFF) + 0.587 * ((pb >> 8) & 0xFF) + 0.114 * (pb & 0xFF);
+            luma_boosted += 0.299 * ((px >> 16) & 0xFF) + 0.587 * ((px >> 8) & 0xFF) + 0.114 * (px & 0xFF);
+            red_base += (pb >> 16) & 0xFF;  blue_base += pb & 0xFF;
+            red_warm += (pw >> 16) & 0xFF;  blue_warm += pw & 0xFF;
+        }
+    }
+
+    assert(luma_boosted > luma_base);
+    assert(red_warm > red_base);
+    assert(blue_warm < blue_base);
+
+    std::cout << "PASS\n";
+    return true;
+}
+
+static bool testExtendedColorAdjustClamping() {
+    std::cout << "TEST: Extended color adjust clamping (out-of-range)... ";
+
+    auto src = createTestBitmap(TEST_WIDTH, TEST_HEIGHT);
+    auto dst = std::make_shared<Bitmap>(TEST_WIDTH, TEST_HEIGHT, PixelFormat::ARGB_8888);
+
+    FilterEngine::ColorAdjustParams params;
+    params.exposure = 50.0f;
+    params.highlights = -99.0f;
+    params.shadows = 99.0f;
+    params.temperature = 100.0f;
+    params.tint = -100.0f;
+    params.gamma = 0.0001f;
+    params.vibrance = 50.0f;
+
+    FilterEngine engine;
+    Status result = engine.applyColorAdjustExtended(*src, *dst, params);
+
+    assert(result == Status::OK);
+    float diff = calculateDifference(*src, *dst);
+    assert(diff > 0.0f);  // masih mengubah pixel; tidak crash
+
+    std::cout << "PASS (difference=" << diff << ")\n";
+    return true;
+}
+
+// ============================================================================
 // Test Cases - Emboss
 // ============================================================================
 
@@ -342,6 +474,12 @@ int main() {
     if (testRGBtoHSVConversion()) passed++; else failed++;
     if (testHSVtoRGBConversion()) passed++; else failed++;
     if (testColorAdjust()) passed++; else failed++;
+    
+    // Extended color adjust tests (Prompt 01)
+    if (testExtendedColorAdjustNeutralIsIdentity()) passed++; else failed++;
+    if (testExtendedColorAdjustPerParameterDiffers()) passed++; else failed++;
+    if (testExtendedColorAdjustDirectional()) passed++; else failed++;
+    if (testExtendedColorAdjustClamping()) passed++; else failed++;
     
     // Emboss tests
     if (testEmbossKernelGeneration()) passed++; else failed++;

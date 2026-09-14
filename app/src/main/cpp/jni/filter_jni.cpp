@@ -328,6 +328,95 @@ Java_com_flyerpix_editor_filter_FilterEngine_nativeApplyColorAdjust(
     }
 }
 
+/**
+ * native int nativeApplyColorAdjustExtended(Bitmap src, Bitmap dst,
+ *                                   float brightness, float contrast,
+ *                                   float saturation, float hue,
+ *                                   float exposure, float highlights, float shadows,
+ *                                   float temperature, float tint, float gamma, float vibrance)
+ */
+extern "C" JNIEXPORT jint JNICALL
+Java_com_flyerpix_editor_filter_FilterEngine_nativeApplyColorAdjustExtended(
+    JNIEnv* env,
+    jobject obj,
+    jobject jSrc,
+    jobject jDst,
+    jfloat brightness,
+    jfloat contrast,
+    jfloat saturation,
+    jfloat hue,
+    jfloat exposure,
+    jfloat highlights,
+    jfloat shadows,
+    jfloat temperature,
+    jfloat tint,
+    jfloat gamma,
+    jfloat vibrance) {
+    
+    LOGD("JNI: applyColorAdjustExtended(B=%.2f, C=%.2f, S=%.2f, H=%.1f, "
+         "E=%.2f, Hi=%.2f, Sh=%.2f, T=%.2f, Ti=%.2f, G=%.2f, V=%.2f)",
+         brightness, contrast, saturation, hue, exposure, highlights, shadows,
+         temperature, tint, gamma, vibrance);
+    
+    try {
+        FilterEngine* engine = getFilterEngine(env, obj);
+        if (!engine) {
+            LOGE("FilterEngine pointer is null");
+            throwJniException(env, "java/lang/NullPointerException", "FilterEngine not initialized");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        // Lock bitmaps
+        BitmapLock srcLock(env, jSrc);
+        if (!srcLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid source bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        BitmapLock dstLock(env, jDst);
+        if (!dstLock.isValid()) {
+            throwJniException(env, "java/lang/IllegalArgumentException", "Invalid destination bitmap");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        // Validate dimensions
+        if (srcLock.info.width != dstLock.info.width || srcLock.info.height != dstLock.info.height) {
+            throwJniException(env, "java/lang/IllegalArgumentException", 
+                            "Bitmap dimensions mismatch");
+            return statusToJni(Status::ERROR_INVALID_PARAM);
+        }
+        
+        // Wrap bitmaps
+        Bitmap srcBitmap = wrapAndroidBitmap(srcLock);
+        Bitmap dstBitmap = wrapAndroidBitmap(dstLock);
+        
+        // Create extended color adjust parameters
+        FilterEngine::ColorAdjustParams params;
+        params.brightness = brightness;
+        params.contrast = contrast;
+        params.saturation = saturation;
+        params.hue = hue;
+        params.exposure = exposure;
+        params.highlights = highlights;
+        params.shadows = shadows;
+        params.temperature = temperature;
+        params.tint = tint;
+        params.gamma = gamma;
+        params.vibrance = vibrance;
+        
+        // Apply filter
+        Status status = engine->applyColorAdjustExtended(srcBitmap, dstBitmap, params);
+        
+        LOGD("Extended color adjust completed with status: %d", static_cast<int>(status));
+        return statusToJni(status);
+        
+    } catch (const std::exception& e) {
+        LOGE("applyColorAdjustExtended exception: %s", e.what());
+        throwJniException(env, "java/lang/RuntimeException", e.what());
+        return statusToJni(Status::ERROR_RENDERING_FAILED);
+    }
+}
+
 // ============================================================================
 // Emboss Filter
 // ============================================================================

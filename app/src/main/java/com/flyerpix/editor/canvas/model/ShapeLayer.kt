@@ -197,20 +197,13 @@ data class ShapeLayer(
             canvas.concat(pMat)
         }
 
+        // 3. Gambar bentuk dengan drop shadow, neon, emboss, atau inner shadow
+        val path = buildPath()
+
         if (extrudeEnabled && extrudeDepth > 0) {
-        // 3. Gambar bentuk dengan drop shadow, neon, emboss, atau inner shadow
-        val path = buildPath()
-
-        paint.style = Paint.Style.FILL
-        paint.alpha = opacity.coerceIn(0, 255)
-        paint.strokeWidth = 0f
-        
-        // 3. Gambar bentuk dengan drop shadow, neon, emboss, atau inner shadow
-        val path = buildPath()
-
-        paint.style = Paint.Style.FILL
-        paint.alpha = opacity.coerceIn(0, 255)
-        paint.strokeWidth = 0f
+            paint.style = Paint.Style.FILL
+            paint.alpha = opacity.coerceIn(0, 255)
+            paint.strokeWidth = 0f
         
         // Apply gradient shader if available (EXCEPT when effects are enabled)
         val currentGradient = gradient
