@@ -840,8 +840,13 @@ class PixelCanvasView @JvmOverloads constructor(
                     layer.draw(canvas, renderPaint)
                     // Apply mask DST_IN
                     if (hasMask && layer.maskBitmap != null) {
-                        val maskPaint = android.graphics.Paint()
-                        maskPaint.alpha = 255
+                        val maskPaint = android.graphics.Paint().apply {
+                            alpha = 255
+                            xfermode = android.graphics.PorterDuffXfermode(
+                                if (layer.maskInverted) android.graphics.PorterDuff.Mode.DST_OUT
+                                else android.graphics.PorterDuff.Mode.DST_IN
+                            )
+                        }
                         canvas.save()
                         applyLayerStandardTransform(canvas, layer)
                         canvas.drawBitmap(layer.maskBitmap!!, 0f, 0f, maskPaint)
@@ -1276,6 +1281,7 @@ class PixelCanvasView @JvmOverloads constructor(
      * lalu gabung/overwrite ke maskBitmap layer terpilih + opsional feather + inversi.
      */
     fun rasterizeSelectionToMask(feather: Int = 0, inverted: Boolean = false): Boolean {
+        android.util.Log.d("FlyerPixMask", "rasterize:: selPath=${selectionPath != null} layer=${selectedLayer?.javaClass?.simpleName} locked=${selectedLayer?.isLocked} selTool=${selectionTool}")
         val selection = selectionPath ?: return false
         val layer = selectedLayer ?: return false
         if (layer.isLocked) return false
@@ -1295,12 +1301,26 @@ class PixelCanvasView @JvmOverloads constructor(
         val localPath = android.graphics.Path(selection)
         localPath.transform(m)
 
-        mask.eraseColor(android.graphics.Color.TRANSPARENT)
-        val bc = android.graphics.Canvas(mask)
-        bc.drawPath(localPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
-            color = android.graphics.Color.WHITE
-        })
+        val clearPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            style = android.graphics.Paint.Style.FILL
+            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.CLEAR)
+        }
+
+        if (inverted) {
+            // Inverted: selection area VISIBLE, rest TRANSPARENT
+            mask.eraseColor(android.graphics.Color.TRANSPARENT)
+            val bc = android.graphics.Canvas(mask)
+            bc.drawPath(localPath, android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                style = android.graphics.Paint.Style.FILL
+                color = android.graphics.Color.WHITE
+            })
+        } else {
+            // Non-inverted (default): selection area TRANSPARENT, rest VISIBLE
+            mask.eraseColor(android.graphics.Color.WHITE)
+            val bc = android.graphics.Canvas(mask)
+            bc.drawPath(localPath, clearPaint)
+        }
+
         if (feather > 0) com.flyerpix.editor.canvas.model.MaskUtils.featherMask(mask, feather)
         layer.maskEnabled = true
         layer.maskInverted = inverted
@@ -2832,6 +2852,7 @@ class PixelCanvasView @JvmOverloads constructor(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     selectionDragActive = false
                     rebuildSelectionPath()
+                    android.util.Log.d("FlyerPixMask", "touchUP selectionPath=${selectionPath != null}")
                     onSelectionChanged?.invoke()
                     invalidate()
                 }

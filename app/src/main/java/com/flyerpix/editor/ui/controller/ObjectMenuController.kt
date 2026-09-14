@@ -911,11 +911,18 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
             canvas.onSelectionChanged = {
                 hasSelection = canvas.selectionPath != null
             }
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                android.util.Log.d("FlyerPixMask", "LaunchedEffect firing beginSelection(RECT)")
+                canvas.beginSelection(com.flyerpix.editor.canvas.PixelCanvasView.SelectionTool.RECT)
+                android.util.Log.d("FlyerPixMask", "after beginSelection selTool=${canvas.selectionTool}")
+            }
             com.flyerpix.editor.ui.composables.SelectionToolPanel(
                 hasSelection = hasSelection,
                 onToolChanged = { tool -> canvas.beginSelection(tool) },
                 onApplyToMask = { feather, inverted ->
+                    android.util.Log.d("FlyerPixMask", "onApplyToMask tapped feather=$feather inverted=$inverted hasSelection=$hasSelection")
                     val ok = canvas.rasterizeSelectionToMask(feather, inverted)
+                    android.util.Log.d("FlyerPixMask", "rasterize ok=$ok selectedLayer=${canvas.selectedLayer?.javaClass?.simpleName}")
                     showSnackbar(if (ok) "Selection applied to mask" else "Select a photo layer first")
                     canvas.clearSelection()
                     hasSelection = false

@@ -42,6 +42,7 @@ fun SelectionToolPanel(
             ).forEach { (label, tool) ->
                 Button(
                     onClick = {
+                        android.util.Log.d("FlyerPixMask", "Tool button $label clicked")
                         activeTool = tool
                         onToolChanged(tool)
                     },
