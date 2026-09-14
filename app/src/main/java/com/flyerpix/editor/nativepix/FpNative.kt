@@ -10,7 +10,7 @@ import android.annotation.SuppressLint
 object FpNative {
 
     init {
-        System.loadLibrary("flyerpix_native")
+        System.loadLibrary("flyerpix_engine")
     }
 
     /**

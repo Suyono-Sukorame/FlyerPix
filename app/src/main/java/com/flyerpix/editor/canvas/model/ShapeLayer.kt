@@ -200,25 +200,24 @@ data class ShapeLayer(
         // 3. Gambar bentuk dengan drop shadow, neon, emboss, atau inner shadow
         val path = buildPath()
 
-        if (extrudeEnabled && extrudeDepth > 0) {
-            paint.style = Paint.Style.FILL
-            paint.alpha = opacity.coerceIn(0, 255)
-            paint.strokeWidth = 0f
-        
         // Apply gradient shader if available (EXCEPT when effects are enabled)
         val currentGradient = gradient
         val hasEffect = shadowEnabled || neonEnabled || embossEnabled || extrudeEnabled || innerShadowEnabled
-        
         if (currentGradient != null && !hasEffect) {
-            // Gradient rendering without effects
             paint.shader = currentGradient.createShader(RectF(0f, 0f, width, height))
+            paint.color = fillColor
         } else {
             // Solid color rendering (for effects compatibility)
             paint.color = fillColor
             paint.shader = null
         }
 
-        // 3D Extrusion (FIRST — provides depth base)
+        if (extrudeEnabled && extrudeDepth > 0) {
+            paint.style = Paint.Style.FILL
+            paint.alpha = opacity.coerceIn(0, 255)
+            paint.strokeWidth = 0f
+
+            // 3D Extrusion (FIRST — provides depth base)
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.draw3DExtrusionEffect(
                 canvas,
                 this,

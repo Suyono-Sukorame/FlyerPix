@@ -2,6 +2,7 @@ package com.flyerpix.editor.ui.compose
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 private val StrokeColorScheme = lightColors(
     primary = Color(0xFF1769FF),
@@ -54,11 +58,15 @@ fun StrokeDetailPage(
     width: Float,
     opacityPct: Float,
     color: Int,
+    strokeStyle: String = "Solid",
+    strokeJoin: String = "Miter",
     onEnabledChange: (Boolean) -> Unit,
     onWidthChange: (Float) -> Unit,
     onOpacityChange: (Float) -> Unit,
     onColorChange: (Int) -> Unit,
     onColorPickRequested: () -> Unit,
+    onStrokeStyleChange: (String) -> Unit = {},
+    onStrokeJoinChange: (String) -> Unit = {},
     onReset: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
@@ -68,6 +76,8 @@ fun StrokeDetailPage(
     var widthState by remember(width) { mutableStateOf(width) }
     var opacityState by remember(opacityPct) { mutableStateOf(opacityPct) }
     var colorState by remember(color) { mutableStateOf(color) }
+    var strokeStyleState by remember(strokeStyle) { mutableStateOf(strokeStyle) }
+    var strokeJoinState by remember(strokeJoin) { mutableStateOf(strokeJoin) }
 
     val baseRgb = colorState or 0xFF000000.toInt()
 
@@ -152,6 +162,8 @@ fun StrokeDetailPage(
                                             widthState = 4f
                                             opacityState = 100f
                                             colorState = 0xFF000000.toInt()
+                                            strokeStyleState = "Solid"
+                                            strokeJoinState = "Miter"
                                             onReset()
                                         }
                                         .padding(horizontal = 6.dp, vertical = 4.dp)
@@ -224,12 +236,11 @@ fun StrokeDetailPage(
                                     }
                                 }
 
-                                // Width Slider Row
+                                // Width Slider
                                 SettingSliderRow(
                                     label = "Width",
                                     value = widthState,
                                     range = 0f..60f,
-                                    steps = 120,
                                     valueText = "${String.format(java.util.Locale.US, "%.1f", widthState)}px",
                                     onValueChange = { v ->
                                         widthState = v
@@ -237,18 +248,121 @@ fun StrokeDetailPage(
                                     }
                                 )
 
-                                // Opacity Slider Row
+                                // Opacity Slider
                                 SettingSliderRow(
                                     label = "Opacity",
                                     value = opacityState,
                                     range = 0f..100f,
-                                    steps = 100,
                                     valueText = "${opacityState.toInt()}%",
                                     onValueChange = { v ->
                                         opacityState = v
                                         onOpacityChange(v)
                                     }
                                 )
+
+                                // Stroke Style Section
+                                Divider(color = Color(PanelDivider), thickness = 1.dp)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                
+                                Text(
+                                    text = "Style",
+                                    style = MaterialTheme.typography.caption,
+                                    color = Color(PanelTextSecondary),
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf("Solid", "Dashed", "Dotted").forEach { style ->
+                                        val isSelected = strokeStyleState == style
+                                        Button(
+                                            onClick = { 
+                                                strokeStyleState = style
+                                                onStrokeStyleChange(style)
+                                            },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(32.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                backgroundColor = if (isSelected) MaterialTheme.colors.primary else Color(0xFFF1F4FA),
+                                                contentColor = if (isSelected) Color.White else Color(PanelTextSecondary)
+                                            ),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text(style, fontWeight = FontWeight.SemiBold, fontSize = MaterialTheme.typography.caption.fontSize)
+                                        }
+                                    }
+                                }
+
+                                // Stroke Join Section
+                                Spacer(modifier = Modifier.height(6.dp))
+                                
+                                Text(
+                                    text = "Join",
+                                    style = MaterialTheme.typography.caption,
+                                    color = Color(PanelTextSecondary),
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf("Miter", "Bevel", "Round").forEach { join ->
+                                        val isSelected = strokeJoinState == join
+                                        Button(
+                                            onClick = { 
+                                                strokeJoinState = join
+                                                onStrokeJoinChange(join)
+                                            },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(32.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                backgroundColor = if (isSelected) MaterialTheme.colors.primary else Color(0xFFF1F4FA),
+                                                contentColor = if (isSelected) Color.White else Color(PanelTextSecondary)
+                                            ),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text(join, fontWeight = FontWeight.SemiBold, fontSize = MaterialTheme.typography.caption.fontSize)
+                                        }
+                                    }
+                                }
+
+                                // Live Preview
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Divider(color = Color(PanelDivider), thickness = 1.dp)
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(60.dp)
+                                        .background(Color(0xFFF8FAFC), RoundedCornerShape(8.dp))
+                                        .border(1.dp, Color(PanelDivider), RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Canvas(modifier = Modifier.fillMaxSize()) {
+                                        drawLine(
+                                            color = Color(colorState),
+                                            start = androidx.compose.ui.geometry.Offset(20f, size.height / 2),
+                                            end = androidx.compose.ui.geometry.Offset(size.width - 20f, size.height / 2),
+                                            strokeWidth = widthState.coerceAtLeast(1f)
+                                        )
+                                    }
+                                    Text(
+                                        "Preview: ${String.format("%.1f", widthState)}px • $strokeStyleState",
+                                        style = MaterialTheme.typography.caption,
+                                        color = Color(PanelTextSecondary),
+                                        fontSize = androidx.compose.ui.unit.TextUnit(9f, androidx.compose.ui.unit.TextUnitType.Sp),
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .padding(4.dp)
+                                    )
+                                }
                             } else {
                                 Text(
                                     text = "Stroke outline is disabled",
@@ -304,10 +418,18 @@ private fun SettingSliderRow(
     label: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
-    steps: Int,
+    steps: Int = 0,
     valueText: String,
     onValueChange: (Float) -> Unit
 ) {
+    var localValue by remember { mutableStateOf(value) }
+    var debounceJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    LaunchedEffect(value) {
+        localValue = value
+    }
+    
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -319,8 +441,15 @@ private fun SettingSliderRow(
             modifier = Modifier.width(52.dp)
         )
         Slider(
-            value = value.coerceIn(range.start, range.endInclusive),
-            onValueChange = onValueChange,
+            value = localValue.coerceIn(range.start, range.endInclusive),
+            onValueChange = { newValue ->
+                localValue = newValue
+                debounceJob?.cancel()
+                debounceJob = coroutineScope.launch {
+                    delay(300)
+                    onValueChange(newValue)
+                }
+            },
             valueRange = range,
             steps = steps,
             modifier = Modifier

@@ -389,6 +389,38 @@ class ImagePreEditView @JvmOverloads constructor(
         selection.circle = CircleNorm(c.centerX, c.centerY, rad).normalized()
     }
 
+    // ── Measurement (enforce 1:1 square aspect ratio) ──────────────────────────
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val widthMode = MeasureSpec.getMode(widthMeasureSpec)
+        val widthSize = MeasureSpec.getSize(widthMeasureSpec)
+        val heightMode = MeasureSpec.getMode(heightMeasureSpec)
+        val heightSize = MeasureSpec.getSize(heightMeasureSpec)
+
+        // Calculate desired square size: use smaller of width/height
+        val desiredSize = when {
+            widthMode == MeasureSpec.EXACTLY && heightMode == MeasureSpec.EXACTLY -> {
+                // Both constrained: use smaller dimension to maintain 1:1
+                minOf(widthSize, heightSize)
+            }
+            widthMode == MeasureSpec.EXACTLY -> {
+                // Only width constrained: make height equal to width
+                widthSize
+            }
+            heightMode == MeasureSpec.EXACTLY -> {
+                // Only height constrained: make width equal to height
+                heightSize
+            }
+            else -> {
+                // Neither constrained: use maximum available
+                minOf(widthSize.coerceAtLeast(heightSize), heightSize.coerceAtLeast(widthSize))
+            }
+        }
+
+        // Set measured dimensions as square (1:1 aspect ratio)
+        setMeasuredDimension(desiredSize, desiredSize)
+    }
+
     // ── Gambar ────────────────────────────────────────────────────────────────
 
     override fun onDraw(canvas: Canvas) {

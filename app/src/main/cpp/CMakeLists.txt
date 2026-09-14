@@ -13,6 +13,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fvisibility=hidden -Wall -Wextra")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
 
+# ← ADDED: Enable OpenMP for parallel processing
+find_package(OpenMP REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+
 # Enable SIMD optimizations for better filter performance
 if(ANDROID_ABI STREQUAL "arm64-v8a")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a")
@@ -95,6 +99,16 @@ set(JNI_SOURCES
 )
 
 # ============================================================================
+# FpNative bridge (blurPixels / applyColorMatrix / applyNoiseVignette)
+# ============================================================================
+
+set(FP_NATIVE_SOURCES
+    fp_blur.cpp
+    fp_color.cpp
+    jni_bridge.cpp
+)
+
+# ============================================================================
 # Create Main Shared Library
 # ============================================================================
 
@@ -106,6 +120,7 @@ add_library(
     ${BITMAP_SOURCES}
     ${FILTER_SOURCES}
     ${JNI_SOURCES}
+    ${FP_NATIVE_SOURCES}
 )
 
 # ============================================================================
@@ -119,6 +134,7 @@ target_link_libraries(
     ${log-lib}
     android
     jnigraphics
+    OpenMP::OpenMP_CXX  # ← ADDED: Link OpenMP
 )
 
 # ============================================================================

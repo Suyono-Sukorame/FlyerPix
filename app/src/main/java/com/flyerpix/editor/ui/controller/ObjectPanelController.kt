@@ -63,7 +63,7 @@ class ObjectPanelController(
 
         val composedObjectTags = setOf(
             OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE,
-            OBJ_SHADOW, OBJ_STROKE, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST
+            OBJ_SHADOW, OBJ_STROKE, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST, OBJ_GRADIENT
         )
     }
 
@@ -298,7 +298,10 @@ class ObjectPanelController(
                 if (composeHost != null) showComposeShadowSheet(layer)
                 else syncShadowUI(layer)
             }
-            OBJ_GRADIENT    -> syncGradientUI(layer)
+            OBJ_GRADIENT    -> {
+                if (composeHost != null) showComposeGradientSheet(layer)
+                else syncGradientUI(layer)
+            }
             OBJ_BLEND       -> {
                 if (composeHost != null) showComposeBlendSheet(layer)
                 else syncBlendUI(layer)
@@ -1258,6 +1261,105 @@ class ObjectPanelController(
                 onCancel = { cancelEffectSettings() },
                 maxHeightPx = sheetMaxH
             )
+        }
+    }
+
+    /** Sheet Compose untuk Gradient Fill per-layer (Edit → Gradient), identik dengan page Adjust. */
+    private fun showComposeGradientSheet(layer: CanvasLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        val grad = layer.gradient
+        val c1 = grad?.colors?.getOrNull(0) ?: Color.WHITE
+        val c2 = if (grad != null && grad.colors.size > 1) grad.colors[1] else Color.BLACK
+        val fallbackType = com.flyerpix.editor.canvas.model.GradientType.LINEAR
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.GradientDetailPage(
+                enabled = layer.gradientEnabled,
+                color1 = c1,
+                color2 = c2,
+                type = grad?.type ?: fallbackType,
+                angle = grad?.angle ?: 0f,
+                activePreset = grad?.name?.takeIf { it.isNotBlank() },
+                onEnabledChange = { en ->
+                    applyToLayer {
+                        if (en && it.gradient == null) it.gradient = defaultGradient()
+                        it.gradientEnabled = en
+                    }
+                },
+                onTypeChange = { t ->
+                    applyToLayer {
+                        val cur = it.gradient ?: defaultGradient()
+                        if (cur.type != t) it.gradient = cur.copy(type = t, name = "")
+                        it.gradientEnabled = true
+                    }
+                },
+                onColor1Change = { c -> setGradientColorAt(0, c) },
+                onColor2Change = { c -> setGradientColorAt(1, c) },
+                onAngleChange = { a ->
+                    applyToLayer {
+                        val cur = it.gradient ?: defaultGradient()
+                        it.gradient = cur.copy(angle = a, name = "")
+                        it.gradientEnabled = true
+                    }
+                },
+                onPreset = { p ->
+                    applyToLayer {
+                        val colors = com.flyerpix.editor.ui.compose.gradientPresetColors(p)
+                        it.gradient = (it.gradient ?: defaultGradient()).copy(
+                            colors = colors.copyOf(),
+                            positions = null,
+                            type = com.flyerpix.editor.canvas.model.GradientType.LINEAR,
+                            angle = 0f,
+                            name = p
+                        )
+                        it.gradientEnabled = true
+                    }
+                },
+                onReset = {
+                    applyToLayer {
+                        it.gradient = null
+                        it.gradientEnabled = false
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun defaultGradient(): com.flyerpix.editor.canvas.model.GradientColor =
+        com.flyerpix.editor.canvas.model.GradientColor(
+            colors = intArrayOf(Color.WHITE, Color.BLACK),
+            type = com.flyerpix.editor.canvas.model.GradientType.LINEAR,
+            angle = 0f,
+            name = ""
+        )
+
+    private fun setGradientColorAt(index: Int, color: Int) {
+        applyToLayer {
+            val cur = it.gradient ?: defaultGradient()
+            val base = cur.colors
+            val newColors = if (base.size >= 2) base.copyOf() else IntArray(2) { i ->
+                when {
+                    i == 0 && base.isNotEmpty() -> base[0]
+                    i == 0 -> Color.WHITE
+                    else -> Color.BLACK
+                }
+            }
+            if (index < newColors.size) newColors[index] = color
+            it.gradient = cur.copy(colors = newColors)
+            it.gradientEnabled = true
         }
     }
 

@@ -54,6 +54,38 @@ open class ImageLayer(
     blendMode = blendMode
 ) {
 
+    companion object {
+        /**
+         * Factory method untuk membuat ImageLayer yang centered di canvas
+         * (horizontal & vertical center).
+         * 
+         * @param bitmap Bitmap yang akan ditampilkan
+         * @param canvasWidth Lebar kanvas (untuk kalkulasi center)
+         * @param canvasHeight Tinggi kanvas (untuk kalkulasi center)
+         * @return ImageLayer dengan positioning centered
+         */
+        fun createCentered(
+            bitmap: Bitmap,
+            canvasWidth: Float,
+            canvasHeight: Float,
+            layerName: String = "Image Layer"
+        ): ImageLayer {
+            val imgWidth = bitmap.width.toFloat()
+            val imgHeight = bitmap.height.toFloat()
+            
+            // Calculate center position
+            val centerX = (canvasWidth - imgWidth) / 2f
+            val centerY = (canvasHeight - imgHeight) / 2f
+            
+            return ImageLayer(
+                x = centerX,
+                y = centerY,
+                bitmap = bitmap,
+                layerName = layerName
+            )
+        }
+    }
+
     override fun drawContent(canvas: Canvas, paint: Paint) {
         if (!isVisible) return
         val (w, h) = getUnwarpedDimensions()

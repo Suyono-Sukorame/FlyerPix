@@ -15,6 +15,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 private val LayerAdjustColorScheme = lightColors(
     primary = Color(0xFF1769FF),
@@ -316,6 +319,14 @@ private fun LayerAdjustRow(
     value: Float,
     onValueChange: (Float) -> Unit
 ) {
+    var localValue by remember { mutableStateOf(value) }
+    var debounceJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    LaunchedEffect(value) {
+        localValue = value
+    }
+    
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -327,10 +338,19 @@ private fun LayerAdjustRow(
             modifier = Modifier.width(68.dp)
         )
         Slider(
-            value = value,
-            onValueChange = onValueChange,
+            value = localValue,
+            onValueChange = { newValue ->
+                localValue = newValue
+                // Cancel previous debounce
+                debounceJob?.cancel()
+                // Debounce: wait 300ms before calling callback
+                debounceJob = coroutineScope.launch {
+                    kotlinx.coroutines.delay(300)
+                    onValueChange(newValue)
+                }
+            },
             valueRange = -100f..100f,
-            steps = 200,
+            steps = 0,  // ← CHANGED: Removed discrete steps = continuous smooth slider
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colors.primary,
                 activeTrackColor = MaterialTheme.colors.primary
@@ -340,7 +360,7 @@ private fun LayerAdjustRow(
                 .height(30.dp)
         )
         Text(
-            text = formatLayerAdjustValue(value),
+            text = formatLayerAdjustValue(localValue),
             style = MaterialTheme.typography.caption,
             color = Color(PanelTextSecondary),
             textAlign = TextAlign.End,

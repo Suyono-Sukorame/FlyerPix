@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <algorithm>
+#include <omp.h>  // ← Added: OpenMP for parallel processing
 
 namespace fp {
 
@@ -31,6 +32,10 @@ void applyColorMatrix(int32_t* pixels, int32_t count,
     const float gz = 0.715f - 0.715f * s;
     const float bz = 0.072f + 0.928f * s;
 
+    // ← ADDED: Parallelize with OpenMP
+    // schedule(static) = best for cache locality
+    // collapse(1) = single loop (for future nested loop optimization)
+    #pragma omp parallel for collapse(1) schedule(static) num_threads(4)
     for (int32_t i = 0; i < count; ++i) {
         const int32_t px = pixels[i];
         const float r0 = static_cast<float>((px >> 16) & 0xFF);
