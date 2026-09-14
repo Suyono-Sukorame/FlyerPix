@@ -8,6 +8,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.canvas.model.CanvasLayer
+import com.flyerpix.editor.canvas.model.ShapeLayer
+import com.flyerpix.editor.canvas.model.PenLayer
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.flyerpix.editor.canvas.model.TextLayer
 import com.flyerpix.editor.databinding.ActivityEditorBinding
@@ -142,6 +144,8 @@ class LayerPanelController(
             if (!canvas.sendSelectedLayerToBack()) showSnackbar("Select an unlocked layer first")
         }
 
+        binding.btnLayerClip.setOnClickListener { showClipMenu(binding.btnLayerClip) }
+
         binding.btnBatchDelete.setOnClickListener {
             val checked = adapter.getCheckedLayers()
             if (checked.isEmpty()) { showSnackbar("Select layers to delete first"); return@setOnClickListener }
@@ -274,6 +278,68 @@ class LayerPanelController(
         val layer = canvas.selectedLayer
         binding.btnLayerToFront.isEnabled = layer != null && !layer.isLocked && canvas.canBringSelectedLayerToFront()
         binding.btnLayerToBack.isEnabled = layer != null && !layer.isLocked && canvas.canSendSelectedLayerToBack()
+        binding.btnLayerClip.isEnabled = layer != null && !layer.isLocked
+    }
+
+    private fun showClipMenu(anchor: View) {
+        val layer = canvas.selectedLayer ?: return
+        if (layer.isLocked) { showSnackbar("Layer is locked"); return }
+        val clipPopup = PopupMenu(binding.root.context, anchor)
+        clipPopup.menu.add("Set as Clip ▼").setOnMenuItemClickListener {
+            val candidates = canvas.layers.filter { it.id != layer.id && it !== layer }
+            if (candidates.isEmpty()) {
+                showSnackbar("No other layers to clip from")
+                return@setOnMenuItemClickListener true
+            }
+val picker = PopupMenu(binding.root.context, anchor)
+            val pickables = candidates.filter {
+                it is ShapeLayer || it is PenLayer || it is TextLayer
+            }
+            if (pickables.isEmpty()) {
+                showSnackbar("Add a Shape / Pen / Text layer first to clip into")
+                return@setOnMenuItemClickListener true
+            }
+            pickables.forEachIndexed { index, target ->
+                val label = when (target) {
+                    is ShapeLayer -> "Shape ${index + 1}"
+                    is PenLayer -> "Pen ${index + 1}"
+                    is TextLayer -> "Text ${index + 1}"
+                    else -> "Layer ${index + 1}"
+                }
+                picker.menu.add(label).setOnMenuItemClickListener {
+                    val snap = canvas.captureCurrentState("Set Clipping")
+                    layer.clippingMode = when (target) {
+                        is ShapeLayer -> com.flyerpix.editor.canvas.model.ClippingMode.CLIP_TO_SHAPE_PATH
+                        is PenLayer -> com.flyerpix.editor.canvas.model.ClippingMode.CLIP_TO_PEN_PATH
+                        is TextLayer -> com.flyerpix.editor.canvas.model.ClippingMode.CLIP_TO_TEXT_BOUNDS
+                        else -> com.flyerpix.editor.canvas.model.ClippingMode.NONE
+                    }
+                    layer.clipLayerId = target.id
+                    canvas.recordAction("Set Clipping", snap)
+                    canvas.invalidate()
+                    canvas.notifyLayersChanged()
+                    showSnackbar("Clipped to: $label")
+                    true
+                }
+            }
+            picker.show()
+            true
+        }
+        clipPopup.menu.add("Hapus Clip").setOnMenuItemClickListener {
+            if (layer.clippingMode == com.flyerpix.editor.canvas.model.ClippingMode.NONE) {
+                showSnackbar("No clip set on this layer")
+                return@setOnMenuItemClickListener true
+            }
+            val snap = canvas.captureCurrentState("Remove Clipping")
+            layer.clippingMode = com.flyerpix.editor.canvas.model.ClippingMode.NONE
+            layer.clipLayerId = null
+            canvas.recordAction("Remove Clipping", snap)
+            canvas.invalidate()
+            canvas.notifyLayersChanged()
+            showSnackbar("Clip removed")
+            true
+        }
+        clipPopup.show()
     }
 
     fun setBatchMode(enabled: Boolean) {

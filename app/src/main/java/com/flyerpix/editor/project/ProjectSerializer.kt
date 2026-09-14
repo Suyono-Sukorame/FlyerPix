@@ -274,7 +274,9 @@ object ProjectSerializer {
         maskEnabled        = layer.maskEnabled,
         maskInverted       = layer.maskInverted,
         maskBase64         = layer.maskBitmap?.let { bitmapToBase64(it) },
-        maskGeneration     = layer.maskGeneration
+        maskGeneration     = layer.maskGeneration,
+        clippingMode       = layer.clippingMode.name,
+        clipLayerId        = layer.clipLayerId
     )
 
     private fun textLayerToDto(l: TextLayer): LayerDto = baseLayerFields(l).copy(
@@ -791,6 +793,10 @@ object ProjectSerializer {
             it.maskEnabled = dto.maskEnabled
             it.maskInverted = dto.maskInverted
             it.maskGeneration = dto.maskGeneration
+            it.clippingMode =
+                runCatching { com.flyerpix.editor.canvas.model.ClippingMode.valueOf(dto.clippingMode) }
+                    .getOrDefault(com.flyerpix.editor.canvas.model.ClippingMode.NONE)
+            it.clipLayerId = dto.clipLayerId
         }
     }
 

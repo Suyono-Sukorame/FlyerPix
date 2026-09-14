@@ -250,7 +250,12 @@ data class LayerDto(
     val maskInverted: Boolean = false,
     /** Bitmap mask 8-bit dikodekan Base64 PNG; null jika tidak ada mask. */
     val maskBase64: String? = null,
-    val maskGeneration: Int = 0
+    val maskGeneration: Int = 0,
+
+    // ── Clipping Path (Prompt 09) ────────────────────────────────────────────
+    /** "NONE", "CLIP_TO_SHAPE_PATH", "CLIP_TO_PEN_PATH", "CLIP_TO_TEXT_BOUNDS" */
+    val clippingMode: String = "NONE",
+    val clipLayerId: String? = null
 )
 
 /**

@@ -299,6 +299,8 @@ abstract class CanvasLayer(
         copy.maskEnabled = this.maskEnabled
         copy.maskInverted = this.maskInverted
         copy.maskGeneration = this.maskGeneration
+        copy.clippingMode = this.clippingMode
+        copy.clipLayerId = this.clipLayerId
         return copy
     }
 
@@ -528,6 +530,8 @@ abstract class CanvasLayer(
         hh = hh * 31 + (if (maskInverted) 1 else 0)
         hh = hh * 31 + System.identityHashCode(maskBitmap)
         hh = hh * 31 + maskGeneration
+        hh = hh * 31 + clippingMode.ordinal
+        hh = hh * 31 + (clipLayerId?.hashCode() ?: 0)
         return hh
     }
 
