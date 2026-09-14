@@ -49,6 +49,7 @@ class ObjectMenuController(
         const val OBJ_STICKER  = "obj_sticker"
         const val OBJ_IMPORT   = "obj_import"
         const val OBJ_DRAW     = "obj_draw"
+        const val OBJ_SELECT   = "obj_select"
         const val OBJ_SHAPES   = "obj_shapes"
         const val OBJ_BEZIER   = "obj_bezier"
         const val OBJ_ARROW    = "obj_arrow"
@@ -198,6 +199,7 @@ class ObjectMenuController(
             Spec(OBJ_STICKER,  "Sticker", R.drawable.ic_sharp_face_24px),
             Spec(OBJ_IMPORT,   "Import",  R.drawable.ic_outline_photo_24px),
             Spec(OBJ_DRAW,     "Draw",    R.drawable.ic_sharp_brush_24px),
+            Spec(OBJ_SELECT,   "Select",  R.drawable.ic_mask_24px),
             Spec(OBJ_SHAPES,   "Shapes",  R.drawable.ic_nav_shapes_24px),
             Spec(OBJ_BEZIER,   "Bezier",  R.drawable.ic_curve_24px),
             Spec(OBJ_ARROW,    "Arrow",   R.drawable.ic_arrow_24px)
@@ -256,6 +258,7 @@ class ObjectMenuController(
             OBJ_STICKER -> showComposeStickerSheet()
             OBJ_IMPORT  -> showComposeImportSheet()
             OBJ_DRAW    -> showComposeDrawSheet()
+            OBJ_SELECT  -> showSelectionToolSheet()
             OBJ_SHAPES  -> showComposeShapeSheet()
             OBJ_BEZIER  -> showComposeBezierSheet()
             OBJ_ARROW   -> showComposeArrowSheet()
@@ -277,6 +280,8 @@ class ObjectMenuController(
         canvas.bezierInputEnabled = false
         canvas.bezierInputLayer = null
         canvas.onBezierInputPointChanged = null
+        canvas.clearSelection()
+        canvas.onSelectionChanged = null
 
         // Hide Compose container
         composeContainer?.visibility = View.GONE
@@ -880,6 +885,45 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                     deselect(restoreStrip = true)
                 },
                 maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    /**
+     * Panel Selection Tools (Prompt 10): Rectangle / Ellipse / Lasso + feather
+     * + "To Mask" rasterize ke layer mask + "Batal".
+     */
+    private fun showSelectionToolSheet() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_SELECT
+        updateToolStripSelection(OBJ_SELECT)
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+        PanelHeightManager.setHeight(container, (300 * activity.resources.displayMetrics.density).toInt())
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            var hasSelection by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(canvas.selectionPath != null) }
+            canvas.onSelectionChanged = {
+                hasSelection = canvas.selectionPath != null
+            }
+            com.flyerpix.editor.ui.composables.SelectionToolPanel(
+                hasSelection = hasSelection,
+                onToolChanged = { tool -> canvas.beginSelection(tool) },
+                onApplyToMask = { feather, inverted ->
+                    val ok = canvas.rasterizeSelectionToMask(feather, inverted)
+                    showSnackbar(if (ok) "Selection applied to mask" else "Select a photo layer first")
+                    canvas.clearSelection()
+                    hasSelection = false
+                },
+                onCancel = {
+                    canvas.clearSelection()
+                    deselect(restoreStrip = true)
+                }
             )
         }
     }

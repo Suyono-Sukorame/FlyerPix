@@ -873,6 +873,23 @@ class PixelCanvasView @JvmOverloads constructor(
             for (p in freeDrawPoints) path.lineTo(p.first, p.second)
             canvas.drawPath(path, freeDrawPaint)
         }
+
+        // Overlay seleksi aktif — putus-putus transparan (Prompt 10)
+        selectionPath?.let { selPath ->
+            val fill = android.graphics.Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = android.graphics.Paint.Style.FILL
+                color = 0x400088FF.toInt()
+                pathEffect = null
+            }
+            canvas.drawPath(selPath, fill)
+            val stroke = android.graphics.Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = android.graphics.Paint.Style.STROKE
+                color = 0xAA0088FF.toInt()
+                strokeWidth = 2f * resources.displayMetrics.density
+                pathEffect = android.graphics.DashPathEffect(floatArrayOf(8f * resources.displayMetrics.density, 6f * resources.displayMetrics.density), 0f)
+            }
+            canvas.drawPath(selPath, stroke)
+        }
     }
 
     // ── Crop Canvas (Prompt 46) ─────────────────────────────────────────────
@@ -1184,6 +1201,113 @@ class PixelCanvasView @JvmOverloads constructor(
         strokeCap = Paint.Cap.ROUND
         strokeWidth = 6f
         color = 0xFF1769FF.toInt()
+    }
+
+    // ── Selection Tools (Prompt 10) ──────────────────────────────────────────
+    enum class SelectionTool { RECT, ELLIPSE, LASSO }
+
+    /** Tool seleksi yang sedang aktif; null = tidak ada mode seleksi. */
+    var selectionTool: SelectionTool? = null
+
+    /** Jalur seleksi terakhir (kanvas space) untuk overlay & rasterize. */
+    var selectionPath: android.graphics.Path? = null
+
+    /** Callback saat seleksi berubah (finish DANDING start) untuk sinkronisasi UI. */
+    var onSelectionChanged: (() -> Unit)? = null
+
+    private var selectionDragActive = false
+    private var selectionStartX = 0f
+    private var selectionStartY = 0f
+    private var selectionCurrentX = 0f
+    private var selectionCurrentY = 0f
+    private val selectionLassoPoints = ArrayList<Pair<Float, Float>>()
+
+    /** Begin mode seleksi baru. */
+    fun beginSelection(tool: SelectionTool) {
+        selectionTool = tool
+        selectionPath = null
+        selectionDragActive = false
+        selectionLassoPoints.clear()
+        invalidate()
+    }
+
+    /** Batalkan seleksi & matikan mode seleksi. */
+    fun clearSelection() {
+        selectionTool = null
+        selectionPath = null
+        selectionDragActive = false
+        selectionLassoPoints.clear()
+        invalidate()
+    }
+
+    /** Bangun Path saat ini (rect/ellipse/lasso) dalam koordinat kanvas. */
+    private fun rebuildSelectionPath() {
+        selectionPath = buildSelectionPath()
+    }
+
+    private fun buildSelectionPath(): android.graphics.Path? {
+        val tool = selectionTool ?: return null
+        return when (tool) {
+            SelectionTool.RECT, SelectionTool.ELLIPSE -> {
+                val left = minOf(selectionStartX, selectionCurrentX)
+                val top = minOf(selectionStartY, selectionCurrentY)
+                val right = maxOf(selectionStartX, selectionCurrentX)
+                val bottom = maxOf(selectionStartY, selectionCurrentY)
+                if (right - left < 1f && bottom - top < 1f) return null
+                val rect = android.graphics.RectF(left, top, right, bottom)
+                android.graphics.Path().apply {
+                    if (tool == SelectionTool.ELLIPSE) addOval(rect, android.graphics.Path.Direction.CW)
+                    else addRect(rect, android.graphics.Path.Direction.CW)
+                }
+            }
+            SelectionTool.LASSO -> {
+                if (selectionLassoPoints.size < 3) return null
+                android.graphics.Path().apply {
+                    moveTo(selectionLassoPoints[0].first, selectionLassoPoints[0].second)
+                    selectionLassoPoints.drop(1).forEach { lineTo(it.first, it.second) }
+                    close()
+                }
+            }
+        }
+    }
+
+    /**
+     * Rasterize seleksi menjadi layer mask (Prompt 10): putih = terlihat, hitam = tersembunyi,
+     * lalu gabung/overwrite ke maskBitmap layer terpilih + opsional feather + inversi.
+     */
+    fun rasterizeSelectionToMask(feather: Int = 0, inverted: Boolean = false): Boolean {
+        val selection = selectionPath ?: return false
+        val layer = selectedLayer ?: return false
+        if (layer.isLocked) return false
+        val (wRaw, hRaw) = layer.getUnwarpedDimensions()
+        val w = if (wRaw > 0f) wRaw.toInt() else 0
+        val h = if (hRaw > 0f) hRaw.toInt() else 0
+        if (w <= 0 || h <= 0) return false
+
+        if (layer.maskBitmap == null) layer.createMask(w, h)
+        val mask = layer.maskBitmap ?: return false
+
+        // Inverse transform kanvas → koordinat layer lokal (konsisten dgn canvasToMaskLocal)
+        val m = android.graphics.Matrix()
+        m.postTranslate(-layer.x, -layer.y)
+        m.postRotate(-layer.rotation, w / 2f, h / 2f)
+        m.postScale(1f / layer.scale, 1f / layer.scale, w / 2f, h / 2f)
+        val localPath = android.graphics.Path(selection)
+        localPath.transform(m)
+
+        mask.eraseColor(android.graphics.Color.TRANSPARENT)
+        val bc = android.graphics.Canvas(mask)
+        bc.drawPath(localPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = android.graphics.Color.WHITE
+        })
+        if (feather > 0) com.flyerpix.editor.canvas.model.MaskUtils.featherMask(mask, feather)
+        layer.maskEnabled = true
+        layer.maskInverted = inverted
+        layer.maskGeneration++
+        invalidate()
+        notifyLayersChanged()
+        return true
     }
 
     var freeDrawColor: Int
@@ -2677,6 +2801,42 @@ class PixelCanvasView @JvmOverloads constructor(
         // 0.55. Tangani mode edit Bezier — drag anchor/handle untuk edit path (Phase 1)
         if (bezierEditMode && selectedBezierLayer != null) {
             return handleBezierEditModeTouch(event)
+        }
+
+        // 0.56. Tangani mode seleksi Rect / Ellipse / Lasso (Prompt 10)
+        if (selectionTool != null) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    selectionDragActive = true
+                    selectionStartX = event.x
+                    selectionStartY = event.y
+                    selectionCurrentX = event.x
+                    selectionCurrentY = event.y
+                    selectionLassoPoints.clear()
+                    selectionLassoPoints.add(event.x to event.y)
+                    selectionPath = null
+                    invalidate()
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    selectionCurrentX = event.x
+                    selectionCurrentY = event.y
+                    if (selectionTool == SelectionTool.LASSO) {
+                        val last = selectionLassoPoints.last()
+                        val dx = event.x - last.first
+                        val dy = event.y - last.second
+                        if (dx * dx + dy * dy >= 36f) selectionLassoPoints.add(event.x to event.y)
+                    }
+                    rebuildSelectionPath()
+                    invalidate()
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    selectionDragActive = false
+                    rebuildSelectionPath()
+                    onSelectionChanged?.invoke()
+                    invalidate()
+                }
+            }
+            return true
         }
 
         // 0.6. Tangani mode gambar bebas — intercept seluruh sentuhan
