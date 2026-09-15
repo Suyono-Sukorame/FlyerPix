@@ -72,7 +72,8 @@ class ImagePreEditView @JvmOverloads constructor(
         selection.reset()
         // Set default aspect ratio to 1:1 (square)
         activeAspect = 1 to 1
-        selection.rect = CropMath.fitRatioToCanvas(1, 1)
+        // Use adjusted function that accounts for image aspect ratio
+        selection.rect = CropMath.fitRatioToCanvasAdjusted(1, 1, bitmap.width, bitmap.height)
         
         // Smart Initial Zoom: Auto-detect optimal zoom level based on image size
         // If image is much larger than view, start with zoom level 1 or 2
@@ -126,7 +127,10 @@ class ImagePreEditView @JvmOverloads constructor(
         selection.isLocked = !selection.isLocked
         if (selection.isLocked && selection.shape == CropShape.RECTANGLE) {
             val ratio = activeAspect
-            selection.rect = if (ratio != null) {
+            val img = image
+            selection.rect = if (ratio != null && img != null) {
+                CropMath.fitRatioToCanvasAdjusted(ratio.first, ratio.second, img.width, img.height)
+            } else if (ratio != null) {
                 CropMath.fitRatioToCanvas(ratio.first, ratio.second)
             } else {
                 CropMath.applyShapeLock(selection.rect, DragCorner.TOP_LEFT)
@@ -140,7 +144,12 @@ class ImagePreEditView @JvmOverloads constructor(
     fun applyAspectRatio(presetW: Int, presetH: Int) {
         activeAspect = presetW to presetH
         if (selection.shape == CropShape.RECTANGLE) {
-            selection.rect = CropMath.fitRatioToCanvas(presetW, presetH)
+            val img = image
+            if (img != null) {
+                selection.rect = CropMath.fitRatioToCanvasAdjusted(presetW, presetH, img.width, img.height)
+            } else {
+                selection.rect = CropMath.fitRatioToCanvas(presetW, presetH)
+            }
         }
         invalidate()
     }

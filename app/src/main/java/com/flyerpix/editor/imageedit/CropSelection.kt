@@ -90,6 +90,12 @@ object CropMath {
     /**
      * Preset rasio aspek yang memenuhi kanvas [0,1]² (memuat area seluas mungkin
      * sambil menjaga rasio width:height). Persegi 1:1 menghasilkan kotak penuh.
+     * 
+     * NOTE: This function assumes the image canvas [0,1]² uses normalized image coordinates,
+     * where (0,0) is top-left and (1,1) is bottom-right of the IMAGE (not the view).
+     * For a rectangular image (e.g., 600x800), the [0,1]² space represents the actual
+     * image dimensions, so aspect ratio calculations are always relative to the image
+     * itself, not the view dimensions.
      */
     fun fitRatioToCanvas(ratioW: Int, ratioH: Int): RectNorm {
         val rw = ratioW.coerceAtLeast(1).toFloat()
@@ -100,6 +106,49 @@ object CropMath {
             h = 1f
             w = h * rw / rh
         }
+        val l = (1f - w) / 2f
+        val t = (1f - h) / 2f
+        return RectNorm(l, t, l + w, t + h)
+    }
+
+    /**
+     * Preset rasio aspek yang memenuhi kanvas [0,1]² dengan mempertimbangkan
+     * aspect ratio gambar. Ini memperbaiki masalah di mana 1:1 selection
+     * pada gambar rectangular (600x800) tampil sebagai 3:4 bukan 1:1.
+     * 
+     * The key insight: normalized coords [0,1]² map to actual image pixels [0,imgWidth] x [0,imgHeight].
+     * To get a desired pixel aspect ratio (e.g., 1:1 square), we need to adjust the 
+     * normalized ratio to account for the image's own aspect ratio.
+     * 
+     * For a 600x800 image wanting a 1:1 square:
+     * - We need: norm_width * 600 = norm_height * 800
+     * - So: norm_width / norm_height = 800/600 = 4/3
+     * 
+     * @param ratioW desired pixel width ratio (e.g., 1 for square)
+     * @param ratioH desired pixel height ratio (e.g., 1 for square)
+     * @param imgWidth actual bitmap width in pixels
+     * @param imgHeight actual bitmap height in pixels
+     * @return normalized rect that maintains the desired pixel ratio within the image bounds
+     */
+    fun fitRatioToCanvasAdjusted(ratioW: Int, ratioH: Int, imgWidth: Int, imgHeight: Int): RectNorm {
+        val rw = ratioW.coerceAtLeast(1).toFloat()
+        val rh = ratioH.coerceAtLeast(1).toFloat()
+        
+        // Adjust desired ratio to account for image aspect ratio
+        // desiredPixelRatio = rw / rh
+        // imageAspect = imgWidth / imgHeight
+        // normalizedRatio = desiredPixelRatio * (imgHeight / imgWidth)
+        val adjustedRatioW = rw * imgHeight
+        val adjustedRatioH = rh * imgWidth
+        
+        // Now use standard fitting logic with adjusted ratio
+        var w = 1f
+        var h = w * adjustedRatioH / adjustedRatioW
+        if (h > 1f) {
+            h = 1f
+            w = h * adjustedRatioW / adjustedRatioH
+        }
+
         val l = (1f - w) / 2f
         val t = (1f - h) / 2f
         return RectNorm(l, t, l + w, t + h)
