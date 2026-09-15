@@ -5,6 +5,25 @@
 echo "=== FlyerPix APK Installer ==="
 echo ""
 
+# Resolusi lokasi Android SDK: env -> local.properties -> lokasi umum
+SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+if [ -z "$SDK" ] && [ -f "local.properties" ]; then
+    SDK="$(sed -n 's/^sdk\.dir=//p' local.properties | tail -1)"
+fi
+if [ -z "$SDK" ] || [ ! -x "$SDK/platform-tools/adb" ]; then
+    for cand in "$HOME/Android/Sdk" "$HOME/Android/sdk" "/usr/lib/android-sdk" "$HOME/Library/Android/sdk"; do
+        if [ -x "$cand/platform-tools/adb" ]; then
+            SDK="$cand"
+            break
+        fi
+    done
+fi
+if [ -n "$SDK" ]; then
+    export ANDROID_SDK_ROOT="$SDK"
+    export ANDROID_HOME="$SDK"
+    export PATH="$SDK/platform-tools:$PATH"
+fi
+
 # Check if ADB is available
 if ! command -v adb &> /dev/null; then
     echo "❌ ERROR: adb not found. Please install Android SDK Platform Tools."

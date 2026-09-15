@@ -2,31 +2,46 @@
 
 set -e
 
-if [ -x "/usr/lib/android-sdk/emulator/emulator" ]; then
-    SDK="/usr/lib/android-sdk"
-elif [ -n "$ANDROID_SDK_ROOT" ] && [ -x "$ANDROID_SDK_ROOT/emulator/emulator" ]; then
-    SDK="$ANDROID_SDK_ROOT"
-elif [ -n "$ANDROID_HOME" ] && [ -x "$ANDROID_HOME/emulator/emulator" ]; then
-    SDK="$ANDROID_HOME"
-else
+# Resolusi lokasi Android SDK: env -> local.properties -> lokasi umum
+SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+
+if [ -z "$SDK" ] && [ -f "local.properties" ]; then
+    SDK="$(sed -n 's/^sdk\.dir=//p' local.properties | tail -1)"
+fi
+
+if [ -z "$SDK" ] || [ ! -x "$SDK/emulator/emulator" ]; then
+    for cand in "$HOME/Android/Sdk" "$HOME/Android/sdk" "/usr/lib/android-sdk" "$HOME/Library/Android/sdk"; do
+        if [ -x "$cand/emulator/emulator" ]; then
+            SDK="$cand"
+            break
+        fi
+    done
+fi
+
+if [ -z "$SDK" ] || [ ! -x "$SDK/emulator/emulator" ]; then
     echo "❌ Emulator SDK tidak ditemukan. Set ANDROID_SDK_ROOT atau install emulator."
     exit 1
 fi
 ADB="$SDK/platform-tools/adb"
 EMULATOR="$SDK/emulator/emulator"
-AVD="${1:-Pixel_7}"
+AVD="${1:-Pixel_7_aosp}"
 
 export ANDROID_SDK_ROOT="$SDK"
 export ANDROID_HOME="$SDK"
 
 echo "🚀 Menjalankan emulator ($AVD)..."
-if ! "$EMULATOR" -list-avds 2>/dev/null | grep -q "^$AVD$"; then
-    echo "⚠️  AVD '$AVD' tidak ditemukan. Daftar AVD:"
-    "$EMULATOR" -list-avds
-    exit 1
-fi
 
-"$EMULATOR" -avd "$AVD" -no-snapshot -no-boot-anim -no-audio -gpu swiftshader_indirect > /tmp/flyerpix-emulator.log 2>&1 &
+# Pakai emulator yang sudah jalan (mis. dari sesi sebelumnya) untuk start cepat
+if "$ADB" devices 2>/dev/null | grep -q "emulator-"; then
+    echo "↩️  Emulator sudah berjalan, memakainya."
+else
+    if ! "$EMULATOR" -list-avds 2>/dev/null | grep -q "^$AVD$"; then
+        echo "⚠️  AVD '$AVD' tidak ditemukan. Daftar AVD:"
+        "$EMULATOR" -list-avds
+        exit 1
+    fi
+    "$EMULATOR" -avd "$AVD" -no-boot-anim -no-audio -gpu swiftshader_indirect > /tmp/flyerpix-emulator.log 2>&1 &
+fi
 
 echo "⏳ Menunggu emulator terdeteksi..."
 "$ADB" wait-for-device
@@ -54,3 +69,6 @@ echo ""
 echo "================================"
 echo "✅ FlyerPix berhasil dijalankan!"
 echo "================================"
+
+echo "🧹 Menghentikan daemon Gradle/Kotlin (hemat RAM)..."
+./gradlew --stop >/dev/null 2>&1 || true

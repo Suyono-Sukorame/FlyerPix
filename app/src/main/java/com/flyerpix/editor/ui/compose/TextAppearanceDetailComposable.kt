@@ -204,6 +204,120 @@ fun TextColorDetailPage(
 }
 
 @Composable
+fun TextPaddingDetailPage(
+    top: Float,
+    bottom: Float,
+    left: Float,
+    right: Float,
+    onLinkedChanged: (Boolean) -> Unit,
+    onTopChanged: (Float) -> Unit,
+    onBottomChanged: (Float) -> Unit,
+    onLeftChanged: (Float) -> Unit,
+    onRightChanged: (Float) -> Unit,
+    onApplyAll: (Float) -> Unit,
+    onReset: () -> Unit,
+    onApply: () -> Unit,
+    onCancel: () -> Unit,
+    maxHeightPx: Int
+) {
+    val linkedSeed = top == bottom && left == right && top == left
+    var linkedState by remember(linkedSeed) { mutableStateOf(linkedSeed) }
+    var topState by remember(top) { mutableStateOf(top) }
+    var bottomState by remember(bottom) { mutableStateOf(bottom) }
+    var leftState by remember(left) { mutableStateOf(left) }
+    var rightState by remember(right) { mutableStateOf(right) }
+
+    fun padLabel(value: Float) = "${value.toInt()} px"
+
+    AppearanceSheet(maxHeightPx, onApply, onCancel) {
+        AppearanceRow {
+            AppearanceLabel("Padding")
+            Switch(checked = linkedState, onCheckedChange = { linkedState = it; onLinkedChanged(it) })
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = {
+                topState = 0f
+                bottomState = 0f
+                leftState = 0f
+                rightState = 0f
+                onReset()
+            }) { Text("Reset", style = MaterialTheme.typography.caption) }
+        }
+        AppearanceRow {
+            AppearanceLabel("Top")
+            Slider(
+                value = topState,
+                onValueChange = { v ->
+                    topState = v
+                    if (linkedState) {
+                        bottomState = v; leftState = v; rightState = v
+                        onApplyAll(v)
+                    } else {
+                        onTopChanged(v)
+                    }
+                },
+                valueRange = 0f..200f,
+                modifier = Modifier.weight(1f).height(30.dp)
+            )
+            Text(padLabel(topState), style = MaterialTheme.typography.caption, color = AppearanceSecondary, modifier = Modifier.width(48.dp), textAlign = TextAlign.End)
+        }
+        AppearanceRow {
+            AppearanceLabel("Bottom")
+            Slider(
+                value = bottomState,
+                onValueChange = { v ->
+                    bottomState = v
+                    if (linkedState) {
+                        topState = v; leftState = v; rightState = v
+                        onApplyAll(v)
+                    } else {
+                        onBottomChanged(v)
+                    }
+                },
+                valueRange = 0f..200f,
+                modifier = Modifier.weight(1f).height(30.dp)
+            )
+            Text(padLabel(bottomState), style = MaterialTheme.typography.caption, color = AppearanceSecondary, modifier = Modifier.width(48.dp), textAlign = TextAlign.End)
+        }
+        AppearanceRow {
+            AppearanceLabel("Left")
+            Slider(
+                value = leftState,
+                onValueChange = { v ->
+                    leftState = v
+                    if (linkedState) {
+                        topState = v; bottomState = v; rightState = v
+                        onApplyAll(v)
+                    } else {
+                        onLeftChanged(v)
+                    }
+                },
+                valueRange = 0f..200f,
+                modifier = Modifier.weight(1f).height(30.dp)
+            )
+            Text(padLabel(leftState), style = MaterialTheme.typography.caption, color = AppearanceSecondary, modifier = Modifier.width(48.dp), textAlign = TextAlign.End)
+        }
+        AppearanceRow {
+            AppearanceLabel("Right")
+            Slider(
+                value = rightState,
+                onValueChange = { v ->
+                    rightState = v
+                    if (linkedState) {
+                        topState = v; bottomState = v; leftState = v
+                        onApplyAll(v)
+                    } else {
+                        onRightChanged(v)
+                    }
+                },
+                valueRange = 0f..200f,
+                modifier = Modifier.weight(1f).height(30.dp)
+            )
+            Text(padLabel(rightState), style = MaterialTheme.typography.caption, color = AppearanceSecondary, modifier = Modifier.width(48.dp), textAlign = TextAlign.End)
+        }
+    }
+}
+
+@Composable
 fun TextGradientDetailPage(
     enabled: Boolean,
     gradient: GradientColor?,

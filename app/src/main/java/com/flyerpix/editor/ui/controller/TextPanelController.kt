@@ -534,6 +534,58 @@ initializeMaskControls()
         onCanvasChanged()
     }
 
+    private fun showComposePaddingSheet(layer: com.flyerpix.editor.canvas.model.TextLayer) {
+        val host = threeDComposeHost ?: return
+        val sheetMaxH = prepareTextAppearanceSheet() ?: return
+        host.setContent {
+            com.flyerpix.editor.ui.compose.TextPaddingDetailPage(
+                top = layer.paddingTop,
+                bottom = layer.paddingBottom,
+                left = layer.paddingLeft,
+                right = layer.paddingRight,
+                onLinkedChanged = { },
+                onTopChanged = { v ->
+                    applyToTextLayer { it.paddingTop = v }
+                    pixelCanvasView.invalidate()
+                },
+                onBottomChanged = { v ->
+                    applyToTextLayer { it.paddingBottom = v }
+                    pixelCanvasView.invalidate()
+                },
+                onLeftChanged = { v ->
+                    applyToTextLayer { it.paddingLeft = v }
+                    pixelCanvasView.invalidate()
+                },
+                onRightChanged = { v ->
+                    applyToTextLayer { it.paddingRight = v }
+                    pixelCanvasView.invalidate()
+                },
+                onApplyAll = { v ->
+                    applyToTextLayer {
+                        it.paddingTop = v
+                        it.paddingBottom = v
+                        it.paddingLeft = v
+                        it.paddingRight = v
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onReset = {
+                    applyToTextLayer {
+                        it.paddingTop = 0f
+                        it.paddingBottom = 0f
+                        it.paddingLeft = 0f
+                        it.paddingRight = 0f
+                    }
+                    pixelCanvasView.invalidate()
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
+        }
+        onCanvasChanged()
+    }
+
     private fun showComposeTextGradientSheet(layer: TextLayer) {
         val host = threeDComposeHost ?: return
         val sheetMaxH = prepareTextAppearanceSheet() ?: return
@@ -3624,7 +3676,10 @@ tvAngleLabel.text = "Angle: 0°"
                 if (threeDComposeHost != null) showComposeTextColorSheet(layer)
                 else syncColorUIHook?.invoke(layer)
             }
-            TOOL_PADDING -> syncPaddingUIHook?.invoke(layer)
+            TOOL_PADDING -> {
+                if (threeDComposeHost != null) showComposePaddingSheet(layer)
+                else syncPaddingUIHook?.invoke(layer)
+            }
             TOOL_SIZE -> {
                 if (threeDComposeHost != null) {
                     showComposeSizeSheet(layer)
