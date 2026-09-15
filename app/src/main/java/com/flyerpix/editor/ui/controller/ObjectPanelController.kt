@@ -415,11 +415,11 @@ class ObjectPanelController(
         fun syncScaleLabels() {
             val l = pixelCanvasView.selectedLayer ?: return
             b.tvScaleLabel.text = "Scale: ${(l.scale * 100).toInt()}%"
-            b.sliderScaleXY.value = l.scale.coerceIn(0.1f, 8f)
+            b.sliderScaleXY.value = l.scale.coerceIn(0.1f, 1f)
         }
 
         b.sliderScaleXY.valueFrom = 0.1f
-        b.sliderScaleXY.valueTo = 8f
+        b.sliderScaleXY.valueTo = 1f
         b.sliderScaleXY.addOnChangeListener { _, v, _ -> applyToLayer { it.scale = v }; syncScaleLabels() }
         b.btnScaleReset.setOnClickListener { applyToLayer { it.scale = 1f }; syncScaleLabels() }
         b.btnSizeReset.setOnClickListener { applyToLayer { it.scale = 1f }; syncScaleLabels() }
@@ -437,7 +437,7 @@ class ObjectPanelController(
     private fun syncScaleUI(layer: CanvasLayer) {
         val b = binding.effectSettingsInclude.sizeControlsInclude
         b.tvScaleLabel.text = "Scale: ${(layer.scale * 100).toInt()}%"
-        b.sliderScaleXY.value = layer.scale.coerceIn(0.1f, 8f)
+        b.sliderScaleXY.value = layer.scale.coerceIn(0.1f, 1f)
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -241,24 +241,28 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     }
 
     private fun addImageAsLayer(bitmap: Bitmap) {
-        val viewW = if (pixelCanvasView.width > 0) pixelCanvasView.width.toFloat() else 1080f
-        val viewH = if (pixelCanvasView.height > 0) pixelCanvasView.height.toFloat() else 1080f
+        // Layer berkoordinat dalam unit dokumen (canvasWidth/canvasHeight),
+        // bukan piksel view. Ukuran target = resolusi dokumen.
+        val docW = if (pixelCanvasView.canvasWidth > 0) pixelCanvasView.canvasWidth.toFloat() else 1080f
+        val docH = if (pixelCanvasView.canvasHeight > 0) pixelCanvasView.canvasHeight.toFloat() else 1080f
         val bmpW = bitmap.width.toFloat()
         val bmpH = bitmap.height.toFloat()
-        
-        // Scale image to fit canvas, but ensure it fits perfectly when sized to canvas
-        // If image is smaller or similar size to canvas, don't scale down
-        // If image is much larger, scale to fit with small margin
-        var scale = 1f
-        if (bmpW > viewW * 1.1f || bmpH > viewH * 1.1f) {
-            // Image is significantly larger than canvas, scale down to fit with margin
-            scale = min(viewW / bmpW, viewH / bmpH) * 0.95f
-        }
-        
-        val layer = ImageLayer(bitmap = bitmap, scale = scale, layerName = "Image")
-        // Center image on canvas
-        layer.x = (viewW - bmpW * scale) / 2f
-        layer.y = (viewH - bmpH * scale) / 2f
+
+        // Foto mengisi penuh canvas (cover): skala mengikuti sisi terbesar agar
+        // pas di semua sisi dokumen, kelebihan terpotong (crop). Bitmap langsung
+        // diresize supaya layer.scale selalu 1f (100%) saat masuk dan konsisten
+        // dengan fitur Scale (100% = memenuhi seluruh canvas).
+        val fit = max(docW / bmpW, docH / bmpH)
+        val finalW = (bmpW * fit).toInt().coerceAtLeast(1)
+        val finalH = (bmpH * fit).toInt().coerceAtLeast(1)
+        val bmp = if (finalW != bitmap.width || finalH != bitmap.height)
+            Bitmap.createScaledBitmap(bitmap, finalW, finalH, true)
+        else bitmap
+
+        val layer = ImageLayer(bitmap = bmp, scale = 1f, layerName = "Image")
+        // Center image on canvas (nilai negatif = overflow ter-crop merata)
+        layer.x = (docW - finalW) / 2f
+        layer.y = (docH - finalH) / 2f
         pixelCanvasView.addLayer(layer)
     }
 

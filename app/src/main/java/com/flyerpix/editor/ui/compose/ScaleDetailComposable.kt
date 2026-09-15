@@ -55,6 +55,29 @@ private fun ScalePresetChip(
     }
 }
 
+@Composable
+private fun ScaleStepButton(
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(26.dp)
+            .clip(RoundedCornerShape(7.dp))
+            .background(if (enabled) Color(0xFFEEF2F7) else Color(0xFFF4F6FA))
+            .clickable(enabled = enabled) { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.caption,
+            fontWeight = FontWeight.Bold,
+            color = if (enabled) MaterialTheme.colors.primary else Color(0xFFB0B8C4)
+        )
+    }
+}
+
 /**
  * Compose bottom sheet untuk Skala Objek (Shape/Image/Sticker).
  */
@@ -68,7 +91,7 @@ fun ScaleDetailPage(
     onCancel: () -> Unit,
     maxHeightPx: Int = 360
 ) {
-    var scaleState by remember(scale) { mutableStateOf(scale.coerceIn(0.1f, 8.0f)) }
+    var scaleState by remember(scale) { mutableStateOf(scale.coerceIn(0.1f, 1.0f)) }
 
     MaterialTheme(colors = ScaleColorScheme) {
         Box(
@@ -150,18 +173,34 @@ fun ScaleDetailPage(
                                     color = Color(PanelTextSecondary),
                                     modifier = Modifier.width(44.dp)
                                 )
+                                ScaleStepButton(
+                                    label = "−",
+                                    enabled = scaleState > 0.101f
+                                ) {
+                                    val nv = (scaleState - 0.05f).coerceIn(0.1f, 1.0f)
+                                    scaleState = nv
+                                    onScaleChange(nv)
+                                }
                                 Slider(
-                                    value = scaleState.coerceIn(0.1f, 8.0f),
+                                    value = scaleState.coerceIn(0.1f, 1.0f),
                                     onValueChange = { v ->
                                         scaleState = v
                                         onScaleChange(v)
                                     },
-                                    valueRange = 0.1f..8.0f,
-                                    steps = 79,
+                                    valueRange = 0.1f..1.0f,
+                                    steps = 17,
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(30.dp)
                                 )
+                                ScaleStepButton(
+                                    label = "+",
+                                    enabled = scaleState < 0.999f
+                                ) {
+                                    val nv = (scaleState + 0.05f).coerceIn(0.1f, 1.0f)
+                                    scaleState = nv
+                                    onScaleChange(nv)
+                                }
                                 Text(
                                     text = "${(scaleState * 100).toInt()}%",
                                     style = MaterialTheme.typography.caption,
@@ -176,7 +215,7 @@ fun ScaleDetailPage(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                listOf(0.5f, 1.0f, 1.5f, 2.0f, 3.0f).forEach { sc ->
+                                listOf(0.25f, 0.5f, 0.75f, 1.0f).forEach { sc ->
                                     ScalePresetChip(
                                         label = "${(sc * 100).toInt()}%",
                                         selected = Math.abs(scaleState - sc) < 0.05f,
