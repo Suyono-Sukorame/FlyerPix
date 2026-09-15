@@ -106,8 +106,9 @@ class CanvasMenuController(
             val alignedH = root.height - homeTop
             if (alignedH > 0) return alignedH
         }
-        val floorPx = (320 * density).toInt()
-        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.42f).toInt()
+        // Fallback if home panel not yet measured — identik dengan menu Gradient
+        val floorPx = (300 * density).toInt()
+        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.40f).toInt()
         return targetPx.coerceAtLeast(floorPx)
     }
 
@@ -850,6 +851,11 @@ class CanvasMenuController(
                         }
                         else -> {}
                     }
+                },
+                onPaintMaskDirect = {
+                    // Langsung buka editor mask (tanpa perlu tombol Apply).
+                    deselect(restoreStrip = true)
+                    onOpenMaskEditor?.invoke(selectedLayer)
                 },
                 onCancel = {
                     deselect(restoreStrip = true)

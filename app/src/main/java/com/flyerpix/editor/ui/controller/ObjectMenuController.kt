@@ -97,6 +97,21 @@ class ObjectMenuController(
      */
     var onAddSettingsOpenChanged: ((Boolean) -> Unit)? = null
 
+    /** Tinggi sheet identik dengan menu Gradient (floor 300dp, 40% layar). */
+    private fun computeComposeSheetHeight(): Int {
+        val density = activity.resources.displayMetrics.density
+        val root = binding.parentLayout
+        val homePanel = binding.bottomControlPanelContainer
+        if (root.height > 0 && homePanel.height > 0) {
+            val homeTop = PanelHeightManager.topInRoot(homePanel, root)
+            val alignedH = root.height - homeTop
+            if (alignedH > 0) return alignedH
+        }
+        val floorPx = (300 * density).toInt()
+        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.40f).toInt()
+        return targetPx.coerceAtLeast(floorPx)
+    }
+
     private fun computeShapeSheetHeight(): Int {
         val density = activity.resources.displayMetrics.density
         val root = binding.parentLayout
@@ -1309,9 +1324,18 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
         container.visibility = View.VISIBLE
         container.bringToFront()
 
-        val sheetMaxH = 550
+        val sheetMaxH = computeComposeSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
+
+        if (layer.maskBitmap == null) {
+            val (w, h) = layer.getUnwarpedDimensions()
+            if (w > 0 && h > 0) {
+                layer.createMask(w.toInt(), h.toInt())
+                // Isi putih agar layer tetap terlihat penuh — langsung bisa dicat hitam untuk menghapus.
+                layer.maskBitmap?.eraseColor(0xFFFFFFFF.toInt())
+            }
+        }
 
         host.setContent {
             com.flyerpix.editor.ui.composables.LayerMaskEditorComposable(
@@ -1345,6 +1369,7 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                     canvas.endMaskPaint()
                     closeMaskEditor()
                 },
+                maxHeightPx = sheetMaxH,
                 // ── Phase 4 & 5: Smart Erase Callbacks (OPTION D) ──────────────────
                 onModeChange = { mode ->
                     val brush = canvas.getMaskPaintBrush()

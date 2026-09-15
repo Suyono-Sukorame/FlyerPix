@@ -55,18 +55,19 @@ class ObjectPanelController(
         const val OBJ_BLEND       = "obj_blend"
         const val OBJ_PERSPECTIVE = "obj_perspective"
         const val OBJ_ADJUST      = "obj_adjust"
+        const val OBJ_ERASE       = "obj_erase"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
 
         val sharedCoreEffectTags = setOf(
             OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE, OBJ_COLOR,
-            OBJ_STROKE, OBJ_SHADOW, OBJ_GRADIENT, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST
+            OBJ_STROKE, OBJ_SHADOW, OBJ_GRADIENT, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST, OBJ_ERASE
         )
 
         val composedObjectTags = setOf(
             OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE, OBJ_SELECT, OBJ_COLOR,
-            OBJ_SHADOW, OBJ_STROKE, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST, OBJ_GRADIENT
+            OBJ_SHADOW, OBJ_STROKE, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST, OBJ_GRADIENT, OBJ_ERASE
         )
     }
 
@@ -84,9 +85,17 @@ class ObjectPanelController(
     private val composeHost: ComposeView? get() = binding.composeThreeDDetail
     private val composeContainer: FrameLayout? get() = binding.composeThreeDSheetContainer
 
+    /** Callback saat pengguna mengklik tool Erase BG. Parameter = layer yang dipilih. */
+    var onOpenEraseBg: ((com.flyerpix.editor.canvas.model.CanvasLayer) -> Unit)? = null
+
+    /** Callback saat pengguna berpindah dari tool Erase BG ke tool objek lain. */
+    var onEraseBgSessionEnd: (() -> Unit)? = null
+
     fun isEffectSettingsOpen(): Boolean = effectSettingsOpen
 
-    private fun computeComposeSheetHeight(): Int {
+
+    /** Hitung tinggi sheet Compose — dipakai Gradien & Erase BG agar konsisten. */
+    fun computeComposeSheetHeight(): Int {
         val density = activity.resources.displayMetrics.density
         val root = binding.parentLayout
         val homePanel = binding.bottomControlPanelContainer
@@ -128,7 +137,8 @@ class ObjectPanelController(
             Spec(OBJ_GRADIENT,    "Gradient",    R.drawable.ic_gradient_24px),
             Spec(OBJ_BLEND,       "Blend",       R.drawable.ic_layers_24px),
             Spec(OBJ_PERSPECTIVE, "Perspective", R.drawable.ic_perspective_24px),
-            Spec(OBJ_ADJUST,      "Adjust",      R.drawable.ic_sharp_palette_24px)
+            Spec(OBJ_ADJUST,      "Adjust",      R.drawable.ic_sharp_palette_24px),
+            Spec(OBJ_ERASE,       "Erase BG",    R.drawable.ic_eraser_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectPropertyStripInclude.objectToolStripContainer
@@ -181,6 +191,23 @@ class ObjectPanelController(
     private fun openEffectSettings(tag: String) {
         val layer = pixelCanvasView.selectedLayer ?: return
         if (effectSettingsOpen && activeToolTag == tag) return
+
+        // ── Erase BG: Akhiri sesi yang sedang berjalan bila berpindah ke tool lain,
+        //    lalu lanjut membuka panel effect settings tool baru. ──
+        if (tag != OBJ_ERASE && pixelCanvasView.isEraseBgActive) {
+            onEraseBgSessionEnd?.invoke()
+        }
+
+        // ── Erase BG: Buka panel khusus, bukan panel effect settings standar ──
+        if (tag == OBJ_ERASE) {
+            if (onOpenEraseBg != null) {
+                onOpenEraseBg!!.invoke(layer)
+            } else {
+                showSnackbar("Pilih foto terlebih dahulu untuk menggunakan Erase BG")
+            }
+            return
+        }
+
         toolBeforeEffect = activeToolTag
         snapshotCurrentState()
         activeToolTag = tag
@@ -192,6 +219,7 @@ class ObjectPanelController(
         showEffectSettingsVisibility()
         syncEffectUI(tag, layer)
     }
+
 
     private fun showEffectSettingsVisibility() {
         val isCompose = activeToolTag in composedObjectTags

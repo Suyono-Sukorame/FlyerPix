@@ -64,6 +64,8 @@ import com.flyerpix.editor.ui.controller.TemplateController
 import com.flyerpix.editor.ui.controller.CanvasToolsController
 import com.flyerpix.editor.ui.controller.ShapePanelController
 import com.flyerpix.editor.ui.controller.PanelHeightManager
+import com.flyerpix.editor.ui.composables.EraseBgBottomSheetComposable
+import com.flyerpix.editor.ui.composables.EraseBgMode
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import java.io.File
@@ -549,10 +551,23 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         )
         objectPanelController.initialize()
 
+        // ── Wire Erase BG callback ──────────────────────────────────────────
+        objectPanelController.onOpenEraseBg = { layer ->
+            showEraseBgPanel(layer)
+        }
+        // Akhiri sesi Erase BG ketika pengguna berpindah ke tool objek lain.
+        objectPanelController.onEraseBgSessionEnd = {
+            if (pixelCanvasView.isEraseBgActive) {
+                pixelCanvasView.endEraseBg()
+                hideEraseBgPanel()
+            }
+        }
+
         // Sambungkan tombol ✓/✕ Effect Settings (halaman yang sama dgn Text) ke ObjectPanelController
         textPanelController.onObjectEffectApply = { objectPanelController.applyEffectSettings() }
         textPanelController.onObjectEffectCancel = { objectPanelController.cancelEffectSettings() }
         textPanelController.isObjectEffectSettingsOpen = { objectPanelController.isEffectSettingsOpen() }
+
 
         // Canvas Tools Controller - Mengelola eyedropper, crop, dan palette
         // DISABLED: Fitur ini belum diperlukan, di-disable untuk menghindari bug FAB
@@ -581,6 +596,71 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         dialog.setOnDismissListener {
             pixelCanvasView.setTextEditMode(false)
         }
+    }
+
+    // ── Erase BG (Penghapus Background Foto) ────────────────────────────────
+    private var eraseBgSheetMaxH = 0
+
+    private fun showEraseBgPanel(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+        if (layer.isLocked) {
+            showSnackbar("Layer terkunci, tidak dapat menghapus background")
+            return
+        }
+        // Re-open tool Erase BG yang sudah aktif: biarkan sesi berjalan tanpa reset mask.
+        if (pixelCanvasView.isEraseBgActive) return
+        val host = binding.composeThreeDDetail
+        val container = binding.composeThreeDSheetContainer
+
+        // Sembunyikan panel effect settings lain agar sheet Erase BG tampil sendirian.
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        binding.editObjectBar.visibility = View.GONE
+        binding.textEditorBar.visibility = View.GONE
+
+        pixelCanvasView.startEraseBg(layer)
+
+        // Tinggi sheet identik dengan menu Gradient (computeComposeSheetHeight).
+        eraseBgSheetMaxH = objectPanelController.computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, eraseBgSheetMaxH)
+        container.visibility = View.VISIBLE
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            EraseBgBottomSheetComposable(
+                onBrushSizeChange = { v -> pixelCanvasView.updateEraseBgConfig(brushSize = v) },
+                onFingerOffsetChange = { v -> pixelCanvasView.updateEraseBgConfig(fingerOffsetDp = v) },
+                onModeChange = { mode ->
+                    when (mode) {
+                        EraseBgMode.MANUAL ->
+                            pixelCanvasView.updateEraseBgConfig(eraseMode = true, autoEraseMode = false)
+                        EraseBgMode.AUTO_COLOR ->
+                            pixelCanvasView.updateEraseBgConfig(autoEraseMode = true)
+                        EraseBgMode.RESTORE ->
+                            pixelCanvasView.updateEraseBgConfig(eraseMode = false, autoEraseMode = false)
+                    }
+                },
+                onAutoColorThresholdChange = { t ->
+                    pixelCanvasView.updateEraseBgConfig(autoColorThreshold = t)
+                },
+                onUndo = { pixelCanvasView.undoEraseStroke() },
+                onRedo = { pixelCanvasView.redoEraseStroke() },
+                onCancel = {
+                    pixelCanvasView.cancelEraseBg()
+                    hideEraseBgPanel()
+                },
+                onFinish = {
+                    pixelCanvasView.endEraseBg()
+                    hideEraseBgPanel()
+                },
+                maxHeightPx = eraseBgSheetMaxH
+            )
+        }
+    }
+
+    private fun hideEraseBgPanel() {
+        binding.composeThreeDDetail.setContent {}
+        binding.composeThreeDSheetContainer.visibility = View.GONE
+        pixelCanvasView.invalidate()
     }
 
     private fun initializeSave() {
@@ -676,6 +756,11 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         else "W,${canvasRatioW}:${canvasRatioH}"
 
     override fun onBackPressed() {
+        if (pixelCanvasView.isEraseBgActive) {
+            pixelCanvasView.cancelEraseBg()
+            hideEraseBgPanel()
+            return
+        }
         if (textPanelController.isEffectSettingsOpen()) {
             textPanelController.cancelEffectSettings()
             return
@@ -803,6 +888,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         // Jika berpindah ke Home / Add / Canvas / Edit tanpa sheet aktif, pastikan
         // compose sheet tertutup dan navbar bawah tampil penuh tanpa tergeser.
         if (menuId == R.id.nav_home || (menuId != R.id.nav_canvas && menuId != R.id.nav_effects && menuId != R.id.nav_add)) {
+            if (pixelCanvasView.isEraseBgActive) {
+                pixelCanvasView.endEraseBg()
+                hideEraseBgPanel()
+            }
             if (binding.composeThreeDSheetContainer.visibility == View.VISIBLE) {
                 binding.composeThreeDSheetContainer.visibility = View.GONE
             }

@@ -1062,7 +1062,7 @@ class PixelCanvasView @JvmOverloads constructor(
     // ── Mode Lukis Mask (Prompt 06) ─────────────────────────────────────────
     /** Konfigurasi brush mask saat mode lukis mask aktif. */
     class MaskPaintBrushState(
-        var brushSize: Float = 30f,
+        var brushSize: Float = 40f,
         var brushOpacity: Int = 255,
         var brushColor: Int = 0xFFFFFFFF.toInt(),
         var isEraser: Boolean = false
@@ -1080,6 +1080,14 @@ class PixelCanvasView @JvmOverloads constructor(
         var autoEraseMode: Boolean = false
         var autoEraseThreshold: Int = 50  // 0-255 color distance threshold
         var autoEraseSourceColor: Int? = null  // Cached color for auto-erase
+
+        // ── Erase BG: Finger Offset Cursor & Restore Mode ─────────────
+        /** Jarak offset kursor penghapus dari titik sentuh jari (dp). */
+        var fingerOffsetDp: Float = 55f
+        /** Jika true: hapus (mask=0/transparan); false: pulihkan (mask=opaque/putih). */
+        var eraseMode: Boolean = true  // true = hapus, false = pulihkan (restore)
+        /** Apakah fitur Erase BG sedang aktif (menggantikan mode Mask Paint standar). */
+        var eraseBgActive: Boolean = false
     }
 
     /** Layer target yang sedang dilukis mask-nya; null = mode tidak aktif. */
@@ -1087,7 +1095,7 @@ class PixelCanvasView @JvmOverloads constructor(
 
     /** State brush mask aktif. */
     private val maskPaintBrush = MaskPaintBrushState()
-    
+
     /** Expose mask paint brush state for UI callbacks (Phase 4 & 5). */
     fun getMaskPaintBrush(): MaskPaintBrushState = maskPaintBrush
 
@@ -1097,8 +1105,78 @@ class PixelCanvasView @JvmOverloads constructor(
     /** Titik brush terakhir (untuk interpolasi garis antar MOVE). */
     private var lastMaskPaintPoint: android.graphics.PointF? = null
 
+    /** Koordinat sentuhan layar mentah (sebelum offset) untuk overlay cursor Erase BG. */
+    private var eraseTouchScreenX: Float = -1f
+    private var eraseTouchScreenY: Float = -1f
+    /** Apakah jari sedang menyentuh layar dalam mode Erase BG. */
+    private var eraseIsTouching: Boolean = false
+
+    // ── Undo/Redo per goresan selama sesi Erase BG (tombol ↩️/↪️ di panel) ──
+    // Snapshot mask TIDAK memakai riwayat kanvas global (yang hanya mencatat SATU
+    // entri saat Selesai). Dua stack Bitmap ringkas ini memungkinkan undo/redo
+    // per goresan secara live selama sesi tanp merusak history produksi.
+    private val eraseStrokeUndo = ArrayDeque<android.graphics.Bitmap>()
+    private val eraseStrokeRedo = ArrayDeque<android.graphics.Bitmap>()
+    private val eraseStrokeLimit = 8
+
+    /** Simpan snapshot mask sebelum goresan baru dimulai (panggil saat ACTION_DOWN). */
+    private fun snapshotEraseStroke(mask: android.graphics.Bitmap) {
+        if (mask.isRecycled) return
+        val copy = mask.copy(android.graphics.Bitmap.Config.ARGB_8888, false) ?: return
+        if (eraseStrokeUndo.size >= eraseStrokeLimit) {
+            eraseStrokeUndo.removeFirst().recycle()
+        }
+        eraseStrokeUndo.addLast(copy)
+        // Goresan baru membatalkan riwayat redo.
+        while (eraseStrokeRedo.isNotEmpty()) eraseStrokeRedo.removeFirst().recycle()
+    }
+
+    private fun restoreMaskFrom(restore: android.graphics.Bitmap): Boolean {
+        val mask = maskPaintLayer?.maskBitmap ?: return false
+        if (mask.isRecycled || restore.isRecycled) return false
+        mask.eraseColor(0)
+        android.graphics.Canvas(mask).drawBitmap(restore, 0f, 0f, null)
+        invalidate()
+        return true
+    }
+
+    /** Undo goresan terakhir dalam sesi Erase BG. */
+    fun undoEraseStroke(): Boolean {
+        val mask = maskPaintLayer?.maskBitmap
+        if (mask == null || mask.isRecycled) return false
+        val prev = eraseStrokeUndo.removeLastOrNull() ?: return false
+        val currentCopy = mask.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+        if (currentCopy != null) eraseStrokeRedo.addLast(currentCopy)
+        val ok = restoreMaskFrom(prev)
+        prev.recycle()
+        return ok
+    }
+
+    /** Redo goresan yang dibatalkan dalam sesi Erase BG. */
+    fun redoEraseStroke(): Boolean {
+        val mask = maskPaintLayer?.maskBitmap
+        if (mask == null || mask.isRecycled) return false
+        val next = eraseStrokeRedo.removeLastOrNull() ?: return false
+        val currentCopy = mask.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+        if (currentCopy != null) {
+            if (eraseStrokeUndo.size >= eraseStrokeLimit) eraseStrokeUndo.removeFirst().recycle()
+            eraseStrokeUndo.addLast(currentCopy)
+        }
+        val ok = restoreMaskFrom(next)
+        next.recycle()
+        return ok
+    }
+
+    private fun clearEraseStrokeHistory() {
+        while (eraseStrokeUndo.isNotEmpty()) eraseStrokeUndo.removeFirst().recycle()
+        while (eraseStrokeRedo.isNotEmpty()) eraseStrokeRedo.removeFirst().recycle()
+    }
+
     /** Apakah mode lukis mask sedang aktif. */
     val isMaskPaintActive: Boolean get() = maskPaintLayer != null
+
+    /** Apakah sesi Erase BG sedang aktif (panel kontrol sedang terbuka). */
+    val isEraseBgActive: Boolean get() = maskPaintBrush.eraseBgActive
 
     /**
      * Memulai sesi lukis mask [layer] dengan konfigurasi brush. Mask dibuat otomatis
@@ -1107,11 +1185,59 @@ class PixelCanvasView @JvmOverloads constructor(
     fun startMaskPaint(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
         if (layer.maskBitmap == null) {
             val (w, h) = layer.getUnwarpedDimensions()
-            if (w > 0 && h > 0) layer.createMask(w.toInt(), h.toInt())
+            if (w > 0 && h > 0) {
+                layer.createMask(w.toInt(), h.toInt())
+                // ── Erase BG: Inisialisasi mask PUTIH = foto tetap 100% terlihat ──
+                // Hitam = hapus (transparan), Putih = tampil. Default putih agar
+                // pengguna melihat foto utuh saat mode Erase BG dibuka pertama kali.
+                if (maskPaintBrush.eraseBgActive) {
+                    layer.maskBitmap?.eraseColor(0xFFFFFFFF.toInt())
+                }
+            }
+        } else if (maskPaintBrush.eraseBgActive && layer.maskBitmap != null) {
+            // Jika mask sudah ada namun Erase BG baru diaktifkan: reset ke putih
+            layer.maskBitmap!!.eraseColor(0xFFFFFFFF.toInt())
         }
         maskPaintLayer = layer
         lastMaskPaintPoint = null
+        eraseIsTouching = false
+        eraseTouchScreenX = -1f
+        eraseTouchScreenY = -1f
         maskPaintBeforeSnapshot = captureCurrentState("Mask Paint")
+        invalidate()
+    }
+
+    /**
+     * Mulai sesi Erase BG dengan konfigurasi offset jari dan mode hapus/pulihkan.
+     * Berbeda dari [startMaskPaint] standar: mask diinisialisasi putih (foto terlihat).
+     */
+    fun startEraseBg(layer: com.flyerpix.editor.canvas.model.CanvasLayer, fingerOffsetDp: Float = 55f) {
+        maskPaintBrush.eraseBgActive = true
+        maskPaintBrush.eraseMode = true
+        maskPaintBrush.fingerOffsetDp = fingerOffsetDp
+        maskPaintBrush.isEraser = false
+        clearEraseStrokeHistory()
+        startMaskPaint(layer)
+    }
+
+    /** Update konfigurasi Erase BG dari panel kontrol. */
+    fun updateEraseBgConfig(
+        brushSize: Float? = null,
+        fingerOffsetDp: Float? = null,
+        eraseMode: Boolean? = null,
+        autoColorThreshold: Int? = null,
+        autoEraseMode: Boolean? = null
+    ) {
+        brushSize?.let { maskPaintBrush.brushSize = it.coerceIn(5f, 200f) }
+        fingerOffsetDp?.let { maskPaintBrush.fingerOffsetDp = it.coerceIn(0f, 150f) }
+        eraseMode?.let { maskPaintBrush.eraseMode = it }
+        autoColorThreshold?.let { maskPaintBrush.autoEraseThreshold = it.coerceIn(5, 180) }
+        autoEraseMode?.let { maskPaintBrush.autoEraseMode = it }
+        if (autoEraseMode == true) {
+            // Warna sumber diambil ulang pada tap berikutnya setelah ganti mode.
+            maskPaintBrush.autoEraseSourceColor = null
+            maskPaintBrush.eraseMode = true
+        }
         invalidate()
     }
 
@@ -1144,10 +1270,67 @@ class PixelCanvasView @JvmOverloads constructor(
         invalidate()
     }
 
-    /** Melukis goresan mask di [canvasX]/[canvasY] (koordinat kanvas, sudah bebas zoom). */
-    private fun maskPaintAt(canvasX: Float, canvasY: Float, pressure: Float = 1f) {
+    /**
+     * Menyelesaikan sesi Erase BG: simpan mask sebagai satu entri undo (Selesai)
+     * lalu matikan seluruh state Erase BG.
+     */
+    fun endEraseBg(layer: com.flyerpix.editor.canvas.model.CanvasLayer? = null) {
+        endMaskPaint(layer)
+        maskPaintBrush.eraseBgActive = false
+        maskPaintBrush.eraseMode = true
+        maskPaintBrush.autoEraseMode = false
+        maskPaintBrush.autoEraseSourceColor = null
+        eraseIsTouching = false
+        eraseTouchScreenX = -1f
+        eraseTouchScreenY = -1f
+        clearEraseStrokeHistory()
+    }
+
+    /**
+     * Membatalkan sesi Erase BG (Batal): kembalikan ke snapshot awal
+     * (mask sebelum sesi dimulai) dan matikan seluruh state Erase BG.
+     */
+    fun cancelEraseBg() {
+        val snapshot = maskPaintBeforeSnapshot
+        maskPaintBeforeSnapshot = null
+        maskPaintLayer = null
+        lastMaskPaintPoint = null
+        maskPaintBrush.eraseBgActive = false
+        maskPaintBrush.eraseMode = true
+        maskPaintBrush.autoEraseMode = false
+        maskPaintBrush.autoEraseSourceColor = null
+        eraseIsTouching = false
+        eraseTouchScreenX = -1f
+        eraseTouchScreenY = -1f
+        clearEraseStrokeHistory()
+        if (snapshot != null) {
+            try {
+                restoreState(snapshot)
+            } catch (_: Throwable) {
+            }
+        }
+        invalidate()
+    }
+
+    /** Melukis goresan mask di [screenX]/[screenY] (koordinat layar mentah). */
+    private fun maskPaintAt(screenX: Float, screenY: Float, pressure: Float = 1f) {
         val layer = maskPaintLayer ?: return
         val mask = layer.maskBitmap ?: return
+
+        // ── Erase BG: Hitung koordinat target dengan finger offset ─────
+        val density = resources.displayMetrics.density
+        val targetScreenY = if (maskPaintBrush.eraseBgActive) {
+            screenY - (maskPaintBrush.fingerOffsetDp * density)
+        } else {
+            screenY
+        }
+
+        // Transformasi ke koordinat kanvas (sudah diperhitungkan zoom/pan)
+        val canvasPts = floatArrayOf(screenX, targetScreenY)
+        canvasTransformInverse.mapPoints(canvasPts)
+        val canvasX = canvasPts[0]
+        val canvasY = canvasPts[1]
+
         val (lx, ly) = canvasToMaskLocal(layer, canvasX, canvasY)
 
         // ── Phase 1: Pressure Sensitivity ────────────────────────────
@@ -1177,29 +1360,32 @@ class PixelCanvasView @JvmOverloads constructor(
 
         // ── Phase 4: Clone Stamp Mode ───────────────────────────────
         if (maskPaintBrush.cloneMode) {
-            // Get the actual layer bitmap (for ImageLayer)
             val layerBitmap = if (layer is com.flyerpix.editor.canvas.model.ImageLayer) {
                 layer.bitmap
             } else {
                 return  // Clone stamp only works on image layers
             }
-            
             cloneStampAt(layer, layerBitmap, lx.toInt(), ly.toInt(), effectiveBrushSize.toInt())
             lastMaskPaintPoint = android.graphics.PointF(lx, ly)
             invalidate()
             return
         }
 
-        // ── Manual Paint Mode (Standard) ──────────────────────────────
+        // ── Erase BG: Manual Hapus atau Pulihkan (Restore) ────────────
+        // eraseMode=true  → set mask px ke TRANSPARENT (0x00000000 = foto hilang)
+        // eraseMode=false → set mask px ke WHITE/OPAQUE (0xFFFFFFFF = foto tampil)
+        val targetMaskColor = if (maskPaintBrush.eraseBgActive) {
+            if (maskPaintBrush.eraseMode) 0x00000000.toInt() else 0xFFFFFFFF.toInt()
+        } else {
+            // Mode mask standar: isEraser=true → putih (tampil), false → warna brush
+            if (maskPaintBrush.isEraser) 0xFFFFFFFF.toInt() else maskPaintBrush.brushColor
+        }
+
+        // ── Manual Paint Mode (Standard & Erase BG) ──────────────────
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC)
-            if (maskPaintBrush.isEraser) {
-                color = 0xFFFFFFFF.toInt()
-                alpha = 255
-            } else {
-                color = maskPaintBrush.brushColor
-                alpha = effectiveOpacity
-            }
+            color = targetMaskColor
+            alpha = if (maskPaintBrush.eraseBgActive) 255 else effectiveOpacity
             style = android.graphics.Paint.Style.STROKE
             strokeWidth = effectiveBrushSize
             strokeCap = android.graphics.Paint.Cap.ROUND
@@ -1221,14 +1407,14 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     /**
-     * Phase 3: Auto-Color Erase — erase pixels similar to reference color within threshold.
-     * 
+     * Phase 3: Auto-Color Erase / Magic Erase.
+     *
      * Algorithm:
-     * 1. On first tap (cloneSourceX/Y null): sample layer's pixel color at tap point
-     * 2. Compare surrounding pixels against this color using CIE Delta E formula
-     * 3. If distance <= threshold: set mask alpha to 255 (opaque/visible = NOT erased)
-     *    Else: set mask alpha to 0 (transparent/erased)
-     * 4. On drag: paint brush-sized area with same logic
+     * 1. Tap pertama (autoEraseSourceColor == null): ambil warna referensi dari piksel
+     *    foto di titik sentuh, lalu FLOOD FILL area tersambung yang sewarna (≤ threshold)
+     *    sehingga background langsung bersih dalam sekali tap.
+     * 2. Saat digeser (drag): terapkan stamp lingkaran berukuran brush yang membandingkan
+     *    warna foto sekitar dengan warna referensi; piksel mirip → mask transparan.
      */
     private fun autoEraseAt(
         layer: com.flyerpix.editor.canvas.model.CanvasLayer,
@@ -1237,51 +1423,146 @@ class PixelCanvasView @JvmOverloads constructor(
         py: Int,
         brushRadius: Int
     ) {
-        // On first tap, sample reference color from layer's actual content (if available)
+        val bitmapForSample = if (layer is com.flyerpix.editor.canvas.model.ImageLayer) layer.bitmap else null
+
+        // ── Tap pertama: sample warna + flood fill wilayah tersambung ──
         if (maskPaintBrush.autoEraseSourceColor == null) {
-            val (w, h) = layer.getUnwarpedDimensions()
-            if (w > 0 && h > 0) {
-                // For ImageLayer: sample from bitmap
-                if (layer is com.flyerpix.editor.canvas.model.ImageLayer) {
-                    val sampleX = px.coerceIn(0, layer.bitmap.width - 1)
-                    val sampleY = py.coerceIn(0, layer.bitmap.height - 1)
-                    maskPaintBrush.autoEraseSourceColor = layer.bitmap.getPixel(sampleX, sampleY)
-                } else {
-                    // For other layers: use a default reference (white)
-                    maskPaintBrush.autoEraseSourceColor = 0xFFFFFFFF.toInt()
+            val sourceColor = if (bitmapForSample != null) {
+                val sampleX = px.coerceIn(0, bitmapForSample.width - 1)
+                val sampleY = py.coerceIn(0, bitmapForSample.height - 1)
+                bitmapForSample.getPixel(sampleX, sampleY)
+            } else {
+                0xFFFFFFFF.toInt()
+            }
+            maskPaintBrush.autoEraseSourceColor = sourceColor
+            floodFillEraseBitmap(mask, bitmapForSample, px, py, sourceColor)
+            invalidate()
+            return
+        }
+
+        // ── Drag: stamp brush berukuran brushRadius (dukungan area yang lebih luas) ──
+        val sourceColor = maskPaintBrush.autoEraseSourceColor ?: 0xFFFFFFFF.toInt()
+        val threshold = maskPaintBrush.autoEraseThreshold
+        val r = brushRadius.coerceAtLeast(1)
+        val startX = (px - r).coerceAtLeast(0)
+        val startY = (py - r).coerceAtLeast(0)
+        val endX = (px + r).coerceAtMost(mask.width - 1)
+        val endY = (py + r).coerceAtMost(mask.height - 1)
+        val w = endX - startX + 1
+        val h = endY - startY + 1
+        if (w <= 0 || h <= 0) return
+
+        val maskPixels = IntArray(w * h)
+        mask.getPixels(maskPixels, 0, w, startX, startY, w, h)
+
+        val bitmapPixels = if (bitmapForSample != null && startX < bitmapForSample.width && startY < bitmapForSample.height) {
+            val bw = endX.coerceAtMost(bitmapForSample.width - 1) - startX + 1
+            val bh = endY.coerceAtMost(bitmapForSample.height - 1) - startY + 1
+            IntArray(bw * bh).also { bitmapForSample.getPixels(it, 0, bw, startX, startY, bw, bh) }
+        } else null
+
+        for (dy in 0 until h) {
+            for (dx in 0 until w) {
+                val distFromCenter = kotlin.math.sqrt(((dx - r) * (dx - r) + (dy - r) * (dy - r)).toFloat())
+                if (distFromCenter > r) continue
+
+                val photoPixel = if (bitmapPixels != null && dx < (endX.coerceAtMost((bitmapForSample?.width ?: 0) - 1) - startX + 1)
+                    && dy < (endY.coerceAtMost((bitmapForSample?.height ?: 0) - 1) - startY + 1)) {
+                    val bw = endX.coerceAtMost((bitmapForSample?.width ?: 1) - 1) - startX + 1
+                    bitmapPixels[dy * bw + dx]
+                } else sourceColor
+
+                if (colorDistance(photoPixel, sourceColor) <= threshold) {
+                    maskPixels[dy * w + dx] = 0x00000000.toInt()  // hapus
                 }
             }
         }
 
-        val sourceColor = maskPaintBrush.autoEraseSourceColor ?: 0xFFFFFFFF.toInt()
+        mask.setPixels(maskPixels, 0, w, startX, startY, w, h)
+    }
+
+    /**
+     * Flood fill: buat mask TRANSPARAN pada seluruh area tersambung dalam foto yang
+     * warnanya mirip (jarak warna ≤ threshold) dengan warna di titik seed [seedX]/[seedY].
+     * Terbatas pada foto ImageLayer agar sampling warna akurat; area lain tidak diproses.
+     */
+    private fun floodFillEraseBitmap(
+        mask: android.graphics.Bitmap,
+        bitmap: android.graphics.Bitmap?,
+        seedX: Int,
+        seedY: Int,
+        seedColor: Int
+    ) {
+        val bmp = bitmap ?: return
+        val bW = bmp.width
+        val bH = bmp.height
+        val mW = mask.width
+        val mH = mask.height
+        if (bW <= 0 || bH <= 0 || mW <= 0 || mH <= 0) return
+        if (seedX < 0 || seedY < 0 || seedX >= bW || seedY >= bH) return
+
+        // Keamanan memori: flood fill penuh hanya untuk bitmap berukuran wajar.
+        // Bitmap sangat besar cukup memakai stamp brush per goresan.
+        val total = bW.toLong() * bH.toLong()
+        if (total > FLOOD_FILL_MAX_PIXELS) return
+
         val threshold = maskPaintBrush.autoEraseThreshold
+        val w = minOf(bW, mW)
+        val h = minOf(bH, mH)
+        val cnt = w * h
 
-        // Paint circular brush area
-        for (dy in -brushRadius..brushRadius) {
-            for (dx in -brushRadius..brushRadius) {
-                val dist = kotlin.math.sqrt((dx * dx + dy * dy).toFloat())
-                if (dist > brushRadius) continue
+        val photoPixels = IntArray(cnt)
+        val maskPixels = IntArray(cnt)
+        bmp.getPixels(photoPixels, 0, w, 0, 0, w, h)
+        mask.getPixels(maskPixels, 0, w, 0, 0, w, h)
 
-                val mx = (px + dx).coerceIn(0, mask.width - 1)
-                val my = (py + dy).coerceIn(0, mask.height - 1)
+        val visited = BooleanArray(cnt)
+        val queue = IntArray(cnt)
+        var head = 0
+        var tail = 0
+        val seedIdx = seedY * w + seedX
+        visited[seedIdx] = true
+        queue[tail++] = seedIdx
+        var erased = 0
 
-                // Calculate color distance using simple RGB Euclidean distance
-                val distance = colorDistance(sourceColor, 0xFFFFFFFF.toInt())  // Compare to white (visible)
-                
-                // If distance within threshold: keep visible (set to white in mask)
-                // Else: make transparent (set to black in mask)
-                val maskAlpha = if (distance <= threshold) 255 else 0
-                val maskPixel = (maskAlpha shl 24) or 0x00FFFFFF
+        while (head < tail) {
+            val idx = queue[head++]
+            maskPixels[idx] = 0x00000000.toInt()  // transparan = terhapus
+            erased++
+            val x = idx % w
+            val y = idx / w
 
-                // Set mask pixel at this position
-                val idx = my * mask.width + mx
-                val pixels = IntArray(1)
-                mask.getPixels(pixels, 0, 1, mx, my, 1, 1)
-                pixels[0] = maskPixel
-                mask.setPixels(pixels, 0, 1, mx, my, 1, 1)
+            if (x > 0) {
+                val ni = idx - 1
+                if (!visited[ni] && colorDistance(photoPixels[ni], seedColor) <= threshold) {
+                    visited[ni] = true; queue[tail++] = ni
+                }
+            }
+            if (x + 1 < w) {
+                val ni = idx + 1
+                if (!visited[ni] && colorDistance(photoPixels[ni], seedColor) <= threshold) {
+                    visited[ni] = true; queue[tail++] = ni
+                }
+            }
+            if (y > 0) {
+                val ni = idx - w
+                if (!visited[ni] && colorDistance(photoPixels[ni], seedColor) <= threshold) {
+                    visited[ni] = true; queue[tail++] = ni
+                }
+            }
+            if (y + 1 < h) {
+                val ni = idx + w
+                if (!visited[ni] && colorDistance(photoPixels[ni], seedColor) <= threshold) {
+                    visited[ni] = true; queue[tail++] = ni
+                }
             }
         }
+
+        if (erased > 0) {
+            mask.setPixels(maskPixels, 0, w, 0, 0, w, h)
+        }
     }
+
 
     /**
      * Calculate color distance between two ARGB colors using CIE Delta E (simplified).
@@ -2536,8 +2817,94 @@ class PixelCanvasView @JvmOverloads constructor(
         } finally {
             canvas.restoreToCount(drawSave)
             drawZoomScrollbars(canvas)
+            // ── Erase BG: Overlay Cursor (Lingkaran Penghapus Melayang) ─────────────
+            // Digambar SETELAH restoreToCount (koordinat LAYAR mentah, bukan kanvas)
+            // agar tidak ter-skalakan/tergeser oleh transformasi zoom dan pan.
+            // Render hanya saat jari sedang menyentuh layar dalam mode Erase BG aktif.
+            if (isMaskPaintActive && maskPaintBrush.eraseBgActive && eraseIsTouching
+                && eraseTouchScreenX >= 0f) {
+                drawEraseBgCursorOverlay(canvas)
+            }
         }
     }
+
+    /**
+     * Render overlay kursor penghapus Erase BG di atas layar (dalam koordinat layar langsung).
+     * Terdiri dari:
+     * 1. Titik merah kecil = posisi jari
+     * 2. Garis pemandu vertikal dari jari ke lingkaran target
+     * 3. Lingkaran penghapus besar + crosshair di posisi target (atas jari)
+     */
+    private fun drawEraseBgCursorOverlay(canvas: Canvas) {
+        val density = resources.displayMetrics.density
+        val fingerX = eraseTouchScreenX
+        val fingerY = eraseTouchScreenY
+        val targetX = fingerX
+        val targetY = fingerY - (maskPaintBrush.fingerOffsetDp * density)
+
+        // Ukuran lingkaran di layar (pixels), proporsional terhadap zoom
+        val ringRadius = (maskPaintBrush.brushSize * canvasZoom / 2f).coerceIn(8f, 300f)
+
+        // 1. Garis pemandu dari jari ke target
+        val guidePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xCCFFFFFF.toInt()
+            strokeWidth = 1.5f * density
+            style = android.graphics.Paint.Style.STROKE
+            pathEffect = android.graphics.DashPathEffect(floatArrayOf(6f * density, 4f * density), 0f)
+        }
+        if (maskPaintBrush.fingerOffsetDp > 5f) {
+            canvas.drawLine(fingerX, fingerY - 8f * density, targetX, targetY + ringRadius, guidePaint)
+        }
+
+        // 2. Titik jari (titik sentuh) — warna sesuai mode
+        val fingerDotColor = when {
+            maskPaintBrush.autoEraseMode -> 0xFFFF9F0A.toInt()  // oranye = auto warna
+            !maskPaintBrush.eraseMode -> 0xFF30D158.toInt()     // hijau = pulihkan
+            else -> 0xFFFF453A.toInt()                          // merah = hapus
+        }
+        val fingerDotPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = fingerDotColor
+            style = android.graphics.Paint.Style.FILL
+        }
+        canvas.drawCircle(fingerX, fingerY, 5f * density, fingerDotPaint)
+
+        // Outline putih pada titik jari
+        val fingerOutlinePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFFFFFF.toInt()
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 1.5f * density
+        }
+        canvas.drawCircle(fingerX, fingerY, 5f * density, fingerOutlinePaint)
+
+        // 3. Lingkaran penghapus di posisi target
+        val ringPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFFFFFF.toInt()
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 2f * density
+        }
+        canvas.drawCircle(targetX, targetY, ringRadius, ringPaint)
+
+        // Outline hitam luar untuk visibilitas pada semua background
+        val ringOuterPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0x88000000.toInt()
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 3.5f * density
+        }
+        canvas.drawCircle(targetX, targetY, ringRadius, ringOuterPaint)
+        // Gambar ulang garis putih di atas outline hitam
+        canvas.drawCircle(targetX, targetY, ringRadius, ringPaint)
+
+        // 4. Crosshair (+) kecil di tengah lingkaran
+        val crossLen = 6f * density
+        val crossPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFFFFFF.toInt()
+            strokeWidth = 1.5f * density
+            style = android.graphics.Paint.Style.STROKE
+        }
+        canvas.drawLine(targetX - crossLen, targetY, targetX + crossLen, targetY, crossPaint)
+        canvas.drawLine(targetX, targetY - crossLen, targetX, targetY + crossLen, crossPaint)
+    }
+
 
     /**
      * Menggambar overlay visualisasi anchor dan handle untuk mode edit Bezier.
@@ -3041,30 +3408,127 @@ class PixelCanvasView @JvmOverloads constructor(
 
         // 0.4. Tangani mode lukis mask — lukis goresan ke maskBitmap layer target (Prompt 06)
         if (maskPaintLayer != null) {
+            // ── Erase BG: Simpan koordinat layar mentah SEBELUM transform untuk cursor overlay ──
+            // Koordinat ini dipakai di drawEraseBgCursorOverlay (layar, bukan kanvas).
+            // Harus diambil dari raw event SEBELUM event.transform() dipanggil di atas.
+            // Namun kita tidak bisa undo transform, jadi simpan di sini setelah transform
+            // karena Erase BG menggunakan raw screen coords langsung di maskPaintAt.
+
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
                     touchEventX = event.x
                     touchEventY = event.y
+                    // ── Erase BG: Snapshot mask di awal goresan agar Undo/Redo per-goresan berfungsi ──
+                    if (maskPaintBrush.eraseBgActive && event.actionMasked == MotionEvent.ACTION_DOWN && event.pointerCount == 1) {
+                        maskPaintLayer?.maskBitmap?.let { snapshotEraseStroke(it) }
+                    }
                     // ── Phase 1: Extract pressure from stylus (OPTION D) ──
                     val pressure = event.getAxisValue(MotionEvent.AXIS_PRESSURE).coerceIn(0f, 1f)
-                    
-                    // ── Phase 4: Clone Stamp — Shift + tap to set source point ──
-                    // Check if Shift key is held (metaState includes META_SHIFT_ON)
-                    if (maskPaintBrush.cloneMode && (event.metaState and android.view.KeyEvent.META_SHIFT_ON) != 0) {
-                        val layer = maskPaintLayer
-                        if (layer != null) {
-                            val (lx, ly) = canvasToMaskLocal(layer, event.x, event.y)
-                            maskPaintBrush.cloneSourceX = lx
-                            maskPaintBrush.cloneSourceY = ly
-                            android.util.Log.d("FlyerPixClone", "Clone source set at ($lx, $ly)")
+
+                    // ── Erase BG: 2-Jari = Pinch Zoom & Pan (tidak menghapus) ──
+                    if (maskPaintBrush.eraseBgActive && event.pointerCount >= 2) {
+                        // Event di atas sudah di-transform ke ruang kanvas (0.1), padahal
+                        // ScaleGestureDetector & pan harus memakai koordinat layar mentah.
+                        // Bangun salinan event dengan koordinat layar mentah kembali.
+                        val rawEvent = if (canvasZoom != 1f || canvasPanX != 0f || canvasPanY != 0f) {
+                            MotionEvent.obtain(event).also { it.transform(canvasTransformMatrix) }
+                        } else {
+                            event
+                        }
+                        try {
+                            // Delegasikan ke scale detector untuk zoom/pan
+                            zoomCanvasScaleDetector.onTouchEvent(rawEvent)
+                            // Pan dengan 2 jari (koordinat layar mentah)
+                            if (event.actionMasked == MotionEvent.ACTION_MOVE) {
+                                val focusX = (rawEvent.getX(0) + rawEvent.getX(1)) / 2f
+                                val focusY = (rawEvent.getY(0) + rawEvent.getY(1)) / 2f
+                                if (lastTouchX != 0f || lastTouchY != 0f) {
+                                    canvasPanX += focusX - lastTouchX
+                                    canvasPanY += focusY - lastTouchY
+                                    clampCanvasPan()
+                                    invalidate()
+                                }
+                                lastTouchX = focusX
+                                lastTouchY = focusY
+                            }
+                        } finally {
+                            if (rawEvent !== event) rawEvent.recycle()
+                        }
+                        eraseIsTouching = false
+                        return true
+                    }
+
+                    // Untuk Erase BG: gunakan koordinat layar mentah (maskPaintAt handle transformasinya)
+                    // Untuk mode standar: event.x/y sudah ter-transform sebelumnya
+                    if (maskPaintBrush.eraseBgActive) {
+                        // Reverse transform agar dapat koordinat layar mentah
+                        val rawPts = floatArrayOf(event.x, event.y)
+                        canvasTransformMatrix.mapPoints(rawPts)  // inverse of canvasTransformInverse
+                        eraseTouchScreenX = rawPts[0]
+                        eraseTouchScreenY = rawPts[1]
+                        eraseIsTouching = true
+
+                        // ── Phase 4: Clone Stamp ──
+                        if (maskPaintBrush.cloneMode && (event.metaState and android.view.KeyEvent.META_SHIFT_ON) != 0) {
+                            val layer = maskPaintLayer
+                            if (layer != null) {
+                                val (lx, ly) = canvasToMaskLocal(layer, event.x, event.y)
+                                maskPaintBrush.cloneSourceX = lx
+                                maskPaintBrush.cloneSourceY = ly
+                            }
+                        } else {
+                            // Erase BG: kirim koordinat layar mentah — maskPaintAt akan hitung offset + transform
+                            maskPaintAt(rawPts[0], rawPts[1], pressure)
                         }
                     } else {
-                        // Normal paint/erase mode
-                        maskPaintAt(event.x, event.y, pressure)
+                        // Mode mask standar — event sudah ter-transform
+                        if (maskPaintBrush.cloneMode && (event.metaState and android.view.KeyEvent.META_SHIFT_ON) != 0) {
+                            val layer = maskPaintLayer
+                            if (layer != null) {
+                                val (lx, ly) = canvasToMaskLocal(layer, event.x, event.y)
+                                maskPaintBrush.cloneSourceX = lx
+                                maskPaintBrush.cloneSourceY = ly
+                                android.util.Log.d("FlyerPixClone", "Clone source set at ($lx, $ly)")
+                            }
+                        } else {
+                            // Normal paint/erase mode
+                            maskPaintAt(event.x, event.y, pressure)
+                        }
+                    }
+                }
+                MotionEvent.ACTION_POINTER_DOWN -> {
+                    if (maskPaintBrush.eraseBgActive) {
+                        val raws = if (canvasZoom != 1f || canvasPanX != 0f || canvasPanY != 0f) {
+                            val pts = floatArrayOf(
+                                event.getX(0), event.getY(0),
+                                event.getX(1), event.getY(1)
+                            )
+                            canvasTransformMatrix.mapPoints(pts)
+                            pts
+                        } else {
+                            floatArrayOf(
+                                event.getX(0), event.getY(0),
+                                event.getX(1), event.getY(1)
+                            )
+                        }
+                        lastTouchX = (raws[0] + raws[2]) / 2f
+                        lastTouchY = (raws[1] + raws[3]) / 2f
+                        lastMaskPaintPoint = null  // Reset goresan saat jari kedua turun
+                        eraseIsTouching = false
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     lastMaskPaintPoint = null
+                    if (maskPaintBrush.eraseBgActive) {
+                        eraseIsTouching = false
+                        lastTouchX = 0f
+                        lastTouchY = 0f
+                        // Reset sourceColor saat jari diangkat agar tap berikutnya ambil warna baru
+                        if (maskPaintBrush.autoEraseMode) {
+                            maskPaintBrush.autoEraseSourceColor = null
+                        }
+                    }
+                    invalidate()
                 }
             }
             return true
@@ -4431,5 +4895,12 @@ class PixelCanvasView @JvmOverloads constructor(
 
         /** Seed deterministik noise (sama dengan tile Java milik Skia). */
         const val NOISE_SEED = 0xC0FFEE
+
+        /**
+         * Batas jumlah piksel untuk flood fill Auto-Color Erase dalam SATU kali tap.
+         * Bitmap lebih besar dari ini hanya memakai stamp brush per goresan agar
+         * tidak boros memori (getPixels penuh ~4 byte/piksel).
+         */
+        const val FLOOD_FILL_MAX_PIXELS = 4_000_000L
     }
 }

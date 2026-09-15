@@ -1,26 +1,155 @@
 package com.flyerpix.editor.ui.composables
 
-import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.model.CanvasLayer
 import com.flyerpix.editor.canvas.model.GradientType
+import com.flyerpix.editor.canvas.model.MaskUtils
+
+private val PanelColorScheme = lightColors(
+    primary = Color(0xFF1769FF),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1A1A2E),
+    background = Color(0xFFFFFFFF)
+)
+
+private const val PanelTextSecondary = 0xFF5F6B7A
+private const val PanelDivider = 0xFFE4E8F0
+private const val PanelAlt = 0xFFF0F3F8
+private const val PanelHandle = 0xFFD0D4DE
+private const val PanelCard = 0xFFF8FAFC
+private const val PanelSwatchBorder = 0xFFCCD6E0
+
+/** Chip pilihan bertema light (aktif = primary). Dipakai untuk mode, aksi, dan arah. */
+@Composable
+private fun ChipButton(
+    label: String,
+    modifier: Modifier = Modifier,
+    active: Boolean = false,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(32.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (active) MaterialTheme.colors.primary else Color(PanelAlt))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+            color = if (active) Color.White else Color(PanelTextSecondary)
+        )
+    }
+}
+
+/** Label section bertema light, dengan nilai kecil opsional di kanan. */
+@Composable
+private fun SectionLabel(text: String, value: String? = null) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.caption,
+            color = Color(PanelTextSecondary),
+            fontWeight = FontWeight.SemiBold
+        )
+        if (value != null) {
+            Text(text = value, fontSize = 10.sp, color = Color(PanelTextSecondary))
+        }
+    }
+}
+
+/** Slider bertema primary, konsisten dengan panel sheet lainnya. */
+@Composable
+private fun PanelSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>
+) {
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        colors = SliderDefaults.colors(
+            thumbColor = MaterialTheme.colors.primary,
+            activeTrackColor = MaterialTheme.colors.primary
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(28.dp)
+    )
+}
+
+/** Card toggle (Switch) bertema light seperti Auto Color Match / Blend to Background. */
+@Composable
+private fun ToggleRowCard(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        backgroundColor = Color(PanelCard),
+        elevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colors.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 10.sp,
+                    color = Color(PanelTextSecondary)
+                )
+            }
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colors.primary,
+                    checkedTrackColor = MaterialTheme.colors.primary.copy(alpha = 0.4f)
+                )
+            )
+        }
+    }
+}
 
 @Composable
 fun LayerMaskEditorComposable(
@@ -35,19 +164,29 @@ fun LayerMaskEditorComposable(
     onModeChange: (mode: String) -> Unit = {},  // "manual", "auto-erase", "clone"
     onPressureToggle: (enabled: Boolean) -> Unit = {},
     onAutoEraseThreshold: (threshold: Int) -> Unit = {},
-    onCloneModeToggle: (enabled: Boolean) -> Unit = {}
+    onCloneModeToggle: (enabled: Boolean) -> Unit = {},
+    maxHeightPx: Int = 420,
+    sessionKey: Int = 0
 ) {
     var brushSize by remember { mutableStateOf(20f) }
     var brushOpacity by remember { mutableStateOf(1f) }
     var isInverted by remember { mutableStateOf(layer.maskInverted) }
     var isEraser by remember { mutableStateOf(false) }
-    var selectedBrushColor by remember { mutableStateOf(0xFFFFFFFF.toInt()) }
-    
+    // Default kuas HITAM (hapus): melukis langsung menghapus, sesuai
+    // "Paint black to remove, white to restore". Putih/restore via swatch.
+    var selectedBrushColor by remember { mutableStateOf(0xFF000000.toInt()) }
+
     // ── Phase 4 & 5: Smart Erase Modes (OPTION D) ────────────────────────────
     var paintMode by remember { mutableStateOf("manual") }  // "manual", "auto-erase", "clone"
     var pressureSensitivityEnabled by remember { mutableStateOf(true) }
     var autoEraseThreshold by remember { mutableStateOf(50) }
     var cloneModeEnabled by remember { mutableStateOf(false) }
+    var featherRadius by remember { mutableStateOf(10f) }
+
+    // Gate konten editor: selama mask sudah ada (independen dari maskEnabled).
+    var maskAvailable by remember { mutableStateOf(layer.maskBitmap != null) }
+    var maskEnabledState by remember { mutableStateOf(layer.maskEnabled) }
+    val scrollState = remember(sessionKey) { ScrollState(0) }
 
     fun fillColor(): Int = when (selectedBrushColor) {
         0xFF000000.toInt() -> 0x00000000.toInt()
@@ -55,265 +194,404 @@ fun LayerMaskEditorComposable(
         else               -> 0xFFFFFFFF.toInt()
     }
 
-    LaunchedEffect(Unit) {
+    fun pushBrushConfig() {
         onBrushConfig(brushSize, (brushOpacity * 255).toInt().coerceIn(0, 255), fillColor(), isEraser)
+    }
+
+    LaunchedEffect(Unit) {
+        pushBrushConfig()
         onEnableMaskPaint()
     }
 
-    val hasMask = layer.hasMask()
-
-    LazyColumn(
-        modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1A1A)).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Layer Mask Editor", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                IconButton(onClick = onClose) { Icon(Icons.Default.Close, "Close", tint = Color.White) }
-            }
-        }
-
-        item {
-            if (!hasMask) {
-                Button(onClick = {
-                    val (w, h) = layer.getUnwarpedDimensions()
-                    if (w > 0 && h > 0) {
-                        layer.createMask(w.toInt(), h.toInt())
-                        onBrushConfig(brushSize, (brushOpacity * 255).toInt().coerceIn(0, 255), fillColor(), isEraser)
-                        onEnableMaskPaint()
-                        onMaskChange()
-                    }
-                }, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF0066FF))) {
-                    Text("Create Mask", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
-            } else {
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Mask Active", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                        Switch(checked = layer.maskEnabled, onCheckedChange = { layer.maskEnabled = it; onBrushConfig(brushSize, (brushOpacity * 255).toInt().coerceIn(0, 255), fillColor(), isEraser); onMaskChange() })
-                    }
-                }
-            }
-        }
-
-        if (hasMask) {
-            item {
-                Text("Brush Tool", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFBBBBBB))
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Size: ${brushSize.toInt()}px", fontSize = 12.sp, color = Color(0xFF999999))
-                Slider(value = brushSize, onValueChange = { brushSize = it; onBrushConfig(brushSize, (brushOpacity * 255).toInt().coerceIn(0, 255), fillColor(), isEraser) }, valueRange = 5f..100f)
-
-                Text("Opacity: ${(brushOpacity * 100).toInt()}%", fontSize = 12.sp, color = Color(0xFF999999))
-                Slider(value = brushOpacity, onValueChange = { brushOpacity = it; onBrushConfig(brushSize, (brushOpacity * 255).toInt().coerceIn(0, 255), fillColor(), isEraser) }, valueRange = 0f..1f)
-            }
-
-            // ── Phase 4 & 5: Smart Erase Mode Selector (OPTION D) ──────────────────
-            item {
-                Text("Erase Mode", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFBBBBBB))
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(
-                        "manual" to "Manual",
-                        "auto-erase" to "Auto-Color",
-                        "clone" to "Clone"
-                    ).forEach { (mode, label) ->
-                        Button(
-                            onClick = {
-                                paintMode = mode
-                                onModeChange(mode)
-                                // Reset clone source when switching modes
-                                if (mode != "clone") {
-                                    onCloneModeToggle(false)
-                                }
-                            },
-                            modifier = Modifier.weight(1f).height(36.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = if (paintMode == mode) Color(0xFF0066FF) else Color(0xFF333333)
-                            ),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text(label, fontSize = 11.sp, color = Color.White)
-                        }
-                    }
-                }
-            }
-
-            // ── Pressure Sensitivity Toggle ────────────────────────────────
-            item {
-                Row(
+    MaterialTheme(colors = PanelColorScheme) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(with(LocalDensity.current) { maxHeightPx.toDp() }),
+                shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
+                elevation = 8.dp,
+                backgroundColor = MaterialTheme.colors.surface
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF222222), shape = RoundedCornerShape(6.dp))
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(top = 6.dp)
                 ) {
-                    Text("Pressure Sensitivity", fontSize = 12.sp, color = Color(0xFFBBBBBB))
-                    Switch(
-                        checked = pressureSensitivityEnabled,
-                        onCheckedChange = { 
-                            pressureSensitivityEnabled = it
-                            onPressureToggle(it)
-                        }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .width(32.dp)
+                            .height(4.dp)
+                            .background(Color(PanelHandle), RoundedCornerShape(50))
                     )
-                }
-            }
 
-            // ── Auto-Color Erase Threshold Slider ──────────────────────────────
-            if (paintMode == "auto-erase") {
-                item {
-                    Text("Auto-Erase Threshold", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFBBBBBB))
-                    Text("${autoEraseThreshold} (color distance 0-255)", fontSize = 11.sp, color = Color(0xFF999999))
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Slider(
-                        value = autoEraseThreshold.toFloat(),
-                        onValueChange = {
-                            autoEraseThreshold = it.toInt()
-                            onAutoEraseThreshold(autoEraseThreshold)
-                        },
-                        valueRange = 0f..255f,
-                        steps = 50
-                    )
-                    Text("Lower = stricter color matching | Higher = more forgiving", fontSize = 10.sp, color = Color(0xFF777777))
-                }
-            }
-
-            // ── Clone Stamp Mode Info ──────────────────────────────────────────
-            if (paintMode == "clone") {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(6.dp),
-                        backgroundColor = Color(0xFF1F4D2B)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Clone Stamp Instructions", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF00FF66))
-                            Text(
-                                "1. Hold Shift + tap to set clone source point\n" +
-                                "2. Drag normally to paint cloned pixels\n" +
-                                "3. Uses DARKEN blending for realistic cloning",
-                                fontSize = 10.sp,
-                                color = Color(0xFFBBBBBB),
-                                modifier = Modifier.padding(top = 6.dp)
-                            )
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(scrollState)
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Divider(color = Color(PanelDivider), thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(2.dp))
+
+                            if (!maskAvailable) {
+                                // ── Create Mask ───────────────────────────────────────────
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(
+                                            width = 1.5.dp,
+                                            color = MaterialTheme.colors.primary,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        .clickable {
+                                            val (w, h) = layer.getUnwarpedDimensions()
+                                            if (w > 0 && h > 0) {
+                                                layer.createMask(w.toInt(), h.toInt())
+                                                // Mulai dari mask PUTIH agar foto terlihat penuh & hitam bisa menghapus.
+                                                layer.maskBitmap?.eraseColor(0xFFFFFFFF.toInt())
+                                                maskAvailable = true
+                                                maskEnabledState = true
+                                                pushBrushConfig()
+                                                onEnableMaskPaint()
+                                                onMaskChange()
+                                            }
+                                        },
+                                    shape = RoundedCornerShape(10.dp),
+                                    backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.08f),
+                                    elevation = 0.dp
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_mask_24px),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colors.primary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Column {
+                                            Text(
+                                                text = "Create Mask",
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colors.onSurface
+                                            )
+                                            Text(
+                                                text = "Buat layer mask baru untuk mengedit non-destruktif",
+                                                fontSize = 10.sp,
+                                                color = Color(PanelTextSecondary)
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                // ── Mask Active toggle ─────────────────────────────────────
+                                ToggleRowCard(
+                                    title = "Mask Active",
+                                    subtitle = "Nyalakan/matikan efek mask pada layer ini",
+                                    checked = maskEnabledState,
+                                    onCheckedChange = {
+                                        maskEnabledState = it
+                                        layer.maskEnabled = it
+                                        pushBrushConfig()
+                                        onMaskChange()
+                                    }
+                                )
+
+                                Divider(color = Color(PanelDivider), thickness = 0.5.dp)
+
+                                // ── Brush Tool ─────────────────────────────────────────
+                                SectionLabel("Brush Tool")
+                                SectionLabel("Brush Size", "${brushSize.toInt()} px")
+                                PanelSlider(
+                                    value = brushSize,
+                                    onValueChange = { brushSize = it; pushBrushConfig() },
+                                    valueRange = 5f..100f
+                                )
+                                SectionLabel("Brush Opacity", "${(brushOpacity * 100).toInt()}%")
+                                PanelSlider(
+                                    value = brushOpacity,
+                                    onValueChange = { brushOpacity = it; pushBrushConfig() },
+                                    valueRange = 0f..1f
+                                )
+
+                                // ── Erase Mode ─────────────────────────────────────────
+                                SectionLabel("Erase Mode")
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    listOf(
+                                        "manual" to "Manual",
+                                        "auto-erase" to "Auto-Color",
+                                        "clone" to "Clone"
+                                    ).forEach { (mode, label) ->
+                                        ChipButton(
+                                            label = label,
+                                            modifier = Modifier.weight(1f),
+                                            active = paintMode == mode,
+                                            onClick = {
+                                                paintMode = mode
+                                                onModeChange(mode)
+                                                if (mode != "clone") {
+                                                    onCloneModeToggle(false)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+
+                                // ── Pressure Sensitivity ─────────────────────────────
+                                ToggleRowCard(
+                                    title = "Pressure Sensitivity",
+                                    subtitle = "Ukuran goresan menyesuaikan tekanan stylus",
+                                    checked = pressureSensitivityEnabled,
+                                    onCheckedChange = {
+                                        pressureSensitivityEnabled = it
+                                        onPressureToggle(it)
+                                    }
+                                )
+
+                                // ── Auto-Color Erase Threshold ───────────────────────
+                                if (paintMode == "auto-erase") {
+                                    SectionLabel("Auto-Erase Threshold", "$autoEraseThreshold")
+                                    PanelSlider(
+                                        value = autoEraseThreshold.toFloat(),
+                                        onValueChange = {
+                                            autoEraseThreshold = it.toInt()
+                                            onAutoEraseThreshold(autoEraseThreshold)
+                                        },
+                                        valueRange = 0f..255f
+                                    )
+                                    Text(
+                                        text = "Lower = stricter color matching | Higher = more forgiving",
+                                        fontSize = 10.sp,
+                                        color = Color(PanelTextSecondary)
+                                    )
+                                }
+
+                                // ── Clone Stamp ──────────────────────────────────────
+                                if (paintMode == "clone") {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp),
+                                        backgroundColor = Color(PanelCard),
+                                        elevation = 0.dp
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Text(
+                                                "Clone Stamp Instructions",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFF007A3D)
+                                            )
+                                            Text(
+                                                "1. Hold Shift + tap to set clone source point\n" +
+                                                    "2. Drag normally to paint cloned pixels\n" +
+                                                    "3. Uses DARKEN blending for realistic cloning",
+                                                fontSize = 10.sp,
+                                                color = Color(PanelTextSecondary),
+                                                modifier = Modifier.padding(top = 6.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    ChipButton(
+                                        label = if (cloneModeEnabled) "Clone Mode Active" else "Enable Clone Mode",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        active = cloneModeEnabled,
+                                        onClick = {
+                                            cloneModeEnabled = !cloneModeEnabled
+                                            onCloneModeToggle(cloneModeEnabled)
+                                        }
+                                    )
+                                }
+
+                                // ── Brush Color ──────────────────────────────────────
+                                SectionLabel("Brush Color")
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    listOf(
+                                        0xFFFFFFFF.toInt() to "White (Show)",
+                                        0xFF000000.toInt() to "Black (Hide)",
+                                        0xFF808080.toInt() to "Gray (Partial)"
+                                    ).forEach { (color, label) ->
+                                        val selected = selectedBrushColor == color && !isEraser
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable {
+                                                    selectedBrushColor = color
+                                                    isEraser = false
+                                                    pushBrushConfig()
+                                                },
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(color))
+                                                    .border(
+                                                        width = if (selected) 2.5.dp else 1.dp,
+                                                        color = if (selected) MaterialTheme.colors.primary else Color(PanelSwatchBorder),
+                                                        shape = CircleShape
+                                                    )
+                                            )
+                                            Text(
+                                                text = label,
+                                                fontSize = 10.sp,
+                                                color = Color(PanelTextSecondary)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // ── Eraser toggle ────────────────────────────────────
+                                ChipButton(
+                                    label = if (isEraser) "Eraser On" else "Eraser Off",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    active = isEraser,
+                                    onClick = {
+                                        isEraser = !isEraser
+                                        pushBrushConfig()
+                                    }
+                                )
+
+                                // ── Mask Actions ─────────────────────────────────────
+                                SectionLabel("Mask Actions")
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    ChipButton(
+                                        label = "Invert",
+                                        modifier = Modifier.weight(1f),
+                                        active = isInverted,
+                                        onClick = {
+                                            layer.maskInverted = !layer.maskInverted
+                                            isInverted = layer.maskInverted
+                                            onMaskChange()
+                                        }
+                                    )
+                                    ChipButton(
+                                        label = "Reset",
+                                        modifier = Modifier.weight(1f),
+                                        active = false,
+                                        onClick = {
+                                            layer.maskBitmap?.let { bmp ->
+                                                val px = IntArray(bmp.width * bmp.height) { 0xFFFFFFFF.toInt() }
+                                                bmp.setPixels(px, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+                                            }
+                                            onMaskChange()
+                                        }
+                                    )
+                                }
+
+                                // ── Auto Masks ───────────────────────────────────────
+                                SectionLabel("Auto Masks")
+                                SectionLabel("Gradient Direction")
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    listOf(
+                                        MaskUtils.DIR_TOP_BOTTOM to "Top",
+                                        MaskUtils.DIR_BOTTOM_TOP to "Bottom",
+                                        MaskUtils.DIR_LEFT_RIGHT to "Left",
+                                        MaskUtils.DIR_RIGHT_LEFT to "Right"
+                                    ).forEach { (dir, label) ->
+                                        ChipButton(
+                                            label = label,
+                                            modifier = Modifier.weight(1f),
+                                            active = false,
+                                            onClick = {
+                                                onGradientMaskApply(GradientType.LINEAR, floatArrayOf(dir.toFloat()))
+                                            }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                ChipButton(
+                                    label = "Gradient Mask (Radial Center)",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    active = false,
+                                    onClick = { onGradientMaskApply(GradientType.RADIAL, floatArrayOf(0.5f)) }
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                SectionLabel("Feather Radius", "${featherRadius.toInt()} px")
+                                PanelSlider(
+                                    value = featherRadius,
+                                    onValueChange = { featherRadius = it },
+                                    valueRange = 0f..100f
+                                )
+                                ChipButton(
+                                    label = "Feather (${featherRadius.toInt()} px)",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    active = featherRadius > 0f,
+                                    onClick = { if (featherRadius > 0f) onFeatherApply(featherRadius) }
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .width(60.dp)
+                                .padding(start = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Bottom
+                        ) {
+                            TextButton(
+                                onClick = onClose,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                            ) {
+                                Text("Batal", style = MaterialTheme.typography.caption)
+                            }
+                            Button(
+                                onClick = onFinish,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = MaterialTheme.colors.primary,
+                                    contentColor = Color.White
+                                ),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                elevation = ButtonDefaults.elevation(defaultElevation = 1.dp)
+                            ) {
+                                Text(
+                                    text = "Selesai",
+                                    style = MaterialTheme.typography.caption,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
-                    
-                    Button(
-                        onClick = { 
-                            cloneModeEnabled = !cloneModeEnabled
-                            onCloneModeToggle(cloneModeEnabled)
-                        },
-                        modifier = Modifier.fillMaxWidth().height(40.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (cloneModeEnabled) Color(0xFF0066FF) else Color(0xFF333333)
-                        )
-                    ) {
-                        Text(if (cloneModeEnabled) "Clone Mode Active" else "Enable Clone Mode", fontSize = 12.sp)
-                    }
                 }
             }
-
-            item {
-                Text("Brush Color", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFBBBBBB))
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    listOf(
-                        0xFFFFFFFF.toInt() to "White (Show)",
-                        0xFF000000.toInt() to "Black (Hide)",
-                        0xFF808080.toInt() to "Gray (Partial)"
-                    ).forEach { (color, label) ->
-                        Column(modifier = Modifier.weight(1f).clickable { selectedBrushColor = color; isEraser = false; onBrushConfig(brushSize, (brushOpacity * 255).toInt().coerceIn(0, 255), fillColor(), isEraser) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(color)).then(
-                                if (selectedBrushColor == color && !isEraser) Modifier.border(2.dp, Color(0xFF00FF00), CircleShape) else Modifier
-                            ))
-                            Text(label, fontSize = 10.sp, color = Color(0xFFBBBBBB))
-                        }
-                    }
-                }
-            }
-
-            item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { isEraser = !isEraser; onBrushConfig(brushSize, (brushOpacity * 255).toInt().coerceIn(0, 255), fillColor(), isEraser) },
-                        modifier = Modifier.weight(1f).height(40.dp), colors = ButtonDefaults.buttonColors(backgroundColor = if (isEraser) Color(0xFF0066FF) else Color(0xFF333333))) {
-                        Text(if (isEraser) "Eraser On" else "Eraser Off", fontSize = 12.sp)
-                    }
-                }
-            }
-
-            item {
-                Text("Mask Actions", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFBBBBBB))
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { layer.maskInverted = !layer.maskInverted; isInverted = layer.maskInverted; onMaskChange() },
-                        modifier = Modifier.weight(1f).height(40.dp), colors = ButtonDefaults.buttonColors(backgroundColor = if (isInverted) Color(0xFF0066FF) else Color(0xFF333333))) {
-                        Text("Invert", fontSize = 12.sp)
-                    }
-                    Button(onClick = {
-                        layer.maskBitmap?.let { bmp ->
-                            val px = IntArray(bmp.width * bmp.height) { 0xFFFFFFFF.toInt() }
-                            bmp.setPixels(px, 0, bmp.width, 0, 0, bmp.width, bmp.height)
-                        }
-                        onMaskChange()
-                    },
-                        modifier = Modifier.weight(1f).height(40.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF666666))) {
-                        Text("Reset", fontSize = 12.sp)
-                    }
-                }
-            }
-
-            item {
-                Text("Auto Masks", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFBBBBBB))
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text("Gradient Direction", fontSize = 12.sp, color = Color(0xFF999999))
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(
-                        com.flyerpix.editor.canvas.model.MaskUtils.DIR_TOP_BOTTOM to "Top",
-                        com.flyerpix.editor.canvas.model.MaskUtils.DIR_BOTTOM_TOP to "Bottom",
-                        com.flyerpix.editor.canvas.model.MaskUtils.DIR_LEFT_RIGHT to "Left",
-                        com.flyerpix.editor.canvas.model.MaskUtils.DIR_RIGHT_LEFT to "Right"
-                    ).forEach { (dir, label) ->
-                        Button(onClick = { onGradientMaskApply(GradientType.LINEAR, floatArrayOf(dir.toFloat())) },
-                            modifier = Modifier.weight(1f).height(34.dp),
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF333333)),
-                            contentPadding = PaddingValues(0.dp)) {
-                            Text(label, fontSize = 11.sp, color = Color.White)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Button(onClick = { onGradientMaskApply(GradientType.RADIAL, floatArrayOf(0.5f)) },
-                    modifier = Modifier.fillMaxWidth().height(38.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF333333))) {
-                    Text("Gradient Mask (Radial Center)", fontSize = 12.sp)
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-                Text("Feather Radius", fontSize = 12.sp, color = Color(0xFF999999))
-                var featherRadius by remember { mutableStateOf(10f) }
-                Slider(value = featherRadius, onValueChange = { featherRadius = it }, valueRange = 0f..100f)
-                Button(onClick = { if (featherRadius > 0f) onFeatherApply(featherRadius) },
-                    modifier = Modifier.fillMaxWidth().height(38.dp), colors = ButtonDefaults.buttonColors(backgroundColor = if (featherRadius > 0f) Color(0xFF0066FF) else Color(0xFF333333))) {
-                    Text("Feather (${featherRadius.toInt()}px)", fontSize = 12.sp)
-                }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = {
-                    onBrushConfig(brushSize, (brushOpacity * 255).toInt().coerceIn(0, 255), fillColor(), isEraser)
-                    onFinish()
-                }, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00CC66))) {
-                    Text("Selesai", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

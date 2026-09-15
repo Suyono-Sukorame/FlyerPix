@@ -26,6 +26,7 @@ import com.flyerpix.editor.R
 
 private val PanelColorScheme = lightColors(
     primary = Color(0xFF1769FF),
+    primaryVariant = Color(0xFF4A8EFF),
     surface = Color(0xFFFFFFFF),
     onSurface = Color(0xFF1A1A2E),
     background = Color(0xFFFFFFFF)
@@ -33,7 +34,7 @@ private val PanelColorScheme = lightColors(
 
 private const val PanelTextSecondary = 0xFF5F6B7A
 private const val PanelDivider = 0xFFE4E8F0
-private const val PanelAlt = 0xFFF0F3F8
+private const val PanelAlt = 0xFFF1F4FA
 private const val PanelHandle = 0xFFD0D4DE
 
 @Composable
@@ -41,6 +42,7 @@ fun RemoveBgComposable(
     selectedLayerName: String = "Selected Layer",
     onReset: () -> Unit,
     onApply: (method: String?, featherStrength: Float) -> Unit,
+    onPaintMaskDirect: () -> Unit = {},
     onCancel: () -> Unit,
     maxHeightPx: Int = 420,
     sessionKey: Int = 0
@@ -181,19 +183,19 @@ fun RemoveBgComposable(
                                 }
                             }
 
-                            val paintSelected = selectedMethod == "paint"
+                            // Paint Mask: langsung buka editor tanpa tombol Apply.
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
                                     .border(
-                                        width = if (paintSelected) 1.5.dp else 1.dp,
-                                        color = if (paintSelected) MaterialTheme.colors.primary else Color(PanelDivider),
+                                        width = 1.dp,
+                                        color = Color(PanelDivider),
                                         shape = RoundedCornerShape(10.dp)
                                     )
-                                    .clickable { selectedMethod = "paint" },
+                                    .clickable { onPaintMaskDirect() },
                                 shape = RoundedCornerShape(10.dp),
-                                backgroundColor = if (paintSelected) MaterialTheme.colors.primary.copy(alpha = 0.08f) else Color(0xFFF8FAFC),
+                                backgroundColor = Color(0xFFF8FAFC),
                                 elevation = 0.dp
                             ) {
                                 Row(
@@ -206,7 +208,7 @@ fun RemoveBgComposable(
                                     Icon(
                                         painter = painterResource(R.drawable.ic_mask_24px),
                                         contentDescription = null,
-                                        tint = if (paintSelected) MaterialTheme.colors.primary else Color(PanelTextSecondary),
+                                        tint = Color(PanelTextSecondary),
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Column {
@@ -222,6 +224,12 @@ fun RemoveBgComposable(
                                             color = Color(PanelTextSecondary)
                                         )
                                     }
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_check_24px),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colors.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
 
