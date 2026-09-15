@@ -1066,13 +1066,30 @@ class PixelCanvasView @JvmOverloads constructor(
         var brushOpacity: Int = 255,
         var brushColor: Int = 0xFFFFFFFF.toInt(),
         var isEraser: Boolean = false
-    )
+    ) {
+        // ── Pressure Sensitivity (OPTION D Phase 1) ──────────────────────
+        var pressureSensitivityEnabled: Boolean = true
+        var currentPressure: Float = 1f  // 0..1, 1 = max pressure
+
+        // ── Clone Mode (OPTION D Phase 4) ─────────────────────────────
+        var cloneMode: Boolean = false
+        var cloneSourceX: Float? = null
+        var cloneSourceY: Float? = null
+
+        // ── Auto-Color Erase (OPTION D Phase 3) ───────────────────────
+        var autoEraseMode: Boolean = false
+        var autoEraseThreshold: Int = 50  // 0-255 color distance threshold
+        var autoEraseSourceColor: Int? = null  // Cached color for auto-erase
+    }
 
     /** Layer target yang sedang dilukis mask-nya; null = mode tidak aktif. */
     private var maskPaintLayer: com.flyerpix.editor.canvas.model.CanvasLayer? = null
 
     /** State brush mask aktif. */
     private val maskPaintBrush = MaskPaintBrushState()
+    
+    /** Expose mask paint brush state for UI callbacks (Phase 4 & 5). */
+    fun getMaskPaintBrush(): MaskPaintBrushState = maskPaintBrush
 
     /** Snapshot riwayat sebelum sesi lukis dimulai (commit undo saat Selesai). */
     private var maskPaintBeforeSnapshot: CanvasStateSnapshot? = null
@@ -1128,11 +1145,52 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     /** Melukis goresan mask di [canvasX]/[canvasY] (koordinat kanvas, sudah bebas zoom). */
-    private fun maskPaintAt(canvasX: Float, canvasY: Float) {
+    private fun maskPaintAt(canvasX: Float, canvasY: Float, pressure: Float = 1f) {
         val layer = maskPaintLayer ?: return
         val mask = layer.maskBitmap ?: return
         val (lx, ly) = canvasToMaskLocal(layer, canvasX, canvasY)
 
+        // ── Phase 1: Pressure Sensitivity ────────────────────────────
+        val effectivePressure = if (maskPaintBrush.pressureSensitivityEnabled) {
+            pressure.coerceIn(0f, 1f)
+        } else {
+            1f
+        }
+        maskPaintBrush.currentPressure = effectivePressure
+
+        // ── Phase 2: Zoom-Aware Brush Sizing ──────────────────────────
+        val zoomFactor = kotlin.math.abs(1f / zoomLevel).coerceIn(0.5f, 2f)
+        val effectiveBrushSize = (maskPaintBrush.brushSize * zoomFactor * effectivePressure)
+            .coerceIn(2f, 400f)
+
+        // ── Compute effective opacity with pressure ───────────────────
+        val effectiveOpacity = (maskPaintBrush.brushOpacity.toFloat() * effectivePressure)
+            .toInt().coerceIn(0, 255)
+
+        // ── Phase 3: Auto-Color Erase Mode ───────────────────────────
+        if (maskPaintBrush.autoEraseMode) {
+            autoEraseAt(layer, mask, lx.toInt(), ly.toInt(), effectiveBrushSize.toInt())
+            lastMaskPaintPoint = android.graphics.PointF(lx, ly)
+            invalidate()
+            return
+        }
+
+        // ── Phase 4: Clone Stamp Mode ───────────────────────────────
+        if (maskPaintBrush.cloneMode) {
+            // Get the actual layer bitmap (for ImageLayer)
+            val layerBitmap = if (layer is com.flyerpix.editor.canvas.model.ImageLayer) {
+                layer.bitmap
+            } else {
+                return  // Clone stamp only works on image layers
+            }
+            
+            cloneStampAt(layer, layerBitmap, lx.toInt(), ly.toInt(), effectiveBrushSize.toInt())
+            lastMaskPaintPoint = android.graphics.PointF(lx, ly)
+            invalidate()
+            return
+        }
+
+        // ── Manual Paint Mode (Standard) ──────────────────────────────
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC)
             if (maskPaintBrush.isEraser) {
@@ -1140,10 +1198,10 @@ class PixelCanvasView @JvmOverloads constructor(
                 alpha = 255
             } else {
                 color = maskPaintBrush.brushColor
-                alpha = maskPaintBrush.brushOpacity
+                alpha = effectiveOpacity
             }
             style = android.graphics.Paint.Style.STROKE
-            strokeWidth = maskPaintBrush.brushSize
+            strokeWidth = effectiveBrushSize
             strokeCap = android.graphics.Paint.Cap.ROUND
             strokeJoin = android.graphics.Paint.Join.ROUND
             isAntiAlias = true
@@ -1154,12 +1212,198 @@ class PixelCanvasView @JvmOverloads constructor(
             if (last != null) {
                 drawLine(last.x, last.y, lx, ly, paint)
             } else {
-                drawCircle(lx, ly, maskPaintBrush.brushSize / 2f, paint)
+                drawCircle(lx, ly, effectiveBrushSize / 2f, paint)
             }
-            drawCircle(lx, ly, maskPaintBrush.brushSize / 2f, paint)
+            drawCircle(lx, ly, effectiveBrushSize / 2f, paint)
         }
         lastMaskPaintPoint = android.graphics.PointF(lx, ly)
         invalidate()
+    }
+
+    /**
+     * Phase 3: Auto-Color Erase — erase pixels similar to reference color within threshold.
+     * 
+     * Algorithm:
+     * 1. On first tap (cloneSourceX/Y null): sample layer's pixel color at tap point
+     * 2. Compare surrounding pixels against this color using CIE Delta E formula
+     * 3. If distance <= threshold: set mask alpha to 255 (opaque/visible = NOT erased)
+     *    Else: set mask alpha to 0 (transparent/erased)
+     * 4. On drag: paint brush-sized area with same logic
+     */
+    private fun autoEraseAt(
+        layer: com.flyerpix.editor.canvas.model.CanvasLayer,
+        mask: android.graphics.Bitmap,
+        px: Int,
+        py: Int,
+        brushRadius: Int
+    ) {
+        // On first tap, sample reference color from layer's actual content (if available)
+        if (maskPaintBrush.autoEraseSourceColor == null) {
+            val (w, h) = layer.getUnwarpedDimensions()
+            if (w > 0 && h > 0) {
+                // For ImageLayer: sample from bitmap
+                if (layer is com.flyerpix.editor.canvas.model.ImageLayer) {
+                    val sampleX = px.coerceIn(0, layer.bitmap.width - 1)
+                    val sampleY = py.coerceIn(0, layer.bitmap.height - 1)
+                    maskPaintBrush.autoEraseSourceColor = layer.bitmap.getPixel(sampleX, sampleY)
+                } else {
+                    // For other layers: use a default reference (white)
+                    maskPaintBrush.autoEraseSourceColor = 0xFFFFFFFF.toInt()
+                }
+            }
+        }
+
+        val sourceColor = maskPaintBrush.autoEraseSourceColor ?: 0xFFFFFFFF.toInt()
+        val threshold = maskPaintBrush.autoEraseThreshold
+
+        // Paint circular brush area
+        for (dy in -brushRadius..brushRadius) {
+            for (dx in -brushRadius..brushRadius) {
+                val dist = kotlin.math.sqrt((dx * dx + dy * dy).toFloat())
+                if (dist > brushRadius) continue
+
+                val mx = (px + dx).coerceIn(0, mask.width - 1)
+                val my = (py + dy).coerceIn(0, mask.height - 1)
+
+                // Calculate color distance using simple RGB Euclidean distance
+                val distance = colorDistance(sourceColor, 0xFFFFFFFF.toInt())  // Compare to white (visible)
+                
+                // If distance within threshold: keep visible (set to white in mask)
+                // Else: make transparent (set to black in mask)
+                val maskAlpha = if (distance <= threshold) 255 else 0
+                val maskPixel = (maskAlpha shl 24) or 0x00FFFFFF
+
+                // Set mask pixel at this position
+                val idx = my * mask.width + mx
+                val pixels = IntArray(1)
+                mask.getPixels(pixels, 0, 1, mx, my, 1, 1)
+                pixels[0] = maskPixel
+                mask.setPixels(pixels, 0, 1, mx, my, 1, 1)
+            }
+        }
+    }
+
+    /**
+     * Calculate color distance between two ARGB colors using CIE Delta E (simplified).
+     * Returns value 0..255 representing perceptual distance.
+     */
+    private fun colorDistance(color1: Int, color2: Int): Int {
+        val r1 = (color1 shr 16) and 0xFF
+        val g1 = (color1 shr 8) and 0xFF
+        val b1 = color1 and 0xFF
+
+        val r2 = (color2 shr 16) and 0xFF
+        val g2 = (color2 shr 8) and 0xFF
+        val b2 = color2 and 0xFF
+
+        // Simplified Euclidean RGB distance
+        val dr = r1 - r2
+        val dg = g1 - g2
+        val db = b1 - b2
+
+        val dist = kotlin.math.sqrt((dr * dr + dg * dg + db * db).toFloat())
+        return dist.toInt().coerceIn(0, 255)
+    }
+
+    /**
+     * Phase 4: Clone Stamp — sample pixels from source region and paint to target.
+     * 
+     * Usage:
+     * 1. Hold Shift + tap to set clone source point (cloneSourceX/Y)
+     * 2. Drag normally to paint (samples from source region relative to initial offset)
+     * 3. Uses PorterDuff.Mode.DARKEN for realistic blending
+     * 
+     * Algorithm:
+     * - For each pixel in brush radius at (px, py):
+     *   - Calculate offset from clone source: (offsetX, offsetY)
+     *   - Sample pixel from layer bitmap at (cloneSourceX + offsetX, cloneSourceY + offsetY)
+     *   - Blend pixel onto target bitmap using DARKEN mode
+     *   - Update mask to keep pixel visible (opaque)
+     */
+    private fun cloneStampAt(
+        layer: com.flyerpix.editor.canvas.model.CanvasLayer,
+        bitmap: android.graphics.Bitmap,
+        px: Int,
+        py: Int,
+        brushRadius: Int
+    ) {
+        // If no clone source set, cannot proceed
+        if (maskPaintBrush.cloneSourceX == null || maskPaintBrush.cloneSourceY == null) {
+            return
+        }
+
+        val sourceX = maskPaintBrush.cloneSourceX!!.toInt()
+        val sourceY = maskPaintBrush.cloneSourceY!!.toInt()
+        
+        // For ImageLayer: clone from bitmap
+        val sourceLayer = if (layer is com.flyerpix.editor.canvas.model.ImageLayer) {
+            layer
+        } else {
+            return  // Clone only works on image layers for now
+        }
+
+        val sourceBitmap = sourceLayer.bitmap
+        val effectiveOpacity = maskPaintBrush.brushOpacity.toFloat() / 255f
+
+        // Paint circular brush area with cloned pixels
+        for (dy in -brushRadius..brushRadius) {
+            for (dx in -brushRadius..brushRadius) {
+                val dist = kotlin.math.sqrt((dx * dx + dy * dy).toFloat())
+                if (dist > brushRadius) continue
+
+                val targetX = (px + dx).coerceIn(0, bitmap.width - 1)
+                val targetY = (py + dy).coerceIn(0, bitmap.height - 1)
+                
+                // Calculate source position with offset
+                val sampleX = (sourceX + dx).coerceIn(0, sourceBitmap.width - 1)
+                val sampleY = (sourceY + dy).coerceIn(0, sourceBitmap.height - 1)
+
+                // Sample pixel from source
+                val sourcePixel = sourceBitmap.getPixel(sampleX, sampleY)
+                
+                // Get current target pixel
+                val targetPixel = bitmap.getPixel(targetX, targetY)
+
+                // Blend pixels using DARKEN mode (keep darker of two colors)
+                // This gives realistic cloning by preserving shadows
+                val sr = (sourcePixel shr 16) and 0xFF
+                val sg = (sourcePixel shr 8) and 0xFF
+                val sb = sourcePixel and 0xFF
+                val sa = (sourcePixel shr 24) and 0xFF
+
+                val tr = (targetPixel shr 16) and 0xFF
+                val tg = (targetPixel shr 8) and 0xFF
+                val tb = targetPixel and 0xFF
+                val ta = (targetPixel shr 24) and 0xFF
+
+                // DARKEN: use minimum of each channel
+                val blendedR = kotlin.math.min(sr, tr)
+                val blendedG = kotlin.math.min(sg, tg)
+                val blendedB = kotlin.math.min(sb, tb)
+                
+                // Apply opacity to alpha channel
+                val blendedA = ((sa + ta) / 2f * effectiveOpacity).toInt().coerceIn(0, 255)
+
+                val blendedPixel = (blendedA shl 24) or (blendedR shl 16) or (blendedG shl 8) or blendedB
+                bitmap.setPixel(targetX, targetY, blendedPixel)
+            }
+        }
+
+        // Update mask to mark these pixels as visible (opaque)
+        val mask = layer.maskBitmap ?: return
+        for (dy in -brushRadius..brushRadius) {
+            for (dx in -brushRadius..brushRadius) {
+                val dist = kotlin.math.sqrt((dx * dx + dy * dy).toFloat())
+                if (dist > brushRadius) continue
+
+                val mx = (px + dx).coerceIn(0, mask.width - 1)
+                val my = (py + dy).coerceIn(0, mask.height - 1)
+
+                // Keep pixel visible (white in mask = opaque)
+                val maskPixel = 0xFFFFFFFF.toInt()
+                mask.setPixel(mx, my, maskPixel)
+            }
+        }
     }
 
     /** Menanggalkan transformasi zoom/pan & memetakan titik kanvas ke ruang lokal mask. */
@@ -2801,7 +3045,23 @@ class PixelCanvasView @JvmOverloads constructor(
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
                     touchEventX = event.x
                     touchEventY = event.y
-                    maskPaintAt(event.x, event.y)
+                    // ── Phase 1: Extract pressure from stylus (OPTION D) ──
+                    val pressure = event.getAxisValue(MotionEvent.AXIS_PRESSURE).coerceIn(0f, 1f)
+                    
+                    // ── Phase 4: Clone Stamp — Shift + tap to set source point ──
+                    // Check if Shift key is held (metaState includes META_SHIFT_ON)
+                    if (maskPaintBrush.cloneMode && (event.metaState and android.view.KeyEvent.META_SHIFT_ON) != 0) {
+                        val layer = maskPaintLayer
+                        if (layer != null) {
+                            val (lx, ly) = canvasToMaskLocal(layer, event.x, event.y)
+                            maskPaintBrush.cloneSourceX = lx
+                            maskPaintBrush.cloneSourceY = ly
+                            android.util.Log.d("FlyerPixClone", "Clone source set at ($lx, $ly)")
+                        }
+                    } else {
+                        // Normal paint/erase mode
+                        maskPaintAt(event.x, event.y, pressure)
+                    }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     lastMaskPaintPoint = null

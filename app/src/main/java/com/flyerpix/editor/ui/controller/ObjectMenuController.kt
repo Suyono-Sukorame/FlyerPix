@@ -1341,6 +1341,41 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 onFinish = {
                     canvas.endMaskPaint()
                     closeMaskEditor()
+                },
+                // ── Phase 4 & 5: Smart Erase Callbacks (OPTION D) ──────────────────
+                onModeChange = { mode ->
+                    val brush = canvas.getMaskPaintBrush()
+                    when (mode) {
+                        "manual" -> {
+                            brush.autoEraseMode = false
+                            brush.cloneMode = false
+                        }
+                        "auto-erase" -> {
+                            brush.autoEraseMode = true
+                            brush.cloneMode = false
+                            brush.autoEraseSourceColor = null  // Reset on mode switch
+                        }
+                        "clone" -> {
+                            brush.autoEraseMode = false
+                            brush.cloneMode = true
+                            brush.cloneSourceX = null
+                            brush.cloneSourceY = null
+                        }
+                    }
+                },
+                onPressureToggle = { enabled ->
+                    canvas.getMaskPaintBrush().pressureSensitivityEnabled = enabled
+                },
+                onAutoEraseThreshold = { threshold ->
+                    canvas.getMaskPaintBrush().autoEraseThreshold = threshold.coerceIn(0, 255)
+                },
+                onCloneModeToggle = { enabled ->
+                    val brush = canvas.getMaskPaintBrush()
+                    brush.cloneMode = enabled
+                    if (!enabled) {
+                        brush.cloneSourceX = null
+                        brush.cloneSourceY = null
+                    }
                 }
             )
         }

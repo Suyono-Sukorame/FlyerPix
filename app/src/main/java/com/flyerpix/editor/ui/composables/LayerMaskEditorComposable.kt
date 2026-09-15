@@ -31,13 +31,23 @@ fun LayerMaskEditorComposable(
     onFeatherApply: (Float) -> Unit,
     onBrushConfig: (brushSize: Float, brushOpacity: Int, color: Int, isEraser: Boolean) -> Unit,
     onEnableMaskPaint: () -> Unit,
-    onFinish: () -> Unit
+    onFinish: () -> Unit,
+    onModeChange: (mode: String) -> Unit = {},  // "manual", "auto-erase", "clone"
+    onPressureToggle: (enabled: Boolean) -> Unit = {},
+    onAutoEraseThreshold: (threshold: Int) -> Unit = {},
+    onCloneModeToggle: (enabled: Boolean) -> Unit = {}
 ) {
     var brushSize by remember { mutableStateOf(20f) }
     var brushOpacity by remember { mutableStateOf(1f) }
     var isInverted by remember { mutableStateOf(layer.maskInverted) }
     var isEraser by remember { mutableStateOf(false) }
     var selectedBrushColor by remember { mutableStateOf(0xFFFFFFFF.toInt()) }
+    
+    // ── Phase 4 & 5: Smart Erase Modes (OPTION D) ────────────────────────────
+    var paintMode by remember { mutableStateOf("manual") }  // "manual", "auto-erase", "clone"
+    var pressureSensitivityEnabled by remember { mutableStateOf(true) }
+    var autoEraseThreshold by remember { mutableStateOf(50) }
+    var cloneModeEnabled by remember { mutableStateOf(false) }
 
     fun fillColor(): Int = when (selectedBrushColor) {
         0xFF000000.toInt() -> 0x00000000.toInt()
@@ -95,6 +105,114 @@ fun LayerMaskEditorComposable(
 
                 Text("Opacity: ${(brushOpacity * 100).toInt()}%", fontSize = 12.sp, color = Color(0xFF999999))
                 Slider(value = brushOpacity, onValueChange = { brushOpacity = it; onBrushConfig(brushSize, (brushOpacity * 255).toInt().coerceIn(0, 255), fillColor(), isEraser) }, valueRange = 0f..1f)
+            }
+
+            // ── Phase 4 & 5: Smart Erase Mode Selector (OPTION D) ──────────────────
+            item {
+                Text("Erase Mode", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFBBBBBB))
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        "manual" to "Manual",
+                        "auto-erase" to "Auto-Color",
+                        "clone" to "Clone"
+                    ).forEach { (mode, label) ->
+                        Button(
+                            onClick = {
+                                paintMode = mode
+                                onModeChange(mode)
+                                // Reset clone source when switching modes
+                                if (mode != "clone") {
+                                    onCloneModeToggle(false)
+                                }
+                            },
+                            modifier = Modifier.weight(1f).height(36.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = if (paintMode == mode) Color(0xFF0066FF) else Color(0xFF333333)
+                            ),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text(label, fontSize = 11.sp, color = Color.White)
+                        }
+                    }
+                }
+            }
+
+            // ── Pressure Sensitivity Toggle ────────────────────────────────
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF222222), shape = RoundedCornerShape(6.dp))
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Pressure Sensitivity", fontSize = 12.sp, color = Color(0xFFBBBBBB))
+                    Switch(
+                        checked = pressureSensitivityEnabled,
+                        onCheckedChange = { 
+                            pressureSensitivityEnabled = it
+                            onPressureToggle(it)
+                        }
+                    )
+                }
+            }
+
+            // ── Auto-Color Erase Threshold Slider ──────────────────────────────
+            if (paintMode == "auto-erase") {
+                item {
+                    Text("Auto-Erase Threshold", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFBBBBBB))
+                    Text("${autoEraseThreshold} (color distance 0-255)", fontSize = 11.sp, color = Color(0xFF999999))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Slider(
+                        value = autoEraseThreshold.toFloat(),
+                        onValueChange = {
+                            autoEraseThreshold = it.toInt()
+                            onAutoEraseThreshold(autoEraseThreshold)
+                        },
+                        valueRange = 0f..255f,
+                        steps = 50
+                    )
+                    Text("Lower = stricter color matching | Higher = more forgiving", fontSize = 10.sp, color = Color(0xFF777777))
+                }
+            }
+
+            // ── Clone Stamp Mode Info ──────────────────────────────────────────
+            if (paintMode == "clone") {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(6.dp),
+                        backgroundColor = Color(0xFF1F4D2B)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Clone Stamp Instructions", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF00FF66))
+                            Text(
+                                "1. Hold Shift + tap to set clone source point\n" +
+                                "2. Drag normally to paint cloned pixels\n" +
+                                "3. Uses DARKEN blending for realistic cloning",
+                                fontSize = 10.sp,
+                                color = Color(0xFFBBBBBB),
+                                modifier = Modifier.padding(top = 6.dp)
+                            )
+                        }
+                    }
+                    
+                    Button(
+                        onClick = { 
+                            cloneModeEnabled = !cloneModeEnabled
+                            onCloneModeToggle(cloneModeEnabled)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(40.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = if (cloneModeEnabled) Color(0xFF0066FF) else Color(0xFF333333)
+                        )
+                    ) {
+                        Text(if (cloneModeEnabled) "Clone Mode Active" else "Enable Clone Mode", fontSize = 12.sp)
+                    }
+                }
             }
 
             item {

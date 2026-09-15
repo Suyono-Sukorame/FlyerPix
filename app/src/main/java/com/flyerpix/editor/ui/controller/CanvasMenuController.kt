@@ -20,6 +20,7 @@ import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.canvas.model.CanvasBackground
 import com.flyerpix.editor.canvas.model.CanvasBackgroundMode
 import com.flyerpix.editor.canvas.model.GradientColor
+import com.flyerpix.editor.canvas.model.MaskUtils
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 import com.flyerpix.editor.ui.adapter.GradientPickerAdapter
 import com.flyerpix.editor.ui.compose.CanvasBgDetailPage
@@ -27,6 +28,7 @@ import com.flyerpix.editor.ui.compose.CanvasGridDetailPage
 import com.flyerpix.editor.ui.compose.CanvasSizeDetailPage
 import com.flyerpix.editor.ui.compose.CanvasSnapDetailPage
 import com.flyerpix.editor.ui.composables.ReplaceBackgroundComposable
+import com.flyerpix.editor.ui.composables.RemoveBgComposable
 import com.flyerpix.editor.ui.dialog.ColorPickerDialog
 
 /**
@@ -62,6 +64,7 @@ class CanvasMenuController(
     companion object {
         const val TOOL_BG        = "canvas_bg"
         const val TOOL_REPLACE_BG = "canvas_replace_bg"
+        const val TOOL_REMOVE_BG = "canvas_remove_bg"
         const val TOOL_SIZE      = "canvas_size"
         const val TOOL_GRID      = "canvas_grid"
         const val TOOL_SNAP      = "canvas_snap"
@@ -162,6 +165,7 @@ class CanvasMenuController(
         val specs = listOf(
             Spec(TOOL_BG,   "Background", R.drawable.ic_background_24px),
             Spec(TOOL_REPLACE_BG, "Replace BG", R.drawable.ic_background_24px),
+            Spec(TOOL_REMOVE_BG, "Remove BG", R.drawable.ic_background_24px),
             Spec(TOOL_SIZE, "Canvas Size", R.drawable.ic_aspect_ratio_24px),
             Spec(TOOL_GRID, "Grid", R.drawable.ic_grid_on_24px),
             Spec(TOOL_SNAP, "Snap", R.drawable.ic_snap_24px)
@@ -280,6 +284,9 @@ class CanvasMenuController(
                         imageBitmap = pixelCanvasView.canvasBackground.imageBitmap
                     )
                     showReplaceBackgroundSheet()
+                }
+                TOOL_REMOVE_BG -> {
+                    showRemoveBgSheet()
                 }
                 TOOL_SIZE -> {
                     showComposeSizeSheet()
@@ -763,6 +770,83 @@ class CanvasMenuController(
             ) { width, height ->
                 updateCanvasAspectRatio(width, height)
             }
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REMOVE BACKGROUND SHEET
+    // ────────────────────────────────────────────────────────────────────────
+
+    private fun showRemoveBgSheet() {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val selectedLayer = pixelCanvasView.selectedLayer
+
+        if (selectedLayer == null) {
+            showSnackbar("Select a layer first")
+            deselect(restoreStrip = true)
+            return
+        }
+
+        binding.canvasContentPanel.visibility = View.GONE
+        binding.canvasMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        val layerDisplayName = when (selectedLayer) {
+            is com.flyerpix.editor.canvas.model.ImageLayer -> selectedLayer.layerName
+            is com.flyerpix.editor.canvas.model.TextLayer -> "Text: ${selectedLayer.text.take(20)}"
+            is com.flyerpix.editor.canvas.model.ShapeLayer -> "Shape"
+            is com.flyerpix.editor.canvas.model.PenLayer -> "Pen"
+            is com.flyerpix.editor.canvas.model.StickerLayer -> "Sticker"
+            else -> "Layer"
+        }
+
+        host.setContent {
+            RemoveBgComposable(
+                selectedLayerName = layerDisplayName,
+                onGradientMaskClick = {
+                    applyGradientMask(selectedLayer)
+                },
+                onPaintMaskClick = {
+                    // TODO: Implement paint mask mode activation
+                    showSnackbar("Paint mask editor coming soon")
+                },
+                onClose = {
+                    deselect(restoreStrip = true)
+                }
+            )
+        }
+    }
+
+    private fun applyGradientMask(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+        val snap = pixelCanvasView.captureCurrentState("Remove Background (Gradient)")
+        
+        val (w, h) = layer.getUnwarpedDimensions()
+        if (w <= 0 || h <= 0) {
+            showSnackbar("Invalid layer dimensions")
+            return
+        }
+
+        if (layer.maskBitmap == null) {
+            layer.createMask(w.toInt(), h.toInt())
+        }
+
+        layer.maskBitmap?.let { bmp ->
+            com.flyerpix.editor.canvas.model.MaskUtils.generateGradientMask(
+                bmp,
+                com.flyerpix.editor.canvas.model.GradientType.LINEAR,
+                com.flyerpix.editor.canvas.model.MaskUtils.DIR_BOTTOM_TOP
+            )
+            layer.maskEnabled = true
+            pixelCanvasView.recordAction("Remove Background (Gradient)", snap)
+            pixelCanvasView.invalidate()
+            showSnackbar("Gradient mask applied. Edit in layer settings to customize.")
+            deselect(restoreStrip = true)
         }
     }
 }
