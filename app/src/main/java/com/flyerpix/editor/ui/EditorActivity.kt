@@ -434,6 +434,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         canvasMenuController.initialize()
         canvasMenuController.setBgGalleryLauncher(bgGalleryLauncher)
         canvasMenuController.setOnCameraRequested { checkCameraPermissionForBackground() }
+        canvasMenuController.onOpenMaskEditor = { layer -> objectMenu.showMaskEditor(layer) }
         canvasMenuController.onCanvasSettingsOpenChanged = { open ->
             val density = resources.displayMetrics.density
             val offset = (56 * density).toInt()

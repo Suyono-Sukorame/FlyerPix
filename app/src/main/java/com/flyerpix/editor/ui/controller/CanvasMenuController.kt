@@ -52,6 +52,7 @@ class CanvasMenuController(
     private lateinit var bgGradientAdapter: GradientPickerAdapter
     private var bgGalleryLauncher: ActivityResultLauncher<String>? = null
     private var onCameraRequested: (() -> Unit)? = null
+    var onOpenMaskEditor: ((com.flyerpix.editor.canvas.model.CanvasLayer) -> Unit)? = null
 
     private val composeHost: ComposeView? get() = binding.composeThreeDDetail
     private val composeContainer: FrameLayout? get() = binding.composeThreeDSheetContainer
@@ -60,6 +61,8 @@ class CanvasMenuController(
     private var initialGridSpacing: Float = 32f
     private var initialSnapEnabled: Boolean = true
     private var replaceBgAutoColorMatch: Boolean = false
+    private var replaceBgSession = 0
+    private var removeBgSession = 0
 
     companion object {
         const val TOOL_BG        = "canvas_bg"
@@ -164,8 +167,8 @@ class CanvasMenuController(
         data class Spec(val tag: String, val label: String, val iconRes: Int)
         val specs = listOf(
             Spec(TOOL_BG,   "Background", R.drawable.ic_background_24px),
-            Spec(TOOL_REPLACE_BG, "Replace BG", R.drawable.ic_background_24px),
-            Spec(TOOL_REMOVE_BG, "Remove BG", R.drawable.ic_background_24px),
+            Spec(TOOL_REPLACE_BG, "Replace BG", R.drawable.ic_gradient_24px),
+            Spec(TOOL_REMOVE_BG, "Remove BG", R.drawable.ic_mask_24px),
             Spec(TOOL_SIZE, "Canvas Size", R.drawable.ic_aspect_ratio_24px),
             Spec(TOOL_GRID, "Grid", R.drawable.ic_grid_on_24px),
             Spec(TOOL_SNAP, "Snap", R.drawable.ic_snap_24px)
@@ -415,16 +418,30 @@ class CanvasMenuController(
         val host = composeHost ?: return
         val container = composeContainer ?: return
 
+        binding.canvasContentPanel.visibility = View.GONE
+        binding.canvasMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
         val sheetMaxH = computeComposeSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { pixelCanvasView.invalidate() }
+        replaceBgSession++
+
+        val snapshot = pixelCanvasView.canvasBackground.copy(
+            imageBitmap = pixelCanvasView.canvasBackground.imageBitmap
+        )
 
         host.setContent {
             ReplaceBackgroundComposable(
                 currentBackground = pixelCanvasView.canvasBackground,
                 onBackgroundChange = { newBg ->
-                    pixelCanvasView.canvasBackground = newBg
-                    pixelCanvasView.invalidate()
+                    when (newBg.mode) {
+                        CanvasBackgroundMode.TRANSPARENT -> pixelCanvasView.setTransparentBackground()
+                        CanvasBackgroundMode.SOLID_COLOR -> pixelCanvasView.setColorBackground(newBg.solidColor)
+                        CanvasBackgroundMode.GRADIENT -> newBg.gradient?.let { pixelCanvasView.setGradientBackground(it) }
+                        CanvasBackgroundMode.IMAGE -> newBg.imageBitmap?.let { pixelCanvasView.setImageBackground(it) }
+                    }
                 },
                 onColorMatchToggle = { enabled ->
                     replaceBgAutoColorMatch = enabled
@@ -432,11 +449,9 @@ class CanvasMenuController(
                 onGalleryClick = {
                     bgGalleryLauncher?.launch("image/*")
                 },
-                onClose = {
-                    pixelCanvasView.runRecordedAction("Replace Canvas Background") {}
-                    replaceBgAutoColorMatch = false
-                    initialBgSnapshot = null
-                    deselect(restoreStrip = true)
+                onReset = {
+                    pixelCanvasView.setColorBackground(Color.WHITE)
+                    showReplaceBackgroundSheet()
                 },
                 onApply = { autoMatch, blend ->
                     if (autoMatch) {
@@ -478,7 +493,20 @@ class CanvasMenuController(
                     initialBgSnapshot = null
                     deselect(restoreStrip = true)
                 },
-                autoColorMatchEnabled = replaceBgAutoColorMatch
+                onCancel = {
+                    when (snapshot.mode) {
+                        CanvasBackgroundMode.TRANSPARENT -> pixelCanvasView.setTransparentBackground()
+                        CanvasBackgroundMode.SOLID_COLOR -> pixelCanvasView.setColorBackground(snapshot.solidColor)
+                        CanvasBackgroundMode.GRADIENT -> snapshot.gradient?.let { pixelCanvasView.setGradientBackground(it) }
+                        CanvasBackgroundMode.IMAGE -> snapshot.imageBitmap?.let { pixelCanvasView.setImageBackground(it) }
+                    }
+                    replaceBgAutoColorMatch = false
+                    initialBgSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                autoColorMatchEnabled = replaceBgAutoColorMatch,
+                maxHeightPx = sheetMaxH,
+                sessionKey = replaceBgSession
             )
         }
     }
@@ -796,6 +824,7 @@ class CanvasMenuController(
         val sheetMaxH = computeComposeSheetHeight()
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { pixelCanvasView.invalidate() }
+        removeBgSession++
 
         val layerDisplayName = when (selectedLayer) {
             is com.flyerpix.editor.canvas.model.ImageLayer -> selectedLayer.layerName
@@ -809,21 +838,29 @@ class CanvasMenuController(
         host.setContent {
             RemoveBgComposable(
                 selectedLayerName = layerDisplayName,
-                onGradientMaskClick = {
-                    applyGradientMask(selectedLayer)
+                onReset = {
+                    showRemoveBgSheet()
                 },
-                onPaintMaskClick = {
-                    // TODO: Implement paint mask mode activation
-                    showSnackbar("Paint mask editor coming soon")
+                onApply = { method, featherStrength ->
+                    when (method) {
+                        "gradient" -> applyGradientMask(selectedLayer, featherStrength)
+                        "paint" -> {
+                            deselect(restoreStrip = true)
+                            onOpenMaskEditor?.invoke(selectedLayer)
+                        }
+                        else -> {}
+                    }
                 },
-                onClose = {
+                onCancel = {
                     deselect(restoreStrip = true)
-                }
+                },
+                maxHeightPx = sheetMaxH,
+                sessionKey = removeBgSession
             )
         }
     }
 
-    private fun applyGradientMask(layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+    private fun applyGradientMask(layer: com.flyerpix.editor.canvas.model.CanvasLayer, featherStrength: Float) {
         val snap = pixelCanvasView.captureCurrentState("Remove Background (Gradient)")
         
         val (w, h) = layer.getUnwarpedDimensions()
@@ -842,10 +879,14 @@ class CanvasMenuController(
                 com.flyerpix.editor.canvas.model.GradientType.LINEAR,
                 com.flyerpix.editor.canvas.model.MaskUtils.DIR_BOTTOM_TOP
             )
+            val featherRadius = (featherStrength * 20f).toInt()
+            if (featherRadius > 0) {
+                com.flyerpix.editor.canvas.model.MaskUtils.featherMask(bmp, featherRadius)
+            }
             layer.maskEnabled = true
             pixelCanvasView.recordAction("Remove Background (Gradient)", snap)
             pixelCanvasView.invalidate()
-            showSnackbar("Gradient mask applied. Edit in layer settings to customize.")
+            showSnackbar("Gradient mask applied")
             deselect(restoreStrip = true)
         }
     }

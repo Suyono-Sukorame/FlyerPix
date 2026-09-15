@@ -1,258 +1,323 @@
 package com.flyerpix.editor.ui.composables
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.flyerpix.editor.R
+
+private val PanelColorScheme = lightColors(
+    primary = Color(0xFF1769FF),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1A1A2E),
+    background = Color(0xFFFFFFFF)
+)
+
+private const val PanelTextSecondary = 0xFF5F6B7A
+private const val PanelDivider = 0xFFE4E8F0
+private const val PanelAlt = 0xFFF0F3F8
+private const val PanelHandle = 0xFFD0D4DE
 
 @Composable
 fun RemoveBgComposable(
-    onClose: () -> Unit,
-    onGradientMaskClick: () -> Unit,
-    onPaintMaskClick: () -> Unit,
-    selectedLayerName: String = "Selected Layer"
+    selectedLayerName: String = "Selected Layer",
+    onReset: () -> Unit,
+    onApply: (method: String?, featherStrength: Float) -> Unit,
+    onCancel: () -> Unit,
+    maxHeightPx: Int = 420,
+    sessionKey: Int = 0
 ) {
     var selectedMethod by remember { mutableStateOf<String?>(null) }
     var featherStrength by remember { mutableStateOf(0.5f) }
+    val scrollState = remember(sessionKey) { ScrollState(0) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1A1A1A))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Remove Background",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, "Close", tint = Color.White)
-            }
-        }
-
-        // Target Layer Info
-        Card(
+    MaterialTheme(colors = PanelColorScheme) {
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            backgroundColor = Color(0xFF2A2A2A),
-            shape = RoundedCornerShape(8.dp),
-            elevation = 0.dp
+                .fillMaxHeight(),
+            contentAlignment = Alignment.BottomCenter
         ) {
-            Row(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Layer",
-                    tint = Color(0xFF0066FF),
-                    modifier = Modifier.size(24.dp)
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "Layer:",
-                        fontSize = 11.sp,
-                        color = Color(0xFFBBBBBB)
-                    )
-                    Text(
-                        selectedLayerName,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                }
-            }
-        }
-
-        // Method Selection
-        Text(
-            "Select Method",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color(0xFFBBBBBB)
-        )
-
-        // Gradient Mask Option
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp),
-            backgroundColor = if (selectedMethod == "gradient") Color(0xFF0066FF).copy(alpha = 0.2f) else Color(0xFF2A2A2A),
-            shape = RoundedCornerShape(12.dp),
-            elevation = 0.dp
-        ) {
-            Button(
-                onClick = { selectedMethod = "gradient" },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Transparent),
-                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
-                elevation = null
+                    .height(with(LocalDensity.current) { maxHeightPx.toDp() }),
+                shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
+                elevation = 8.dp,
+                backgroundColor = MaterialTheme.colors.surface
             ) {
                 Column(
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp)
                 ) {
-                    Text(
-                        "Gradient Mask (Automatic)",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .width(32.dp)
+                            .height(4.dp)
+                            .background(Color(PanelHandle), RoundedCornerShape(50))
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Best for skies & horizons. Creates smooth fade-out effect.",
-                        fontSize = 11.sp,
-                        color = Color(0xFFBBBBBB),
-                        maxLines = 2
-                    )
-                }
-            }
-        }
 
-        // Paint Mask Option
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp),
-            backgroundColor = if (selectedMethod == "paint") Color(0xFF0066FF).copy(alpha = 0.2f) else Color(0xFF2A2A2A),
-            shape = RoundedCornerShape(12.dp),
-            elevation = 0.dp
-        ) {
-            Button(
-                onClick = { selectedMethod = "paint" },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Transparent),
-                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Transparent),
-                elevation = null
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "Paint Mask (Manual)",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Precise control. Paint black to remove, white to restore.",
-                        fontSize = 11.sp,
-                        color = Color(0xFFBBBBBB),
-                        maxLines = 2
-                    )
-                }
-            }
-        }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(scrollState)
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Divider(color = Color(PanelDivider), thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(2.dp))
 
-        // Feather Strength Slider
-        if (selectedMethod != null) {
-            Divider(color = Color(0xFF333333), thickness = 0.5.dp)
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                backgroundColor = Color(0xFFF8FAFC),
+                                elevation = 0.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_layers_24px),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colors.primary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Target Layer",
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp,
+                                            color = Color(PanelTextSecondary)
+                                        )
+                                        Text(
+                                            text = selectedLayerName,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colors.onSurface
+                                        )
+                                    }
+                                }
+                            }
 
-            Text(
-                "Edge Smoothness",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFFBBBBBB)
-            )
+                            Text(
+                                text = "Select Method",
+                                style = MaterialTheme.typography.caption,
+                                color = Color(PanelTextSecondary),
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
 
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Slider(
-                    value = featherStrength,
-                    onValueChange = { featherStrength = it },
-                    valueRange = 0f..1f,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFF0066FF),
-                        activeTrackColor = Color(0xFF0066FF),
-                        inactiveTrackColor = Color(0xFF444444)
-                    )
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Soft", fontSize = 11.sp, color = Color(0xFF888888))
-                    Text("Hard", fontSize = 11.sp, color = Color(0xFF888888))
-                }
-            }
-        }
+                            val gradientSelected = selectedMethod == "gradient"
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .border(
+                                        width = if (gradientSelected) 1.5.dp else 1.dp,
+                                        color = if (gradientSelected) MaterialTheme.colors.primary else Color(PanelDivider),
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable { selectedMethod = "gradient" },
+                                shape = RoundedCornerShape(10.dp),
+                                backgroundColor = if (gradientSelected) MaterialTheme.colors.primary.copy(alpha = 0.08f) else Color(0xFFF8FAFC),
+                                elevation = 0.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_gradient_24px),
+                                        contentDescription = null,
+                                        tint = if (gradientSelected) MaterialTheme.colors.primary else Color(PanelTextSecondary),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Gradient Mask (Automatic)",
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colors.onSurface
+                                        )
+                                        Text(
+                                            text = "Best for skies & horizons. Creates smooth fade-out effect.",
+                                            fontSize = 10.sp,
+                                            color = Color(PanelTextSecondary)
+                                        )
+                                    }
+                                }
+                            }
 
-        Spacer(modifier = Modifier.height(8.dp))
+                            val paintSelected = selectedMethod == "paint"
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .border(
+                                        width = if (paintSelected) 1.5.dp else 1.dp,
+                                        color = if (paintSelected) MaterialTheme.colors.primary else Color(PanelDivider),
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable { selectedMethod = "paint" },
+                                shape = RoundedCornerShape(10.dp),
+                                backgroundColor = if (paintSelected) MaterialTheme.colors.primary.copy(alpha = 0.08f) else Color(0xFFF8FAFC),
+                                elevation = 0.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_mask_24px),
+                                        contentDescription = null,
+                                        tint = if (paintSelected) MaterialTheme.colors.primary else Color(PanelTextSecondary),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Paint Mask (Manual)",
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colors.onSurface
+                                        )
+                                        Text(
+                                            text = "Precise control. Paint black to remove, white to restore.",
+                                            fontSize = 10.sp,
+                                            color = Color(PanelTextSecondary)
+                                        )
+                                    }
+                                }
+                            }
 
-        // Action Buttons
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = onClose,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(44.dp),
-                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF333333)),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("Cancel", color = Color.White, fontSize = 13.sp)
-            }
+                            if (selectedMethod != null) {
+                                Divider(color = Color(PanelDivider), thickness = 0.5.dp)
 
-            Button(
-                onClick = {
-                    when (selectedMethod) {
-                        "gradient" -> onGradientMaskClick()
-                        "paint" -> onPaintMaskClick()
-                        else -> onClose()
+                                Text(
+                                    text = "Edge Smoothness",
+                                    style = MaterialTheme.typography.caption,
+                                    color = Color(PanelTextSecondary),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Slider(
+                                    value = featherStrength,
+                                    onValueChange = { featherStrength = it },
+                                    valueRange = 0f..1f,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colors.primary,
+                                        activeTrackColor = MaterialTheme.colors.primary
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(28.dp)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        "Soft",
+                                        fontSize = 10.sp,
+                                        color = Color(PanelTextSecondary)
+                                    )
+                                    Text(
+                                        "Hard",
+                                        fontSize = 10.sp,
+                                        color = Color(PanelTextSecondary)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(2.dp))
+
+                            Text(
+                                text = "Reset",
+                                style = MaterialTheme.typography.caption,
+                                color = MaterialTheme.colors.primary,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedMethod = null
+                                        featherStrength = 0.5f
+                                        onReset()
+                                    }
+                                    .padding(vertical = 4.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .width(60.dp)
+                                .padding(start = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Bottom
+                        ) {
+                            TextButton(
+                                onClick = onCancel,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                            ) {
+                                Text("Cancel", style = MaterialTheme.typography.caption)
+                            }
+                            Button(
+                                onClick = { onApply(selectedMethod, featherStrength) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = MaterialTheme.colors.primary,
+                                    contentColor = Color.White
+                                ),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                elevation = ButtonDefaults.elevation(defaultElevation = 1.dp),
+                                enabled = selectedMethod != null
+                            ) {
+                                Text(
+                                    text = "Apply",
+                                    style = MaterialTheme.typography.caption,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
-                    onClose()
-                },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(44.dp),
-                enabled = selectedMethod != null,
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor = Color(0xFF0066FF),
-                    disabledBackgroundColor = Color(0xFF555555)
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    "Apply",
-                    color = if (selectedMethod != null) Color.White else Color(0xFF888888),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                }
             }
         }
     }

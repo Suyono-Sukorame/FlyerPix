@@ -1214,12 +1214,15 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 onGalleryClick = {
                     onBackgroundGalleryRequested()
                 },
-                onClose = {
+                onReset = {
                     closeReplaceBackgroundEditor()
                 },
                 onApply = { autoMatch, blend ->
                     applyAutoColorMatch(autoMatch)
                     if (blend) applyBlendMaskToSelected()
+                    closeReplaceBackgroundEditor()
+                },
+                onCancel = {
                     closeReplaceBackgroundEditor()
                 },
                 autoColorMatchEnabled = autoColorMatchEnabled
