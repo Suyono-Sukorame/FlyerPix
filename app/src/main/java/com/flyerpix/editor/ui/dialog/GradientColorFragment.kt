@@ -32,6 +32,13 @@ class GradientColorFragment : Fragment() {
     private var angle: Float = 0f
     private var editingStart = true
 
+    private var gradientListener: ((GradientColor) -> Unit)? = null
+
+    /** Live preview — dipanggil setiap state gradasi berubah. */
+    fun setOnGradientChanged(listener: (GradientColor) -> Unit) {
+        gradientListener = listener
+    }
+
     private lateinit var preview: View
     private lateinit var colorStartView: View
     private lateinit var colorEndView: View
@@ -119,6 +126,7 @@ class GradientColorFragment : Fragment() {
             updateColorSwatches()
             updatePreview()
             presetAdapter?.updateSelection(matchingPresetIndex())
+            notifyGradientChanged()
             closeStopEditor()
         }
         view.findViewById<View>(R.id.btnStopEditorCancel).setOnClickListener { closeStopEditor() }
@@ -136,6 +144,7 @@ class GradientColorFragment : Fragment() {
             layoutAngle.visibility = if (gradientType == GradientType.LINEAR) View.VISIBLE else View.GONE
             updatePreview()
             presetAdapter?.updateSelection(matchingPresetIndex())
+            notifyGradientChanged()
         }
 
         sliderAngle.addOnChangeListener { _, value, fromUser ->
@@ -144,6 +153,7 @@ class GradientColorFragment : Fragment() {
                 tvAngleLabel.text = "Angle: ${value.roundToInt()}°"
                 updatePreview()
                 presetAdapter?.updateSelection(matchingPresetIndex())
+                notifyGradientChanged()
             }
         }
 
@@ -164,6 +174,7 @@ class GradientColorFragment : Fragment() {
             tvAngleLabel.text = "Angle: ${angle.roundToInt()}°"
             updateColorSwatches()
             updatePreview()
+            notifyGradientChanged()
         }
         rvPresets.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
         rvPresets.adapter = presetAdapter
@@ -190,6 +201,10 @@ class GradientColorFragment : Fragment() {
             angle = angle,
             name = "Custom"
         )
+    }
+
+    private fun notifyGradientChanged() {
+        gradientListener?.invoke(getGradient())
     }
 
     /** Indeks preset yang cocok persis dengan state gradasi saat ini, -1 jika tak ada. */

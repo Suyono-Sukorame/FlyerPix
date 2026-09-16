@@ -34,6 +34,12 @@ class ColorPickerDialog : DialogFragment() {
     private var initialGradient: GradientColor? = null
     private var resultKey: String = RESULT_KEY
 
+    /** Live preview warna solid — dipanggil setiap pilihan berubah (sebelum OK). */
+    var onColorChanged: (Int) -> Unit = {}
+
+    /** Live preview gradasi — dipanggil setiap pilihan berubah (sebelum OK). */
+    var onGradientChanged: (GradientColor) -> Unit = {}
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NO_TITLE, R.style.AppAlertDialog)
@@ -54,6 +60,13 @@ class ColorPickerDialog : DialogFragment() {
 
         val solidFragment = SolidColorFragment.newInstance(initialColor)
         val gradientFragment = GradientColorFragment.newInstance(initialGradient)
+
+        solidFragment.setOnColorChanged { color ->
+            onColorChanged(color)
+        }
+        gradientFragment.setOnGradientChanged { gradient ->
+            onGradientChanged(gradient)
+        }
 
         val pagerAdapter = object : FragmentStateAdapter(this) {
             override fun getItemCount() = 2

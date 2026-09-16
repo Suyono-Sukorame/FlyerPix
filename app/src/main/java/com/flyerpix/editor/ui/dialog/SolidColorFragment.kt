@@ -15,6 +15,14 @@ class SolidColorFragment : Fragment() {
 
     private var editorView: SolidColorEditorView? = null
 
+    private var pendingColorListener: ((Int) -> Unit)? = null
+
+    /** Live preview — dipanggil setiap warna solid berubah. */
+    fun setOnColorChanged(listener: (Int) -> Unit) {
+        pendingColorListener = listener
+        editorView?.setOnColorChanged(listener)
+    }
+
     override fun onCreateView(
         inflater: android.view.LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
@@ -34,6 +42,7 @@ class SolidColorFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         val initColor = arguments?.getInt(ARG_COLOR, Color.WHITE) ?: Color.WHITE
         editorView?.setInitialColor(initColor)
+        pendingColorListener?.let { editorView?.setOnColorChanged(it) }
     }
 
     /** Warna solid terpilih — dipanggil saat dialog OK. */

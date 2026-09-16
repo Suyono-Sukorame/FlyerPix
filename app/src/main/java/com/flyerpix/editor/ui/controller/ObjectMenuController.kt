@@ -22,6 +22,7 @@ import com.flyerpix.editor.canvas.model.ArrowLayer
 import com.flyerpix.editor.canvas.model.ArrowStyle
 import com.flyerpix.editor.canvas.model.BezierInputFlow
 import com.flyerpix.editor.canvas.model.GradientType
+import com.flyerpix.editor.canvas.model.GradientColor
 import com.flyerpix.editor.canvas.model.PenLayer
 import com.flyerpix.editor.canvas.model.ShapeLayer
 import com.flyerpix.editor.canvas.model.ShapeType
@@ -90,6 +91,9 @@ class ObjectMenuController(
     private var draftArrow: ArrowLayer? = null
     private var draftPen: PenLayer? = null
     private val bezierFlow = BezierInputFlow()
+
+    /** State Brush Color draw sheet yang bisa di-update live dari color picker dialog. */
+    private val liveDrawBrushColor = mutableStateOf(0)
 
     /**
      * Callback saat salah satu Compose sheet Add dibuka/ditutup,
@@ -354,7 +358,14 @@ class ObjectMenuController(
             }
         }
         fragmentManager.setFragmentResultListener(DRAW_COLOR_RESULT_KEY, activity) { _, bundle ->
-            val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
+            @Suppress("DEPRECATION")
+            val gradient = bundle.getSerializable(ColorPickerDialog.EXTRA_GRADIENT) as? GradientColor
+            val color = if (gradient != null) {
+                gradient.colors.firstOrNull() ?: Color.WHITE
+            } else {
+                bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
+            }
+            liveDrawBrushColor.value = color
             canvas.freeDrawColor = color
             showComposeDrawSheet()
         }
@@ -661,24 +672,36 @@ class ObjectMenuController(
 
         host.setContent {
             var currentBrushSize by remember { mutableStateOf(canvas.freeDrawStrokeWidth) }
-            var currentBrushColor by remember { mutableStateOf(canvas.freeDrawColor) }
+            liveDrawBrushColor.value = canvas.freeDrawColor
 
             DrawDetailPage(
                 brushSize = currentBrushSize,
-                brushColor = currentBrushColor,
+                brushColor = liveDrawBrushColor.value,
                 onBrushSizeChange = { size ->
                     currentBrushSize = size
                     canvas.freeDrawStrokeWidth = size
                 },
                 onBrushColorChange = { color ->
-                    currentBrushColor = color
+                    liveDrawBrushColor.value = color
                     canvas.freeDrawColor = color
                 },
                 onOpenColorPicker = {
-                    ColorPickerDialog.newInstance(
-                        initialColor = canvas.freeDrawColor,
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = liveDrawBrushColor.value,
                         resultKey = DRAW_COLOR_RESULT_KEY
-                    ).show(fragmentManager, "DrawColorPicker")
+                    )
+                    dialog.onColorChanged = { color ->
+                        liveDrawBrushColor.value = color
+                        canvas.freeDrawColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onGradientChanged = { gradient ->
+                        val solid = gradient.colors.firstOrNull() ?: liveDrawBrushColor.value
+                        liveDrawBrushColor.value = solid
+                        canvas.freeDrawColor = solid
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "DrawColorPicker")
                 },
                 onApply = {
                     canvas.freeDrawEnabled = false
