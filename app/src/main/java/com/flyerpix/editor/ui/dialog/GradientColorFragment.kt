@@ -30,6 +30,7 @@ class GradientColorFragment : Fragment() {
     private var colorEnd: Int = 0xFFDD2476.toInt()
     private var gradientType: GradientType = GradientType.LINEAR
     private var angle: Float = 0f
+    private var opacity: Float = 1f
     private var editingStart = true
 
     private var gradientListener: ((GradientColor) -> Unit)? = null
@@ -46,6 +47,8 @@ class GradientColorFragment : Fragment() {
     private lateinit var layoutAngle: View
     private lateinit var tvAngleLabel: TextView
     private lateinit var sliderAngle: Slider
+    private lateinit var tvOpacityLabel: TextView
+    private lateinit var sliderOpacity: Slider
     private lateinit var gradientContent: View
     private lateinit var stopEditorSection: View
     private lateinit var inlineStopEditor: SolidColorEditorView
@@ -64,6 +67,7 @@ class GradientColorFragment : Fragment() {
             colorEnd = initGrad.colors[initGrad.colors.size - 1]
             gradientType = initGrad.type
             angle = initGrad.angle
+            opacity = initGrad.opacity
         }
 
         preview = view.findViewById(R.id.viewGradientPreview)
@@ -73,6 +77,8 @@ class GradientColorFragment : Fragment() {
         layoutAngle = view.findViewById(R.id.layoutAngle)
         tvAngleLabel = view.findViewById(R.id.tvAngleLabel)
         sliderAngle = view.findViewById(R.id.sliderAngle)
+        tvOpacityLabel = view.findViewById(R.id.tvOpacityLabel)
+        sliderOpacity = view.findViewById(R.id.sliderOpacity)
         gradientContent = view.findViewById(R.id.gradientContent)
         stopEditorSection = view.findViewById(R.id.stopEditorSection)
         inlineStopEditor = view.findViewById(R.id.inlineStopEditor)
@@ -90,6 +96,7 @@ class GradientColorFragment : Fragment() {
                 }
                 orientation = GradientDrawable.Orientation.LEFT_RIGHT
                 cornerRadius = 12f
+                alpha = (opacity * 255f).roundToInt().coerceIn(0, 255)
             }
             preview.background = gd
         }
@@ -157,6 +164,15 @@ class GradientColorFragment : Fragment() {
             }
         }
 
+        sliderOpacity.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                opacity = (value / 100f).coerceIn(0f, 1f)
+                tvOpacityLabel.text = "Opacity: ${value.roundToInt()}%"
+                updatePreview()
+                notifyGradientChanged()
+            }
+        }
+
         presetAdapter = GradientPresetAdapter { preset ->
             colorStart = preset.colors[0]
             colorEnd = preset.colors[preset.colors.size - 1]
@@ -189,6 +205,8 @@ class GradientColorFragment : Fragment() {
         layoutAngle.visibility = if (gradientType == GradientType.LINEAR) View.VISIBLE else View.GONE
         sliderAngle.value = angle
         tvAngleLabel.text = "Angle: ${angle.roundToInt()}°"
+        sliderOpacity.value = (opacity * 100f).roundToInt().toFloat()
+        tvOpacityLabel.text = "Opacity: ${(opacity * 100f).roundToInt()}%"
         updateColorSwatches()
         updatePreview()
         presetAdapter?.updateSelection(matchingPresetIndex())
@@ -199,6 +217,7 @@ class GradientColorFragment : Fragment() {
             colors = intArrayOf(colorStart, colorEnd),
             type = gradientType,
             angle = angle,
+            opacity = opacity,
             name = "Custom"
         )
     }

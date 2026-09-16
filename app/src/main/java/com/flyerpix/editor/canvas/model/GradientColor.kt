@@ -9,6 +9,7 @@ import android.graphics.SweepGradient
 import java.io.Serializable
 import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
@@ -30,6 +31,7 @@ enum class GradientType {
  * @property positions  Stop posisi relatif (0.0 .. 1.0) tiap warna. Null = distribusi rata.
  * @property type       Tipe gradasi ([GradientType.LINEAR], [GradientType.RADIAL], [GradientType.SWEEP]).
  * @property angle      Sudut rotasi gradasi linier dalam derajat (0°–360°).
+ * @property opacity    Transparansi global gradasi (0.0 = tembus, 1.0 = solid), terpisah dari warna.
  * @property name       Nama preset untuk tampilan UI swatch (misal "Sunset", "Ocean").
  */
 data class GradientColor(
@@ -37,8 +39,23 @@ data class GradientColor(
     var positions: FloatArray? = null,
     var type: GradientType = GradientType.LINEAR,
     var angle: Float = 0f,
+    var opacity: Float = 1f,
     var name: String = ""
 ) : Serializable {
+
+    /**
+     * Warna efektif setelah dikalikan [opacity] pada kanal alpha.
+     * Dipakai saat membuat shader agar seluruh renderer ikut transparan.
+     */
+    private fun effectiveColors(): IntArray {
+        val o = opacity.coerceIn(0f, 1f)
+        if (o >= 1f) return colors
+        return IntArray(colors.size) { i ->
+            val c = colors[i]
+            val a = (Color.alpha(c) * o).roundToInt().coerceIn(0, 255)
+            (c and 0x00FFFFFF) or (a shl 24)
+        }
+    }
 
     /**
      * Menghasilkan instance [Shader] Android yang disesuaikan dengan batas area [bounds] (Prompt 44).
@@ -48,6 +65,7 @@ data class GradientColor(
         val h = if ((bounds.bottom - bounds.top) <= 0f) 1f else (bounds.bottom - bounds.top)
         val cx = (bounds.left + bounds.right) / 2f
         val cy = (bounds.top + bounds.bottom) / 2f
+        val shaderColors = effectiveColors()
 
         return when (type) {
             GradientType.LINEAR -> {
@@ -59,7 +77,7 @@ data class GradientColor(
                 LinearGradient(
                     cx - dx, cy - dy,
                     cx + dx, cy + dy,
-                    colors, positions,
+                    shaderColors, positions,
                     Shader.TileMode.CLAMP
                 )
             }
@@ -67,12 +85,12 @@ data class GradientColor(
                 val radius = max(w, h) / 2f
                 RadialGradient(
                     cx, cy, max(1f, radius),
-                    colors, positions,
+                    shaderColors, positions,
                     Shader.TileMode.CLAMP
                 )
             }
             GradientType.SWEEP -> {
-                SweepGradient(cx, cy, colors, positions)
+                SweepGradient(cx, cy, shaderColors, positions)
             }
         }
     }
@@ -101,6 +119,7 @@ data class GradientColor(
         } else if (other.positions != null) return false
         if (type != other.type) return false
         if (angle != other.angle) return false
+        if (opacity != other.opacity) return false
         if (name != other.name) return false
         return true
     }
@@ -110,6 +129,7 @@ data class GradientColor(
         result = 31 * result + (positions?.contentHashCode() ?: 0)
         result = 31 * result + type.hashCode()
         result = 31 * result + angle.hashCode()
+        result = 31 * result + opacity.hashCode()
         result = 31 * result + name.hashCode()
         return result
     }

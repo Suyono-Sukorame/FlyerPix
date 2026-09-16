@@ -490,6 +490,16 @@ initializeMaskControls()
         val host = threeDComposeHost ?: return
         val sheetMaxH = prepareTextAppearanceSheet() ?: return
         val recents = com.flyerpix.editor.ui.dialog.ColorRecents(activity).recents()
+        run {
+            val raw = activity.getSharedPreferences("color_recent", android.content.Context.MODE_PRIVATE)
+                .getString("entries", "").orEmpty()
+            android.util.Log.d("FlyerPixRecents", "sheet ctx=${activity.javaClass.simpleName} recents=${recents.size} rawLen=${raw.length} raw=${raw.take(120)}")
+            android.widget.Toast.makeText(
+                activity,
+                "recents=${recents.size} rawLen=${raw.length}",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
         host.setContent {
             com.flyerpix.editor.ui.compose.TextColorDetailPage(
                 color = layer.textColor,

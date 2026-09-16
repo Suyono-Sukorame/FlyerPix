@@ -66,7 +66,8 @@ class ColorRecents(private val context: Context) {
         a is RecentEntry.Gradient && b is RecentEntry.Gradient ->
             a.gradient.colors.contentEquals(b.gradient.colors) &&
                 a.gradient.type == b.gradient.type &&
-                a.gradient.angle == b.gradient.angle
+                a.gradient.angle == b.gradient.angle &&
+                a.gradient.opacity == b.gradient.opacity
         else -> false
     }
 
@@ -77,14 +78,15 @@ class ColorRecents(private val context: Context) {
         entry is RecentEntry.Gradient && g != null &&
             entry.gradient.colors.contentEquals(g.colors) &&
             entry.gradient.type == g.type &&
-            entry.gradient.angle == g.angle
+            entry.gradient.angle == g.angle &&
+            entry.gradient.opacity == g.opacity
 
     private fun encode(entry: RecentEntry): String = when (entry) {
         is RecentEntry.Solid -> "s,${entry.color}"
         is RecentEntry.Gradient -> {
             val g = entry.gradient
             val colorsHex = g.colors.joinToString("-") { String.format("#%08X", it) }
-            "g|$colorsHex|${g.type.name}|${g.angle}|${g.name}"
+            "g|$colorsHex|${g.type.name}|${g.angle}|${g.name}|${g.opacity}"
         }
     }
 
@@ -102,8 +104,9 @@ class ColorRecents(private val context: Context) {
                 .getOrDefault(GradientType.LINEAR)
             val angle = parts[2].toFloatOrNull() ?: 0f
             val name = parts.getOrElse(3) { "Custom" }
+            val opacity = parts.getOrElse(4) { "1" }.toFloatOrNull() ?: 1f
             return RecentEntry.Gradient(
-                GradientColor(colors = colors.toIntArray(), type = type, angle = angle, name = name)
+                GradientColor(colors = colors.toIntArray(), type = type, angle = angle, opacity = opacity, name = name)
             )
         }
         return null

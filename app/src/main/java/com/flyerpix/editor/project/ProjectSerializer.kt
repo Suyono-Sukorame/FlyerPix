@@ -223,7 +223,8 @@ object ProjectSerializer {
         type      = g.type.name,
         colors    = g.colors.toList(),
         positions = g.positions?.toList(),
-        angle     = g.angle
+        angle     = g.angle,
+        opacity   = g.opacity
     )
 
     private fun cornersToString(corners: FloatArray): String =
@@ -475,7 +476,8 @@ object ProjectSerializer {
             colors    = dto.colors.toIntArray(),
             positions = dto.positions?.toFloatArray(),
             type      = type,
-            angle     = dto.angle
+            angle     = dto.angle,
+            opacity   = dto.opacity ?: 1f
         )
     }
 

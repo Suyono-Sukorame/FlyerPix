@@ -50,12 +50,14 @@ data class CanvasBackgroundDto(
  * @property colors   Daftar warna ARGB titik henti gradasi.
  * @property positions Daftar posisi relatif (0.0–1.0) per titik henti; null = merata.
  * @property angle    Sudut gradasi linear dalam derajat (0–360).
+ * @property opacity  Transparansi global gradasi (0.0–1.0); null = 1.0 untuk proyek lama.
  */
 data class GradientColorDto(
     val type: String = "LINEAR",
     val colors: List<Int> = emptyList(),
     val positions: List<Float>? = null,
-    val angle: Float = 0f
+    val angle: Float = 0f,
+    val opacity: Float? = null
 )
 
 data class RichTextSpanDto(

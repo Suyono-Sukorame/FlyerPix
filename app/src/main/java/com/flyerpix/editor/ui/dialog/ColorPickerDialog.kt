@@ -96,6 +96,11 @@ class ColorPickerDialog : DialogFragment() {
                 result.putSerializable(EXTRA_GRADIENT, gradient)
                 ColorRecents(requireContext()).pushGradient(gradient)
             }
+            run {
+                val raw = requireContext().getSharedPreferences("color_recent", android.content.Context.MODE_PRIVATE)
+                    .getString("entries", "").orEmpty()
+                android.util.Log.d("FlyerPixRecents", "picker OK key=$resultKey push=${result.getInt(EXTRA_COLOR)} store=${ColorRecents(requireContext()).recents().size} rawLen=${raw.length}")
+            }
             setFragmentResult(resultKey, result)
             dismiss()
         }
