@@ -14,10 +14,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flyerpix.editor.R
@@ -39,77 +45,108 @@ private const val PanelHandle = 0xFFD0D4DE
 private const val PanelCard = 0xFFF8FAFC
 private const val PanelSwatchBorder = 0xFFCCD6E0
 
-/** Chip pilihan bertema light (aktif = primary). Dipakai untuk mode, aksi, dan arah. */
+/** Chip ikon (mode/aksi/arah) — tanpa teks, aktif = primary. */
 @Composable
-private fun ChipButton(
-    label: String,
+private fun IconChip(
+    iconRes: Int,
     modifier: Modifier = Modifier,
     active: Boolean = false,
+    contentDescription: String?,
     onClick: () -> Unit
 ) {
     Box(
         modifier = modifier
-            .height(32.dp)
+            .height(30.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(if (active) MaterialTheme.colors.primary else Color(PanelAlt))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-            color = if (active) Color.White else Color(PanelTextSecondary)
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = contentDescription,
+            tint = if (active) Color.White else Color(PanelTextSecondary),
+            modifier = Modifier.size(18.dp)
         )
     }
 }
 
-/** Label section bertema light, dengan nilai kecil opsional di kanan. */
+/** Chip ikon panah berputar (arah gradient) — tanpa teks. */
 @Composable
-private fun SectionLabel(text: String, value: String? = null) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+private fun ArrowDirectionChip(
+    degrees: Float,
+    modifier: Modifier = Modifier,
+    contentDescription: String?,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(30.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(PanelAlt))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.caption,
-            color = Color(PanelTextSecondary),
-            fontWeight = FontWeight.SemiBold
+        Icon(
+            painter = painterResource(R.drawable.ic_arrow_24px),
+            contentDescription = contentDescription,
+            tint = Color(PanelTextSecondary),
+            modifier = Modifier
+                .size(18.dp)
+                .rotate(degrees)
         )
-        if (value != null) {
-            Text(text = value, fontSize = 10.sp, color = Color(PanelTextSecondary))
-        }
     }
 }
 
-/** Slider bertema primary, konsisten dengan panel sheet lainnya. */
+/** Baris slider: ikon + slider + nilai angka (mis. ukuran kuas). */
 @Composable
-private fun PanelSlider(
+private fun IconSliderRow(
+    iconRes: Int,
+    iconDesc: String?,
     value: Float,
     onValueChange: (Float) -> Unit,
-    valueRange: ClosedFloatingPointRange<Float>
+    valueRange: ClosedFloatingPointRange<Float>,
+    valueText: String,
+    valueWidth: Dp = 44.dp
 ) {
-    Slider(
-        value = value,
-        onValueChange = onValueChange,
-        valueRange = valueRange,
-        colors = SliderDefaults.colors(
-            thumbColor = MaterialTheme.colors.primary,
-            activeTrackColor = MaterialTheme.colors.primary
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(28.dp)
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = iconDesc,
+            tint = Color(PanelTextSecondary),
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colors.primary,
+                activeTrackColor = MaterialTheme.colors.primary
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .height(24.dp)
+        )
+        Text(
+            text = valueText,
+            fontSize = 10.sp,
+            color = Color(PanelTextSecondary),
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(valueWidth)
+        )
+    }
 }
 
-/** Card toggle (Switch) bertema light seperti Auto Color Match / Blend to Background. */
+/** Card toggle (Switch) ikon — tanpa teks. */
 @Composable
-private fun ToggleRowCard(
-    title: String,
-    subtitle: String,
+private fun IconToggleRowCard(
+    iconRes: Int,
+    iconDesc: String?,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -122,23 +159,16 @@ private fun ToggleRowCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colors.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 10.sp,
-                    color = Color(PanelTextSecondary)
-                )
-            }
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = iconDesc,
+                tint = MaterialTheme.colors.onSurface,
+                modifier = Modifier.size(22.dp)
+            )
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
@@ -187,6 +217,8 @@ fun LayerMaskEditorComposable(
     var maskAvailable by remember { mutableStateOf(layer.maskBitmap != null) }
     var maskEnabledState by remember { mutableStateOf(layer.maskEnabled) }
     val scrollState = remember(sessionKey) { ScrollState(0) }
+    val sheetCapDp = with(LocalDensity.current) { maxHeightPx.toDp() }
+        .coerceAtMost((LocalConfiguration.current.screenHeightDp * 0.45f).dp)
 
     fun fillColor(): Int = when (selectedBrushColor) {
         0xFF000000.toInt() -> 0x00000000.toInt()
@@ -213,7 +245,7 @@ fun LayerMaskEditorComposable(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(with(LocalDensity.current) { maxHeightPx.toDp() }),
+                    .heightIn(max = sheetCapDp),
                 shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
                 elevation = 8.dp,
                 backgroundColor = MaterialTheme.colors.surface
@@ -221,20 +253,20 @@ fun LayerMaskEditorComposable(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 6.dp)
+                        .padding(top = 4.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                             .width(32.dp)
-                            .height(4.dp)
+                            .height(3.dp)
                             .background(Color(PanelHandle), RoundedCornerShape(50))
                     )
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(
@@ -242,13 +274,12 @@ fun LayerMaskEditorComposable(
                                 .weight(1f)
                                 .verticalScroll(scrollState)
                                 .padding(horizontal = 4.dp, vertical = 2.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Divider(color = Color(PanelDivider), thickness = 1.dp)
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Divider(color = Color(PanelDivider), thickness = 0.5.dp)
 
                             if (!maskAvailable) {
-                                // ── Create Mask ───────────────────────────────────────────
+                                // ── Create Mask (ikon) ───────────────────────────────────
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -261,7 +292,6 @@ fun LayerMaskEditorComposable(
                                             val (w, h) = layer.getUnwarpedDimensions()
                                             if (w > 0 && h > 0) {
                                                 layer.createMask(w.toInt(), h.toInt())
-                                                // Mulai dari mask PUTIH agar foto terlihat penuh & hitam bisa menghapus.
                                                 layer.maskBitmap?.eraseColor(0xFFFFFFFF.toInt())
                                                 maskAvailable = true
                                                 maskEnabledState = true
@@ -274,39 +304,25 @@ fun LayerMaskEditorComposable(
                                     backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.08f),
                                     elevation = 0.dp
                                 ) {
-                                    Row(
+                                    Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            .padding(vertical = 12.dp),
+                                        contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_mask_24px),
-                                            contentDescription = null,
+                                            contentDescription = "Create Mask",
                                             tint = MaterialTheme.colors.primary,
                                             modifier = Modifier.size(24.dp)
                                         )
-                                        Column {
-                                            Text(
-                                                text = "Create Mask",
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 12.sp,
-                                                color = MaterialTheme.colors.onSurface
-                                            )
-                                            Text(
-                                                text = "Buat layer mask baru untuk mengedit non-destruktif",
-                                                fontSize = 10.sp,
-                                                color = Color(PanelTextSecondary)
-                                            )
-                                        }
                                     }
                                 }
                             } else {
-                                // ── Mask Active toggle ─────────────────────────────────────
-                                ToggleRowCard(
-                                    title = "Mask Active",
-                                    subtitle = "Nyalakan/matikan efek mask pada layer ini",
+                                // ── Mask Active toggle (ikon) ─────────────────────────────
+                                IconToggleRowCard(
+                                    iconRes = R.drawable.ic_visibility_24px,
+                                    iconDesc = "Mask Active",
                                     checked = maskEnabledState,
                                     onCheckedChange = {
                                         maskEnabledState = it
@@ -318,51 +334,67 @@ fun LayerMaskEditorComposable(
 
                                 Divider(color = Color(PanelDivider), thickness = 0.5.dp)
 
-                                // ── Brush Tool ─────────────────────────────────────────
-                                SectionLabel("Brush Tool")
-                                SectionLabel("Brush Size", "${brushSize.toInt()} px")
-                                PanelSlider(
+                                // ── Brush (ukuran & opacity) ────────────────────────────
+                                IconSliderRow(
+                                    iconRes = R.drawable.ic_size_24px,
+                                    iconDesc = "Brush Size",
                                     value = brushSize,
                                     onValueChange = { brushSize = it; pushBrushConfig() },
-                                    valueRange = 5f..100f
+                                    valueRange = 5f..100f,
+                                    valueText = "${brushSize.toInt()} px"
                                 )
-                                SectionLabel("Brush Opacity", "${(brushOpacity * 100).toInt()}%")
-                                PanelSlider(
+                                IconSliderRow(
+                                    iconRes = R.drawable.ic_opacity_24px,
+                                    iconDesc = "Brush Opacity",
                                     value = brushOpacity,
                                     onValueChange = { brushOpacity = it; pushBrushConfig() },
-                                    valueRange = 0f..1f
+                                    valueRange = 0f..1f,
+                                    valueText = "${(brushOpacity * 100).toInt()}%"
                                 )
 
-                                // ── Erase Mode ─────────────────────────────────────────
-                                SectionLabel("Erase Mode")
+                                // ── Erase Mode (ikon) ───────────────────────────────────
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    listOf(
-                                        "manual" to "Manual",
-                                        "auto-erase" to "Auto-Color",
-                                        "clone" to "Clone"
-                                    ).forEach { (mode, label) ->
-                                        ChipButton(
-                                            label = label,
-                                            modifier = Modifier.weight(1f),
-                                            active = paintMode == mode,
-                                            onClick = {
-                                                paintMode = mode
-                                                onModeChange(mode)
-                                                if (mode != "clone") {
-                                                    onCloneModeToggle(false)
-                                                }
-                                            }
-                                        )
-                                    }
+                                    IconChip(
+                                        iconRes = R.drawable.ic_sharp_brush_24px,
+                                        modifier = Modifier.weight(1f),
+                                        active = paintMode == "manual",
+                                        contentDescription = "Manual Erase",
+                                        onClick = {
+                                            paintMode = "manual"
+                                            onModeChange("manual")
+                                            onCloneModeToggle(false)
+                                        }
+                                    )
+                                    IconChip(
+                                        iconRes = R.drawable.ic_sharp_colorize_24px,
+                                        modifier = Modifier.weight(1f),
+                                        active = paintMode == "auto-erase",
+                                        contentDescription = "Auto-Color Erase",
+                                        onClick = {
+                                            paintMode = "auto-erase"
+                                            onModeChange("auto-erase")
+                                            onCloneModeToggle(false)
+                                        }
+                                    )
+                                    IconChip(
+                                        iconRes = R.drawable.ic_copy_24px,
+                                        modifier = Modifier.weight(1f),
+                                        active = paintMode == "clone",
+                                        contentDescription = "Clone Stamp",
+                                        onClick = {
+                                            paintMode = "clone"
+                                            onModeChange("clone")
+                                        }
+                                    )
                                 }
 
-                                // ── Pressure Sensitivity ─────────────────────────────
-                                ToggleRowCard(
-                                    title = "Pressure Sensitivity",
-                                    subtitle = "Ukuran goresan menyesuaikan tekanan stylus",
+                                // ── Pressure Sensitivity (ikon) ────────────────────────
+                                IconToggleRowCard(
+                                    iconRes = R.drawable.ic_edit_24px,
+                                    iconDesc = "Pressure Sensitivity",
                                     checked = pressureSensitivityEnabled,
                                     onCheckedChange = {
                                         pressureSensitivityEnabled = it
@@ -370,63 +402,35 @@ fun LayerMaskEditorComposable(
                                     }
                                 )
 
-                                // ── Auto-Color Erase Threshold ───────────────────────
+                                // ── Auto-Color Erase Threshold ─────────────────────────
                                 if (paintMode == "auto-erase") {
-                                    SectionLabel("Auto-Erase Threshold", "$autoEraseThreshold")
-                                    PanelSlider(
+                                    IconSliderRow(
+                                        iconRes = R.drawable.ic_sharp_colorize_24px,
+                                        iconDesc = "Auto-Erase Threshold",
                                         value = autoEraseThreshold.toFloat(),
                                         onValueChange = {
                                             autoEraseThreshold = it.toInt()
                                             onAutoEraseThreshold(autoEraseThreshold)
                                         },
-                                        valueRange = 0f..255f
-                                    )
-                                    Text(
-                                        text = "Lower = stricter color matching | Higher = more forgiving",
-                                        fontSize = 10.sp,
-                                        color = Color(PanelTextSecondary)
+                                        valueRange = 0f..255f,
+                                        valueText = "$autoEraseThreshold"
                                     )
                                 }
 
-                                // ── Clone Stamp ──────────────────────────────────────
+                                // ── Clone Stamp (icon-only, instruksi dihapus) ──────────
                                 if (paintMode == "clone") {
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(8.dp),
-                                        backgroundColor = Color(PanelCard),
-                                        elevation = 0.dp
-                                    ) {
-                                        Column(modifier = Modifier.padding(12.dp)) {
-                                            Text(
-                                                "Clone Stamp Instructions",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF007A3D)
-                                            )
-                                            Text(
-                                                "1. Hold Shift + tap to set clone source point\n" +
-                                                    "2. Drag normally to paint cloned pixels\n" +
-                                                    "3. Uses DARKEN blending for realistic cloning",
-                                                fontSize = 10.sp,
-                                                color = Color(PanelTextSecondary),
-                                                modifier = Modifier.padding(top = 6.dp)
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    ChipButton(
-                                        label = if (cloneModeEnabled) "Clone Mode Active" else "Enable Clone Mode",
-                                        modifier = Modifier.fillMaxWidth(),
-                                        active = cloneModeEnabled,
-                                        onClick = {
-                                            cloneModeEnabled = !cloneModeEnabled
+                                    IconToggleRowCard(
+                                        iconRes = R.drawable.ic_copy_24px,
+                                        iconDesc = "Enable Clone Mode",
+                                        checked = cloneModeEnabled,
+                                        onCheckedChange = {
+                                            cloneModeEnabled = it
                                             onCloneModeToggle(cloneModeEnabled)
                                         }
                                     )
                                 }
 
-                                // ── Brush Color ──────────────────────────────────────
-                                SectionLabel("Brush Color")
+                                // ── Brush Color (swatch tanpa label) ───────────────────
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -437,67 +441,60 @@ fun LayerMaskEditorComposable(
                                         0xFF808080.toInt() to "Gray (Partial)"
                                     ).forEach { (color, label) ->
                                         val selected = selectedBrushColor == color && !isEraser
-                                        Column(
+                                        Box(
                                             modifier = Modifier
                                                 .weight(1f)
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .semantics { contentDescription = label }
+                                                .background(Color(color))
+                                                .border(
+                                                    width = if (selected) 2.5.dp else 1.dp,
+                                                    color = if (selected) MaterialTheme.colors.primary else Color(PanelSwatchBorder),
+                                                    shape = CircleShape
+                                                )
                                                 .clickable {
                                                     selectedBrushColor = color
                                                     isEraser = false
                                                     pushBrushConfig()
-                                                },
-                                            horizontalAlignment = Alignment.CenterHorizontally
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(40.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color(color))
-                                                    .border(
-                                                        width = if (selected) 2.5.dp else 1.dp,
-                                                        color = if (selected) MaterialTheme.colors.primary else Color(PanelSwatchBorder),
-                                                        shape = CircleShape
-                                                    )
-                                            )
-                                            Text(
-                                                text = label,
-                                                fontSize = 10.sp,
-                                                color = Color(PanelTextSecondary)
-                                            )
-                                        }
+                                                }
+                                        )
                                     }
                                 }
 
-                                // ── Eraser toggle ────────────────────────────────────
-                                ChipButton(
-                                    label = if (isEraser) "Eraser On" else "Eraser Off",
+                                // ── Eraser toggle (ikon) ───────────────────────────────
+                                IconChip(
+                                    iconRes = R.drawable.ic_eraser_24px,
                                     modifier = Modifier.fillMaxWidth(),
                                     active = isEraser,
+                                    contentDescription = if (isEraser) "Eraser On" else "Eraser Off",
                                     onClick = {
                                         isEraser = !isEraser
                                         pushBrushConfig()
                                     }
                                 )
 
-                                // ── Mask Actions ─────────────────────────────────────
-                                SectionLabel("Mask Actions")
+                                // ── Mask Actions: Invert / Reset (ikon) ────────────────
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    ChipButton(
-                                        label = "Invert",
+                                    IconChip(
+                                        iconRes = R.drawable.ic_sharp_flip_24px,
                                         modifier = Modifier.weight(1f),
                                         active = isInverted,
+                                        contentDescription = "Invert Mask",
                                         onClick = {
                                             layer.maskInverted = !layer.maskInverted
                                             isInverted = layer.maskInverted
                                             onMaskChange()
                                         }
                                     )
-                                    ChipButton(
-                                        label = "Reset",
+                                    IconChip(
+                                        iconRes = R.drawable.ic_sharp_restart_24px,
                                         modifier = Modifier.weight(1f),
                                         active = false,
+                                        contentDescription = "Reset Mask",
                                         onClick = {
                                             layer.maskBitmap?.let { bmp ->
                                                 val px = IntArray(bmp.width * bmp.height) { 0xFFFFFFFF.toInt() }
@@ -508,66 +505,74 @@ fun LayerMaskEditorComposable(
                                     )
                                 }
 
-                                // ── Auto Masks ───────────────────────────────────────
-                                SectionLabel("Auto Masks")
-                                SectionLabel("Gradient Direction")
+                                // ── Auto Masks: arah gradient (ikon panah) ──────────────
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    listOf(
-                                        MaskUtils.DIR_TOP_BOTTOM to "Top",
-                                        MaskUtils.DIR_BOTTOM_TOP to "Bottom",
-                                        MaskUtils.DIR_LEFT_RIGHT to "Left",
-                                        MaskUtils.DIR_RIGHT_LEFT to "Right"
-                                    ).forEach { (dir, label) ->
-                                        ChipButton(
-                                            label = label,
-                                            modifier = Modifier.weight(1f),
-                                            active = false,
-                                            onClick = {
-                                                onGradientMaskApply(GradientType.LINEAR, floatArrayOf(dir.toFloat()))
-                                            }
-                                        )
-                                    }
+                                    ArrowDirectionChip(
+                                        degrees = 90f,
+                                        modifier = Modifier.weight(1f),
+                                        contentDescription = "Gradient Top",
+                                        onClick = { onGradientMaskApply(GradientType.LINEAR, floatArrayOf(MaskUtils.DIR_TOP_BOTTOM.toFloat())) }
+                                    )
+                                    ArrowDirectionChip(
+                                        degrees = 270f,
+                                        modifier = Modifier.weight(1f),
+                                        contentDescription = "Gradient Bottom",
+                                        onClick = { onGradientMaskApply(GradientType.LINEAR, floatArrayOf(MaskUtils.DIR_BOTTOM_TOP.toFloat())) }
+                                    )
+                                    ArrowDirectionChip(
+                                        degrees = 0f,
+                                        modifier = Modifier.weight(1f),
+                                        contentDescription = "Gradient Left",
+                                        onClick = { onGradientMaskApply(GradientType.LINEAR, floatArrayOf(MaskUtils.DIR_LEFT_RIGHT.toFloat())) }
+                                    )
+                                    ArrowDirectionChip(
+                                        degrees = 180f,
+                                        modifier = Modifier.weight(1f),
+                                        contentDescription = "Gradient Right",
+                                        onClick = { onGradientMaskApply(GradientType.LINEAR, floatArrayOf(MaskUtils.DIR_RIGHT_LEFT.toFloat())) }
+                                    )
                                 }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                ChipButton(
-                                    label = "Gradient Mask (Radial Center)",
+                                IconChip(
+                                    iconRes = R.drawable.ic_sharp_circle_outline_24px,
                                     modifier = Modifier.fillMaxWidth(),
                                     active = false,
+                                    contentDescription = "Radial Gradient Mask",
                                     onClick = { onGradientMaskApply(GradientType.RADIAL, floatArrayOf(0.5f)) }
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
 
-                                SectionLabel("Feather Radius", "${featherRadius.toInt()} px")
-                                PanelSlider(
+                                // ── Feather (soft edge) ────────────────────────────────
+                                IconSliderRow(
+                                    iconRes = R.drawable.ic_merge_layers_24px,
+                                    iconDesc = "Feather Radius",
                                     value = featherRadius,
                                     onValueChange = { featherRadius = it },
-                                    valueRange = 0f..100f
+                                    valueRange = 0f..100f,
+                                    valueText = "${featherRadius.toInt()} px"
                                 )
-                                ChipButton(
-                                    label = "Feather (${featherRadius.toInt()} px)",
+                                IconChip(
+                                    iconRes = R.drawable.ic_check_24px,
                                     modifier = Modifier.fillMaxWidth(),
                                     active = featherRadius > 0f,
+                                    contentDescription = "Apply Feather",
                                     onClick = { if (featherRadius > 0f) onFeatherApply(featherRadius) }
                                 )
-
-                                Spacer(modifier = Modifier.height(6.dp))
                             }
                         }
 
                         Column(
                             modifier = Modifier
                                 .width(60.dp)
-                                .padding(start = 6.dp),
+                                .padding(start = 4.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Bottom
                         ) {
                             TextButton(
                                 onClick = onClose,
                                 modifier = Modifier.fillMaxWidth(),
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)
                             ) {
                                 Text("Batal", style = MaterialTheme.typography.caption)
                             }
@@ -579,7 +584,7 @@ fun LayerMaskEditorComposable(
                                     backgroundColor = MaterialTheme.colors.primary,
                                     contentColor = Color.White
                                 ),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                                 elevation = ButtonDefaults.elevation(defaultElevation = 1.dp)
                             ) {
                                 Text(

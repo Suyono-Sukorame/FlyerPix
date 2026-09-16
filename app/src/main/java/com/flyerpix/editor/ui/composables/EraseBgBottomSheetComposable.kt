@@ -10,10 +10,14 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flyerpix.editor.R
@@ -50,6 +54,8 @@ fun EraseBgBottomSheetComposable(
     var fingerOffsetDp by remember { mutableStateOf(55f) }
     var autoColorThreshold by remember { mutableStateOf(30) }
     var activeMode by remember { mutableStateOf(EraseBgMode.MANUAL) }
+    val sheetCapDp = with(LocalDensity.current) { maxHeightPx.toDp() }
+        .coerceAtMost((LocalConfiguration.current.screenHeightDp * 0.42f).dp)
 
     LaunchedEffect(Unit) {
         onBrushSizeChange(brushSize)
@@ -68,7 +74,7 @@ fun EraseBgBottomSheetComposable(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(with(LocalDensity.current) { maxHeightPx.toDp() }),
+                    .heightIn(max = sheetCapDp),
                 shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
                 elevation = 8.dp,
                 backgroundColor = MaterialTheme.colors.surface
@@ -76,216 +82,122 @@ fun EraseBgBottomSheetComposable(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 6.dp)
+                        .padding(top = 4.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                             .width(32.dp)
-                            .height(4.dp)
+                            .height(3.dp)
                             .background(Color(EraseBgPanelHandle), RoundedCornerShape(50))
                     )
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(
                             modifier = Modifier
                                 .weight(1f)
                                 .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Divider(color = Color(EraseBgPanelDivider), thickness = 1.dp)
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Divider(color = Color(EraseBgPanelDivider), thickness = 0.5.dp)
 
-                            // ── Mode selector (chip gaya Gradient "Type") ─────────────
-                            Text(
-                                text = "Mode",
-                                style = MaterialTheme.typography.caption,
-                                color = Color(EraseBgPanelTextSecondary)
-                            )
+                            // ── Mode selector (ikon: eraser / palette / brush) ────────
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 EraseBgMode.values().forEach { mode ->
                                     val selected = activeMode == mode
-                                    Text(
-                                        text = mode.label,
-                                        style = MaterialTheme.typography.caption,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (selected) Color.White else Color(EraseBgPanelTextSecondary),
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .background(
-                                                if (selected) MaterialTheme.colors.primary else Color(EraseBgPanelChipBg),
-                                                RoundedCornerShape(8.dp)
-                                            )
-                                            .clickable {
-                                                activeMode = mode
-                                                onModeChange(mode)
-                                            }
-                                            .padding(vertical = 6.dp)
+                                    EraseIconChip(
+                                        iconRes = mode.iconRes,
+                                        modifier = Modifier.weight(1f),
+                                        active = selected,
+                                        contentDescription = mode.name,
+                                        onClick = {
+                                            activeMode = mode
+                                            onModeChange(mode)
+                                        }
                                     )
                                 }
                             }
 
-                            // ── Undo / Redo (link caption gaya Gradient "Reset") ───────
+                            // ── Undo / Redo (ikon) ───────────────────────────────────
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "Undo",
-                                    style = MaterialTheme.typography.caption,
-                                    color = MaterialTheme.colors.primary,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier
-                                        .clickable(onClick = onUndo)
-                                        .padding(vertical = 4.dp)
+                                EraseIconChip(
+                                    iconRes = R.drawable.ic_sharp_undo_24px,
+                                    contentDescription = "Undo",
+                                    onClick = onUndo
                                 )
-                                Text(
-                                    text = "Redo",
-                                    style = MaterialTheme.typography.caption,
-                                    color = MaterialTheme.colors.primary,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier
-                                        .clickable(onClick = onRedo)
-                                        .padding(vertical = 4.dp)
+                                EraseIconChip(
+                                    iconRes = R.drawable.ic_sharp_redo_24px,
+                                    contentDescription = "Redo",
+                                    onClick = onRedo
                                 )
                             }
 
-                            // ── Ukuran Penghapus (baris slider gaya Gradient "Angle") ──
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Ukuran",
-                                    style = MaterialTheme.typography.caption,
-                                    color = Color(EraseBgPanelTextSecondary),
-                                    modifier = Modifier.width(84.dp)
-                                )
-                                Slider(
-                                    value = brushSize,
-                                    onValueChange = {
-                                        brushSize = it
-                                        onBrushSizeChange(it)
-                                    },
-                                    valueRange = 10f..120f,
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = MaterialTheme.colors.primary,
-                                        activeTrackColor = MaterialTheme.colors.primary
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(30.dp)
-                                )
-                                Text(
-                                    text = "${brushSize.toInt()}",
-                                    style = MaterialTheme.typography.caption,
-                                    color = Color(EraseBgPanelTextSecondary),
-                                    textAlign = TextAlign.End,
-                                    modifier = Modifier.width(36.dp)
-                                )
-                            }
+                            // ── Ukuran Penghapus ─────────────────────────────────────
+                            EraseIconSliderRow(
+                                iconRes = R.drawable.ic_size_24px,
+                                iconDesc = "Ukuran",
+                                value = brushSize,
+                                onValueChange = {
+                                    brushSize = it
+                                    onBrushSizeChange(it)
+                                },
+                                valueRange = 10f..120f,
+                                valueText = "${brushSize.toInt()}"
+                            )
 
                             // ── Jarak Jari / Offset ─────────────────────────────────
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Jarak Jari",
-                                    style = MaterialTheme.typography.caption,
-                                    color = Color(EraseBgPanelTextSecondary),
-                                    modifier = Modifier.width(84.dp)
-                                )
-                                Slider(
-                                    value = fingerOffsetDp,
-                                    onValueChange = {
-                                        fingerOffsetDp = it
-                                        onFingerOffsetChange(it)
-                                    },
-                                    valueRange = 0f..100f,
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = MaterialTheme.colors.primary,
-                                        activeTrackColor = MaterialTheme.colors.primary
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(30.dp)
-                                )
-                                Text(
-                                    text = "↑${fingerOffsetDp.toInt()}",
-                                    style = MaterialTheme.typography.caption,
-                                    color = Color(EraseBgPanelTextSecondary),
-                                    textAlign = TextAlign.End,
-                                    modifier = Modifier.width(44.dp)
-                                )
-                            }
+                            EraseIconSliderRow(
+                                iconRes = R.drawable.ic_move_pad_24px,
+                                iconDesc = "Jarak Jari",
+                                value = fingerOffsetDp,
+                                onValueChange = {
+                                    fingerOffsetDp = it
+                                    onFingerOffsetChange(it)
+                                },
+                                valueRange = 0f..100f,
+                                valueText = "↑${fingerOffsetDp.toInt()}",
+                                valueWidth = 44.dp
+                            )
 
                             // ── Toleransi Warna (hanya saat Auto Color) ─────────────
                             if (activeMode == EraseBgMode.AUTO_COLOR) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Toleransi",
-                                        style = MaterialTheme.typography.caption,
-                                        color = Color(EraseBgPanelTextSecondary),
-                                        modifier = Modifier.width(84.dp)
-                                    )
-                                    Slider(
-                                        value = autoColorThreshold.toFloat(),
-                                        onValueChange = {
-                                            autoColorThreshold = it.toInt()
-                                            onAutoColorThresholdChange(it.toInt())
-                                        },
-                                        valueRange = 5f..120f,
-                                        colors = SliderDefaults.colors(
-                                            thumbColor = MaterialTheme.colors.primary,
-                                            activeTrackColor = MaterialTheme.colors.primary
-                                        ),
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(30.dp)
-                                    )
-                                    Text(
-                                        text = "$autoColorThreshold",
-                                        style = MaterialTheme.typography.caption,
-                                        color = Color(EraseBgPanelTextSecondary),
-                                        textAlign = TextAlign.End,
-                                        modifier = Modifier.width(36.dp)
-                                    )
-                                }
-                                Text(
-                                    text = "Lower = stricter color matching | Higher = more forgiving",
-                                    fontSize = 10.sp,
-                                    color = Color(EraseBgPanelTextSecondary)
+                                EraseIconSliderRow(
+                                    iconRes = R.drawable.ic_sharp_colorize_24px,
+                                    iconDesc = "Toleransi",
+                                    value = autoColorThreshold.toFloat(),
+                                    onValueChange = {
+                                        autoColorThreshold = it.toInt()
+                                        onAutoColorThresholdChange(it.toInt())
+                                    },
+                                    valueRange = 5f..120f,
+                                    valueText = "$autoColorThreshold"
                                 )
                             }
-
-                            Spacer(modifier = Modifier.height(2.dp))
                         }
 
                         Column(
                             modifier = Modifier
                                 .width(60.dp)
-                                .padding(start = 6.dp),
+                                .padding(start = 4.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Bottom
                         ) {
                             TextButton(
                                 onClick = onCancel,
                                 modifier = Modifier.fillMaxWidth(),
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)
                             ) {
                                 Text("Batal", style = MaterialTheme.typography.caption)
                             }
@@ -297,7 +209,7 @@ fun EraseBgBottomSheetComposable(
                                     backgroundColor = MaterialTheme.colors.primary,
                                     contentColor = Color.White
                                 ),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                                 elevation = ButtonDefaults.elevation(defaultElevation = 1.dp)
                             ) {
                                 Text(
@@ -330,8 +242,78 @@ private const val EraseBgPanelHandle = 0xFFD0D4DE
 private const val EraseBgPanelChipBg = 0xFFF1F4FA
 
 /** Mode penghapusan yang dapat dipilih pengguna. */
-enum class EraseBgMode(val label: String, val iconRes: Int) {
-    MANUAL("Manual", R.drawable.ic_eraser_24px),
-    AUTO_COLOR("Auto Warna", R.drawable.ic_sharp_palette_24px),
-    RESTORE("Pulihkan", R.drawable.ic_sharp_brush_24px)
+enum class EraseBgMode(val iconRes: Int) {
+    MANUAL(R.drawable.ic_eraser_24px),
+    AUTO_COLOR(R.drawable.ic_sharp_palette_24px),
+    RESTORE(R.drawable.ic_sharp_brush_24px)
+}
+
+/** Chip ikon (tanpa teks) untuk mode & aksi. Aktif = primary. */
+@Composable
+private fun EraseIconChip(
+    iconRes: Int,
+    modifier: Modifier = Modifier,
+    active: Boolean = false,
+    contentDescription: String?,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(30.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (active) MaterialTheme.colors.primary else Color(EraseBgPanelChipBg))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = contentDescription,
+            tint = if (active) Color.White else Color(EraseBgPanelTextSecondary),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+/** Baris slider: ikon + slider + nilai angka. */
+@Composable
+private fun EraseIconSliderRow(
+    iconRes: Int,
+    iconDesc: String?,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    valueText: String,
+    valueWidth: Dp = 44.dp
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = iconDesc,
+            tint = Color(EraseBgPanelTextSecondary),
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colors.primary,
+                activeTrackColor = MaterialTheme.colors.primary
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .height(26.dp)
+        )
+        Text(
+            text = valueText,
+            style = MaterialTheme.typography.caption,
+            color = Color(EraseBgPanelTextSecondary),
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(valueWidth)
+        )
+    }
 }

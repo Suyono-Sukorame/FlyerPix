@@ -9,17 +9,18 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flyerpix.editor.R
@@ -37,6 +38,76 @@ private const val PanelDivider = 0xFFE4E8F0
 private const val PanelAlt = 0xFFF1F4FA
 private const val PanelHandle = 0xFFD0D4DE
 
+/** Chip ikon (tanpa teks) untuk aksi. Aktif = primary. */
+@Composable
+private fun RemoveIconChip(
+    iconRes: Int,
+    modifier: Modifier = Modifier,
+    active: Boolean = false,
+    contentDescription: String?,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(32.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (active) MaterialTheme.colors.primary else Color(PanelAlt))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = contentDescription,
+            tint = if (active) Color.White else Color(PanelTextSecondary),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+/** Baris slider: ikon + slider + nilai angka. */
+@Composable
+private fun RemoveIconSliderRow(
+    iconRes: Int,
+    iconDesc: String?,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    valueText: String,
+    valueWidth: Dp = 44.dp
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = iconDesc,
+            tint = Color(PanelTextSecondary),
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colors.primary,
+                activeTrackColor = MaterialTheme.colors.primary
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .height(28.dp)
+        )
+        Text(
+            text = valueText,
+            fontSize = 10.sp,
+            color = Color(PanelTextSecondary),
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(valueWidth)
+        )
+    }
+}
+
 @Composable
 fun RemoveBgComposable(
     selectedLayerName: String = "Selected Layer",
@@ -50,6 +121,8 @@ fun RemoveBgComposable(
     var selectedMethod by remember { mutableStateOf<String?>(null) }
     var featherStrength by remember { mutableStateOf(0.5f) }
     val scrollState = remember(sessionKey) { ScrollState(0) }
+    val sheetCapDp = with(LocalDensity.current) { maxHeightPx.toDp() }
+        .coerceAtMost((LocalConfiguration.current.screenHeightDp * 0.45f).dp)
 
     MaterialTheme(colors = PanelColorScheme) {
         Box(
@@ -61,28 +134,28 @@ fun RemoveBgComposable(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(with(LocalDensity.current) { maxHeightPx.toDp() }),
+                    .heightIn(max = sheetCapDp),
                 shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
                 elevation = 8.dp,
                 backgroundColor = MaterialTheme.colors.surface
             ) {
-                Column(
+Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 6.dp)
+                        .padding(top = 4.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                             .width(32.dp)
-                            .height(4.dp)
+                            .height(3.dp)
                             .background(Color(PanelHandle), RoundedCornerShape(50))
                     )
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(
@@ -90,10 +163,9 @@ fun RemoveBgComposable(
                                 .weight(1f)
                                 .verticalScroll(scrollState)
                                 .padding(horizontal = 4.dp, vertical = 2.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Divider(color = Color(PanelDivider), thickness = 1.dp)
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Divider(color = Color(PanelDivider), thickness = 0.5.dp)
 
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -114,194 +186,120 @@ fun RemoveBgComposable(
                                         tint = MaterialTheme.colors.primary,
                                         modifier = Modifier.size(24.dp)
                                     )
-                                    Column {
-                                        Text(
-                                            text = "Target Layer",
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 11.sp,
-                                            color = Color(PanelTextSecondary)
-                                        )
-                                        Text(
-                                            text = selectedLayerName,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
-                                            color = MaterialTheme.colors.onSurface
-                                        )
-                                    }
+                                    Text(
+                                        text = selectedLayerName,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colors.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
                                 }
                             }
-
-                            Text(
-                                text = "Select Method",
-                                style = MaterialTheme.typography.caption,
-                                color = Color(PanelTextSecondary),
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(top = 2.dp)
-                            )
 
                             val gradientSelected = selectedMethod == "gradient"
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .border(
-                                        width = if (gradientSelected) 1.5.dp else 1.dp,
-                                        color = if (gradientSelected) MaterialTheme.colors.primary else Color(PanelDivider),
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { selectedMethod = "gradient" },
-                                shape = RoundedCornerShape(10.dp),
-                                backgroundColor = if (gradientSelected) MaterialTheme.colors.primary.copy(alpha = 0.08f) else Color(0xFFF8FAFC),
-                                elevation = 0.dp
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Row(
+                                // Gradient Mask
+                                Card(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_gradient_24px),
-                                        contentDescription = null,
-                                        tint = if (gradientSelected) MaterialTheme.colors.primary else Color(PanelTextSecondary),
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Column {
-                                        Text(
-                                            text = "Gradient Mask (Automatic)",
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colors.onSurface
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .border(
+                                            width = if (gradientSelected) 1.5.dp else 1.dp,
+                                            color = if (gradientSelected) MaterialTheme.colors.primary else Color(PanelDivider),
+                                            shape = RoundedCornerShape(10.dp)
                                         )
-                                        Text(
-                                            text = "Best for skies & horizons. Creates smooth fade-out effect.",
-                                            fontSize = 10.sp,
-                                            color = Color(PanelTextSecondary)
+                                        .clickable { selectedMethod = "gradient" },
+                                    shape = RoundedCornerShape(10.dp),
+                                    backgroundColor = if (gradientSelected) MaterialTheme.colors.primary.copy(alpha = 0.08f) else Color(0xFFF8FAFC),
+                                    elevation = 0.dp
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_gradient_24px),
+                                            contentDescription = "Gradient Mask",
+                                            tint = if (gradientSelected) MaterialTheme.colors.primary else Color(PanelTextSecondary),
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
                                 }
-                            }
 
-                            // Paint Mask: langsung buka editor tanpa tombol Apply.
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .border(
-                                        width = 1.dp,
-                                        color = Color(PanelDivider),
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { onPaintMaskDirect() },
-                                shape = RoundedCornerShape(10.dp),
-                                backgroundColor = Color(0xFFF8FAFC),
-                                elevation = 0.dp
-                            ) {
-                                Row(
+                                // Paint Mask: langsung buka editor tanpa tombol Apply.
+                                Card(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_mask_24px),
-                                        contentDescription = null,
-                                        tint = Color(PanelTextSecondary),
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Column {
-                                        Text(
-                                            text = "Paint Mask (Manual)",
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colors.onSurface
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .border(
+                                            width = 1.dp,
+                                            color = Color(PanelDivider),
+                                            shape = RoundedCornerShape(10.dp)
                                         )
-                                        Text(
-                                            text = "Precise control. Paint black to remove, white to restore.",
-                                            fontSize = 10.sp,
-                                            color = Color(PanelTextSecondary)
+                                        .clickable { onPaintMaskDirect() },
+                                    shape = RoundedCornerShape(10.dp),
+                                    backgroundColor = Color(0xFFF8FAFC),
+                                    elevation = 0.dp
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_mask_24px),
+                                            contentDescription = "Paint Mask",
+                                            tint = MaterialTheme.colors.primary,
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_check_24px),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colors.primary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
                                 }
                             }
 
                             if (selectedMethod != null) {
                                 Divider(color = Color(PanelDivider), thickness = 0.5.dp)
 
-                                Text(
-                                    text = "Edge Smoothness",
-                                    style = MaterialTheme.typography.caption,
-                                    color = Color(PanelTextSecondary),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-
-                                Slider(
+                                RemoveIconSliderRow(
+                                    iconRes = R.drawable.ic_merge_layers_24px,
+                                    iconDesc = "Edge Smoothness",
                                     value = featherStrength,
                                     onValueChange = { featherStrength = it },
                                     valueRange = 0f..1f,
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = MaterialTheme.colors.primary,
-                                        activeTrackColor = MaterialTheme.colors.primary
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(28.dp)
+                                    valueText = "${(featherStrength * 100).toInt()}%"
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        "Soft",
-                                        fontSize = 10.sp,
-                                        color = Color(PanelTextSecondary)
-                                    )
-                                    Text(
-                                        "Hard",
-                                        fontSize = 10.sp,
-                                        color = Color(PanelTextSecondary)
-                                    )
-                                }
                             }
 
-                            Spacer(modifier = Modifier.height(2.dp))
-
-                            Text(
-                                text = "Reset",
-                                style = MaterialTheme.typography.caption,
-                                color = MaterialTheme.colors.primary,
-                                fontWeight = FontWeight.SemiBold,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        selectedMethod = null
-                                        featherStrength = 0.5f
-                                        onReset()
-                                    }
-                                    .padding(vertical = 4.dp)
+                            RemoveIconChip(
+                                iconRes = R.drawable.ic_sharp_restart_24px,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentDescription = "Reset",
+                                onClick = {
+                                    selectedMethod = null
+                                    featherStrength = 0.5f
+                                    onReset()
+                                }
                             )
                         }
 
                         Column(
                             modifier = Modifier
                                 .width(60.dp)
-                                .padding(start = 6.dp),
+                                .padding(start = 4.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Bottom
                         ) {
                             TextButton(
                                 onClick = onCancel,
                                 modifier = Modifier.fillMaxWidth(),
-                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)
                             ) {
                                 Text("Cancel", style = MaterialTheme.typography.caption)
                             }
@@ -313,7 +311,7 @@ fun RemoveBgComposable(
                                     backgroundColor = MaterialTheme.colors.primary,
                                     contentColor = Color.White
                                 ),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                                 elevation = ButtonDefaults.elevation(defaultElevation = 1.dp),
                                 enabled = selectedMethod != null
                             ) {
