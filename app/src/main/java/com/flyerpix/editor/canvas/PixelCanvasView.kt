@@ -1382,8 +1382,15 @@ class PixelCanvasView @JvmOverloads constructor(
         }
 
         // ── Manual Paint Mode (Standard & Erase BG) ──────────────────
+        // Manual Erase BG (eraseBgActive && eraseMode) menulis mask TRANSPARAN.
+        // Warna 0x00000000 ber-alpha 0 tidak akan menggambar apa pun dengan mode SRC,
+        // jadi gunakan PorterDuff.CLEAR (hasil = transparan) agar goresan terlihat.
+        val eraseToTransparent = maskPaintBrush.eraseBgActive && maskPaintBrush.eraseMode
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC)
+            xfermode = android.graphics.PorterDuffXfermode(
+                if (eraseToTransparent) android.graphics.PorterDuff.Mode.CLEAR
+                else android.graphics.PorterDuff.Mode.SRC
+            )
             color = targetMaskColor
             alpha = if (maskPaintBrush.eraseBgActive) 255 else effectiveOpacity
             style = android.graphics.Paint.Style.STROKE
