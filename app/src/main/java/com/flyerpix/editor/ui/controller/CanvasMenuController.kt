@@ -363,20 +363,51 @@ class CanvasMenuController(
                 },
                 onOpenColorPicker = {
                     val currentColor = pixelCanvasView.canvasBackgroundColor
-                    ColorPickerDialog.newInstance(
+                    val originalGradient = pixelCanvasView.canvasBackgroundGradient
+                    val dialog = ColorPickerDialog.newInstance(
                         initialColor = currentColor,
                         resultKey = CANVAS_BG_RESULT_KEY
-                    ).show(fragmentManager, "CanvasBgSolidColorPicker")
+                    )
+                    dialog.onColorChanged = { color ->
+                        pixelCanvasView.setColorBackground(color)
+                    }
+                    dialog.onGradientChanged = { gradient ->
+                        pixelCanvasView.setGradientBackground(gradient)
+                    }
+                    dialog.onCancel = {
+                        if (originalGradient != null) {
+                            pixelCanvasView.setGradientBackground(originalGradient)
+                        } else {
+                            pixelCanvasView.setColorBackground(currentColor)
+                        }
+                    }
+                    dialog.show(fragmentManager, "CanvasBgSolidColorPicker")
                 },
                 onGradientChange = { grad ->
                     pixelCanvasView.setGradientBackground(grad)
                 },
                 onOpenGradientPicker = {
                     val currentGrad = currentBg.gradient ?: GradientColor.PRESETS.first()
-                    ColorPickerDialog.newInstance(
+                    val originalColor = pixelCanvasView.canvasBackgroundColor
+                    val originalGradient = pixelCanvasView.canvasBackgroundGradient
+                    val dialog = ColorPickerDialog.newInstance(
                         initialGradient = currentGrad,
                         resultKey = CANVAS_BG_RESULT_KEY
-                    ).show(fragmentManager, "CanvasBgGradientPicker")
+                    )
+                    dialog.onColorChanged = { color ->
+                        pixelCanvasView.setColorBackground(color)
+                    }
+                    dialog.onGradientChanged = { gradient ->
+                        pixelCanvasView.setGradientBackground(gradient)
+                    }
+                    dialog.onCancel = {
+                        if (originalGradient != null) {
+                            pixelCanvasView.setGradientBackground(originalGradient)
+                        } else {
+                            pixelCanvasView.setColorBackground(originalColor)
+                        }
+                    }
+                    dialog.show(fragmentManager, "CanvasBgGradientPicker")
                 },
                 onGalleryPickRequested = {
                     bgGalleryLauncher?.launch("image/*")

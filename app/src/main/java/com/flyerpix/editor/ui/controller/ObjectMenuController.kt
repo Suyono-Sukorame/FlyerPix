@@ -2,6 +2,7 @@ package com.flyerpix.editor.ui.controller
 
 import android.graphics.Color
 import android.graphics.Paint
+import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -340,9 +341,27 @@ class ObjectMenuController(
     // Color Picker Result Listeners
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * Mengambil warna solid efektif dari hasil [ColorPickerDialog].
+     *
+     * Bila user memilih tab Gradient, tidak ada [ColorPickerDialog.EXTRA_COLOR],
+     * sehingga dipakai stop pertama dari gradasi — supaya layer tidak diam-diam
+     * jatuh ke warna default. Layer yang mendukung gradient tetap memakai warna
+     * ini sebagai fallback solid saat efek aktif.
+     */
+    private fun bundleSolidColor(bundle: Bundle, fallback: Int): Int {
+        val isGradient = bundle.getBoolean(ColorPickerDialog.EXTRA_IS_GRADIENT, false)
+        if (isGradient) {
+            @Suppress("DEPRECATION")
+            val gradient = bundle.getSerializable(ColorPickerDialog.EXTRA_GRADIENT) as? GradientColor
+            return gradient?.colors?.firstOrNull() ?: fallback
+        }
+        return bundle.getInt(ColorPickerDialog.EXTRA_COLOR, fallback)
+    }
+
     private fun setupColorResultListeners() {
         fragmentManager.setFragmentResultListener(SHAPE_FILL_RESULT_KEY, activity) { _, bundle ->
-            val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
+            val color = bundleSolidColor(bundle, Color.WHITE)
             draftShape?.let {
                 it.fillColor = color
                 canvas.invalidate()
@@ -350,7 +369,7 @@ class ObjectMenuController(
             }
         }
         fragmentManager.setFragmentResultListener(SHAPE_STROKE_RESULT_KEY, activity) { _, bundle ->
-            val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.BLACK)
+            val color = bundleSolidColor(bundle, Color.BLACK)
             draftShape?.let {
                 it.strokeColor = color
                 canvas.invalidate()
@@ -358,19 +377,13 @@ class ObjectMenuController(
             }
         }
         fragmentManager.setFragmentResultListener(DRAW_COLOR_RESULT_KEY, activity) { _, bundle ->
-            @Suppress("DEPRECATION")
-            val gradient = bundle.getSerializable(ColorPickerDialog.EXTRA_GRADIENT) as? GradientColor
-            val color = if (gradient != null) {
-                gradient.colors.firstOrNull() ?: Color.WHITE
-            } else {
-                bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
-            }
+            val color = bundleSolidColor(bundle, Color.WHITE)
             liveDrawBrushColor.value = color
             canvas.freeDrawColor = color
             showComposeDrawSheet()
         }
         fragmentManager.setFragmentResultListener(ARROW_COLOR_RESULT_KEY, activity) { _, bundle ->
-            val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
+            val color = bundleSolidColor(bundle, Color.WHITE)
             draftArrow?.let {
                 it.headColor = color
                 it.tailColor = color
@@ -379,7 +392,7 @@ class ObjectMenuController(
             }
         }
         fragmentManager.setFragmentResultListener(BEZIER_COLOR_RESULT_KEY, activity) { _, bundle ->
-            val color = bundle.getInt(ColorPickerDialog.EXTRA_COLOR, Color.WHITE)
+            val color = bundleSolidColor(bundle, Color.WHITE)
             draftPen?.let {
                 it.strokeColor = color
                 canvas.invalidate()
@@ -573,10 +586,24 @@ class ObjectMenuController(
                     canvas.invalidate()
                 },
                 onOpenFillColorPicker = {
-                    ColorPickerDialog.newInstance(
+                    val original = shape.fillColor
+                    val dialog = ColorPickerDialog.newInstance(
                         initialColor = shape.fillColor,
                         resultKey = SHAPE_FILL_RESULT_KEY
-                    ).show(fragmentManager, "ShapeFillColorPicker")
+                    )
+                    dialog.onColorChanged = { color ->
+                        shape.fillColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onGradientChanged = { gradient ->
+                        shape.fillColor = gradient.colors.firstOrNull() ?: original
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        shape.fillColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "ShapeFillColorPicker")
                 },
                 onStrokeWidthChange = { width ->
                     currentStrokeWidth = width
@@ -594,10 +621,24 @@ class ObjectMenuController(
                     canvas.invalidate()
                 },
                 onOpenStrokeColorPicker = {
-                    ColorPickerDialog.newInstance(
+                    val original = shape.strokeColor
+                    val dialog = ColorPickerDialog.newInstance(
                         initialColor = shape.strokeColor,
                         resultKey = SHAPE_STROKE_RESULT_KEY
-                    ).show(fragmentManager, "ShapeStrokeColorPicker")
+                    )
+                    dialog.onColorChanged = { color ->
+                        shape.strokeColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onGradientChanged = { gradient ->
+                        shape.strokeColor = gradient.colors.firstOrNull() ?: original
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        shape.strokeColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "ShapeStrokeColorPicker")
                 },
                 onStrokeJoinChange = { join ->
                     currentStrokeJoin = join
@@ -686,6 +727,7 @@ class ObjectMenuController(
                     canvas.freeDrawColor = color
                 },
                 onOpenColorPicker = {
+                    val original = liveDrawBrushColor.value
                     val dialog = ColorPickerDialog.newInstance(
                         initialColor = liveDrawBrushColor.value,
                         resultKey = DRAW_COLOR_RESULT_KEY
@@ -699,6 +741,11 @@ class ObjectMenuController(
                         val solid = gradient.colors.firstOrNull() ?: liveDrawBrushColor.value
                         liveDrawBrushColor.value = solid
                         canvas.freeDrawColor = solid
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        liveDrawBrushColor.value = original
+                        canvas.freeDrawColor = original
                         canvas.invalidate()
                     }
                     dialog.show(fragmentManager, "DrawColorPicker")
@@ -800,10 +847,29 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                     canvas.invalidate()
                 },
                 onOpenColorPicker = {
-                    ColorPickerDialog.newInstance(
+                    val originalHead = arrow.headColor
+                    val originalTail = arrow.tailColor
+                    val dialog = ColorPickerDialog.newInstance(
                         initialColor = arrow.headColor,
                         resultKey = ARROW_COLOR_RESULT_KEY
-                    ).show(fragmentManager, "ArrowColorPicker")
+                    )
+                    dialog.onColorChanged = { color ->
+                        arrow.headColor = color
+                        arrow.tailColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onGradientChanged = { gradient ->
+                        val color = gradient.colors.firstOrNull() ?: originalHead
+                        arrow.headColor = color
+                        arrow.tailColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        arrow.headColor = originalHead
+                        arrow.tailColor = originalTail
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "ArrowColorPicker")
                 },
                 onApply = {
                     canvas.runRecordedAction("Add Arrow") {}
@@ -885,10 +951,24 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                     canvas.invalidate()
                 },
                 onOpenColorPicker = {
-                    ColorPickerDialog.newInstance(
+                    val original = pen.strokeColor
+                    val dialog = ColorPickerDialog.newInstance(
                         initialColor = pen.strokeColor,
                         resultKey = BEZIER_COLOR_RESULT_KEY
-                    ).show(fragmentManager, "BezierColorPicker")
+                    )
+                    dialog.onColorChanged = { color ->
+                        pen.strokeColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onGradientChanged = { gradient ->
+                        pen.strokeColor = gradient.colors.firstOrNull() ?: original
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        pen.strokeColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "BezierColorPicker")
                 },
                 onInputFirst = {
                     val anchorX = if (pen.anchors.isEmpty()) canvas.width / 2f else pen.anchors.last().x + 80f

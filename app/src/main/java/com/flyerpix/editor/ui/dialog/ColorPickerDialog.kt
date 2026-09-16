@@ -1,6 +1,7 @@
 package com.flyerpix.editor.ui.dialog
 
 import android.app.Dialog
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -39,6 +40,26 @@ class ColorPickerDialog : DialogFragment() {
 
     /** Live preview gradasi — dipanggil setiap pilihan berubah (sebelum OK). */
     var onGradientChanged: (GradientColor) -> Unit = {}
+
+    /**
+     * Dipanggil saat user membatalkan pemilihan (tombol Cancel, tombol back,
+     * atau tap di luar dialog). Dipakai untuk mengembalikan live preview.
+     */
+    var onCancel: () -> Unit = {}
+
+    private var cancelNotified = false
+
+    private fun notifyCancel() {
+        if (!cancelNotified) {
+            cancelNotified = true
+            onCancel()
+        }
+    }
+
+    override fun onCancel(dialog: DialogInterface) {
+        super.onCancel(dialog)
+        notifyCancel()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,27 +106,26 @@ class ColorPickerDialog : DialogFragment() {
             )
             val result = Bundle()
             if (binding.viewPagerColorPicker.currentItem == 0 && currentFragment is SolidColorFragment) {
+                // getSelectedColor() sudah menyimpan ke Recent — tidak perlu push lagi.
                 val color = currentFragment.getSelectedColor()
                 result.putBoolean(EXTRA_IS_GRADIENT, false)
                 result.putInt(EXTRA_COLOR, color)
-                ColorRecents(requireContext()).pushSolid(color)
             } else if (currentFragment is GradientColorFragment) {
                 result.putBoolean(EXTRA_IS_GRADIENT, true)
                 @Suppress("DEPRECATION")
                 val gradient = currentFragment.getGradient()
                 result.putSerializable(EXTRA_GRADIENT, gradient)
+                // getGradient() tidak menyimpan ke Recent, jadi gradient di-push di sini.
                 ColorRecents(requireContext()).pushGradient(gradient)
-            }
-            run {
-                val raw = requireContext().getSharedPreferences("color_recent", android.content.Context.MODE_PRIVATE)
-                    .getString("entries", "").orEmpty()
-                android.util.Log.d("FlyerPixRecents", "picker OK key=$resultKey push=${result.getInt(EXTRA_COLOR)} store=${ColorRecents(requireContext()).recents().size} rawLen=${raw.length}")
             }
             setFragmentResult(resultKey, result)
             dismiss()
         }
 
-        binding.btnColorPickerCancel.setOnClickListener { dismiss() }
+        binding.btnColorPickerCancel.setOnClickListener {
+            notifyCancel()
+            dismiss()
+        }
     }
 
     override fun onStart() {

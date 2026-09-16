@@ -151,8 +151,22 @@ class CanvasBackgroundBottomSheet : BottomSheetDialogFragment() {
 
         binding.btnCustomSolidColor.setOnClickListener {
             val currentColor = pixelCanvasView?.canvasBackgroundColor ?: Color.WHITE
-            ColorPickerDialog.newInstance(initialColor = currentColor)
-                .show(childFragmentManager, "BackgroundSolidColorPicker")
+            val originalGradient = pixelCanvasView?.canvasBackgroundGradient
+            val dialog = ColorPickerDialog.newInstance(initialColor = currentColor)
+            dialog.onColorChanged = { color ->
+                pixelCanvasView?.setColorBackground(color)
+            }
+            dialog.onGradientChanged = { gradient ->
+                pixelCanvasView?.setGradientBackground(gradient)
+            }
+            dialog.onCancel = {
+                if (originalGradient != null) {
+                    pixelCanvasView?.setGradientBackground(originalGradient)
+                } else {
+                    pixelCanvasView?.setColorBackground(currentColor)
+                }
+            }
+            dialog.show(childFragmentManager, "BackgroundSolidColorPicker")
         }
 
         childFragmentManager.setFragmentResultListener(ColorPickerDialog.RESULT_KEY, viewLifecycleOwner) { _, bundle ->
@@ -213,8 +227,23 @@ class CanvasBackgroundBottomSheet : BottomSheetDialogFragment() {
 
         binding.btnCustomGradient.setOnClickListener {
             val currentGrad = pixelCanvasView?.canvasBackgroundGradient ?: GradientColor.PRESETS[0]
-            ColorPickerDialog.newInstance(initialGradient = currentGrad)
-                .show(childFragmentManager, "BackgroundGradientPicker")
+            val originalColor = pixelCanvasView?.canvasBackgroundColor ?: Color.WHITE
+            val originalGradient = pixelCanvasView?.canvasBackgroundGradient
+            val dialog = ColorPickerDialog.newInstance(initialGradient = currentGrad)
+            dialog.onColorChanged = { color ->
+                pixelCanvasView?.setColorBackground(color)
+            }
+            dialog.onGradientChanged = { gradient ->
+                pixelCanvasView?.setGradientBackground(gradient)
+            }
+            dialog.onCancel = {
+                if (originalGradient != null) {
+                    pixelCanvasView?.setGradientBackground(originalGradient)
+                } else {
+                    pixelCanvasView?.setColorBackground(originalColor)
+                }
+            }
+            dialog.show(childFragmentManager, "BackgroundGradientPicker")
         }
     }
 

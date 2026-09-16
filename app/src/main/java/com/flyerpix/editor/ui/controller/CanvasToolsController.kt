@@ -303,8 +303,85 @@ class CanvasToolsController(
             }
         }
 
-        com.flyerpix.editor.ui.dialog.ColorPickerDialog
+        val dialog = com.flyerpix.editor.ui.dialog.ColorPickerDialog
             .newInstance(initialColor, initialGradient)
-            .show(fragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
+
+        val originalColor = initialColor
+        val originalGradient = initialGradient
+        dialog.onColorChanged = { color ->
+            when (currentLayer) {
+                is com.flyerpix.editor.canvas.model.TextLayer -> {
+                    currentLayer.textColor = color
+                    currentLayer.gradientEnabled = false
+                    pixelCanvasView.invalidate()
+                }
+                is com.flyerpix.editor.canvas.model.ShapeLayer -> {
+                    currentLayer.fillColor = color
+                    pixelCanvasView.invalidate()
+                }
+                is com.flyerpix.editor.canvas.model.PenLayer -> {
+                    currentLayer.strokeColor = color
+                    pixelCanvasView.invalidate()
+                }
+                is com.flyerpix.editor.canvas.model.ArrowLayer -> {
+                    currentLayer.headColor = color
+                    pixelCanvasView.invalidate()
+                }
+                else -> pixelCanvasView.setColorBackground(color)
+            }
+        }
+        dialog.onGradientChanged = { gradient ->
+            val solid = gradient.colors.firstOrNull() ?: originalColor
+            when (currentLayer) {
+                is com.flyerpix.editor.canvas.model.TextLayer -> {
+                    currentLayer.textColor = solid
+                    currentLayer.gradientEnabled = false
+                    pixelCanvasView.invalidate()
+                }
+                is com.flyerpix.editor.canvas.model.ShapeLayer -> {
+                    currentLayer.fillColor = solid
+                    pixelCanvasView.invalidate()
+                }
+                is com.flyerpix.editor.canvas.model.PenLayer -> {
+                    currentLayer.strokeColor = solid
+                    pixelCanvasView.invalidate()
+                }
+                is com.flyerpix.editor.canvas.model.ArrowLayer -> {
+                    currentLayer.headColor = solid
+                    pixelCanvasView.invalidate()
+                }
+                else -> pixelCanvasView.setGradientBackground(gradient)
+            }
+        }
+        dialog.onCancel = {
+            when (currentLayer) {
+                is com.flyerpix.editor.canvas.model.TextLayer -> {
+                    currentLayer.textColor = originalColor
+                    currentLayer.gradientEnabled = originalGradient != null
+                    pixelCanvasView.invalidate()
+                }
+                is com.flyerpix.editor.canvas.model.ShapeLayer -> {
+                    currentLayer.fillColor = originalColor
+                    pixelCanvasView.invalidate()
+                }
+                is com.flyerpix.editor.canvas.model.PenLayer -> {
+                    currentLayer.strokeColor = originalColor
+                    pixelCanvasView.invalidate()
+                }
+                is com.flyerpix.editor.canvas.model.ArrowLayer -> {
+                    currentLayer.headColor = originalColor
+                    pixelCanvasView.invalidate()
+                }
+                else -> {
+                    if (originalGradient != null) {
+                        pixelCanvasView.setGradientBackground(originalGradient)
+                    } else {
+                        pixelCanvasView.setColorBackground(originalColor)
+                    }
+                }
+            }
+        }
+
+        dialog.show(fragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
     }
 }

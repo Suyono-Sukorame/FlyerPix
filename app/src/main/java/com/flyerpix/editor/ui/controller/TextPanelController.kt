@@ -439,13 +439,29 @@ initializeMaskControls()
                 onDepthChange = { v -> applyToTextLayer { it.extrudeDepth = v }; pixelCanvasView.invalidate() },
                 onDepthPickRequested = {
                     val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@ThreeDTextDetailPage
-                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                    val originalColor = sel.extrudeColor
+                    val originalGradient = sel.extrudeGradient
+                    val dialog = com.flyerpix.editor.ui.dialog.ColorPickerDialog
                         .newInstance(
                             initialColor = sel.extrudeColor,
                             initialGradient = sel.extrudeGradient,
                             resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.DEPTH_RESULT_KEY
                         )
-                        .show((activity as androidx.fragment.app.FragmentActivity).supportFragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
+                    dialog.onColorChanged = { color ->
+                        sel.extrudeColor = color
+                        sel.extrudeGradient = null
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.onGradientChanged = { gradient ->
+                        sel.extrudeGradient = gradient
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.onCancel = {
+                        sel.extrudeColor = originalColor
+                        sel.extrudeGradient = originalGradient
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.show((activity as androidx.fragment.app.FragmentActivity).supportFragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
                 },
                 onAngleChange = { a -> applyToTextLayer { it.extrudeAngle = a }; pixelCanvasView.invalidate() },
                 onViewTypeChange = { type ->
@@ -490,16 +506,6 @@ initializeMaskControls()
         val host = threeDComposeHost ?: return
         val sheetMaxH = prepareTextAppearanceSheet() ?: return
         val recents = com.flyerpix.editor.ui.dialog.ColorRecents(activity).recents()
-        run {
-            val raw = activity.getSharedPreferences("color_recent", android.content.Context.MODE_PRIVATE)
-                .getString("entries", "").orEmpty()
-            android.util.Log.d("FlyerPixRecents", "sheet ctx=${activity.javaClass.simpleName} recents=${recents.size} rawLen=${raw.length} raw=${raw.take(120)}")
-            android.widget.Toast.makeText(
-                activity,
-                "recents=${recents.size} rawLen=${raw.length}",
-                android.widget.Toast.LENGTH_LONG
-            ).show()
-        }
         host.setContent {
             com.flyerpix.editor.ui.compose.TextColorDetailPage(
                 color = layer.textColor,
@@ -526,10 +532,28 @@ initializeMaskControls()
                 onPickColor = {
                     val selected = pixelCanvasView.selectedLayer as? TextLayer
                     if (selected != null) {
-                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.newInstance(
+                        val originalColor = selected.textColor
+                        val originalGradientEnabled = selected.gradientEnabled
+                        val dialog = com.flyerpix.editor.ui.dialog.ColorPickerDialog.newInstance(
                             initialColor = selected.textColor,
                             resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.TEXT_RESULT_KEY
-                        ).show(
+                        )
+                        dialog.onColorChanged = { color ->
+                            selected.textColor = color
+                            selected.gradientEnabled = false
+                            pixelCanvasView.invalidate()
+                        }
+                        dialog.onGradientChanged = { gradient ->
+                            selected.textColor = gradient.colors.firstOrNull() ?: originalColor
+                            selected.gradientEnabled = false
+                            pixelCanvasView.invalidate()
+                        }
+                        dialog.onCancel = {
+                            selected.textColor = originalColor
+                            selected.gradientEnabled = originalGradientEnabled
+                            pixelCanvasView.invalidate()
+                        }
+                        dialog.show(
                             (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
                             com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
                         )
@@ -775,12 +799,21 @@ initializeMaskControls()
                 onDepthChange = { v -> applyToTextLayer { it.shadow3DDepth = v }; pixelCanvasView.invalidate() },
                 onColorPickRequested = {
                     val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@ThreeDShadowDetailPage
-                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                    val original = sel.shadow3DColor
+                    val dialog = com.flyerpix.editor.ui.dialog.ColorPickerDialog
                         .newInstance(
                             initialColor = sel.shadow3DColor,
                             resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW3D_RESULT_KEY
                         )
-                        .show((activity as androidx.fragment.app.FragmentActivity).supportFragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
+                    dialog.onColorChanged = { color ->
+                        sel.shadow3DColor = color
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.onCancel = {
+                        sel.shadow3DColor = original
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.show((activity as androidx.fragment.app.FragmentActivity).supportFragmentManager, com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG)
                 },
                 onAngleChange = { a -> applyToTextLayer { it.shadow3DAngle = a }; pixelCanvasView.invalidate() },
                 onBlurChange = { b -> applyToTextLayer { it.shadow3DBlur = b }; pixelCanvasView.invalidate() },
@@ -923,15 +956,24 @@ initializeMaskControls()
                 },
                 onColorPickRequested = {
                     val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@NeonDetailPage
-                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                    val original = sel.neonColor
+                    val dialog = com.flyerpix.editor.ui.dialog.ColorPickerDialog
                         .newInstance(
                             initialColor = sel.neonColor,
                             resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.NEON_RESULT_KEY
                         )
-                        .show(
-                            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
-                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
-                        )
+                    dialog.onColorChanged = { color ->
+                        sel.neonColor = color
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.onCancel = {
+                        sel.neonColor = original
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.show(
+                        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                    )
                 },
                 onRadiusChange = { r ->
                     applyToTextLayer { it.neonRadius = r }
@@ -1081,15 +1123,24 @@ initializeMaskControls()
                 },
                 onColorPickRequested = {
                     val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@ShadowDetailPage
-                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                    val original = sel.shadowColor
+                    val dialog = com.flyerpix.editor.ui.dialog.ColorPickerDialog
                         .newInstance(
                             initialColor = sel.shadowColor,
                             resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW_RESULT_KEY
                         )
-                        .show(
-                            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
-                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
-                        )
+                    dialog.onColorChanged = { color ->
+                        sel.shadowColor = color
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.onCancel = {
+                        sel.shadowColor = original
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.show(
+                        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                    )
                 },
                 onRadiusChange = { r ->
                     applyToTextLayer { it.shadowRadius = r }
@@ -1162,15 +1213,24 @@ initializeMaskControls()
                 },
                 onColorPickRequested = {
                     val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@ShadowDetailPage
-                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                    val original = sel.innerShadowColor
+                    val dialog = com.flyerpix.editor.ui.dialog.ColorPickerDialog
                         .newInstance(
                             initialColor = sel.innerShadowColor,
                             resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.INNER_SHADOW_RESULT_KEY
                         )
-                        .show(
-                            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
-                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
-                        )
+                    dialog.onColorChanged = { color ->
+                        sel.innerShadowColor = color
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.onCancel = {
+                        sel.innerShadowColor = original
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.show(
+                        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                    )
                 },
                 onRadiusChange = { r ->
                     applyToTextLayer { it.innerShadowRadius = r }
@@ -1378,15 +1438,25 @@ initializeMaskControls()
                 },
                 onColorPickRequested = {
                     val sel = pixelCanvasView.selectedLayer as? TextLayer ?: return@BackgroundDetailPage
-                    com.flyerpix.editor.ui.dialog.ColorPickerDialog
+                    val original = sel.bgColor
+                    val dialog = com.flyerpix.editor.ui.dialog.ColorPickerDialog
                         .newInstance(
                             initialColor = sel.bgColor,
                             resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.BG_RESULT_KEY
                         )
-                        .show(
-                            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
-                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
-                        )
+                    dialog.onColorChanged = { color ->
+                        val currentAlpha = (sel.bgColor ushr 24) and 0xFF
+                        sel.bgColor = (color and 0x00FFFFFF) or (currentAlpha shl 24)
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.onCancel = {
+                        sel.bgColor = original
+                        pixelCanvasView.invalidate()
+                    }
+                    dialog.show(
+                        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+                    )
                 },
                 onOpacityChange = { op ->
                     applyToTextLayer { it.bgOpacity = op / 100f }
@@ -2625,38 +2695,43 @@ tvAngleLabel.text = "Angle: 0°"
                 )
         }
 
-        // Terima hasil pemilihan Depth Color / Gradient dari ColorPickerDialog
-        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
-            .setFragmentResultListener(
-                com.flyerpix.editor.ui.dialog.ColorPickerDialog.DEPTH_RESULT_KEY,
-                activity
-            ) { _, bundle ->
-                val isGradient = bundle.getBoolean(
-                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
-                )
-                if (isGradient) {
-                    @Suppress("DEPRECATION")
-                    val gradient = bundle.getSerializable(
-                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_GRADIENT
-                    ) as? com.flyerpix.editor.canvas.model.GradientColor
-                    if (gradient != null) {
+        // Terima hasil pemilihan Depth Color / Gradient dari ColorPickerDialog.
+        // Hanya didaftarkan sebagai fallback saat host Compose tidak tersedia —
+        // saat host ada, listener Compose (initializeThreeDCompose) yang dipakai
+        // supaya tidak ada dua listener dengan key & owner yang sama.
+        if (threeDComposeHost == null) {
+            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+                .setFragmentResultListener(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.DEPTH_RESULT_KEY,
+                    activity
+                ) { _, bundle ->
+                    val isGradient = bundle.getBoolean(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
+                    )
+                    if (isGradient) {
+                        @Suppress("DEPRECATION")
+                        val gradient = bundle.getSerializable(
+                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_GRADIENT
+                        ) as? com.flyerpix.editor.canvas.model.GradientColor
+                        if (gradient != null) {
+                            applyToTextLayer { layer ->
+                                layer.extrudeGradient = gradient
+                            }
+                        }
+                    } else {
+                        val color = bundle.getInt(
+                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                            0xFF333333.toInt()
+                        )
                         applyToTextLayer { layer ->
-                            layer.extrudeGradient = gradient
+                            layer.extrudeColor = color
+                            layer.extrudeGradient = null
                         }
                     }
-                } else {
-                    val color = bundle.getInt(
-                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
-                        0xFF333333.toInt()
-                    )
-                    applyToTextLayer { layer ->
-                        layer.extrudeColor = color
-                        layer.extrudeGradient = null
-                    }
+                    setupDepthColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
+                    pixelCanvasView.invalidate()
                 }
-                setupDepthColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
-                pixelCanvasView.invalidate()
-            }
+        }
 
         chipPreview.setOnClickListener { openDepthColorPicker() }
         btnPick.setOnClickListener { openDepthColorPicker() }
@@ -2793,27 +2868,30 @@ tvAngleLabel.text = "Angle: 0°"
                 )
         }
 
-        // Terima hasil pemilihan Shadow Color dari ColorPickerDialog
-        (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
-            .setFragmentResultListener(
-                com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW3D_RESULT_KEY,
-                activity
-            ) { _, bundle ->
-                val isGradient = bundle.getBoolean(
-                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
-                )
-                if (!isGradient) {
-                    val color = bundle.getInt(
-                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
-                        0xB3000000.toInt()
+        // Terima hasil pemilihan Shadow Color dari ColorPickerDialog.
+        // Hanya fallback saat host Compose tidak tersedia (lihat initializeThreeDCompose).
+        if (threeDComposeHost == null) {
+            (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager
+                .setFragmentResultListener(
+                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.SHADOW3D_RESULT_KEY,
+                    activity
+                ) { _, bundle ->
+                    val isGradient = bundle.getBoolean(
+                        com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_IS_GRADIENT, false
                     )
-                    applyToTextLayer { layer ->
-                        layer.shadow3DColor = color
+                    if (!isGradient) {
+                        val color = bundle.getInt(
+                            com.flyerpix.editor.ui.dialog.ColorPickerDialog.EXTRA_COLOR,
+                            0xB3000000.toInt()
+                        )
+                        applyToTextLayer { layer ->
+                            layer.shadow3DColor = color
+                        }
+                        setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
+                        pixelCanvasView.invalidate()
                     }
-                    setupColorPreview(pixelCanvasView.selectedLayer as? TextLayer)
-                    pixelCanvasView.invalidate()
                 }
-            }
+        }
 
         chipPreview.setOnClickListener { openColorPicker() }
         btnPick.setOnClickListener { openColorPicker() }
@@ -5143,15 +5221,32 @@ private fun registerTextPanels() {
 
         fun openColorPicker() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
-            com.flyerpix.editor.ui.dialog.ColorPickerDialog
+            val originalColor = layer.textColor
+            val originalGradientEnabled = layer.gradientEnabled
+            val dialog = com.flyerpix.editor.ui.dialog.ColorPickerDialog
                 .newInstance(
                     initialColor = layer.textColor,
                     resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.TEXT_RESULT_KEY
                 )
-                .show(
-                    (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
-                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
-                )
+            dialog.onColorChanged = { color ->
+                layer.textColor = color
+                layer.gradientEnabled = false
+                pixelCanvasView.invalidate()
+            }
+            dialog.onGradientChanged = { gradient ->
+                layer.textColor = gradient.colors.firstOrNull() ?: originalColor
+                layer.gradientEnabled = false
+                pixelCanvasView.invalidate()
+            }
+            dialog.onCancel = {
+                layer.textColor = originalColor
+                layer.gradientEnabled = originalGradientEnabled
+                pixelCanvasView.invalidate()
+            }
+            dialog.show(
+                (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+            )
         }
 
         // Terima hasil pemilihan Warna Teks dari ColorPickerDialog
@@ -5231,15 +5326,31 @@ private fun registerTextPanels() {
 
         fun openColorPicker() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
-            com.flyerpix.editor.ui.dialog.ColorPickerDialog
+            val original = layer.strokeColor
+            val dialog = com.flyerpix.editor.ui.dialog.ColorPickerDialog
                 .newInstance(
                     initialColor = layer.strokeColor,
                     resultKey = com.flyerpix.editor.ui.dialog.ColorPickerDialog.STROKE_RESULT_KEY
                 )
-                .show(
-                    (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
-                    com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
-                )
+            dialog.onColorChanged = { color ->
+                val currentAlpha = (layer.strokeColor ushr 24) and 0xFF
+                layer.strokeColor = (color and 0x00FFFFFF) or (currentAlpha shl 24)
+                pixelCanvasView.invalidate()
+            }
+            dialog.onGradientChanged = { gradient ->
+                val color = gradient.colors.firstOrNull() ?: original
+                val currentAlpha = (layer.strokeColor ushr 24) and 0xFF
+                layer.strokeColor = (color and 0x00FFFFFF) or (currentAlpha shl 24)
+                pixelCanvasView.invalidate()
+            }
+            dialog.onCancel = {
+                layer.strokeColor = original
+                pixelCanvasView.invalidate()
+            }
+            dialog.show(
+                (activity as androidx.fragment.app.FragmentActivity).supportFragmentManager,
+                com.flyerpix.editor.ui.dialog.ColorPickerDialog.TAG
+            )
         }
 
         fun applyStrokeChange(actionName: String, block: (com.flyerpix.editor.canvas.model.TextLayer) -> Unit) {
