@@ -232,6 +232,7 @@
                 android:checked="true"
                 android:text="Linear"
                 android:textColor="@color/light_text_primary"
+                android:buttonTint="@color/radio_button_tint"
                 android:textSize="13sp" />
 
             <RadioButton
@@ -241,6 +242,7 @@
                 android:layout_marginStart="16dp"
                 android:text="Radial"
                 android:textColor="@color/light_text_primary"
+                android:buttonTint="@color/radio_button_tint"
                 android:textSize="13sp" />
 
             <RadioButton
@@ -250,6 +252,7 @@
                 android:layout_marginStart="16dp"
                 android:text="Sweep"
                 android:textColor="@color/light_text_primary"
+                android:buttonTint="@color/radio_button_tint"
                 android:textSize="13sp" />
         </RadioGroup>
 

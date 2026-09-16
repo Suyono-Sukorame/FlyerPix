@@ -66,6 +66,7 @@
                 android:layout_weight="1"
                 android:text="Linear"
                 android:checked="true"
+                android:buttonTint="@color/radio_button_tint"
                 android:textSize="12sp" />
 
             <RadioButton
@@ -74,6 +75,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Radial"
+                android:buttonTint="@color/radio_button_tint"
                 android:textSize="12sp" />
 
             <RadioButton
@@ -82,6 +84,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Sweep"
+                android:buttonTint="@color/radio_button_tint"
                 android:textSize="12sp" />
         </RadioGroup>
 

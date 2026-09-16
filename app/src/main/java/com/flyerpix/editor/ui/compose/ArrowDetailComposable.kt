@@ -276,7 +276,7 @@ private fun SettingRow(
 }
 
 /**
- * Baris deret warna (swatch bulat + tombol "More...").
+ * Baris deret warna (swatch bulat + tombol "+" warna).
  */
 @Composable
 private fun SwatchRow(
@@ -307,16 +307,6 @@ private fun SwatchRow(
                     .clickable { onColorChange(colorInt) }
             )
         }
-        TextButton(
-            onClick = onOpenColorPicker,
-            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-        ) {
-            Text(
-                text = "More...",
-                style = MaterialTheme.typography.caption,
-                color = MaterialTheme.colors.primary,
-                fontWeight = FontWeight.Bold
-            )
-        }
+        AddColorSwatchButton(onClick = onOpenColorPicker)
     }
 }

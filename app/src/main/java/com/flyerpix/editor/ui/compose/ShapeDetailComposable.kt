@@ -271,19 +271,7 @@ fun ShapeDetailPage(
                                 )
                             }
 
-                            Button(
-                                onClick = onOpenFillColorPicker,
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = Color(0xFFF1F5F9),
-                                    contentColor = PrimaryBlue
-                                ),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                elevation = ButtonDefaults.elevation(0.dp),
-                                modifier = Modifier.height(32.dp)
-                            ) {
-                                Text("More", style = MaterialTheme.typography.caption, fontSize = 10.sp)
-                            }
+                            AddColorSwatchButton(onClick = onOpenFillColorPicker, buttonSize = 32.dp)
                         }
 
                         // SECTION: Stroke
@@ -420,19 +408,7 @@ fun ShapeDetailPage(
                                 )
                             }
 
-                            Button(
-                                onClick = onOpenStrokeColorPicker,
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = Color(0xFFF1F5F9),
-                                    contentColor = PrimaryBlue
-                                ),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                elevation = ButtonDefaults.elevation(0.dp),
-                                modifier = Modifier.height(32.dp)
-                            ) {
-                                Text("More", style = MaterialTheme.typography.caption, fontSize = 10.sp)
-                            }
+                            AddColorSwatchButton(onClick = onOpenStrokeColorPicker, buttonSize = 32.dp)
                         }
 
                         Text(
