@@ -58,8 +58,13 @@ object SnapCalculator {
 
     /**
      * Menghitung snap berdasarkan bounding box aktual layer, sehingga akurat untuk
-     * layer yang sudah diskalakan atau dirotasi. Target magnet mencakup center
-     * canvas serta tepi canvas kiri/kanan/atas/bawah.
+     * layer yang sudah diskalakan atau dirotasi.
+     *
+     * Target magnet mencakup tepi kanvas kiri/kanan/atas/bawah, garis tengah kanvas,
+     * serta tepi/tengah layer lain ([peerXTargets]/[peerYTargets]). Toleransi tepi
+     * ([edgeTolerance]) default sama dengan [tolerance] agar pemanggil lama tetap
+     * kompatibel, tetapi UI memakai toleransi tepi yang lebih besar supaya magnet
+     * sisi terasa sama kuatnya dengan magnet tengah.
      */
     fun calculateWithEdges(
         layerX: Float,
@@ -72,24 +77,44 @@ object SnapCalculator {
         canvasLeft: Float,
         canvasTop: Float,
         canvasRight: Float,
-        canvasBottom: Float
+        canvasBottom: Float,
+        edgeTolerance: Float = tolerance,
+        peerXTargets: FloatArray = FloatArray(0),
+        peerYTargets: FloatArray = FloatArray(0)
     ): SnapResult {
         val boundsCenterX = (boundsLeft + boundsRight) / 2f
         val boundsCenterY = (boundsTop + boundsBottom) / 2f
         val canvasCenterX = (canvasLeft + canvasRight) / 2f
         val canvasCenterY = (canvasTop + canvasBottom) / 2f
 
-        val snapX = closestSnapDelta(
-            boundsLeft to canvasLeft,
-            boundsCenterX to canvasCenterX,
-            boundsRight to canvasRight,
-            tolerance = tolerance
+        // Tepi kanvas tidak lagi ditawarkan bila layer lebih besar dari kanvas pada
+        // sumbu tersebut, karena menempelkan satu tepi justru melepas tepi lainnya.
+        val allowCanvasEdgeX = (boundsRight - boundsLeft) <= (canvasRight - canvasLeft)
+        val allowCanvasEdgeY = (boundsBottom - boundsTop) <= (canvasBottom - canvasTop)
+
+        val snapX = resolveAxisSnap(
+            boundsStart = boundsLeft,
+            boundsCenter = boundsCenterX,
+            boundsEnd = boundsRight,
+            canvasStart = canvasLeft,
+            canvasCenter = canvasCenterX,
+            canvasEnd = canvasRight,
+            allowCanvasEdge = allowCanvasEdgeX,
+            centerTolerance = tolerance,
+            edgeTolerance = edgeTolerance,
+            peerTargets = peerXTargets
         )
-        val snapY = closestSnapDelta(
-            boundsTop to canvasTop,
-            boundsCenterY to canvasCenterY,
-            boundsBottom to canvasBottom,
-            tolerance = tolerance
+        val snapY = resolveAxisSnap(
+            boundsStart = boundsTop,
+            boundsCenter = boundsCenterY,
+            boundsEnd = boundsBottom,
+            canvasStart = canvasTop,
+            canvasCenter = canvasCenterY,
+            canvasEnd = canvasBottom,
+            allowCanvasEdge = allowCanvasEdgeY,
+            centerTolerance = tolerance,
+            edgeTolerance = edgeTolerance,
+            peerTargets = peerYTargets
         )
 
         return SnapResult(
@@ -104,21 +129,50 @@ object SnapCalculator {
 
     private data class SnapDelta(val delta: Float, val target: Float)
 
-    private fun closestSnapDelta(
-        vararg candidates: Pair<Float, Float>,
-        tolerance: Float
+    /**
+     * Memilih target snap terdekat pada satu sumbu.
+     *
+     * Tepi kanvas & layer lain dievaluasi lebih dulu sehingga menang saat jaraknya
+     * seri dengan garis tengah kanvas; garis tengah hanya terpakai bila benar-benar
+     * lebih dekat (mencegah center "merampas" magnet tepi).
+     */
+    private fun resolveAxisSnap(
+        boundsStart: Float,
+        boundsCenter: Float,
+        boundsEnd: Float,
+        canvasStart: Float,
+        canvasCenter: Float,
+        canvasEnd: Float,
+        allowCanvasEdge: Boolean,
+        centerTolerance: Float,
+        edgeTolerance: Float,
+        peerTargets: FloatArray
     ): SnapDelta? {
         var best: SnapDelta? = null
         var bestDistance = Float.POSITIVE_INFINITY
 
-        for ((source, target) in candidates) {
+        fun consider(source: Float, target: Float, limit: Float) {
             val delta = target - source
             val distance = kotlin.math.abs(delta)
-            if (distance <= tolerance && distance < bestDistance) {
+            if (distance <= limit && distance < bestDistance) {
                 best = SnapDelta(delta, target)
                 bestDistance = distance
             }
         }
+
+        if (allowCanvasEdge) {
+            consider(boundsStart, canvasStart, edgeTolerance)
+            consider(boundsEnd, canvasEnd, edgeTolerance)
+        }
+        for (peer in peerTargets) {
+            if (peer.isFinite()) {
+                consider(boundsStart, peer, edgeTolerance)
+                consider(boundsCenter, peer, edgeTolerance)
+                consider(boundsEnd, peer, edgeTolerance)
+            }
+        }
+
+        consider(boundsCenter, canvasCenter, centerTolerance)
 
         return best
     }

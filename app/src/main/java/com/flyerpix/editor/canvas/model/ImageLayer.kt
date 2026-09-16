@@ -27,6 +27,10 @@ open class ImageLayer(
     override var x: Float = 0f,
     override var y: Float = 0f,
     override var scale: Float = 1f,
+    /** Stretch horizontal non-uniform (1f = normal). Dipakai handle tengah-kanan. */
+    var stretchX: Float = 1f,
+    /** Stretch vertikal non-uniform (1f = normal). Dipakai handle tengah-bawah. */
+    var stretchY: Float = 1f,
     override var rotation: Float = 0f,
     override var opacity: Int = 255,
     override var isLocked: Boolean = false,
@@ -103,7 +107,7 @@ open class ImageLayer(
         val cx = w / 2f
         val cy = h / 2f
         canvas.translate(x, y)
-        canvas.scale(scale, scale, cx, cy)
+        canvas.scale(scale * stretchX, scale * stretchY, cx, cy)
         canvas.rotate(rotation, cx, cy)
 
         // 2. Transformasi perspektif (jika diaktifkan)
@@ -217,12 +221,74 @@ open class ImageLayer(
         return Pair(width, height)
     }
 
+    private fun effectiveScaleX(): Float = if (scale * stretchX != 0f) scale * stretchX else 1f
+
+    private fun effectiveScaleY(): Float = if (scale * stretchY != 0f) scale * stretchY else 1f
+
+    override fun getSelectionBoxPoints(padding: Float): FloatArray {
+        val (w, h) = getUnwarpedDimensions()
+        val localPts = floatArrayOf(
+            -padding, -padding,        // Top-Left
+            w + padding, -padding,     // Top-Right
+            w + padding, h + padding,  // Bottom-Right
+            -padding, h + padding      // Bottom-Left
+        )
+
+        val sx = effectiveScaleX()
+        val sy = effectiveScaleY()
+        val rad = Math.toRadians(rotation.toDouble())
+        val cos = Math.cos(rad).toFloat()
+        val sin = Math.sin(rad).toFloat()
+        val cx = w / 2f
+        val cy = h / 2f
+
+        val result = FloatArray(8)
+        for (i in 0..3) {
+            val ox = (localPts[i * 2] - cx) * sx
+            val oy = (localPts[i * 2 + 1] - cy) * sy
+            result[i * 2] = ox * cos - oy * sin + cx + x
+            result[i * 2 + 1] = ox * sin + oy * cos + cy + y
+        }
+        return result
+    }
+
+    override fun containsCanvasPoint(px: Float, py: Float): Boolean {
+        val (w, h) = getUnwarpedDimensions()
+        if (w <= 0f || h <= 0f) return false
+
+        val cx = x + w / 2f
+        val cy = y + h / 2f
+        val dx = px - cx
+        val dy = py - cy
+
+        val rad = Math.toRadians(-rotation.toDouble())
+        val cos = Math.cos(rad)
+        val sin = Math.sin(rad)
+        val unrotX = dx * cos - dy * sin
+        val unrotY = dx * sin + dy * cos
+
+        val localX = unrotX / effectiveScaleX() + w / 2f
+        val localY = unrotY / effectiveScaleY() + h / 2f
+
+        return localX in 0f..w && localY in 0f..h
+    }
+
+    override fun getLayerTransformMatrix(w: Float, h: Float): Matrix {
+        val matrix = Matrix()
+        matrix.postTranslate(x, y)
+        matrix.postScale(effectiveScaleX(), effectiveScaleY(), x + w / 2f, y + h / 2f)
+        matrix.postRotate(rotation, x + w / 2f, y + h / 2f)
+        return matrix
+    }
+
     override fun contentBlurSignature(): Int {
         var h = 1
         h = h * 31 + id.hashCode()
         h = h * 31 + x.hashCode()
         h = h * 31 + y.hashCode()
         h = h * 31 + scale.hashCode()
+        h = h * 31 + stretchX.hashCode()
+        h = h * 31 + stretchY.hashCode()
         h = h * 31 + rotation.hashCode()
         h = h * 31 + opacity
         h = h * 31 + (if (isVisible) 1 else 0)
@@ -245,6 +311,8 @@ open class ImageLayer(
             x = x,
             y = y,
             scale = scale,
+            stretchX = stretchX,
+            stretchY = stretchY,
             rotation = rotation,
             opacity = opacity,
             isLocked = isLocked,

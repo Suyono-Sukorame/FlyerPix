@@ -71,7 +71,6 @@ import androidx.recyclerview.widget.RecyclerView
 import java.io.File
 import java.io.FileOutputStream
 import java.util.*
-import kotlin.math.max
 import kotlin.math.min
 
 class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
@@ -237,6 +236,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         ImagePreEditDialog.show(supportFragmentManager, bitmap) { result ->
             if (result != null) {
                 addImageAsLayer(result)
+                // Buka menu Canvas supaya panel bawah langsung terisi (bukan blank).
+                binding.bottomNavigation.selectedItemId = R.id.nav_canvas
                 showSnackbar("Image added successfully!")
             }
         }
@@ -250,11 +251,11 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         val bmpW = bitmap.width.toFloat()
         val bmpH = bitmap.height.toFloat()
 
-        // Foto mengisi penuh canvas (cover): skala mengikuti sisi terbesar agar
-        // pas di semua sisi dokumen, kelebihan terpotong (crop). Bitmap langsung
+        // Gambar masuk dengan skala contain: sisi terpanjang = 80% dari canvas,
+        // supaya masih ada ruang dan mudah diperbesar/dikecilkan. Bitmap langsung
         // diresize supaya layer.scale selalu 1f (100%) saat masuk dan konsisten
-        // dengan fitur Scale (100% = memenuhi seluruh canvas).
-        val fit = max(docW / bmpW, docH / bmpH)
+        // dengan fitur Scale (100% = 80% canvas untuk gambar).
+        val fit = 0.8f * min(docW / bmpW, docH / bmpH)
         val finalW = (bmpW * fit).toInt().coerceAtLeast(1)
         val finalH = (bmpH * fit).toInt().coerceAtLeast(1)
         val bmp = if (finalW != bitmap.width || finalH != bitmap.height)
@@ -262,9 +263,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         else bitmap
 
         val layer = ImageLayer(bitmap = bmp, scale = 1f, layerName = "Image")
-        // Center image on canvas (nilai negatif = overflow ter-crop merata)
-        layer.x = (docW - finalW) / 2f
-        layer.y = (docH - finalH) / 2f
+        // Tempel di sudut kiri-atas canvas
+        layer.x = 0f
+        layer.y = 0f
         pixelCanvasView.addLayer(layer)
     }
 

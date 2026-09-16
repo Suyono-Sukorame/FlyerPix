@@ -188,6 +188,9 @@ data class LayerDto(
     /** Bitmap layer gambar/stiker dikodekan Base64 PNG. */
     val bitmapBase64: String? = null,
     val layerName: String? = null,
+    /** Stretch non-uniform ImageLayer (null = 1f agar proyek lama tetap kompatibel). */
+    val stretchX: Float? = null,
+    val stretchY: Float? = null,
 
     // ── ShapeLayer ───────────────────────────────────────────────────────────
     /** "RECTANGLE" | "ROUNDED_RECTANGLE" | "CIRCLE" | "ARC" | "TRIANGLE" | "STAR" */

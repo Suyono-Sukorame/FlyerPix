@@ -374,7 +374,9 @@ object ProjectSerializer {
     private fun imageLayerToDto(l: ImageLayer): LayerDto = baseLayerFields(l).copy(
         type         = "IMAGE",
         bitmapBase64 = bitmapToBase64(l.bitmap),
-        layerName    = l.layerName
+        layerName    = l.layerName,
+        stretchX     = l.stretchX,
+        stretchY     = l.stretchY
     )
 
     private fun stickerLayerToDto(l: StickerLayer): LayerDto = baseLayerFields(l).copy(
@@ -643,6 +645,8 @@ object ProjectSerializer {
                     x                  = dto.x,
                     y                  = dto.y,
                     scale              = dto.scale,
+                    stretchX           = dto.stretchX ?: 1f,
+                    stretchY           = dto.stretchY ?: 1f,
                     rotation           = dto.rotation,
                     opacity            = dto.opacity,
                     isLocked           = dto.isLocked,
@@ -677,10 +681,10 @@ object ProjectSerializer {
 
             "SHAPE" -> ShapeLayer(
                 id                  = dto.id,
-                x                   = dto.x,
-                y                   = dto.y,
-                scale               = dto.scale,
-                rotation            = dto.rotation,
+                    x                  = dto.x,
+                    y                  = dto.y,
+                    scale              = dto.scale,
+                    rotation           = dto.rotation,
                 opacity             = dto.opacity,
                 isLocked            = dto.isLocked,
                 isVisible           = dto.isVisible,

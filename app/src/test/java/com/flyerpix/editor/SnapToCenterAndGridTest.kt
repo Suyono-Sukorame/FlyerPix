@@ -241,4 +241,105 @@ class SnapToCenterAndGridTest {
         assertEquals(500f, result.guideX!!, 0.001f)
         assertFalse(result.isSnappedY)
     }
+
+    @Test
+    fun `edge tolerance pulls layer to canvas edge beyond center tolerance`() {
+        // boundsLeft = 8px dari tepi kiri kanvas: di luar center tolerance 5px
+        // tetapi di dalam edge tolerance 10px -> harus menempel ke tepi kiri.
+        val result = SnapCalculator.calculateWithEdges(
+            layerX = 8f,
+            layerY = 300f,
+            boundsLeft = 8f,
+            boundsTop = 300f,
+            boundsRight = 108f,
+            boundsBottom = 400f,
+            tolerance = 5f,
+            canvasLeft = 0f,
+            canvasTop = 0f,
+            canvasRight = 1000f,
+            canvasBottom = 800f,
+            edgeTolerance = 10f
+        )
+
+        assertTrue(result.isSnappedX)
+        assertEquals(0f, result.snappedX, 0.001f)
+        assertEquals(0f, result.guideX!!, 0.001f)
+    }
+
+    @Test
+    fun `center snap is used when it is strictly closer than canvas edge`() {
+        // Center delta = 3px (bounds 447..547, center 497 vs 500); tepi kanan peer
+        // delta = 6px (boundsRight 547 vs 553) masih valid dalam edge tolerance 10px.
+        // Center harus menang karena lebih dekat.
+        val result = SnapCalculator.calculateWithEdges(
+            layerX = 447f,
+            layerY = 300f,
+            boundsLeft = 447f,
+            boundsTop = 300f,
+            boundsRight = 547f,
+            boundsBottom = 400f,
+            tolerance = 5f,
+            canvasLeft = 0f,
+            canvasTop = 0f,
+            canvasRight = 1000f,
+            canvasBottom = 800f,
+            edgeTolerance = 10f,
+            peerXTargets = floatArrayOf(553f)
+        )
+
+        assertTrue(result.isSnappedX)
+        assertEquals(450f, result.snappedX, 0.001f)
+        assertEquals(500f, result.guideX!!, 0.001f)
+    }
+
+    @Test
+    fun `layer wider than canvas cannot snap to canvas side edges`() {
+        // Lebar layer 1200 > lebar kanvas 1000 -> tepi tidak ditawarkan,
+        // hanya center yang boleh aktif.
+        val result = SnapCalculator.calculateWithEdges(
+            layerX = -100f,
+            layerY = 300f,
+            boundsLeft = -100f,
+            boundsTop = 300f,
+            boundsRight = 1100f,
+            boundsBottom = 400f,
+            tolerance = 5f,
+            canvasLeft = 0f,
+            canvasTop = 0f,
+            canvasRight = 1000f,
+            canvasBottom = 800f,
+            edgeTolerance = 10f
+        )
+
+        // Center bounds = 500 == canvas center 500 -> snap ke center (x tetap -100).
+        assertTrue(result.isSnappedX)
+        assertEquals(-100f, result.snappedX, 0.001f)
+        assertEquals(500f, result.guideX!!, 0.001f)
+    }
+
+    @Test
+    fun `layer snaps to left edge of another layer via peer targets`() {
+        // Layer kecil di x=200, layer lain (peer) memiliki tepi kiri di 400.
+        // Layer aktif boundsLeft = 406 (delta 6px terhadap peer 400).
+        val result = SnapCalculator.calculateWithEdges(
+            layerX = 406f,
+            layerY = 300f,
+            boundsLeft = 406f,
+            boundsTop = 300f,
+            boundsRight = 506f,
+            boundsBottom = 400f,
+            tolerance = 5f,
+            canvasLeft = 0f,
+            canvasTop = 0f,
+            canvasRight = 1000f,
+            canvasBottom = 800f,
+            edgeTolerance = 10f,
+            peerXTargets = floatArrayOf(400f, 450f, 500f),
+            peerYTargets = floatArrayOf(300f, 350f, 400f)
+        )
+
+        assertTrue(result.isSnappedX)
+        assertEquals(400f, result.snappedX, 0.001f)
+        assertEquals(400f, result.guideX!!, 0.001f)
+    }
 }

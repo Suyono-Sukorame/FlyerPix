@@ -1030,7 +1030,9 @@ class PixelCanvasView @JvmOverloads constructor(
         DRAGGING_SCALE_HANDLE,
         DRAGGING_ROTATE_HANDLE,
         DRAGGING_PERSPECTIVE_HANDLE,
-        DRAGGING_WRAP_HANDLE
+        DRAGGING_WRAP_HANDLE,
+        DRAGGING_STRETCH_RIGHT,
+        DRAGGING_STRETCH_BOTTOM
     }
 
     var currentTouchState: TouchState = TouchState.IDLE
@@ -1040,6 +1042,12 @@ class PixelCanvasView @JvmOverloads constructor(
     private var initialLayerScale: Float = 1f
     private var initialCenterPoint: Pair<Float, Float> = Pair(0f, 0f)
     private var previousTouchAngle: Float = 0f
+
+    // Anchor sudut kiri-atas (koordinat kanvas) saat resize ImageLayer, agar
+    // sudut kiri-atas tidak bergerak ketika handle kanan-bawah ditarik.
+    private var scaleAnchorPoint: Pair<Float, Float> = Pair(0f, 0f)
+    private var scaleAnchorW: Float = 0f
+    private var scaleAnchorH: Float = 0f
 
     // ── Mode Eyedropper (Prompt 42) ──────────────────────────────────────────
 
@@ -2276,6 +2284,32 @@ class PixelCanvasView @JvmOverloads constructor(
         snapGuideYPosition = null
     }
 
+    /**
+     * Mengumpulkan koordinat target magnet dari layer lain (peer snapping): tepi
+     * kiri/tengah/kanan untuk sumbu X dan tepi atas/tengah/bawah untuk sumbu Y.
+     * Layer yang sedang digeser ([exclude]) dilewati agar tidak menempel ke dirinya
+     * sendiri.
+     */
+    private fun collectSnapPeerTargets(exclude: CanvasLayer): Pair<FloatArray, FloatArray> {
+        val xTargets = ArrayList<Float>()
+        val yTargets = ArrayList<Float>()
+        var count = 0
+        for (other in layers) {
+            if (other === exclude || !other.isVisible) continue
+            val b = other.getBounds()
+            if (b.width() <= 0f || b.height() <= 0f) continue
+            xTargets.add(b.left)
+            xTargets.add(b.centerX())
+            xTargets.add(b.right)
+            yTargets.add(b.top)
+            yTargets.add(b.centerY())
+            yTargets.add(b.bottom)
+            count++
+            if (count >= MAX_SNAP_PEER_LAYERS) break
+        }
+        return xTargets.toFloatArray() to yTargets.toFloatArray()
+    }
+
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0x2600E5FF.toInt() // Biru cyan transparan lembut untuk kisi grid
         style = Paint.Style.STROKE
@@ -2958,14 +2992,28 @@ class PixelCanvasView @JvmOverloads constructor(
     ) {
         if (!isSnapToCenterEnabled || vp.spanX <= 0 || vp.spanY <= 0) return
 
+        // Garis panduan tepi jatuh tepat di border kanvas sehingga tidak terlihat;
+        // geser sedikit ke dalam agar umpan balik magnet tepi sama jelas dengan center.
+        val edgeInset = 2f * resources.displayMetrics.density
+
         if (isSnapGuideXVisible) {
             val guideX = snapGuideXPosition ?: vp.midX
-            canvas.drawLine(guideX, vp.top, guideX, vp.bottom, snapGuidePaint)
+            val drawX = when {
+                guideX <= vp.left + 0.5f -> vp.left + edgeInset
+                guideX >= vp.right - 0.5f -> vp.right - edgeInset
+                else -> guideX
+            }
+            canvas.drawLine(drawX, vp.top, drawX, vp.bottom, snapGuidePaint)
         }
 
         if (isSnapGuideYVisible) {
             val guideY = snapGuideYPosition ?: vp.midY
-            canvas.drawLine(vp.left, guideY, vp.right, guideY, snapGuidePaint)
+            val drawY = when {
+                guideY <= vp.top + 0.5f -> vp.top + edgeInset
+                guideY >= vp.bottom - 0.5f -> vp.bottom - edgeInset
+                else -> guideY
+            }
+            canvas.drawLine(vp.left, drawY, vp.right, drawY, snapGuidePaint)
         }
     }
 
@@ -3064,7 +3112,9 @@ class PixelCanvasView @JvmOverloads constructor(
         DELETE,       // Kanan atas
         SCALE,        // Kanan bawah
         ROTATE,       // Kiri bawah
-        WRAP          // Tengah-kanan (resize lebar wrap teks)
+        WRAP,         // Tengah-kanan (resize lebar wrap teks)
+        STRETCH_RIGHT, // Tengah-kanan (lebar) khusus ImageLayer
+        STRETCH_BOTTOM // Tengah-bawah (tinggi) khusus ImageLayer
     }
 
     /**
@@ -3098,6 +3148,20 @@ class PixelCanvasView @JvmOverloads constructor(
         if (hypot(touchX - pts[0], touchY - pts[1]) <= touchRadius) return TransformHandle.DUPLICATE
         if (hypot(touchX - pts[4], touchY - pts[5]) <= touchRadius) return TransformHandle.SCALE
 
+        // Handle sisi khusus ImageLayer: dot tengah-kanan (lebar) & tengah-bawah (tinggi).
+        if (layer is ImageLayer) {
+            val midRightX = (pts[2] + pts[4]) / 2f
+            val midRightY = (pts[3] + pts[5]) / 2f
+            val midBottomX = (pts[4] + pts[6]) / 2f
+            val midBottomY = (pts[5] + pts[7]) / 2f
+            if (hypot(touchX - midRightX, touchY - midRightY) <= touchRadius) {
+                return TransformHandle.STRETCH_RIGHT
+            }
+            if (hypot(touchX - midBottomX, touchY - midBottomY) <= touchRadius) {
+                return TransformHandle.STRETCH_BOTTOM
+            }
+        }
+
         return TransformHandle.NONE
     }
 
@@ -3113,6 +3177,38 @@ class PixelCanvasView @JvmOverloads constructor(
         val pts = layer.getSelectionBoxPoints(0f)
         if (pts.size < 8) return null
         return Pair((pts[2] + pts[4]) / 2f, (pts[3] + pts[5]) / 2f)
+    }
+
+    /**
+     * Menyimpan sudut kiri-atas (koordinat kanvas) serta dimensi bitmap layer
+     * sebagai anchor agar transformasi berikutnya tidak menggesernya.
+     */
+    private fun captureImageAnchor(layer: ImageLayer) {
+        val (w, h) = layer.getUnwarpedDimensions()
+        val box = layer.getSelectionBoxPoints(0f)
+        scaleAnchorPoint = if (box.size >= 8) Pair(box[0], box[1]) else Pair(layer.x, layer.y)
+        scaleAnchorW = w
+        scaleAnchorH = h
+    }
+
+    /**
+     * Menjaga sudut kiri-atas [layer] tetap pada posisi kanvas semula setelah
+     * scale / stretch berubah. Transformasi berporos di titik tengah, jadi x/y
+     * dikompensasi memakai skala efektif (scale × stretch) agar anchor diam.
+     */
+    private fun applyImageLayerTopLeftAnchor(layer: ImageLayer) {
+        if (scaleAnchorW <= 0f || scaleAnchorH <= 0f) return
+        val cx = scaleAnchorW / 2f
+        val cy = scaleAnchorH / 2f
+        val rad = Math.toRadians(layer.rotation.toDouble())
+        val cos = Math.cos(rad).toFloat()
+        val sin = Math.sin(rad).toFloat()
+        val vx = -layer.scale * layer.stretchX * cx
+        val vy = -layer.scale * layer.stretchY * cy
+        val rx = vx * cos - vy * sin
+        val ry = vx * sin + vy * cos
+        layer.x = scaleAnchorPoint.first - (rx + cx)
+        layer.y = scaleAnchorPoint.second - (ry + cy)
     }
 
     /**
@@ -3136,6 +3232,23 @@ class PixelCanvasView @JvmOverloads constructor(
         wrapPoint?.let { wp ->
             drawWidthHandle(canvas, wp.first, wp.second, r)
         }
+
+        // 4. ImageLayer: dot kecil tengah-kanan (lebar) & tengah-bawah (tinggi)
+        if (selectedLayer is ImageLayer) {
+            val midRightX = (pts[2] + pts[4]) / 2f
+            val midRightY = (pts[3] + pts[5]) / 2f
+            val midBottomX = (pts[4] + pts[6]) / 2f
+            val midBottomY = (pts[5] + pts[7]) / 2f
+            drawStretchDot(canvas, midRightX, midRightY, r, TouchState.DRAGGING_STRETCH_RIGHT)
+            drawStretchDot(canvas, midBottomX, midBottomY, r, TouchState.DRAGGING_STRETCH_BOTTOM)
+        }
+    }
+
+    private fun drawStretchDot(canvas: Canvas, cx: Float, cy: Float, r: Float, state: TouchState) {
+        val isActive = currentTouchState == state
+        val dotR = r * 0.5f
+        canvas.drawCircle(cx, cy, dotR, if (isActive) perspectiveHandleActiveCenterPaint else handleBgPaint)
+        canvas.drawCircle(cx, cy, dotR, handleBorderPaint)
     }
 
     private fun adaptiveTransformHandleRadius(pts: FloatArray, wrapPoint: Pair<Float, Float>?): Float {
@@ -3716,6 +3829,7 @@ class PixelCanvasView @JvmOverloads constructor(
                             val ratio = currentDist / initialHandleDist
                             val newScale = (initialLayerScale * ratio).coerceIn(0.05f, 25.0f)
                             layer.scale = newScale
+                            if (layer is ImageLayer) applyImageLayerTopLeftAnchor(layer)
                             hasTouchTransformed = true
                             invalidate()
                         }
@@ -3778,6 +3892,55 @@ class PixelCanvasView @JvmOverloads constructor(
                     if (hasTouchTransformed) {
                         touchStartState?.let { before ->
                             recordAction("Change Text Wrap Width", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
+        // 1c. Tangani stretch non-uniform ImageLayer (dot tengah-kanan / tengah-bawah)
+        if (currentTouchState == TouchState.DRAGGING_STRETCH_RIGHT ||
+            currentTouchState == TouchState.DRAGGING_STRETCH_BOTTOM
+        ) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is ImageLayer && !layer.isLocked &&
+                        scaleAnchorW > 0f && scaleAnchorH > 0f
+                    ) {
+                        val rad = Math.toRadians(layer.rotation.toDouble())
+                        val cos = Math.cos(rad).toFloat()
+                        val sin = Math.sin(rad).toFloat()
+                        val dx = event.x - scaleAnchorPoint.first
+                        val dy = event.y - scaleAnchorPoint.second
+                        val baseScale = if (layer.scale != 0f) layer.scale else 1f
+
+                        if (currentTouchState == TouchState.DRAGGING_STRETCH_RIGHT) {
+                            // Proyeksi sentuhan ke sumbu-x lokal → skala efektif horizontal.
+                            val proj = dx * cos + dy * sin
+                            val sxEff = (proj / scaleAnchorW).coerceIn(0.02f, 50f)
+                            layer.stretchX = (sxEff / baseScale).coerceIn(0.02f, 50f)
+                        } else {
+                            // Proyeksi sentuhan ke sumbu-y lokal → skala efektif vertikal.
+                            val proj = -dx * sin + dy * cos
+                            val syEff = (proj / scaleAnchorH).coerceIn(0.02f, 50f)
+                            layer.stretchY = (syEff / baseScale).coerceIn(0.02f, 50f)
+                        }
+                        applyImageLayerTopLeftAnchor(layer)
+                        hasTouchTransformed = true
+                        invalidate()
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Stretch Image", before)
                         }
                     }
                     touchStartState = null
@@ -3891,7 +4054,37 @@ class PixelCanvasView @JvmOverloads constructor(
                                 initialCenterPoint = Pair(cx, cy)
                                 initialHandleDist = hypot(event.x - cx, event.y - cy)
                                 initialLayerScale = layer.scale
+                                val box = layer.getSelectionBoxPoints(0f)
+                                scaleAnchorPoint = if (box.size >= 8) {
+                                    Pair(box[0], box[1])
+                                } else {
+                                    Pair(layer.x, layer.y)
+                                }
+                                scaleAnchorW = w
+                                scaleAnchorH = h
                                 currentTouchState = TouchState.DRAGGING_SCALE_HANDLE
+                                isDragging = false
+                                invalidate()
+                                return true
+                            }
+                        }
+                    }
+                    TransformHandle.STRETCH_RIGHT -> {
+                        selectedLayer?.let { layer ->
+                            if (!layer.isLocked && layer is ImageLayer) {
+                                captureImageAnchor(layer)
+                                currentTouchState = TouchState.DRAGGING_STRETCH_RIGHT
+                                isDragging = false
+                                invalidate()
+                                return true
+                            }
+                        }
+                    }
+                    TransformHandle.STRETCH_BOTTOM -> {
+                        selectedLayer?.let { layer ->
+                            if (!layer.isLocked && layer is ImageLayer) {
+                                captureImageAnchor(layer)
+                                currentTouchState = TouchState.DRAGGING_STRETCH_BOTTOM
                                 isDragging = false
                                 invalidate()
                                 return true
@@ -3998,7 +4191,10 @@ class PixelCanvasView @JvmOverloads constructor(
                                 }
                                 if (isSnapToCenterEnabled && vp.spanX > 0 && vp.spanY > 0) {
                                     val bounds = layer.getBounds()
-                                    val snapTolerance = 5f * resources.displayMetrics.density
+                                    val density = resources.displayMetrics.density
+                                    val snapTolerance = 5f * density
+                                    val edgeSnapTolerance = 10f * density
+                                    val (peerXTargets, peerYTargets) = collectSnapPeerTargets(layer)
                                     val snapResult = SnapCalculator.calculateWithEdges(
                                         layerX = layer.x,
                                         layerY = layer.y,
@@ -4010,7 +4206,10 @@ class PixelCanvasView @JvmOverloads constructor(
                                         canvasLeft = vp.left,
                                         canvasTop = vp.top,
                                         canvasRight = vp.right,
-                                        canvasBottom = vp.bottom
+                                        canvasBottom = vp.bottom,
+                                        edgeTolerance = edgeSnapTolerance,
+                                        peerXTargets = peerXTargets,
+                                        peerYTargets = peerYTargets
                                     )
                                     layer.x = snapResult.snappedX
                                     layer.y = snapResult.snappedY
@@ -4909,5 +5108,8 @@ class PixelCanvasView @JvmOverloads constructor(
          * tidak boros memori (getPixels penuh ~4 byte/piksel).
          */
         const val FLOOD_FILL_MAX_PIXELS = 4_000_000L
+
+        /** Batas jumlah layer peer yang dihitung sebagai target magnet saat drag. */
+        private const val MAX_SNAP_PEER_LAYERS = 32
     }
 }

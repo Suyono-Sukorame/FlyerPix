@@ -70,10 +70,11 @@ class ImagePreEditView @JvmOverloads constructor(
     fun setImage(bitmap: Bitmap) {
         image = bitmap
         selection.reset()
-        // Set default aspect ratio to 1:1 (square)
-        activeAspect = 1 to 1
-        // Use adjusted function that accounts for image aspect ratio
-        selection.rect = CropMath.fitRatioToCanvasAdjusted(1, 1, bitmap.width, bitmap.height)
+        // Default: ikuti rasio asli gambar (bukan dipaksa 1:1), seleksi = seluruh
+        // gambar sehingga gambar persegi panjang tidak lagi ter-crop jadi kotak.
+        val g = gcd(bitmap.width, bitmap.height)
+        activeAspect = if (g > 0) (bitmap.width / g) to (bitmap.height / g) else null
+        selection.rect = RectNorm(0f, 0f, 1f, 1f)
         
         // Smart Initial Zoom: Auto-detect optimal zoom level based on image size
         // If image is much larger than view, start with zoom level 1 or 2
@@ -175,6 +176,17 @@ class ImagePreEditView @JvmOverloads constructor(
     }
 
     // ── Transformasi bitmap ───────────────────────────────────────────────────
+
+    private fun gcd(a: Int, b: Int): Int {
+        var x = kotlin.math.abs(a)
+        var y = kotlin.math.abs(b)
+        while (y != 0) {
+            val t = y
+            y = x % y
+            x = t
+        }
+        return x
+    }
 
     private fun rotate(clockwise: Boolean) {
         val src = image ?: return
