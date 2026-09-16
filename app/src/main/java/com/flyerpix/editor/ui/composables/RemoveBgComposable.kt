@@ -301,7 +301,12 @@ Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)
                             ) {
-                                Text("Cancel", style = MaterialTheme.typography.caption)
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_sharp_clear_24px),
+                                    contentDescription = "Cancel",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = Color(PanelTextSecondary)
+                                )
                             }
                             Button(
                                 onClick = { onApply(selectedMethod, featherStrength) },
@@ -315,10 +320,11 @@ Column(
                                 elevation = ButtonDefaults.elevation(defaultElevation = 1.dp),
                                 enabled = selectedMethod != null
                             ) {
-                                Text(
-                                    text = "Apply",
-                                    style = MaterialTheme.typography.caption,
-                                    fontWeight = FontWeight.Bold
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check_24px),
+                                    contentDescription = "Apply",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = Color.White
                                 )
                             }
                         }

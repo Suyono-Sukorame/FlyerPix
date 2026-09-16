@@ -1,5 +1,9 @@
 package com.flyerpix.editor.ui.compose
 
+import androidx.compose.ui.res.painterResource
+
+import com.flyerpix.editor.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +16,7 @@ import androidx.compose.material.Card
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Slider
+import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.lightColors
@@ -162,7 +167,12 @@ fun ThreeDRotateDetailPage(
                                 modifier = Modifier.fillMaxWidth(),
                                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
                             ) {
-                                Text("Cancel", style = MaterialTheme.typography.caption)
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_sharp_clear_24px),
+                                    contentDescription = "Cancel",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = Color(PanelTextSecondary)
+                                )
                             }
                             Button(
                                 onClick = onApply,
@@ -175,10 +185,11 @@ fun ThreeDRotateDetailPage(
                                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                                 elevation = ButtonDefaults.elevation(defaultElevation = 1.dp)
                             ) {
-                                Text(
-                                    text = "Apply",
-                                    style = MaterialTheme.typography.caption,
-                                    fontWeight = FontWeight.Bold
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check_24px),
+                                    contentDescription = "Apply",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = Color.White
                                 )
                             }
                         }

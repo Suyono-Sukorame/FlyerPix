@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
+import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.*
@@ -24,10 +25,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.model.ShapeType
 import kotlin.math.cos
 import kotlin.math.min
@@ -126,10 +129,11 @@ fun ShapePickerPage(
                         onClick = onClose,
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text(
-                            text = "Batal",
-                            color = PickerTextSecondary,
-                            fontSize = 11.sp
+                        Icon(
+                            painter = painterResource(R.drawable.ic_sharp_clear_24px),
+                            contentDescription = "Cancel",
+                            modifier = Modifier.size(16.dp),
+                            tint = PickerTextSecondary
                         )
                     }
                 }

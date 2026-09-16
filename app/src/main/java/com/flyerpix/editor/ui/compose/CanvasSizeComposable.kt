@@ -322,7 +322,12 @@ fun CanvasSizeDetailPage(
                                 modifier = Modifier.fillMaxWidth(),
                                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)
                             ) {
-                                Text("Cancel", style = MaterialTheme.typography.caption)
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_sharp_clear_24px),
+                                    contentDescription = "Cancel",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = Color(PanelTextSecondary)
+                                )
                             }
                             Button(
                                 onClick = {
@@ -349,10 +354,11 @@ fun CanvasSizeDetailPage(
                                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                                 elevation = ButtonDefaults.elevation(defaultElevation = 1.dp)
                             ) {
-                                Text(
-                                    text = "Apply",
-                                    style = MaterialTheme.typography.caption,
-                                    fontWeight = FontWeight.Bold
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check_24px),
+                                    contentDescription = "Apply",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = Color.White
                                 )
                             }
                         }

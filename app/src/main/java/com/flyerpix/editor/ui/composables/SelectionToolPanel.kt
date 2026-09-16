@@ -9,9 +9,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
 
 @Composable
@@ -80,7 +82,7 @@ fun SelectionToolPanel(
                     onCancel()
                 },
                 modifier = Modifier.weight(1f).height(44.dp)
-            ) { Text("Batal", color = Color.White) }
+            ) { Icon(painterResource(R.drawable.ic_sharp_clear_24px), contentDescription = "Cancel", modifier = Modifier.size(18.dp), tint = Color.White) }
             Button(
                 onClick = { onApplyToMask(feather.toInt(), inverted) },
                 modifier = Modifier.weight(1f).height(44.dp),
