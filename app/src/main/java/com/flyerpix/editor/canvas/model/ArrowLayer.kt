@@ -213,7 +213,7 @@ data class ArrowLayer(
         val cx = w / 2f
         val cy = h / 2f
         canvas.translate(x, y)
-        canvas.scale(scale, scale, cx, cy)
+        canvas.scale(scale * stretchX, scale * stretchY, cx, cy)
         canvas.rotate(rotation, cx, cy)
 
         // 2. Transformasi perspektif
@@ -356,5 +356,8 @@ data class ArrowLayer(
         y = this.y + 30f,
         perspectiveCorners = this.perspectiveCorners.clone(),
         blendMode = this.blendMode
-    )
+    ).also {
+        it.stretchX = this.stretchX
+        it.stretchY = this.stretchY
+    }
 }

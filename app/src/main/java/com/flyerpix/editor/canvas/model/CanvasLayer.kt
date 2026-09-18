@@ -78,6 +78,14 @@ abstract class CanvasLayer(
      */
     open var blendExtra: ExtendedBlendMode? = null
 
+    // ── Non-Uniform Stretch (8-Handle Resize) ────────────────────────────────
+    // Skala non-uniform per-sumbu. 1f = normal (tanpa stretch). Dipakai oleh
+    // sistem resize universal 8 handle: handle sisi mengubah satu sumbu,
+    // handle sudut mengubah keduanya secara proporsional. Total transformasi
+    // efektif per-sumbu = scale * stretchX / scale * stretchY.
+    open var stretchX: Float = 1f
+    open var stretchY: Float = 1f
+
     // ── Clipping Path Properties (Phase 8) ──────────────────────────────────
     // Non-destruktif masking menggunakan bentuk/path layer lain sebagai clip
     open var clippingMode: ClippingMode = ClippingMode.NONE
@@ -343,8 +351,10 @@ abstract class CanvasLayer(
         val unrotY = (dx * sin + dy * cos)
 
         val s = if (scale != 0f) scale else 1f
-        val localX = (unrotX / s) + w / 2f
-        val localY = (unrotY / s) + h / 2f
+        val sx = if (s * stretchX != 0f) s * stretchX else 1f
+        val sy = if (s * stretchY != 0f) s * stretchY else 1f
+        val localX = (unrotX / sx) + w / 2f
+        val localY = (unrotY / sy) + h / 2f
 
         return localX in 0f..w && localY in 0f..h
     }
@@ -355,7 +365,9 @@ abstract class CanvasLayer(
     open fun getLayerTransformMatrix(w: Float, h: Float): Matrix {
         val matrix = Matrix()
         matrix.postTranslate(x, y)
-        matrix.postScale(scale, scale, x + w / 2f, y + h / 2f)
+        val sx = if (scale * stretchX != 0f) scale * stretchX else 1f
+        val sy = if (scale * stretchY != 0f) scale * stretchY else 1f
+        matrix.postScale(sx, sy, x + w / 2f, y + h / 2f)
         matrix.postRotate(rotation, x + w / 2f, y + h / 2f)
         return matrix
     }
@@ -417,9 +429,11 @@ abstract class CanvasLayer(
     fun mapLocalPointToCanvas(lx: Float, ly: Float, w: Float, h: Float): Pair<Float, Float> {
         val cx = w / 2f
         val cy = h / 2f
-        // 1. Skala terhadap titik pusat
-        val sx = (lx - cx) * scale
-        val sy = (ly - cy) * scale
+        val sxEff = if (scale * stretchX != 0f) scale * stretchX else 1f
+        val syEff = if (scale * stretchY != 0f) scale * stretchY else 1f
+        // 1. Skala terhadap titik pusat (termasuk stretch non-uniform)
+        val sx = (lx - cx) * sxEff
+        val sy = (ly - cy) * syEff
         // 2. Rotasi terhadap titik pusat
         val rad = Math.toRadians(rotation.toDouble())
         val cos = Math.cos(rad).toFloat()
@@ -454,6 +468,46 @@ abstract class CanvasLayer(
 
         val result = FloatArray(8)
         for (i in 0..3) {
+            val (cx, cy) = mapLocalPointToCanvas(localPts[i * 2], localPts[i * 2 + 1], w, h)
+            result[i * 2] = cx
+            result[i * 2 + 1] = cy
+        }
+        return result
+    }
+
+    /**
+     * Mengembalikan posisi 8 titik handle resize universal dalam ruang koordinat kanvas.
+     * Urutan (16 elemen: x, y berpasangan):
+     *  - 0, 1: Top-Left      (kiri-atas)
+     *  - 2, 3: Top-Middle    (tengah-atas)
+     *  - 4, 5: Top-Right     (kanan-atas)
+     *  - 6, 7: Middle-Left   (tengah-kiri)
+     *  - 8, 9: Middle-Right  (tengah-kanan)
+     *  - 10, 11: Bottom-Left (kiri-bawah)
+     *  - 12, 13: Bottom-Middle (tengah-bawah)
+     *  - 14, 15: Bottom-Right (kanan-bawah)
+     *
+     * Handle sudut mengaktifkan resize proporsional 2 sumbu (anchor di sudut
+     * berlawanan); handle sisi mengaktifkan resize satu sumbu saja.
+     *
+     * @param padding Jarak margin dari batas layer (dalam piksel).
+     */
+    open fun getHandle8Points(padding: Float = 0f): FloatArray {
+        val (w, h) = getUnwarpedDimensions()
+        val p = padding
+        val localPts = floatArrayOf(
+            -p, -p,            // TL
+            w / 2f, -p,        // TM
+            w + p, -p,         // TR
+            -p, h / 2f,        // ML
+            w + p, h / 2f,     // MR
+            -p, h + p,         // BL
+            w / 2f, h + p,     // BM
+            w + p, h + p       // BR
+        )
+
+        val result = FloatArray(16)
+        for (i in 0..7) {
             val (cx, cy) = mapLocalPointToCanvas(localPts[i * 2], localPts[i * 2 + 1], w, h)
             result[i * 2] = cx
             result[i * 2 + 1] = cy
@@ -520,6 +574,8 @@ abstract class CanvasLayer(
      */
     open fun contentBlurSignature(): Int {
         var h = hashCode()
+        h = h * 31 + stretchX.hashCode()
+        h = h * 31 + stretchY.hashCode()
         h = h * 31 + (if (adjustmentsEnabled) 1 else 0)
         h = h * 31 + adjustments.hashCode()
         return maskBlurSignature(h)

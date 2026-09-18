@@ -1027,27 +1027,32 @@ class PixelCanvasView @JvmOverloads constructor(
     enum class TouchState {
         IDLE,
         DRAGGING_LAYER,
-        DRAGGING_SCALE_HANDLE,
+        DRAGGING_RESIZE_HANDLE,
         DRAGGING_ROTATE_HANDLE,
-        DRAGGING_PERSPECTIVE_HANDLE,
-        DRAGGING_WRAP_HANDLE,
-        DRAGGING_STRETCH_RIGHT,
-        DRAGGING_STRETCH_BOTTOM
+        DRAGGING_PERSPECTIVE_HANDLE
     }
 
     var currentTouchState: TouchState = TouchState.IDLE
         private set
 
-    private var initialHandleDist: Float = 0f
-    private var initialLayerScale: Float = 1f
     private var initialCenterPoint: Pair<Float, Float> = Pair(0f, 0f)
     private var previousTouchAngle: Float = 0f
 
-    // Anchor sudut kiri-atas (koordinat kanvas) saat resize ImageLayer, agar
-    // sudut kiri-atas tidak bergerak ketika handle kanan-bawah ditarik.
-    private var scaleAnchorPoint: Pair<Float, Float> = Pair(0f, 0f)
-    private var scaleAnchorW: Float = 0f
-    private var scaleAnchorH: Float = 0f
+    // ── State Drag Resize 8-Handle Universal ────────────────────────────────
+    // Anchor (sudut/sisi lawan yang tetap diam) plus snapshot awal layer agar
+    // setiap pergerakan MOVE menghitung ulang nilai dengan basis yang stabil.
+    private var activeResizeHandle: TransformHandle = TransformHandle.NONE
+    private var resizeAnchorPoint: Pair<Float, Float> = Pair(0f, 0f)
+    private var resizeStartDist: Float = 0f
+    private var resizeInitialScale: Float = 1f
+    private var resizeInitialStretchX: Float = 1f
+    private var resizeInitialStretchY: Float = 1f
+    private var resizeInitialW: Float = 0f
+    private var resizeInitialH: Float = 0f
+    private var resizeAnchorFracX: Float = 0f
+    private var resizeAnchorFracY: Float = 0f
+    private var resizeStartWrapWidth: Float = 0f
+    private var resizeStartTextSize: Float = 0f
 
     // ── Mode Eyedropper (Prompt 42) ──────────────────────────────────────────
 
@@ -2192,19 +2197,6 @@ class PixelCanvasView @JvmOverloads constructor(
         strokeWidth = 3f
     }
 
-    private val handleDeleteBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFE53935.toInt() // Merah
-        style = Paint.Style.STROKE
-        strokeWidth = 3f
-    }
-
-    private val handleDeleteIconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFE53935.toInt() // Merah
-        style = Paint.Style.STROKE
-        strokeWidth = 4f
-        strokeCap = Paint.Cap.ROUND
-    }
-
     private val handleIconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF0288D1.toInt() // Biru PixelLab
         style = Paint.Style.STROKE
@@ -3104,33 +3096,89 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     /**
-     * Tipe handle transformasi interaktif pada 4 sudut Bounding Box.
+     * Tipe handle transformasi interaktif pada 8 titik Bounding Box
+     * (4 sudut + 4 sisi) serta 1 handle rotasi di luar kotak.
      */
     enum class TransformHandle {
         NONE,
-        DUPLICATE,    // Kiri atas
-        DELETE,       // Kanan atas
-        SCALE,        // Kanan bawah
-        ROTATE,       // Kiri bawah
-        WRAP,         // Tengah-kanan (resize lebar wrap teks)
-        STRETCH_RIGHT, // Tengah-kanan (lebar) khusus ImageLayer
-        STRETCH_BOTTOM // Tengah-bawah (tinggi) khusus ImageLayer
+        RESIZE_TL,  // Kiri-atas   (anchor: kanan-bawah)
+        RESIZE_TM,  // Tengah-atas (anchor: tengah-bawah)
+        RESIZE_TR,  // Kanan-atas  (anchor: kiri-bawah)
+        RESIZE_ML,  // Tengah-kiri (anchor: tengah-kanan)
+        RESIZE_MR,  // Tengah-kanan (anchor: tengah-kiri)
+        RESIZE_BL,  // Kiri-bawah  (anchor: kanan-atas)
+        RESIZE_BM,  // Tengah-bawah (anchor: tengah-atas)
+        RESIZE_BR,  // Kanan-bawah (anchor: kiri-atas)
+        ROTATE      // Di luar kotak, dekat kiri-bawah
     }
 
     /**
-    * Memeriksa apakah sentuhan mengenai handle transformasi atau handle lebar teks.
+     * Indeks 8 handle resize sesuai urutan [com.flyerpix.editor.canvas.model.CanvasLayer.getHandle8Points].
+     * Urutan: TL(0), TM(1), TR(2), ML(3), MR(4), BL(5), BM(6), BR(7).
+     */
+    private fun resizeHandleIndex(handle: TransformHandle): Int = when (handle) {
+        TransformHandle.RESIZE_TL -> 0
+        TransformHandle.RESIZE_TM -> 1
+        TransformHandle.RESIZE_TR -> 2
+        TransformHandle.RESIZE_ML -> 3
+        TransformHandle.RESIZE_MR -> 4
+        TransformHandle.RESIZE_BL -> 5
+        TransformHandle.RESIZE_BM -> 6
+        TransformHandle.RESIZE_BR -> 7
+        else -> -1
+    }
+
+    private fun resizeHandleAtIndex(index: Int): TransformHandle = when (index) {
+        0 -> TransformHandle.RESIZE_TL
+        1 -> TransformHandle.RESIZE_TM
+        2 -> TransformHandle.RESIZE_TR
+        3 -> TransformHandle.RESIZE_ML
+        4 -> TransformHandle.RESIZE_MR
+        5 -> TransformHandle.RESIZE_BL
+        6 -> TransformHandle.RESIZE_BM
+        7 -> TransformHandle.RESIZE_BR
+        else -> TransformHandle.NONE
+    }
+
+    /** Handle lawan (anchor yang tetap diam) untuk setiap handle resize. */
+    private fun oppositeResizeHandleIndex(index: Int): Int = when (index) {
+        0 -> 7 // TL <-> BR
+        1 -> 6 // TM <-> BM
+        2 -> 5 // TR <-> BL
+        3 -> 4 // ML <-> MR
+        4 -> 3 // MR <-> ML
+        5 -> 2 // BL <-> TR
+        6 -> 1 // BM <-> TM
+        7 -> 0 // BR <-> TL
+        else -> -1
+    }
+
+    private fun resizeHandleLocalPoint(index: Int, w: Float, h: Float): Pair<Float, Float> = when (index) {
+        0 -> Pair(0f, 0f)
+        1 -> Pair(w / 2f, 0f)
+        2 -> Pair(w, 0f)
+        3 -> Pair(0f, h / 2f)
+        4 -> Pair(w, h / 2f)
+        5 -> Pair(0f, h)
+        6 -> Pair(w / 2f, h)
+        7 -> Pair(w, h)
+        else -> Pair(0f, 0f)
+    }
+
+    /**
+     * Memeriksa apakah sentuhan mengenai salah satu dari 8 handle resize
+     * universal atau handle rotasi.
      * Mengembalikan [TransformHandle] yang tersentuh, atau [TransformHandle.NONE].
      */
     fun getTransformHandleAt(touchX: Float, touchY: Float): TransformHandle {
         val layer = selectedLayer ?: return TransformHandle.NONE
         if (!layer.isVisible || layer.isLocked || layer.perspectiveEnabled) return TransformHandle.NONE
 
-        val padding = 0f
-        val pts = layer.getSelectionBoxPoints(padding)
-        if (pts.size < 8) return TransformHandle.NONE
+        val hpts = layer.getHandle8Points(0f)
+        if (hpts.size < 16) return TransformHandle.NONE
 
-        val wrapPoint = if (selectedLayer is TextLayer) wrapHandleCanvasPoint() else null
-        val touchRadius = adaptiveTransformHandleRadius(pts, wrapPoint)
+        val rotatePoint = rotateHandleCanvasPoint(hpts)
+        val touchRadius = adaptiveTransformHandleRadius(hpts)
             .let { radius ->
                 (radius * 1.8f).coerceIn(
                     12f * resources.displayMetrics.density,
@@ -3138,27 +3186,14 @@ class PixelCanvasView @JvmOverloads constructor(
                 )
             }
 
-        // Handle lebar wrap teks: titik tengah sisi kanan bounding box
-        if (wrapPoint != null) {
-            if (hypot(touchX - wrapPoint.first, touchY - wrapPoint.second) <= touchRadius) {
-                return TransformHandle.WRAP
-            }
+        // Handle rotasi di luar kotak diprioritaskan (digambar di belakang, area luar).
+        if (hypot(touchX - rotatePoint.first, touchY - rotatePoint.second) <= touchRadius) {
+            return TransformHandle.ROTATE
         }
 
-        if (hypot(touchX - pts[0], touchY - pts[1]) <= touchRadius) return TransformHandle.DUPLICATE
-        if (hypot(touchX - pts[4], touchY - pts[5]) <= touchRadius) return TransformHandle.SCALE
-
-        // Handle sisi khusus ImageLayer: dot tengah-kanan (lebar) & tengah-bawah (tinggi).
-        if (layer is ImageLayer) {
-            val midRightX = (pts[2] + pts[4]) / 2f
-            val midRightY = (pts[3] + pts[5]) / 2f
-            val midBottomX = (pts[4] + pts[6]) / 2f
-            val midBottomY = (pts[5] + pts[7]) / 2f
-            if (hypot(touchX - midRightX, touchY - midRightY) <= touchRadius) {
-                return TransformHandle.STRETCH_RIGHT
-            }
-            if (hypot(touchX - midBottomX, touchY - midBottomY) <= touchRadius) {
-                return TransformHandle.STRETCH_BOTTOM
+        for (i in 0..7) {
+            if (hypot(touchX - hpts[i * 2], touchY - hpts[i * 2 + 1]) <= touchRadius) {
+                return resizeHandleAtIndex(i)
             }
         }
 
@@ -3166,171 +3201,336 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     /**
-     * Titik tengah sisi kanan kotak teks untuk mengatur lebar wrap.
-     * Handle tersedia sejak layer teks dipilih agar wrapping bisa dimulai
-     * langsung dengan menarik sisi kanan ke dalam.
+     * Titik handle rotasi di luar Bounding Box, agak jauh dari sudut kiri-bawah.
      */
-    private fun wrapHandleCanvasPoint(): Pair<Float, Float>? {
-        val layer = selectedLayer as? TextLayer ?: return null
-        if (layer.isLocked || layer.perspectiveEnabled) return null
-        if (layer.rotate3DX != 0f || layer.rotate3DY != 0f || layer.rotate3DZ != 0f) return null
-        val pts = layer.getSelectionBoxPoints(0f)
-        if (pts.size < 8) return null
-        return Pair((pts[2] + pts[4]) / 2f, (pts[3] + pts[5]) / 2f)
+    private fun rotateHandleCanvasPoint(hpts: FloatArray): Pair<Float, Float> {
+        if (hpts.size < 16) return Pair(0f, 0f)
+        val blX = hpts[10]
+        val blY = hpts[11]
+        val cX = (hpts[0] + hpts[4] + hpts[14] + hpts[10]) / 4f
+        val cY = (hpts[1] + hpts[5] + hpts[15] + hpts[11]) / 4f
+        val dx = blX - cX
+        val dy = blY - cY
+        val len = hypot(dx, dy).coerceAtLeast(1f)
+        val off = adaptiveTransformHandleRadius(hpts) * 2.6f
+        return Pair(blX + dx / len * off, blY + dy / len * off)
     }
 
     /**
-     * Menyimpan sudut kiri-atas (koordinat kanvas) serta dimensi bitmap layer
-     * sebagai anchor agar transformasi berikutnya tidak menggesernya.
+     * Memulai drag resize 8-handle: menghitung anchor (sudut/sisi lawan) yang
+     * tetap diam selama drag, lalu menyimpan snapshot awal layer.
+     * Mengembalikan true jika drag dimulai.
      */
-    private fun captureImageAnchor(layer: ImageLayer) {
+    private fun beginResizeHandleDrag(
+        layer: CanvasLayer,
+        handle: TransformHandle,
+        touchX: Float,
+        touchY: Float
+    ): Boolean {
+        val idx = resizeHandleIndex(handle)
+        if (idx < 0) return false
+        val anchorIdx = oppositeResizeHandleIndex(idx)
+        if (anchorIdx < 0) return false
+
+        val hpts = layer.getHandle8Points(0f)
+        if (hpts.size < 16) return false
         val (w, h) = layer.getUnwarpedDimensions()
-        val box = layer.getSelectionBoxPoints(0f)
-        scaleAnchorPoint = if (box.size >= 8) Pair(box[0], box[1]) else Pair(layer.x, layer.y)
-        scaleAnchorW = w
-        scaleAnchorH = h
+        if (w <= 0f || h <= 0f) return false
+
+        activeResizeHandle = handle
+        resizeAnchorPoint = Pair(hpts[anchorIdx * 2], hpts[anchorIdx * 2 + 1])
+        resizeStartDist = hypot(
+            hpts[idx * 2] - resizeAnchorPoint.first,
+            hpts[idx * 2 + 1] - resizeAnchorPoint.second
+        ).coerceAtLeast(1f)
+        resizeInitialScale = layer.scale
+        resizeInitialStretchX = layer.stretchX
+        resizeInitialStretchY = layer.stretchY
+        resizeInitialW = w
+        resizeInitialH = h
+
+        val anchorLocal = resizeHandleLocalPoint(anchorIdx, w, h)
+        resizeAnchorFracX = anchorLocal.first / w
+        resizeAnchorFracY = anchorLocal.second / h
+
+        // TextLayer: meraih handle tengah-kiri / tengah-kanan mengaktifkan wrapping
+        // (wrapWidth) sebagai model resize horizontal.
+        if (layer is TextLayer) {
+            if ((handle == TransformHandle.RESIZE_ML || handle == TransformHandle.RESIZE_MR) &&
+                layer.wrapWidth <= 0f
+            ) {
+                layer.wrapWidth = layer.measureNaturalWidth().coerceAtLeast(40f)
+                layer.wrapTextEnabled = true
+            }
+            resizeStartWrapWidth = layer.wrapWidth
+            resizeStartTextSize = layer.textSize
+        }
+
+        currentTouchState = TouchState.DRAGGING_RESIZE_HANDLE
+        isDragging = false
+        invalidate()
+        return true
     }
 
     /**
-     * Menjaga sudut kiri-atas [layer] tetap pada posisi kanvas semula setelah
-     * scale / stretch berubah. Transformasi berporos di titik tengah, jadi x/y
-     * dikompensasi memakai skala efektif (scale × stretch) agar anchor diam.
+     * Memperbarui nilai resize sesuai jenis layer dan handle yang aktif:
+     *  - TextLayer: horizontal -> wrapWidth, vertikal -> textSize, sudut -> textSize (+wrap)
+     *  - ShapeLayer: width / height langsung
+     *  - Layer lainnya (Image/Sticker/Arrow/Pen): stretchX / stretchY
+     * Setelah properti berubah, posisi anchor dipertahankan diam di kanvas.
      */
-    private fun applyImageLayerTopLeftAnchor(layer: ImageLayer) {
-        if (scaleAnchorW <= 0f || scaleAnchorH <= 0f) return
-        val cx = scaleAnchorW / 2f
-        val cy = scaleAnchorH / 2f
+    private fun updateResizeHandleDrag(
+        layer: CanvasLayer,
+        handle: TransformHandle,
+        touchX: Float,
+        touchY: Float
+    ) {
+        when (layer) {
+            is TextLayer -> resizeTextLayer(layer, handle, touchX, touchY)
+            is ShapeLayer -> resizeShapeLayer(layer, handle, touchX, touchY)
+            else -> resizeStretchLayer(layer, handle, touchX, touchY)
+        }
+        applyAnchoredStretchFix(layer)
+        hasTouchTransformed = true
+        invalidate()
+    }
+
+    /** Resize layer generik (Image/Sticker/Arrow/Pen) via stretchX/stretchY. */
+    private fun resizeStretchLayer(layer: CanvasLayer, handle: TransformHandle, touchX: Float, touchY: Float) {
         val rad = Math.toRadians(layer.rotation.toDouble())
         val cos = Math.cos(rad).toFloat()
         val sin = Math.sin(rad).toFloat()
-        val vx = -layer.scale * layer.stretchX * cx
-        val vy = -layer.scale * layer.stretchY * cy
-        val rx = vx * cos - vy * sin
-        val ry = vx * sin + vy * cos
-        layer.x = scaleAnchorPoint.first - (rx + cx)
-        layer.y = scaleAnchorPoint.second - (ry + cy)
+        val dx = touchX - resizeAnchorPoint.first
+        val dy = touchY - resizeAnchorPoint.second
+        val projX = dx * cos + dy * sin
+        val projY = -dx * sin + dy * cos
+        val s = if (layer.scale != 0f) layer.scale else 1f
+
+        when (handle) {
+            TransformHandle.RESIZE_ML -> {
+                val sxEff = ((-projX).coerceAtLeast(1f) / resizeInitialW).coerceIn(0.02f, 50f)
+                layer.stretchX = (sxEff / s).coerceIn(0.02f, 50f)
+            }
+            TransformHandle.RESIZE_MR -> {
+                val sxEff = (projX.coerceAtLeast(1f) / resizeInitialW).coerceIn(0.02f, 50f)
+                layer.stretchX = (sxEff / s).coerceIn(0.02f, 50f)
+            }
+            TransformHandle.RESIZE_TM -> {
+                val syEff = ((-projY).coerceAtLeast(1f) / resizeInitialH).coerceIn(0.02f, 50f)
+                layer.stretchY = (syEff / s).coerceIn(0.02f, 50f)
+            }
+            TransformHandle.RESIZE_BM -> {
+                val syEff = (projY.coerceAtLeast(1f) / resizeInitialH).coerceIn(0.02f, 50f)
+                layer.stretchY = (syEff / s).coerceIn(0.02f, 50f)
+            }
+            TransformHandle.RESIZE_TL, TransformHandle.RESIZE_TR,
+            TransformHandle.RESIZE_BL, TransformHandle.RESIZE_BR -> {
+                val currentDist = hypot(dx, dy)
+                val ratio = (currentDist / resizeStartDist).coerceIn(0.02f, 50f)
+                layer.stretchX = (resizeInitialStretchX * ratio).coerceIn(0.02f, 50f)
+                layer.stretchY = (resizeInitialStretchY * ratio).coerceIn(0.02f, 50f)
+            }
+            else -> {}
+        }
+    }
+
+    /** Resize ShapeLayer langsung mengubah width / height (stroke tetap). */
+    private fun resizeShapeLayer(layer: ShapeLayer, handle: TransformHandle, touchX: Float, touchY: Float) {
+        val rad = Math.toRadians(layer.rotation.toDouble())
+        val cos = Math.cos(rad).toFloat()
+        val sin = Math.sin(rad).toFloat()
+        val dx = touchX - resizeAnchorPoint.first
+        val dy = touchY - resizeAnchorPoint.second
+        val projX = dx * cos + dy * sin
+        val projY = -dx * sin + dy * cos
+        val s = if (layer.scale != 0f) layer.scale else 1f
+        val sxCurrent = if (s * layer.stretchX != 0f) s * layer.stretchX else 1f
+        val syCurrent = if (s * layer.stretchY != 0f) s * layer.stretchY else 1f
+
+        when (handle) {
+            TransformHandle.RESIZE_ML, TransformHandle.RESIZE_MR -> {
+                val effW = if (handle == TransformHandle.RESIZE_MR) projX else -projX
+                val sxTot = (effW.coerceAtLeast(1f) / resizeInitialW).coerceIn(0.02f, 50f)
+                layer.width = (resizeInitialW * sxTot / sxCurrent).coerceIn(1f, 10000f)
+            }
+            TransformHandle.RESIZE_TM, TransformHandle.RESIZE_BM -> {
+                val effH = if (handle == TransformHandle.RESIZE_BM) projY else -projY
+                val syTot = (effH.coerceAtLeast(1f) / resizeInitialH).coerceIn(0.02f, 50f)
+                layer.height = (resizeInitialH * syTot / syCurrent).coerceIn(1f, 10000f)
+            }
+            TransformHandle.RESIZE_TL, TransformHandle.RESIZE_TR,
+            TransformHandle.RESIZE_BL, TransformHandle.RESIZE_BR -> {
+                val currentDist = hypot(dx, dy)
+                val ratio = (currentDist / resizeStartDist).coerceIn(0.02f, 50f)
+                layer.width = (resizeInitialW * ratio).coerceIn(1f, 10000f)
+                layer.height = (resizeInitialH * ratio).coerceIn(1f, 10000f)
+            }
+            else -> {}
+        }
+    }
+
+    /** Resize TextLayer: horizontal -> wrapWidth, vertikal -> textSize, sudut -> keduanya. */
+    private fun resizeTextLayer(layer: TextLayer, handle: TransformHandle, touchX: Float, touchY: Float) {
+        val rad = Math.toRadians(layer.rotation.toDouble())
+        val cos = Math.cos(rad).toFloat()
+        val sin = Math.sin(rad).toFloat()
+        val dx = touchX - resizeAnchorPoint.first
+        val dy = touchY - resizeAnchorPoint.second
+        val projX = dx * cos + dy * sin
+        val projY = -dx * sin + dy * cos
+        val s = if (layer.scale != 0f) layer.scale else 1f
+
+        when (handle) {
+            TransformHandle.RESIZE_ML, TransformHandle.RESIZE_MR -> {
+                val effPw = if (handle == TransformHandle.RESIZE_MR) projX else -projX
+                val pwLocal = effPw / s
+                val padL = layer.paddingLeft.coerceAtLeast(0f)
+                val padR = layer.paddingRight.coerceAtLeast(0f)
+                layer.wrapWidth = (pwLocal - padL - padR).coerceIn(40f, 4000f)
+            }
+            TransformHandle.RESIZE_TM, TransformHandle.RESIZE_BM -> {
+                val effPh = if (handle == TransformHandle.RESIZE_BM) projY else -projY
+                val ratio = (effPh / (resizeInitialH * s)).coerceIn(0.01f, 30f)
+                layer.textSize = (resizeStartTextSize * ratio).coerceIn(4f, 400f)
+            }
+            TransformHandle.RESIZE_TL, TransformHandle.RESIZE_TR,
+            TransformHandle.RESIZE_BL, TransformHandle.RESIZE_BR -> {
+                val currentDist = hypot(dx, dy)
+                val ratio = (currentDist / resizeStartDist).coerceIn(0.02f, 50f)
+                layer.textSize = (resizeStartTextSize * ratio).coerceIn(4f, 400f)
+                if (layer.wrapWidth > 0f) {
+                    layer.wrapWidth = (resizeStartWrapWidth * ratio).coerceIn(40f, 4000f)
+                }
+            }
+            else -> {}
+        }
     }
 
     /**
-     * Menggambar handle aktif pada Bounding Box:
-     *  1. Kiri atas: Handle Duplicate (ikon copy)
-     *  2. Kanan bawah: Handle Scale / Resize (ikon panah diagonal)
-     *  3. Tengah-kanan: Handle Wrap untuk teks
+     * Menjaga anchor tetap pada posisi kanvas semula setelah properti resize
+     * berubah. Memakai pecahan posisi anchor terhadap dimensi lokal saat ini
+     * sehingga berlaku umum untuk semua jenis layer & model resize.
+     */
+    private fun applyAnchoredStretchFix(layer: CanvasLayer) {
+        val (w, h) = layer.getUnwarpedDimensions()
+        if (w <= 0f || h <= 0f) return
+        val ax = resizeAnchorFracX * w
+        val ay = resizeAnchorFracY * h
+        val rad = Math.toRadians(layer.rotation.toDouble())
+        val cos = Math.cos(rad).toFloat()
+        val sin = Math.sin(rad).toFloat()
+        val sxEff = if (layer.scale * layer.stretchX != 0f) layer.scale * layer.stretchX else 1f
+        val syEff = if (layer.scale * layer.stretchY != 0f) layer.scale * layer.stretchY else 1f
+        val vx = (ax - w / 2f) * sxEff
+        val vy = (ay - h / 2f) * syEff
+        val rx = vx * cos - vy * sin + w / 2f
+        val ry = vx * sin + vy * cos + h / 2f
+        layer.x = resizeAnchorPoint.first - rx
+        layer.y = resizeAnchorPoint.second - ry
+    }
+
+    /**
+     * Menggambar handle aktif pada Bounding Box: 8 handle resize universal
+     * (4 sudut + 4 sisi) serta handle rotasi di luar kotak dekat kiri-bawah.
      */
     private fun drawTransformHandles(canvas: Canvas, pts: FloatArray) {
         if (pts.size < 8) return
-        val wrapPoint = wrapHandleCanvasPoint()
-        val r = adaptiveTransformHandleRadius(pts, wrapPoint)
+        val hpts = cornersToHandle8(pts)
+        if (hpts.size < 16) return
+        val r = adaptiveTransformHandleRadius(hpts)
 
-        // 1. Kiri atas (Top-Left): Duplicate (ikon copy)
-        drawDuplicateHandle(canvas, pts[0], pts[1], r)
+        // Handle rotasi di luar kotak digambar pertama (di belakang 8 handle).
+        val rotatePoint = rotateHandleCanvasPoint(hpts)
+        drawRotateHandle(canvas, rotatePoint.first, rotatePoint.second, r)
 
-        // 2. Kanan bawah (Bottom-Right): Scale / Resize (ikon panah diagonal)
-        drawScaleHandle(canvas, pts[4], pts[5], r)
-
-        // 3. Tengah-kanan: aktifkan dan resize lebar wrap teks
-        wrapPoint?.let { wp ->
-            drawWidthHandle(canvas, wp.first, wp.second, r)
-        }
-
-        // 4. ImageLayer: dot kecil tengah-kanan (lebar) & tengah-bawah (tinggi)
-        if (selectedLayer is ImageLayer) {
-            val midRightX = (pts[2] + pts[4]) / 2f
-            val midRightY = (pts[3] + pts[5]) / 2f
-            val midBottomX = (pts[4] + pts[6]) / 2f
-            val midBottomY = (pts[5] + pts[7]) / 2f
-            drawStretchDot(canvas, midRightX, midRightY, r, TouchState.DRAGGING_STRETCH_RIGHT)
-            drawStretchDot(canvas, midBottomX, midBottomY, r, TouchState.DRAGGING_STRETCH_BOTTOM)
+        for (i in 0..7) {
+            val isCorner = i == 0 || i == 2 || i == 5 || i == 7
+            drawResizeHandle(canvas, hpts[i * 2], hpts[i * 2 + 1], r, resizeHandleAtIndex(i), isCorner)
         }
     }
 
-    private fun drawStretchDot(canvas: Canvas, cx: Float, cy: Float, r: Float, state: TouchState) {
-        val isActive = currentTouchState == state
-        val dotR = r * 0.5f
-        canvas.drawCircle(cx, cy, dotR, if (isActive) perspectiveHandleActiveCenterPaint else handleBgPaint)
-        canvas.drawCircle(cx, cy, dotR, handleBorderPaint)
+    /**
+     * Menurunkan 8 posisi handle (16 float) dari 4 sudut kotak seleksi (8 float).
+     * Urutan: TL, TM, TR, ML, MR, BL, BM, BR.
+     */
+    private fun cornersToHandle8(pts: FloatArray): FloatArray {
+        if (pts.size < 8) return FloatArray(0)
+        val tlX = pts[0]; val tlY = pts[1]
+        val trX = pts[2]; val trY = pts[3]
+        val brX = pts[4]; val brY = pts[5]
+        val blX = pts[6]; val blY = pts[7]
+        return floatArrayOf(
+            tlX, tlY,
+            (tlX + trX) / 2f, (tlY + trY) / 2f,
+            trX, trY,
+            (tlX + blX) / 2f, (tlY + blY) / 2f,
+            (trX + brX) / 2f, (trY + brY) / 2f,
+            blX, blY,
+            (brX + blX) / 2f, (brY + blY) / 2f,
+            brX, brY
+        )
     }
 
-    private fun adaptiveTransformHandleRadius(pts: FloatArray, wrapPoint: Pair<Float, Float>?): Float {
+    private fun drawResizeHandle(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        r: Float,
+        handle: TransformHandle,
+        isCorner: Boolean
+    ) {
+        val isActive = currentTouchState == TouchState.DRAGGING_RESIZE_HANDLE && activeResizeHandle == handle
+        canvas.drawCircle(cx, cy, r, if (isActive) perspectiveHandleActiveCenterPaint else handleBgPaint)
+        canvas.drawCircle(cx, cy, r, handleBorderPaint)
+
+        // Sisi wajib berupa garis aksis penuh; sudut pakai garis diagonal pendek.
+        val d = if (isCorner) r * 0.30f else r * 0.46f
+        val paint = if (isActive) handleBgPaint else handleIconPaint
+        val (dirX, dirY) = resizeHandleDirection(handle)
+
+        // Garis utama searah dorongan.
+        canvas.drawLine(cx - dirX * d, cy - dirY * d, cx + dirX * d, cy + dirY * d, paint)
+
+        // Kepala panah.
+        val tipX = cx + dirX * d
+        val tipY = cy + dirY * d
+        val a = r * 0.2f
+        canvas.drawLine(tipX, tipY, tipX - dirX * d * 0.55f + dirY * a, tipY - dirY * d * 0.55f - dirX * a, paint)
+        canvas.drawLine(tipX, tipY, tipX - dirX * d * 0.55f - dirY * a, tipY - dirY * d * 0.55f + dirX * a, paint)
+    }
+
+    /** Arah dorong setiap handle resize (sudut = diagonal, sisi = sumbu). */
+    private fun resizeHandleDirection(handle: TransformHandle): Pair<Float, Float> = when (handle) {
+        TransformHandle.RESIZE_TL -> Pair(-0.7071f, -0.7071f)
+        TransformHandle.RESIZE_TM -> Pair(0f, -1f)
+        TransformHandle.RESIZE_TR -> Pair(0.7071f, -0.7071f)
+        TransformHandle.RESIZE_ML -> Pair(-1f, 0f)
+        TransformHandle.RESIZE_MR -> Pair(1f, 0f)
+        TransformHandle.RESIZE_BL -> Pair(-0.7071f, 0.7071f)
+        TransformHandle.RESIZE_BM -> Pair(0f, 1f)
+        TransformHandle.RESIZE_BR -> Pair(0.7071f, 0.7071f)
+        else -> Pair(0f, 1f)
+    }
+
+    /** Radius handle yang menyesuaikan jarak terdekat antar 8 posisi handle. */
+    private fun adaptiveTransformHandleRadius(hpts: FloatArray): Float {
         val density = resources.displayMetrics.density
         val maxRadius = 13f * density
         val minRadius = 5f * density
-        val centers = mutableListOf(
-            pts[0] to pts[1], // duplicate
-            pts[4] to pts[5]  // scale
-        )
-        wrapPoint?.let { centers.add(it) }
+        val count = hpts.size / 2
 
         var nearestDistance = Float.POSITIVE_INFINITY
-        for (i in centers.indices) {
-            for (j in i + 1 until centers.size) {
+        for (i in 0 until count) {
+            for (j in i + 1 until count) {
                 nearestDistance = min(
                     nearestDistance,
-                    hypot(centers[i].first - centers[j].first, centers[i].second - centers[j].second)
+                    hypot(hpts[i * 2] - hpts[j * 2], hpts[i * 2 + 1] - hpts[j * 2 + 1])
                 )
             }
         }
 
         val fitRadius = if (nearestDistance.isFinite()) nearestDistance * 0.28f else maxRadius
         return fitRadius.coerceIn(minRadius, maxRadius)
-    }
-
-    private fun drawWidthHandle(canvas: Canvas, cx: Float, cy: Float, r: Float) {
-        val isActive = (currentTouchState == TouchState.DRAGGING_WRAP_HANDLE)
-        canvas.drawCircle(cx, cy, r, if (isActive) perspectiveHandleActiveCenterPaint else handleBgPaint)
-        canvas.drawCircle(cx, cy, r, handleBorderPaint)
-
-        val d = r * 0.5f
-        val paint = if (isActive) handleBgPaint else handleIconPaint
-        // Panah horizontal bolak-balik (tahan → geser kiri/kanan)
-        canvas.drawLine(cx - d, cy, cx + d, cy, paint)
-        canvas.drawLine(cx - d, cy, cx - d + r * 0.3f, cy - r * 0.28f, paint)
-        canvas.drawLine(cx - d, cy, cx - d + r * 0.3f, cy + r * 0.28f, paint)
-        canvas.drawLine(cx + d, cy, cx + d - r * 0.3f, cy - r * 0.28f, paint)
-        canvas.drawLine(cx + d, cy, cx + d - r * 0.3f, cy + r * 0.28f, paint)
-    }
-
-    private fun drawDeleteHandle(canvas: Canvas, cx: Float, cy: Float, r: Float) {
-        canvas.drawCircle(cx, cy, r, handleBgPaint)
-        canvas.drawCircle(cx, cy, r, handleDeleteBorderPaint)
-
-        val d = r * 0.42f
-        canvas.drawLine(cx - d, cy - d, cx + d, cy + d, handleDeleteIconPaint)
-        canvas.drawLine(cx - d, cy + d, cx + d, cy - d, handleDeleteIconPaint)
-    }
-
-    private fun drawDuplicateHandle(canvas: Canvas, cx: Float, cy: Float, r: Float) {
-        canvas.drawCircle(cx, cy, r, handleBgPaint)
-        canvas.drawCircle(cx, cy, r, handleBorderPaint)
-
-        val w = r * 0.38f
-        val h = r * 0.46f
-        val off = r * 0.16f
-
-        // Lembar belakang
-        canvas.drawRect(cx - w - off, cy - h - off, cx + w - off, cy + h - off, handleIconPaint)
-        // Lembar depan
-        canvas.drawRect(cx - w + off, cy - h + off, cx + w + off, cy + h + off, handleIconPaint)
-    }
-
-    private fun drawScaleHandle(canvas: Canvas, cx: Float, cy: Float, r: Float) {
-        val isActive = (currentTouchState == TouchState.DRAGGING_SCALE_HANDLE)
-        canvas.drawCircle(cx, cy, r, if (isActive) perspectiveHandleActiveCenterPaint else handleBgPaint)
-        canvas.drawCircle(cx, cy, r, handleBorderPaint)
-
-        val d = r * 0.44f
-        val paint = if (isActive) handleBgPaint else handleIconPaint
-        // Garis diagonal panah
-        canvas.drawLine(cx - d, cy - d, cx + d, cy + d, paint)
-
-        // Kepala panah kiri-atas
-        val a = d * 0.55f
-        canvas.drawLine(cx - d, cy - d, cx - d + a, cy - d, paint)
-        canvas.drawLine(cx - d, cy - d, cx - d, cy - d + a, paint)
-
-        // Kepala panah kanan-bawah
-        canvas.drawLine(cx + d, cy + d, cx + d - a, cy + d, paint)
-        canvas.drawLine(cx + d, cy + d, cx + d, cy + d - a, paint)
     }
 
     private fun drawRotateHandle(canvas: Canvas, cx: Float, cy: Float, r: Float) {
@@ -3474,12 +3674,16 @@ class PixelCanvasView @JvmOverloads constructor(
     private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
             val layer = findTopLayerAt(e.x, e.y) ?: selectedLayer
-            if (layer is TextLayer && !layer.isLocked) {
+            if (layer == null) return false
+            if (layer.isLocked) return false
+            if (layer is TextLayer) {
                 selectedLayer = layer
                 onTextLayerDoubleTapListener?.invoke(layer)
                 return true
             }
-            return false
+            // Prompt 29: non-Text → duplikat layer (menggantikan handle duplikat lama).
+            duplicateSelectedLayer()
+            return true
         }
     })
 
@@ -3819,132 +4023,26 @@ class PixelCanvasView @JvmOverloads constructor(
             hasTouchTransformed = false
         }
 
-        // 1. Tangani interaksi geser handle skala/resize jika sedang aktif (Prompt 27)
-        if (currentTouchState == TouchState.DRAGGING_SCALE_HANDLE) {
-            when (event.actionMasked) {
-                MotionEvent.ACTION_MOVE -> {
-                    selectedLayer?.let { layer ->
-                        if (!layer.isLocked && initialHandleDist > 0f) {
-                            val currentDist = hypot(event.x - initialCenterPoint.first, event.y - initialCenterPoint.second)
-                            val ratio = currentDist / initialHandleDist
-                            val newScale = (initialLayerScale * ratio).coerceIn(0.05f, 25.0f)
-                            layer.scale = newScale
-                            if (layer is ImageLayer) applyImageLayerTopLeftAnchor(layer)
-                            hasTouchTransformed = true
-                            invalidate()
-                        }
-                    }
-                    return true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (hasTouchTransformed) {
-                        touchStartState?.let { before ->
-                            recordAction("Move / Transform", before)
-                        }
-                    }
-                    touchStartState = null
-                    hasTouchTransformed = false
-                    currentTouchState = TouchState.IDLE
-                    invalidate()
-                    return true
-                }
-            }
-        }
-
-        // 1b. Tangani interaksi geser handle lebar wrap teks
-        if (currentTouchState == TouchState.DRAGGING_WRAP_HANDLE) {
-            when (event.actionMasked) {
-                MotionEvent.ACTION_MOVE -> {
-                    selectedLayer?.let { layer ->
-                        if (!layer.isLocked && layer is TextLayer) {
-                            val padL = layer.paddingLeft.coerceAtLeast(0f)
-                            val padR = layer.paddingRight.coerceAtLeast(0f)
-                            val wrap = layer.wrapWidth.coerceAtLeast(1f)
-                            val pw = wrap + padL + padR
-                            val (_, ph) = layer.getUnwarpedDimensions()
-                            val cx = pw / 2f
-                            val cy = ph / 2f
-                            val rad = Math.toRadians(layer.rotation.toDouble())
-                            val cosA = Math.cos(rad).toFloat()
-                            val sinA = Math.sin(rad).toFloat()
-                            val s = if (layer.scale != 0f) layer.scale else 1f
-
-                            // Anchor kiri tetap: proyeksikan sentuhan dari titik tengah-kiri
-                            // kotak ke sumbu-x lokal (px tak diskalakan).
-                            val leftMidX = layer.x + cx * (1f - s * cosA)
-                            val leftMidY = layer.y + cy - s * cx * sinA
-                            val u = ((event.x - leftMidX) * cosA + (event.y - leftMidY) * sinA) / s
-                            val newWrap = (u - (padL + padR)).coerceIn(40f, 4000f)
-
-                            // Geser posisi layer agar sisi kiri tidak ikut bergerak.
-                            val delta = newWrap - layer.wrapWidth
-                            layer.wrapWidth = newWrap
-                            layer.x -= (delta / 2f) * (1f - s * cosA)
-                            layer.y += (delta / 2f) * s * sinA
-
-                            hasTouchTransformed = true
-                            invalidate()
-                        }
-                    }
-                    return true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (hasTouchTransformed) {
-                        touchStartState?.let { before ->
-                            recordAction("Change Text Wrap Width", before)
-                        }
-                    }
-                    touchStartState = null
-                    hasTouchTransformed = false
-                    currentTouchState = TouchState.IDLE
-                    invalidate()
-                    return true
-                }
-            }
-        }
-
-        // 1c. Tangani stretch non-uniform ImageLayer (dot tengah-kanan / tengah-bawah)
-        if (currentTouchState == TouchState.DRAGGING_STRETCH_RIGHT ||
-            currentTouchState == TouchState.DRAGGING_STRETCH_BOTTOM
-        ) {
+        // 1. Tangani interaksi geser 8-handle resize universal (Prompt 27/29)
+        if (currentTouchState == TouchState.DRAGGING_RESIZE_HANDLE) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_MOVE -> {
                     val layer = selectedLayer
-                    if (layer is ImageLayer && !layer.isLocked &&
-                        scaleAnchorW > 0f && scaleAnchorH > 0f
-                    ) {
-                        val rad = Math.toRadians(layer.rotation.toDouble())
-                        val cos = Math.cos(rad).toFloat()
-                        val sin = Math.sin(rad).toFloat()
-                        val dx = event.x - scaleAnchorPoint.first
-                        val dy = event.y - scaleAnchorPoint.second
-                        val baseScale = if (layer.scale != 0f) layer.scale else 1f
-
-                        if (currentTouchState == TouchState.DRAGGING_STRETCH_RIGHT) {
-                            // Proyeksi sentuhan ke sumbu-x lokal → skala efektif horizontal.
-                            val proj = dx * cos + dy * sin
-                            val sxEff = (proj / scaleAnchorW).coerceIn(0.02f, 50f)
-                            layer.stretchX = (sxEff / baseScale).coerceIn(0.02f, 50f)
-                        } else {
-                            // Proyeksi sentuhan ke sumbu-y lokal → skala efektif vertikal.
-                            val proj = -dx * sin + dy * cos
-                            val syEff = (proj / scaleAnchorH).coerceIn(0.02f, 50f)
-                            layer.stretchY = (syEff / baseScale).coerceIn(0.02f, 50f)
-                        }
-                        applyImageLayerTopLeftAnchor(layer)
-                        hasTouchTransformed = true
-                        invalidate()
+                    val handle = activeResizeHandle
+                    if (layer != null && !layer.isLocked && handle != TransformHandle.NONE) {
+                        updateResizeHandleDrag(layer, handle, event.x, event.y)
                     }
                     return true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     if (hasTouchTransformed) {
                         touchStartState?.let { before ->
-                            recordAction("Stretch Image", before)
+                            recordAction("Resize Layer", before)
                         }
                     }
                     touchStartState = null
                     hasTouchTransformed = false
+                    activeResizeHandle = TransformHandle.NONE
                     currentTouchState = TouchState.IDLE
                     invalidate()
                     return true
@@ -4032,65 +4130,6 @@ class PixelCanvasView @JvmOverloads constructor(
                 // Cek apakah sentuhan mengenai tombol handle sudut Bounding Box (Prompt 26, 27, 28, 29)
                 val handle = getTransformHandleAt(event.x, event.y)
                 when (handle) {
-                    TransformHandle.DELETE -> {
-                        // Delete handle is no longer drawn. Keep this branch non-destructive
-                        // so stale hit-test states cannot remove a text layer by mistake.
-                        isDragging = false
-                        currentTouchState = TouchState.IDLE
-                        return true
-                    }
-                    TransformHandle.DUPLICATE -> {
-                        duplicateSelectedLayer()
-                        isDragging = false
-                        currentTouchState = TouchState.IDLE
-                        return true
-                    }
-                    TransformHandle.SCALE -> {
-                        selectedLayer?.let { layer ->
-                            if (!layer.isLocked) {
-                                val (w, h) = layer.getUnwarpedDimensions()
-                                val cx = layer.x + w / 2f
-                                val cy = layer.y + h / 2f
-                                initialCenterPoint = Pair(cx, cy)
-                                initialHandleDist = hypot(event.x - cx, event.y - cy)
-                                initialLayerScale = layer.scale
-                                val box = layer.getSelectionBoxPoints(0f)
-                                scaleAnchorPoint = if (box.size >= 8) {
-                                    Pair(box[0], box[1])
-                                } else {
-                                    Pair(layer.x, layer.y)
-                                }
-                                scaleAnchorW = w
-                                scaleAnchorH = h
-                                currentTouchState = TouchState.DRAGGING_SCALE_HANDLE
-                                isDragging = false
-                                invalidate()
-                                return true
-                            }
-                        }
-                    }
-                    TransformHandle.STRETCH_RIGHT -> {
-                        selectedLayer?.let { layer ->
-                            if (!layer.isLocked && layer is ImageLayer) {
-                                captureImageAnchor(layer)
-                                currentTouchState = TouchState.DRAGGING_STRETCH_RIGHT
-                                isDragging = false
-                                invalidate()
-                                return true
-                            }
-                        }
-                    }
-                    TransformHandle.STRETCH_BOTTOM -> {
-                        selectedLayer?.let { layer ->
-                            if (!layer.isLocked && layer is ImageLayer) {
-                                captureImageAnchor(layer)
-                                currentTouchState = TouchState.DRAGGING_STRETCH_BOTTOM
-                                isDragging = false
-                                invalidate()
-                                return true
-                            }
-                        }
-                    }
                     TransformHandle.ROTATE -> {
                         selectedLayer?.let { layer ->
                             if (!layer.isLocked) {
@@ -4106,22 +4145,18 @@ class PixelCanvasView @JvmOverloads constructor(
                             }
                         }
                     }
-                    TransformHandle.WRAP -> {
+                    TransformHandle.NONE -> {
+                        // Tidak mengenai handle, lanjutkan ke pengecekan perspektif atau seleksi layer
+                    }
+                    else -> {
+                        // 8 handle resize universal (semua jenis layer)
                         selectedLayer?.let { layer ->
-                            if (!layer.isLocked && layer is TextLayer) {
-                                if (layer.wrapWidth <= 0f) {
-                                    layer.wrapWidth = layer.measureNaturalWidth().coerceAtLeast(40f)
+                            if (!layer.isLocked) {
+                                if (beginResizeHandleDrag(layer, handle, event.x, event.y)) {
+                                    return true
                                 }
-                                layer.wrapTextEnabled = true
-                                currentTouchState = TouchState.DRAGGING_WRAP_HANDLE
-                                isDragging = false
-                                invalidate()
-                                return true
                             }
                         }
-                    }
-                    TransformHandle.NONE -> {
-                        // Tidak mengenai handle sudut, lanjutkan ke pengecekan perspektif atau seleksi layer
                     }
                 }
 
@@ -4265,6 +4300,7 @@ class PixelCanvasView @JvmOverloads constructor(
 
                 activePointerId = MotionEvent.INVALID_POINTER_ID
                 activePerspectiveCorner = -1
+                activeResizeHandle = TransformHandle.NONE
                 currentTouchState = TouchState.IDLE
                 isDragging = false
                 val needInvalidate = isSnapGuideXVisible || isSnapGuideYVisible

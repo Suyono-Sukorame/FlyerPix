@@ -27,10 +27,10 @@ open class ImageLayer(
     override var x: Float = 0f,
     override var y: Float = 0f,
     override var scale: Float = 1f,
-    /** Stretch horizontal non-uniform (1f = normal). Dipakai handle tengah-kanan. */
-    var stretchX: Float = 1f,
-    /** Stretch vertikal non-uniform (1f = normal). Dipakai handle tengah-bawah. */
-    var stretchY: Float = 1f,
+    /** Stretch horizontal non-uniform (1f = normal). Dipakai handle tengah-kiri/kanan. */
+    override var stretchX: Float = 1f,
+    /** Stretch vertikal non-uniform (1f = normal). Dipakai handle tengah-atas/bawah. */
+    override var stretchY: Float = 1f,
     override var rotation: Float = 0f,
     override var opacity: Int = 255,
     override var isLocked: Boolean = false,

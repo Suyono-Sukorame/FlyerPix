@@ -987,6 +987,8 @@ data class TextLayer(
 
     override fun contentBlurSignature(): Int {
         var h = hashCode()
+        h = h * 31 + stretchX.hashCode()
+        h = h * 31 + stretchY.hashCode()
         h = h * 31 + (blendExtra?.ordinal ?: -1)
         textureBitmap?.let { bmp ->
             h = h * 31 + System.identityHashCode(bmp)
@@ -1007,5 +1009,9 @@ data class TextLayer(
         textureBitmap = this.textureBitmap,
         perspectiveCorners = this.perspectiveCorners.clone(),
         blendMode = this.blendMode
-    ).also { it.blendExtra = this.blendExtra }
+    ).also {
+        it.blendExtra = this.blendExtra
+        it.stretchX = this.stretchX
+        it.stretchY = this.stretchY
+    }
 }

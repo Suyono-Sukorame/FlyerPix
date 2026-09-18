@@ -256,6 +256,8 @@ object ProjectSerializer {
         opacity            = layer.opacity,
         isLocked           = layer.isLocked,
         isVisible          = layer.isVisible,
+        stretchX           = layer.stretchX,
+        stretchY           = layer.stretchY,
         blendMode          = blendModeToString(layer.blendMode),
         blendExtra         = layer.blendExtra?.name,
         perspectiveEnabled = layer.perspectiveEnabled,
@@ -374,9 +376,7 @@ object ProjectSerializer {
     private fun imageLayerToDto(l: ImageLayer): LayerDto = baseLayerFields(l).copy(
         type         = "IMAGE",
         bitmapBase64 = bitmapToBase64(l.bitmap),
-        layerName    = l.layerName,
-        stretchX     = l.stretchX,
-        stretchY     = l.stretchY
+        layerName    = l.layerName
     )
 
     private fun stickerLayerToDto(l: StickerLayer): LayerDto = baseLayerFields(l).copy(
@@ -781,6 +781,8 @@ object ProjectSerializer {
             else -> throw IllegalArgumentException("Unknown layer type: '${dto.type}'")
         }.also {
             it.blendExtra = blendExtraFromString(dto.blendExtra)
+            it.stretchX = dto.stretchX ?: 1f
+            it.stretchY = dto.stretchY ?: 1f
             it.adjustmentsEnabled = dto.adjustmentsEnabled
             it.adjustments = LayerAdjustments(
                 exposure     = dto.exposure ?: 0f,
