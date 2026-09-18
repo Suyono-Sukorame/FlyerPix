@@ -7,10 +7,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Unit test untuk 8-Handle Resize Universal + Handle Rotasi (Prompt 26/29).
+ * Unit test untuk 8-Handle Resize Universal (Prompt 26/29, Clean Dots).
  *
  * Verifikasi:
- *  1. Nilai enum TransformHandle lengkap (NONE, 8xRESIZE_*, ROTATE)
+ *  1. Nilai enum TransformHandle lengkap (NONE + 8xRESIZE_*), tanpa handle rotasi
  *  2. getHandle8Points mengembalikan 16 float dengan urutan TL, TM, TR, ML, MR, BL, BM, BR
  *  3. Posisi 4 titik sudut dari getSelectionBoxPoints memetakan ke posisi handle sudut secara benar
  *  4. Urutan 8 titik handle: sudut-sudut berada di posisi yang benar relatif satu sama lain
@@ -18,9 +18,9 @@ import org.junit.Test
 class TransformHandlesTest {
 
     @Test
-    fun `enum TransformHandle has all 10 required states`() {
+    fun `enum TransformHandle has all 9 required states`() {
         val values = TransformHandle.values()
-        assertEquals(10, values.size)
+        assertEquals(9, values.size)
         assertEquals(TransformHandle.NONE, TransformHandle.valueOf("NONE"))
         assertEquals(TransformHandle.RESIZE_TL, TransformHandle.valueOf("RESIZE_TL"))
         assertEquals(TransformHandle.RESIZE_TM, TransformHandle.valueOf("RESIZE_TM"))
@@ -30,7 +30,6 @@ class TransformHandlesTest {
         assertEquals(TransformHandle.RESIZE_BL, TransformHandle.valueOf("RESIZE_BL"))
         assertEquals(TransformHandle.RESIZE_BM, TransformHandle.valueOf("RESIZE_BM"))
         assertEquals(TransformHandle.RESIZE_BR, TransformHandle.valueOf("RESIZE_BR"))
-        assertEquals(TransformHandle.ROTATE, TransformHandle.valueOf("ROTATE"))
     }
 
     @Test

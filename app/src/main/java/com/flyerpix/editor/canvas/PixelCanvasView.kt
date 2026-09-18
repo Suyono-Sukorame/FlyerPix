@@ -1035,9 +1035,6 @@ class PixelCanvasView @JvmOverloads constructor(
     var currentTouchState: TouchState = TouchState.IDLE
         private set
 
-    private var initialCenterPoint: Pair<Float, Float> = Pair(0f, 0f)
-    private var previousTouchAngle: Float = 0f
-
     // ── State Drag Resize 8-Handle Universal ────────────────────────────────
     // Anchor (sudut/sisi lawan yang tetap diam) plus snapshot awal layer agar
     // setiap pergerakan MOVE menghitung ulang nilai dengan basis yang stabil.
@@ -2197,14 +2194,6 @@ class PixelCanvasView @JvmOverloads constructor(
         strokeWidth = 3f
     }
 
-    private val handleIconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF0288D1.toInt() // Biru PixelLab
-        style = Paint.Style.STROKE
-        strokeWidth = 3.5f
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-    }
-
     // ── Paint untuk Handle & Garis Pandu Perspektif ─────────────────────────
     private val perspectiveGuidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF18C8F5.toInt()
@@ -3097,7 +3086,8 @@ class PixelCanvasView @JvmOverloads constructor(
 
     /**
      * Tipe handle transformasi interaktif pada 8 titik Bounding Box
-     * (4 sudut + 4 sisi) serta 1 handle rotasi di luar kotak.
+     * (4 sudut + 4 sisi). Handle rotasi tidak lagi disediakan di kanvas;
+     * rotasi memakai slider derajat di toolbar atau gestur dua jari.
      */
     enum class TransformHandle {
         NONE,
@@ -3108,8 +3098,7 @@ class PixelCanvasView @JvmOverloads constructor(
         RESIZE_MR,  // Tengah-kanan (anchor: tengah-kiri)
         RESIZE_BL,  // Kiri-bawah  (anchor: kanan-atas)
         RESIZE_BM,  // Tengah-bawah (anchor: tengah-atas)
-        RESIZE_BR,  // Kanan-bawah (anchor: kiri-atas)
-        ROTATE      // Di luar kotak, dekat kiri-bawah
+        RESIZE_BR   // Kanan-bawah (anchor: kiri-atas)
     }
 
     /**
@@ -3166,8 +3155,9 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     /**
-     * Memeriksa apakah sentuhan mengenai salah satu dari 8 handle resize
-     * universal atau handle rotasi.
+     * Memeriksa apakah sentuhan mengenai salah satu dari 8 handle resize.
+     * Area toleransi sentuh dibuat lebih lebar dari ukuran visual titik
+     * (hit radius 12-24dp) agar resize tetap responsif.
      * Mengembalikan [TransformHandle] yang tersentuh, atau [TransformHandle.NONE].
      */
     fun getTransformHandleAt(touchX: Float, touchY: Float): TransformHandle {
@@ -3177,7 +3167,6 @@ class PixelCanvasView @JvmOverloads constructor(
         val hpts = layer.getHandle8Points(0f)
         if (hpts.size < 16) return TransformHandle.NONE
 
-        val rotatePoint = rotateHandleCanvasPoint(hpts)
         val touchRadius = adaptiveTransformHandleRadius(hpts)
             .let { radius ->
                 (radius * 1.8f).coerceIn(
@@ -3186,11 +3175,6 @@ class PixelCanvasView @JvmOverloads constructor(
                 )
             }
 
-        // Handle rotasi di luar kotak diprioritaskan (digambar di belakang, area luar).
-        if (hypot(touchX - rotatePoint.first, touchY - rotatePoint.second) <= touchRadius) {
-            return TransformHandle.ROTATE
-        }
-
         for (i in 0..7) {
             if (hypot(touchX - hpts[i * 2], touchY - hpts[i * 2 + 1]) <= touchRadius) {
                 return resizeHandleAtIndex(i)
@@ -3198,22 +3182,6 @@ class PixelCanvasView @JvmOverloads constructor(
         }
 
         return TransformHandle.NONE
-    }
-
-    /**
-     * Titik handle rotasi di luar Bounding Box, agak jauh dari sudut kiri-bawah.
-     */
-    private fun rotateHandleCanvasPoint(hpts: FloatArray): Pair<Float, Float> {
-        if (hpts.size < 16) return Pair(0f, 0f)
-        val blX = hpts[10]
-        val blY = hpts[11]
-        val cX = (hpts[0] + hpts[4] + hpts[14] + hpts[10]) / 4f
-        val cY = (hpts[1] + hpts[5] + hpts[15] + hpts[11]) / 4f
-        val dx = blX - cX
-        val dy = blY - cY
-        val len = hypot(dx, dy).coerceAtLeast(1f)
-        val off = adaptiveTransformHandleRadius(hpts) * 2.6f
-        return Pair(blX + dx / len * off, blY + dy / len * off)
     }
 
     /**
@@ -3430,22 +3398,28 @@ class PixelCanvasView @JvmOverloads constructor(
     }
 
     /**
-     * Menggambar handle aktif pada Bounding Box: 8 handle resize universal
-     * (4 sudut + 4 sisi) serta handle rotasi di luar kotak dekat kiri-bawah.
+     * Menggambar 8 handle resize sebagai titik lingkaran bersih (Clean Dots):
+     * sudut sedikit lebih besar (6.5dp), sisi 5.5dp, berbingkai cyan tipis dan
+     * tanpa ikon panah. Tidak ada handle rotasi pada bounding box.
      */
     private fun drawTransformHandles(canvas: Canvas, pts: FloatArray) {
         if (pts.size < 8) return
         val hpts = cornersToHandle8(pts)
         if (hpts.size < 16) return
-        val r = adaptiveTransformHandleRadius(hpts)
-
-        // Handle rotasi di luar kotak digambar pertama (di belakang 8 handle).
-        val rotatePoint = rotateHandleCanvasPoint(hpts)
-        drawRotateHandle(canvas, rotatePoint.first, rotatePoint.second, r)
+        val fitR = adaptiveTransformHandleRadius(hpts)
+        val density = resources.displayMetrics.density
+        val cornerR = min(6.5f * density, fitR)
+        val midR = min(5.5f * density, fitR)
 
         for (i in 0..7) {
             val isCorner = i == 0 || i == 2 || i == 5 || i == 7
-            drawResizeHandle(canvas, hpts[i * 2], hpts[i * 2 + 1], r, resizeHandleAtIndex(i), isCorner)
+            drawResizeHandle(
+                canvas = canvas,
+                cx = hpts[i * 2],
+                cy = hpts[i * 2 + 1],
+                r = if (isCorner) cornerR else midR,
+                handle = resizeHandleAtIndex(i)
+            )
         }
     }
 
@@ -3471,45 +3445,21 @@ class PixelCanvasView @JvmOverloads constructor(
         )
     }
 
+    /**
+     * Titik resize bersih: lingkaran putih berisi + border cyan tipis, tanpa ikon.
+     * Saat sedang ditarik, titik sedikit membesar & highlight pink (feedback aktif).
+     */
     private fun drawResizeHandle(
         canvas: Canvas,
         cx: Float,
         cy: Float,
         r: Float,
-        handle: TransformHandle,
-        isCorner: Boolean
+        handle: TransformHandle
     ) {
         val isActive = currentTouchState == TouchState.DRAGGING_RESIZE_HANDLE && activeResizeHandle == handle
-        canvas.drawCircle(cx, cy, r, if (isActive) perspectiveHandleActiveCenterPaint else handleBgPaint)
-        canvas.drawCircle(cx, cy, r, handleBorderPaint)
-
-        // Sisi wajib berupa garis aksis penuh; sudut pakai garis diagonal pendek.
-        val d = if (isCorner) r * 0.30f else r * 0.46f
-        val paint = if (isActive) handleBgPaint else handleIconPaint
-        val (dirX, dirY) = resizeHandleDirection(handle)
-
-        // Garis utama searah dorongan.
-        canvas.drawLine(cx - dirX * d, cy - dirY * d, cx + dirX * d, cy + dirY * d, paint)
-
-        // Kepala panah.
-        val tipX = cx + dirX * d
-        val tipY = cy + dirY * d
-        val a = r * 0.2f
-        canvas.drawLine(tipX, tipY, tipX - dirX * d * 0.55f + dirY * a, tipY - dirY * d * 0.55f - dirX * a, paint)
-        canvas.drawLine(tipX, tipY, tipX - dirX * d * 0.55f - dirY * a, tipY - dirY * d * 0.55f + dirX * a, paint)
-    }
-
-    /** Arah dorong setiap handle resize (sudut = diagonal, sisi = sumbu). */
-    private fun resizeHandleDirection(handle: TransformHandle): Pair<Float, Float> = when (handle) {
-        TransformHandle.RESIZE_TL -> Pair(-0.7071f, -0.7071f)
-        TransformHandle.RESIZE_TM -> Pair(0f, -1f)
-        TransformHandle.RESIZE_TR -> Pair(0.7071f, -0.7071f)
-        TransformHandle.RESIZE_ML -> Pair(-1f, 0f)
-        TransformHandle.RESIZE_MR -> Pair(1f, 0f)
-        TransformHandle.RESIZE_BL -> Pair(-0.7071f, 0.7071f)
-        TransformHandle.RESIZE_BM -> Pair(0f, 1f)
-        TransformHandle.RESIZE_BR -> Pair(0.7071f, 0.7071f)
-        else -> Pair(0f, 1f)
+        val radius = if (isActive) r * 1.15f else r
+        canvas.drawCircle(cx, cy, radius, if (isActive) perspectiveHandleActiveCenterPaint else handleBgPaint)
+        canvas.drawCircle(cx, cy, radius, handleBorderPaint)
     }
 
     /** Radius handle yang menyesuaikan jarak terdekat antar 8 posisi handle. */
@@ -3531,24 +3481,6 @@ class PixelCanvasView @JvmOverloads constructor(
 
         val fitRadius = if (nearestDistance.isFinite()) nearestDistance * 0.28f else maxRadius
         return fitRadius.coerceIn(minRadius, maxRadius)
-    }
-
-    private fun drawRotateHandle(canvas: Canvas, cx: Float, cy: Float, r: Float) {
-        val isActive = (currentTouchState == TouchState.DRAGGING_ROTATE_HANDLE)
-        canvas.drawCircle(cx, cy, r, if (isActive) perspectiveHandleActiveCenterPaint else handleBgPaint)
-        canvas.drawCircle(cx, cy, r, handleBorderPaint)
-
-        val d = r * 0.46f
-        val oval = RectF(cx - d, cy - d, cx + d, cy + d)
-        val paint = if (isActive) handleBgPaint else handleIconPaint
-        canvas.drawArc(oval, 30f, 270f, false, paint)
-
-        // Kepala panah pada ujung busur
-        val tipX = cx + d * Math.cos(Math.toRadians(30.0)).toFloat()
-        val tipY = cy + d * Math.sin(Math.toRadians(30.0)).toFloat()
-        val arrowHead = r * 0.28f
-        canvas.drawLine(tipX, tipY, tipX + arrowHead, tipY - arrowHead * 0.4f, paint)
-        canvas.drawLine(tipX, tipY, tipX - arrowHead * 0.4f, tipY - arrowHead, paint)
     }
 
     /**
@@ -4050,39 +3982,10 @@ class PixelCanvasView @JvmOverloads constructor(
             }
         }
 
-        // 2. Tangani interaksi geser handle rotasi jika sedang aktif (Prompt 28)
-        if (currentTouchState == TouchState.DRAGGING_ROTATE_HANDLE) {
-            when (event.actionMasked) {
-                MotionEvent.ACTION_MOVE -> {
-                    selectedLayer?.let { layer ->
-                        if (!layer.isLocked) {
-                            val cx = initialCenterPoint.first
-                            val cy = initialCenterPoint.second
-                            val currentAngle = RotationCalculator.touchAngle(cx, cy, event.x, event.y)
-                            layer.rotation = RotationCalculator.updatedRotation(layer.rotation, previousTouchAngle, currentAngle)
-                            previousTouchAngle = currentAngle
-                            hasTouchTransformed = true
-                            invalidate()
-                        }
-                    }
-                    return true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (hasTouchTransformed) {
-                        touchStartState?.let { before ->
-                            recordAction("Move / Transform", before)
-                        }
-                    }
-                    touchStartState = null
-                    hasTouchTransformed = false
-                    currentTouchState = TouchState.IDLE
-                    invalidate()
-                    return true
-                }
-            }
-        }
+        // Handle rotasi di kanvas dihapus (rotasi via slider toolbar / gestur dua jari),
+        // sehingga tidak ada blok interaksi DRAGGING_ROTATE_HANDLE.
 
-        // 2. Tangani interaksi geser handle sudut perspektif secara prioritas jika sedang aktif
+        // Tangani interaksi geser handle sudut perspektif secara prioritas jika sedang aktif
         if (activePerspectiveCorner != -1) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_MOVE -> {
@@ -4130,21 +4033,6 @@ class PixelCanvasView @JvmOverloads constructor(
                 // Cek apakah sentuhan mengenai tombol handle sudut Bounding Box (Prompt 26, 27, 28, 29)
                 val handle = getTransformHandleAt(event.x, event.y)
                 when (handle) {
-                    TransformHandle.ROTATE -> {
-                        selectedLayer?.let { layer ->
-                            if (!layer.isLocked) {
-                                val (w, h) = layer.getUnwarpedDimensions()
-                                val cx = layer.x + w / 2f
-                                val cy = layer.y + h / 2f
-                                initialCenterPoint = Pair(cx, cy)
-                                previousTouchAngle = RotationCalculator.touchAngle(cx, cy, event.x, event.y)
-                                currentTouchState = TouchState.DRAGGING_ROTATE_HANDLE
-                                isDragging = false
-                                invalidate()
-                                return true
-                            }
-                        }
-                    }
                     TransformHandle.NONE -> {
                         // Tidak mengenai handle, lanjutkan ke pengecekan perspektif atau seleksi layer
                     }
