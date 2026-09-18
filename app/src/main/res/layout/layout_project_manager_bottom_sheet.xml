@@ -167,6 +167,18 @@
             android:textColor="@color/light_text_secondary"
             android:textSize="12sp" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnImportEmpty"
+            style="@style/LightPanelOutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:minHeight="0dp"
+            android:text="Import .plp from Storage"
+            android:textSize="13sp"
+            app:icon="@drawable/ic_plp_24px"
+            app:iconSize="18dp" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

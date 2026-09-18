@@ -30,10 +30,27 @@
                 android:name=".ui.EditorActivity"
                 android:screenOrientation="portrait"
                 android:windowSoftInputMode="adjustPan"
+                android:launchMode="singleTop"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+            <!-- Buka file .plp langsung dari File Manager / pesan WhatsApp (Prompt: import external) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="content" android:host="*" android:mimeType="*/*" android:pathPattern=".*\\.plp"/>
+                <data android:scheme="file" android:host="*" android:mimeType="*/*" android:pathPattern=".*\\.plp"/>
+            </intent-filter>
+
+            <!-- Fallback: provider Downloads memakai path numerik (/document/msf:N)
+                 sehingga pathPattern tidak cocok → tangkap via MIME application/* -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="content" android:host="*" android:mimeType="application/*"/>
             </intent-filter>
         </activity>
 

@@ -7,9 +7,11 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.PixelCanvasView
 import com.flyerpix.editor.canvas.model.ExportFormat
 import com.flyerpix.editor.canvas.model.ExportQuality
@@ -37,6 +39,13 @@ class ExportController(
     }
 
     var currentProjectName: String = "Untitled"
+
+    /**
+     * Callback default untuk membuka file picker .plp eksternal. Di-iwire oleh
+     * EditorActivity pada inisialisasi controller sehingga panggilan
+     * [showProjectManager] tanpa argumen tetap bisa membuka file picker.
+     */
+    var onImportExternalRequested: (() -> Unit)? = null
 
     private val exportExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -116,7 +125,7 @@ class ExportController(
         ProjectManagerBottomSheet.show(
             fragmentManager = activity.supportFragmentManager,
             onProjectLoaded = { project -> loadProject(project) },
-            onImportExternalRequested = onImportExternalRequested
+            onImportExternalRequested = onImportExternalRequested ?: this.onImportExternalRequested
         )
     }
 
@@ -158,12 +167,60 @@ class ExportController(
 
     fun importProjectFromUri(uri: Uri) {
         try {
-            val json = activity.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
-            if (json.isNullOrBlank()) { showSnackbar("Project file is empty or unreadable"); return }
-            loadProject(ProjectSerializer.deserialize(json))
+            val json = activity.contentResolver.openInputStream(uri)
+                ?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+            if (json.isNullOrBlank()) {
+                showImportError("File proyek kosong atau tidak dapat dibaca.")
+                return
+            }
+            val project = ProjectSerializer.deserialize(json)
+            val fileName = (resolveImportFileName(uri) ?: project.projectName)
+                .removeSuffix(ProjectSerializer.FILE_EXTENSION)
+                .ifBlank { "Imported" }
+            try {
+                ProjectSerializer.saveProject(activity, project, fileName)
+            } catch (saveError: Exception) {
+                showImportError("Gagal menyimpan proyek ke penyimpanan lokal.")
+                return
+            }
+            loadProject(project)
+            showSnackbar("Project '${project.projectName}' imported & added to My Projects")
         } catch (e: Exception) {
-            showSnackbar("Failed to load project file: ${e.localizedMessage}")
+            showImportError("Format .plp tidak didukung atau rusak.")
         }
+    }
+
+    /**
+     * Mengambil nama file asli dari URI (MediaStore DISPLAY_NAME, lalu fallback
+     * ke segmen path terakhir URI).
+     */
+    private fun resolveImportFileName(uri: Uri): String? {
+        return try {
+            activity.contentResolver.query(
+                uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        } catch (e: Exception) {
+            null
+        } ?: try {
+            uri.lastPathSegment?.substringAfterLast('/')?.let { seg ->
+                if (seg.isNotBlank()) seg else null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Dialog error yang ramah saat file .plp gagal dibuka / tidak valid. */
+    private fun showImportError(message: String) {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(
+            activity, R.style.AppAlertDialog
+        )
+            .setTitle("File Tidak Dapat Dibuka")
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show()
     }
 
     fun onPermissionResult(requestCode: Int, grantResults: IntArray, onCameraGranted: () -> Unit) {

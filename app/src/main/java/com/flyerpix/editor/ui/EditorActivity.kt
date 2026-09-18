@@ -277,6 +277,24 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         }
     }
 
+    /**
+     * Menangani intent pembuka file .plp dari aplikasi eksternal (File Manager,
+     * WhatsApp, dsb.) via ACTION_VIEW. Dipanggil dari onCreate & onNewIntent.
+     */
+    private fun handleViewIntent(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (intent.action != Intent.ACTION_VIEW) return
+        if (::exportController.isInitialized) {
+            exportController.importProjectFromUri(uri)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleViewIntent(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityEditorBinding.inflate(layoutInflater)
@@ -346,6 +364,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         // ── Inisialisasi Controllers ────────────────────────────────────────
         initializeControllers()
 
+        // Tangani file .plp yang dibuka langsung dari file manager eksternal.
+        handleViewIntent(intent)
+
         // ── Legacy Initializations ───────────────────────────────────────────
         // Text Editor ala PixelLab: pasang controller PALING AWAL agar berlari PALING
         // AKHIR pada rantai onLayerSelectedListener → visibilitas panel selalu final.
@@ -386,6 +407,12 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             { showSnackbar(it) },
             { w, h -> updateCanvasAspectRatio(w, h) }
         )
+        // Handler import bawaan: setiap panggilan showProjectManager() tanpa
+        // callback eksplisit akan membuka file picker .plp (wildcard */* sebagai
+        // fallback agar file .plp non-standar tetap bisa dipilih).
+        exportController.onImportExternalRequested = {
+            openProjectFileLauncher.launch(arrayOf("*/*"))
+        }
 
         // Text Panel Controller - Mengelola semua kontrol text editor
         textPanelController = TextPanelController(

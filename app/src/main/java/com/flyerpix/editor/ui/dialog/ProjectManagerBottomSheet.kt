@@ -101,6 +101,10 @@ class ProjectManagerBottomSheet : BottomSheetDialogFragment() {
             onImportExternalRequested?.invoke()
             dismiss()
         }
+        binding.btnImportEmpty.setOnClickListener {
+            onImportExternalRequested?.invoke()
+            dismiss()
+        }
         binding.btnSortProjects.setOnClickListener { showSortMenu() }
         binding.btnDoneProjects.setOnClickListener { dismiss() }
     }
