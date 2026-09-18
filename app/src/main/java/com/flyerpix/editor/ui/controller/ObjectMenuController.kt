@@ -1021,7 +1021,8 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
         binding.objectMenuPanel.visibility = View.GONE
         container.visibility = View.VISIBLE
         container.bringToFront()
-        PanelHeightManager.setHeight(container, (300 * activity.resources.displayMetrics.density).toInt())
+        val sheetMaxH = computeDrawSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
 
         host.setContent {
@@ -1048,7 +1049,8 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 onCancel = {
                     canvas.clearSelection()
                     deselect(restoreStrip = true)
-                }
+                },
+                maxHeightPx = sheetMaxH
             )
         }
     }
