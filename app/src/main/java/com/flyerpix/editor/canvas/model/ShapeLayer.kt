@@ -22,7 +22,10 @@ enum class ShapeType {
     CIRCLE,
     ARC,
     TRIANGLE,
-    STAR
+    STAR,
+    HEART,
+    HEXAGON,
+    DIAMOND
 }
 
 enum class StrokeStyle {
@@ -40,6 +43,9 @@ enum class StrokeStyle {
  *  - [ShapeType.CIRCLE]             — Lingkaran / Elips
  *  - [ShapeType.TRIANGLE]           — Segitiga sama sisi
  *  - [ShapeType.STAR]               — Bintang dengan jumlah titik & inner radius dinamis
+ *  - [ShapeType.HEART]              — Hati (kurva Bezier simetris)
+ *  - [ShapeType.HEXAGON]            — Segi enam beraturan
+ *  - [ShapeType.DIAMOND]            — Belah ketupat 4 titik
  *
  * Properti visual:
  *  - [fillColor]   — Warna isi bentuk
@@ -106,12 +112,15 @@ data class ShapeLayer(
 
     fun buildPath(): Path {
         return when (shapeType) {
-            ShapeType.RECTANGLE        -> buildRectanglePath()
+            ShapeType.RECTANGLE         -> buildRectanglePath()
             ShapeType.ROUNDED_RECTANGLE -> buildRoundedRectanglePath()
-            ShapeType.CIRCLE           -> buildCirclePath()
-            ShapeType.ARC             -> buildCirclePath()
-            ShapeType.TRIANGLE         -> buildTrianglePath()
-            ShapeType.STAR             -> buildStarPath()
+            ShapeType.CIRCLE            -> buildCirclePath()
+            ShapeType.ARC               -> buildCirclePath()
+            ShapeType.TRIANGLE          -> buildTrianglePath()
+            ShapeType.STAR              -> buildStarPath()
+            ShapeType.HEART             -> buildHeartPath()
+            ShapeType.HEXAGON           -> buildHexagonPath()
+            ShapeType.DIAMOND           -> buildDiamondPath()
         }
     }
 
@@ -173,9 +182,48 @@ data class ShapeLayer(
         return path
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Render pipeline
-    // ─────────────────────────────────────────────────────────────────────────
+    private fun buildHeartPath(): Path {
+        val sx = width / 32f
+        val sy = height / 29.6f
+        val path = Path()
+        path.moveTo(16f * sx, 29.6f * sy)
+        path.cubicTo(6f * sx, 22.5f * sy, 0f * sx, 14f * sy, 0f * sx, 7.4f * sy)
+        path.cubicTo(0f * sx, 2.5f * sy, 4.4f * sx, 0f * sy, 8f * sx, 0f * sy)
+        path.cubicTo(12f * sx, 0f * sy, 16f * sx, 4.2f * sy, 16f * sx, 9.4f * sy)
+        path.cubicTo(16f * sx, 4.2f * sy, 20f * sx, 0f * sy, 24f * sx, 0f * sy)
+        path.cubicTo(27.6f * sx, 0f * sy, 32f * sx, 2.5f * sy, 32f * sx, 7.4f * sy)
+        path.cubicTo(32f * sx, 14f * sy, 26f * sx, 22.5f * sy, 16f * sx, 29.6f * sy)
+        path.close()
+        return path
+    }
+
+    private fun buildHexagonPath(): Path {
+        val cx = width / 2f
+        val cy = height / 2f
+        val rx = width / 2f
+        val ry = height / 2f
+        val path = Path()
+        val startAngle = -Math.PI / 2.0
+        val angleStep = Math.PI / 3.0
+        for (i in 0 until 6) {
+            val angle = startAngle + i * angleStep
+            val px = cx + (rx * Math.cos(angle)).toFloat()
+            val py = cy + (ry * Math.sin(angle)).toFloat()
+            if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
+        }
+        path.close()
+        return path
+    }
+
+    private fun buildDiamondPath(): Path {
+        val path = Path()
+        path.moveTo(width / 2f, 0f)
+        path.lineTo(width, height / 2f)
+        path.lineTo(width / 2f, height)
+        path.lineTo(0f, height / 2f)
+        path.close()
+        return path
+    }
 
     override fun drawContent(canvas: Canvas, paint: Paint) {
         if (!isVisible) return

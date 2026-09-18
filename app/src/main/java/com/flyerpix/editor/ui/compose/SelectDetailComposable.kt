@@ -192,6 +192,9 @@ fun SelectDetailPage(
                                             ShapeType.TRIANGLE -> "Triangle"
                                             ShapeType.STAR -> "Star"
                                             ShapeType.ARC -> "Arc"
+                                            ShapeType.HEART -> "Heart"
+                                            ShapeType.HEXAGON -> "Hexagon"
+                                            ShapeType.DIAMOND -> "Diamond"
                                         }}",
                                         style = MaterialTheme.typography.caption,
                                         color = Color(PanelTextSecondary),

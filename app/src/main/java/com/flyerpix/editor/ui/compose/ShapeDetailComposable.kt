@@ -1,6 +1,7 @@
 package com.flyerpix.editor.ui.compose
 
 import android.graphics.Paint
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -87,6 +88,7 @@ fun ShapeDetailPage(
     var strokeStyleState by remember(strokeStyle) { mutableStateOf(strokeStyle) }
     var arcStartAngleState by remember(arcStartAngle) { mutableStateOf(arcStartAngle) }
     var arcSweepAngleState by remember(arcSweepAngle) { mutableStateOf(arcSweepAngle) }
+    var showShapePicker by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -143,44 +145,32 @@ fun ShapeDetailPage(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFFF8FAFC))
+                                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
+                                .clickable { showShapePicker = true }
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            listOf(
-                                ShapeType.RECTANGLE to "Rectangle",
-                                ShapeType.ROUNDED_RECTANGLE to "Rounded",
-                                ShapeType.CIRCLE to "Circle",
-                                ShapeType.ARC to "Arc",
-                                ShapeType.TRIANGLE to "Triangle",
-                                ShapeType.STAR to "Star"
-                            ).forEach { (type, label) ->
-                                val isSelected = shapeTypeState == type
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSelected) Color(0xFFE8F0FE) else Color(0xFFF8FAFC))
-                                        .border(
-                                            width = if (isSelected) 1.5.dp else 1.dp,
-                                            color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
-                                            shape = RoundedCornerShape(8.dp)
-                                        )
-                                        .clickable {
-                                            shapeTypeState = type
-                                            onShapeTypeChange(type)
-                                        }
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.caption,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) PrimaryBlue else Color(0xFF1A1A2E),
-                                        fontSize = 10.sp
-                                    )
-                                }
+                            Canvas(modifier = Modifier.size(22.dp)) {
+                                drawShapePickerPreview(type = shapeTypeState, fillColor = PrimaryBlue)
                             }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = shapeTypeLabel(shapeTypeState),
+                                style = MaterialTheme.typography.caption,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1E293B),
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                painter = painterResource(R.drawable.ic_sort_24px),
+                                contentDescription = "Choose shape",
+                                modifier = Modifier.size(20.dp),
+                                tint = Color(TextSecondary)
+                            )
                         }
 
                         // SECTION: Geometry
@@ -530,6 +520,18 @@ fun ShapeDetailPage(
                     }
                 }
             }
+        }
+
+        if (showShapePicker) {
+            ShapePickerPopupDialog(
+                currentType = shapeTypeState,
+                onShapeSelected = { type ->
+                    shapeTypeState = type
+                    onShapeTypeChange(type)
+                    showShapePicker = false
+                },
+                onDismiss = { showShapePicker = false }
+            )
         }
     }
 }

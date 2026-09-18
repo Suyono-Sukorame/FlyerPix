@@ -435,75 +435,50 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 2. Shape Studio (Opsi "Shape Picker First")
-    //    Step 1: ShapePickerPage kompak (~38%) -> pilih tipe lebih dulu
-    //    Step 2: expand ke ShapeDetailPage di container yang sama (~58%)
+    // 2. Shape Studio (alur Instant, ala PixelLab Original)
+    //    Saat menu Shapes ditekan, shape default (RECTANGLE) langsung muncul di
+    //    kanvas + panel pengaturan lengkap terbuka instan. Pemilihan tipe bentuk
+    //    dilakukan lewat pop-up dialog floating (ShapePickerPopupDialog).
     // ─────────────────────────────────────────────────────────────────────────
 
     fun showComposeShapeSheet(shapeToEdit: ShapeLayer? = null) {
-        if (shapeToEdit != null || draftShape != null) {
-            showComposeShapeDetail(shapeToEdit ?: draftShape!!)
-        } else {
-            showComposeShapePicker()
-        }
+        val shape = shapeToEdit ?: draftShape ?: createNewDraftShape()
+        showComposeShapeDetail(shape)
     }
 
     /**
-     * Step 1 — Gallery pemilihan tipe shape. User memilih bentuk lebih dulu,
-     * baru layer dibuat di canvas (tidak ada "shape mendadak muncul").
+     * Membuat shape default baru di kanvas, memilihnya, dan mem-backup state awal
+     * untuk rollback saat Cancel (isNewShape = true → Cancel menghapus layer).
      */
-    private fun showComposeShapePicker() {
-        val host = composeHost ?: return
-        val container = composeContainer ?: return
-
-        activeTag = OBJ_SHAPES
-        updateToolStripSelection(OBJ_SHAPES)
-
-        binding.objectContentPanel.visibility = View.GONE
-        binding.objectMenuPanel.visibility = View.GONE
-        container.visibility = View.VISIBLE
-        container.bringToFront()
-
-        val sheetMaxH = computeShapeSheetHeight()
-        PanelHeightManager.setHeight(container, sheetMaxH)
-        container.post { canvas.invalidate() }
-
-        host.setContent {
-            ShapePickerPage(
-                onShapeTypeSelected = { type ->
-                    val shape = canvas.addShapeLayer(type).also {
-                        isNewShape = true
-                        canvas.selectedLayer = it
-                        onShapeCreated?.invoke(it)
-                    }
-                    draftShape = shape
-                    // Backup initial state untuk rollback saat Cancel
-                    shapeSnapshotType = shape.shapeType
-                    shapeSnapshotCornerX = shape.cornerRadiusX
-                    shapeSnapshotCornerY = shape.cornerRadiusY
-                    shapeSnapshotOpacity = shape.opacity
-                    shapeSnapshotFillColor = shape.fillColor
-                    shapeSnapshotStrokeWidth = shape.strokeWidth
-                    shapeSnapshotStrokeOpacity = shape.strokeOpacity
-                    shapeSnapshotStrokeColor = shape.strokeColor
-                    shapeSnapshotStrokeJoin = shape.strokeJoin
-                    shapeSnapshotStrokeStyle = shape.strokeStyle
-                    shapeSnapshotArcStartAngle = shape.arcStartAngle
-                    shapeSnapshotArcSweepAngle = shape.arcSweepAngle
-                    showComposeShapeDetail(shape)
-                },
-                onClose = {
-                    draftShape = null
-                    deselect(restoreStrip = true)
-                },
-                maxHeightPx = sheetMaxH
-            )
+    private fun createNewDraftShape(): ShapeLayer {
+        val shape = canvas.addShapeLayer(ShapeType.RECTANGLE).also {
+            isNewShape = true
+            canvas.selectedLayer = it
+            onShapeCreated?.invoke(it)
         }
+        draftShape = shape
+        backupShapeSnapshot(shape)
+        return shape
+    }
+
+    private fun backupShapeSnapshot(shape: ShapeLayer) {
+        shapeSnapshotType = shape.shapeType
+        shapeSnapshotCornerX = shape.cornerRadiusX
+        shapeSnapshotCornerY = shape.cornerRadiusY
+        shapeSnapshotOpacity = shape.opacity
+        shapeSnapshotFillColor = shape.fillColor
+        shapeSnapshotStrokeWidth = shape.strokeWidth
+        shapeSnapshotStrokeOpacity = shape.strokeOpacity
+        shapeSnapshotStrokeColor = shape.strokeColor
+        shapeSnapshotStrokeJoin = shape.strokeJoin
+        shapeSnapshotStrokeStyle = shape.strokeStyle
+        shapeSnapshotArcStartAngle = shape.arcStartAngle
+        shapeSnapshotArcSweepAngle = shape.arcSweepAngle
     }
 
     /**
-     * Step 2 — Detail editing shape (warna, stroke, opacity, dsb). Dipanggil
-     * baik untuk mengedit shape lama maupun setelah memilih tipe di picker.
+     * Detail editing shape (warna, stroke, opacity, dsb). Dipanggil baik untuk
+     * mengedit shape lama maupun untuk shape baru yang baru dibuat.
      */
     private fun showComposeShapeDetail(shape: ShapeLayer) {
         val host = composeHost ?: return
@@ -524,19 +499,7 @@ class ObjectMenuController(
         if (draftShape == null) {
             draftShape = shape
             isNewShape = false
-            // Backup initial state
-            shapeSnapshotType = shape.shapeType
-            shapeSnapshotCornerX = shape.cornerRadiusX
-            shapeSnapshotCornerY = shape.cornerRadiusY
-            shapeSnapshotOpacity = shape.opacity
-            shapeSnapshotFillColor = shape.fillColor
-            shapeSnapshotStrokeWidth = shape.strokeWidth
-            shapeSnapshotStrokeOpacity = shape.strokeOpacity
-            shapeSnapshotStrokeColor = shape.strokeColor
-            shapeSnapshotStrokeJoin = shape.strokeJoin
-            shapeSnapshotStrokeStyle = shape.strokeStyle
-            shapeSnapshotArcStartAngle = shape.arcStartAngle
-            shapeSnapshotArcSweepAngle = shape.arcSweepAngle
+            backupShapeSnapshot(shape)
         }
 
         host.setContent {
