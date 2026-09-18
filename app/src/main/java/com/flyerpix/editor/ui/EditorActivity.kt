@@ -979,15 +979,46 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         textPanelController.pagePinnedByNav = false
 
         binding.bottomNavigation.setOnItemSelectedListener { menuItem: MenuItem ->
+            // Tab Edit: pastikan selalu ada layer yang bisa diedit. Jika kanvas
+            // kosong, tahan di Home + Snackbar (tanpa empty state mati).
+            if (menuItem.itemId == R.id.nav_edit && !ensureEditableLayerForEditTab()) {
+                showSnackbar("Tap an object on canvas or add one to edit")
+                showMenu(R.id.nav_home)
+                return@setOnItemSelectedListener false
+            }
             showMenu(menuItem.itemId)
             true
         }
         binding.bottomNavigation.setOnItemReselectedListener { menuItem: MenuItem ->
+            if (menuItem.itemId == R.id.nav_edit && !ensureEditableLayerForEditTab()) {
+                showSnackbar("Tap an object on canvas or add one to edit")
+                showMenu(R.id.nav_home)
+                return@setOnItemReselectedListener
+            }
             showMenu(menuItem.itemId)
         }
         
         // Initialize dengan menu default (Home) untuk set FAB visibility dengan benar
         showMenu(R.id.nav_home)
+    }
+
+    /**
+     * Memastikan tab Edit selalu punya layer yang dapat diedit:
+     *  1. Layer terpilih valid (terlihat & tidak terkunci) → langsung dipakai.
+     *  2. Jika belum ada seleksi, cari layer teratas yang valid lalu seleksi otomatis.
+     *  3. Jika kanvas kosong / semua layer terkunci → mengembalikan false agar
+     *     navigasi dialihkan ke Home tanpa membuka empty state "Select a layer...".
+     */
+    private fun ensureEditableLayerForEditTab(): Boolean {
+        val selected = pixelCanvasView.selectedLayer
+        if (selected != null && selected.isVisible && !selected.isLocked) return true
+        val fallback = pixelCanvasView.layers.lastOrNull { it.isVisible && !it.isLocked }
+        if (fallback != null) {
+            pixelCanvasView.selectedLayer = fallback
+            pixelCanvasView.invalidate()
+            return true
+        }
+        return false
     }
 
     private fun initializeAuthenticTopBar() {
