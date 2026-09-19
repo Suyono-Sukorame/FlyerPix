@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Muka koin (elips 3D miring) -->
+    <path
+        android:pathData="M4.5,7 A7.5,5 0 1 0 19.5,7 A7.5,5 0 1 0 4.5,7 Z"
+        android:fillColor="#66D4AF37"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.6" />
+    <!-- Band ketebalan sisi kanan -->
+    <path
+        android:pathData="M19.5,7 A7.5,5 0 0 0 19.5,17.05 L19.62,15.05 A7.5,5 0 0 1 19.62,5 Z"
+        android:fillColor="#FF000000"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.2" />
+    <!-- Simbol persen di tengah -->
+    <path
+        android:pathData="M10.9,10.8 L13.4,5.6"
+        android:fillColor="#00000000"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M9.1,11.2 m-1,0 a1,1 0 1 1 2,0 a1,1 0 1 1 -2,0"
+        android:fillColor="#FF000000" />
+    <path
+        android:pathData="M15.3,5.4 m-1,0 a1,1 0 1 1 2,0 a1,1 0 1 1 -2,0"
+        android:fillColor="#FF000000" />
+    <!-- Kilau bintang kecil di kiri-atas -->
+    <path
+        android:pathData="M6.9,5.35 L7.25,6.05 L8,6.35 L7.25,6.65 L6.9,7.35 L6.55,6.65 L5.8,6.35 L6.55,6.05 Z"
+        android:fillColor="#FF000000" />
+</vector>

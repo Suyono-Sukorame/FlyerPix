@@ -51,6 +51,10 @@ import com.flyerpix.editor.canvas.model.ArrowLayer
 import com.flyerpix.editor.canvas.model.Box3DLayer
 import com.flyerpix.editor.canvas.model.CanvasBackground
 import com.flyerpix.editor.canvas.model.CanvasBackgroundMode
+import com.flyerpix.editor.canvas.model.Coin3DLayer
+import com.flyerpix.editor.canvas.model.CoinContentMode
+import com.flyerpix.editor.canvas.model.CoinMaterial
+import com.flyerpix.editor.canvas.model.CoinSymbol
 import com.flyerpix.editor.canvas.model.Cylinder3DLayer
 import com.flyerpix.editor.canvas.model.HitAnchor
 import com.flyerpix.editor.canvas.model.CanvasLayer
@@ -1049,7 +1053,8 @@ class PixelCanvasView @JvmOverloads constructor(
         DRAGGING_BOX3D_VP_HANDLE,
         DRAGGING_SPHERE_LIGHT_HANDLE,
         DRAGGING_CYLINDER_SIZE_HANDLE,
-        DRAGGING_CYLINDER_TILT_HANDLE
+        DRAGGING_CYLINDER_TILT_HANDLE,
+        DRAGGING_COIN_TILT_HANDLE
     }
 
     var currentTouchState: TouchState = TouchState.IDLE
@@ -1085,9 +1090,16 @@ class PixelCanvasView @JvmOverloads constructor(
     private var cylinderSizeStartRadiusX: Float = 0f
     private var cylinderSizeStartHeight: Float = 0f
     private var cylinderSizeStartLocal: Pair<Float, Float> = Pair(0f, 0f)
-    private var cylinderTiltStartRadiusY: Float = 0f
+private var cylinderTiltStartRadiusY: Float = 0f
+
     private var cylinderTiltStartLocalY: Float = 0f
 
+    // ── State Drag Handle Putar Koin 3D ──────────────────────────────────────
+    private var coinTiltStartAngle: Float = 0f
+
+    private var coinSpinStartAngle: Float = 0f
+
+    private var coinHandleStartLocal: Pair<Float, Float> = Pair(0f, 0f)
     // ── Mode Eyedropper (Prompt 42) ──────────────────────────────────────────
 
     /** Apakah kanvas sedang dalam mode eyedropper (pipet warna). */
@@ -2862,6 +2874,13 @@ class PixelCanvasView @JvmOverloads constructor(
                 }
             }
 
+            // 4f. Overlay handle putar Koin 3D: tilt (vertikal) + spin (horizontal)
+            selectedLayer?.let { layer ->
+                if (!editorZoomMode && layer.isVisible && !layer.isLocked && layer is Coin3DLayer) {
+                    drawCoin3DOverlay(canvas, layer)
+                }
+            }
+
             // 4b. Render anchor visualization untuk mode edit Bezier (Phase 1)
             if (bezierEditMode && selectedBezierLayer != null && !editorZoomMode) {
                 drawBezierAnchorOverlay(canvas, selectedBezierLayer!!)
@@ -3277,6 +3296,40 @@ class PixelCanvasView @JvmOverloads constructor(
         canvas.drawPath(diamond, borderPaint)
     }
 
+    /** Overlay handle putar Koin 3D: garis panduan + lingkaran di bibir atas-kanan. */
+    private fun drawCoin3DOverlay(canvas: Canvas, layer: Coin3DLayer) {
+        val (w, h) = layer.getUnwarpedDimensions()
+        if (w <= 0f || h <= 0f) return
+        val density = resources.displayMetrics.density
+
+        val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xAA00A8FF.toInt()
+            strokeWidth = 1.5f * density
+            style = Paint.Style.STROKE
+            pathEffect = DashPathEffect(floatArrayOf(6f * density, 5f * density), 0f)
+        }
+        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF00A8FF.toInt()
+            style = Paint.Style.FILL
+        }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            strokeWidth = 2f * density
+            style = Paint.Style.STROKE
+        }
+
+        val l = layer.computeLayout()
+        val (clx, cly) = layer.mapLocalPointToCanvas(l.fx, l.fy, w, h)
+        val (hlx, hly) = layer.getTiltHandleLocal()
+        val (px, py) = layer.mapLocalPointToCanvas(hlx, hly, w, h)
+
+        canvas.drawLine(clx, cly, px, py, guidePaint)
+
+        val size = 7f * density
+        canvas.drawCircle(px, py, size, fillPaint)
+        canvas.drawCircle(px, py, size, borderPaint)
+    }
+
     private fun drawTextEditLabel(canvas: Canvas, pts: FloatArray) {
         val left = minOf(pts[0], pts[2], pts[4], pts[6])
         val top = minOf(pts[1], pts[3], pts[5], pts[7])
@@ -3551,6 +3604,28 @@ class PixelCanvasView @JvmOverloads constructor(
         val dy = cly - cylinderTiltStartLocalY
         layer.radiusY = (cylinderTiltStartRadiusY - dy).coerceIn(4f, 300f)
             .coerceAtMost(layer.radiusX * 1.5f)
+        hasTouchTransformed = true
+        invalidate()
+    }
+
+    /** Memulai drag handle putar Koin 3D: mencatat tilt/spin awal + titik tangkapan. */
+    private fun beginCoinTiltDrag(layer: Coin3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        coinTiltStartAngle = layer.tiltAngle
+        coinSpinStartAngle = layer.spinAngle
+        coinHandleStartLocal = layer.mapCanvasPointToLocal(touchX, touchY, w, h)
+        currentTouchState = TouchState.DRAGGING_COIN_TILT_HANDLE
+        isDragging = false
+        invalidate()
+    }
+
+    /** Memperbarui koin: tarik ke atas = makin miring; ke kanan = berputar (spin). */
+    private fun updateCoinTiltDrag(layer: Coin3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        val (clx, cly) = layer.mapCanvasPointToLocal(touchX, touchY, w, h)
+        val dx = clx - coinHandleStartLocal.first
+        val dy = cly - coinHandleStartLocal.second
+        layer.tiltAngle = (coinTiltStartAngle - dy * 0.35f).coerceIn(0f, 75f)
+        val newSpin = coinSpinStartAngle + dx * 0.5f
+        layer.spinAngle = ((newSpin % 360f) + 360f) % 360f
         hasTouchTransformed = true
         invalidate()
     }
@@ -4399,6 +4474,32 @@ class PixelCanvasView @JvmOverloads constructor(
             }
         }
 
+        // 1b5. Tangani geser handle putar Koin 3D (tilt + spin)
+        if (currentTouchState == TouchState.DRAGGING_COIN_TILT_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is Coin3DLayer && !layer.isLocked) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) updateCoinTiltDrag(layer, event.x, event.y, w, h)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Putar Koin 3D", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
         // Handle rotasi di kanvas dihapus (rotasi via slider toolbar / gestur dua jari),
         // sehingga tidak ada blok interaksi DRAGGING_ROTATE_HANDLE.
 
@@ -4507,6 +4608,22 @@ class PixelCanvasView @JvmOverloads constructor(
                             val touchRadius = 28f * resources.displayMetrics.density
                             if (hypot(event.x - tx, event.y - ty) <= touchRadius) {
                                 beginCylinderTiltDrag(layer, event.x, event.y, w, h)
+                                return true
+                            }
+                        }
+                    }
+                }
+
+                // Cek sentuhan handle putar Koin 3D (bibir atas-kanan koin)
+                selectedLayer?.let { layer ->
+                    if (!layer.isLocked && layer is Coin3DLayer) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            val (tlx, tly) = layer.getTiltHandleLocal()
+                            val (tx, ty) = layer.mapLocalPointToCanvas(tlx, tly, w, h)
+                            val touchRadius = 28f * resources.displayMetrics.density
+                            if (hypot(event.x - tx, event.y - ty) <= touchRadius) {
+                                beginCoinTiltDrag(layer, event.x, event.y, w, h)
                                 return true
                             }
                         }
@@ -5445,6 +5562,41 @@ class PixelCanvasView @JvmOverloads constructor(
             // Posisi: horizontal tengah, vertikal sekitar 55% ke bawah (pemeran produk).
             x = cx - contentW / 2f,
             y = cy - contentH * 0.3f
+        )
+        addLayer(layer)
+        return layer
+    }
+
+    /**
+     * Menambahkan objek Koin 3D emas default bertuliskan "%" di tengah kanvas,
+     * sebagai [Coin3DLayer] dengan kemiringan 3D natural + gerigi tepi.
+     */
+    fun addCoin3DLayer(): Coin3DLayer {
+        val cx = if (width > 0) width / 2f else 540f
+        val cy = if (height > 0) height / 2f else 540f
+        val base = ((minOf(width, height).takeIf { it > 0 }?.toFloat() ?: 400f) * 0.30f).coerceIn(36f, 240f)
+        val contentW = base * 2f
+        val contentH = base * 2f
+        val layer = Coin3DLayer(
+            diameter = base * 2f,
+            thickness = base * 0.16f,
+            tiltAngle = 35f,
+            spinAngle = 0f,
+            contentMode = CoinContentMode.PRESET_SYMBOL,
+            symbolType = CoinSymbol.PERCENT,
+            materialType = CoinMaterial.GOLD,
+            baseColor = 0xFFFFD700.toInt(),
+            emblemColor = Color.WHITE,
+            reededEdgeEnabled = true,
+            reedCount = 36,
+            sparkleEnabled = true,
+            sparkleAngle = -45f,
+            sparkleSize = base * 0.18f,
+            floorShadowEnabled = true,
+            floorShadowOpacity = 0.5f,
+            // Posisi: horizontal tengah, vertikal sekitar 35% ke atas dari tengah.
+            x = cx - contentW / 2f,
+            y = cy - contentH * 0.35f
         )
         addLayer(layer)
         return layer

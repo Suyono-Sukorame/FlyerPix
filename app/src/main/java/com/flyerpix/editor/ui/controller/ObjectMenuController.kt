@@ -24,6 +24,10 @@ import com.flyerpix.editor.canvas.model.ArrowStyle
 import com.flyerpix.editor.canvas.model.BezierInputFlow
 import com.flyerpix.editor.canvas.model.Box3DLayer
 import com.flyerpix.editor.canvas.model.Box3DPerspectiveMode
+import com.flyerpix.editor.canvas.model.Coin3DLayer
+import com.flyerpix.editor.canvas.model.CoinContentMode
+import com.flyerpix.editor.canvas.model.CoinMaterial
+import com.flyerpix.editor.canvas.model.CoinSymbol
 import com.flyerpix.editor.canvas.model.Cylinder3DLayer
 import com.flyerpix.editor.canvas.model.GradientType
 import com.flyerpix.editor.canvas.model.GradientColor
@@ -64,6 +68,7 @@ class ObjectMenuController(
         const val OBJ_3D_BOX   = "obj_3d_box"
         const val OBJ_3D_SPHERE = "3d_sphere"
         const val OBJ_3D_CYLINDER = "3d_cylinder"
+        const val OBJ_3D_COIN   = "3d_coin"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
@@ -81,6 +86,8 @@ class ObjectMenuController(
         private const val CYLINDER_BASE_COLOR_RESULT_KEY = "obj_cylinder_base_color_key"
         private const val CYLINDER_TOP_COLOR_RESULT_KEY = "obj_cylinder_top_color_key"
         private const val CYLINDER_RING_COLOR_RESULT_KEY = "obj_cylinder_ring_color_key"
+        private const val COIN_EMBLEM_COLOR_RESULT_KEY = "obj_coin_emblem_color_key"
+        private const val COIN_BASE_COLOR_RESULT_KEY = "obj_coin_base_color_key"
     }
 
     private val fragmentManager: FragmentManager get() = activity.supportFragmentManager
@@ -138,6 +145,11 @@ class ObjectMenuController(
     private var draftCylinder: Cylinder3DLayer? = null
     private var isNewCylinder: Boolean = false
     private var cylinderSnapshot: Cylinder3DLayer? = null
+
+    // Draft layer 3D Coin (untuk instant-create & rollback)
+    private var draftCoin: Coin3DLayer? = null
+    private var isNewCoin: Boolean = false
+    private var coinSnapshot: Coin3DLayer? = null
 
     /** State Brush Color draw sheet yang bisa di-update live dari color picker dialog. */
     private val liveDrawBrushColor = mutableStateOf(0)
@@ -271,7 +283,8 @@ class ObjectMenuController(
             Spec(OBJ_ARROW,    "Arrow",   R.drawable.ic_arrow_24px),
             Spec(OBJ_3D_BOX,   "3D Box",  R.drawable.ic_3d_box_24px),
             Spec(OBJ_3D_SPHERE, "3D Sphere", R.drawable.ic_sphere_3d_24px),
-            Spec(OBJ_3D_CYLINDER, "Podium 3D", R.drawable.ic_podium_3d_24px)
+            Spec(OBJ_3D_CYLINDER, "Podium 3D", R.drawable.ic_podium_3d_24px),
+            Spec(OBJ_3D_COIN, "Koin 3D", R.drawable.ic_coin_3d_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectToolStripInclude.objectToolStripContainer
@@ -334,6 +347,7 @@ class ObjectMenuController(
             OBJ_3D_BOX  -> showComposeBox3DSheet()
             OBJ_3D_SPHERE -> showComposeSphere3DSheet()
             OBJ_3D_CYLINDER -> showComposeCylinder3DSheet()
+            OBJ_3D_COIN -> showComposeCoin3DSheet()
         }
         onAddSettingsOpenChanged?.invoke(true)
         onPanelChanged()
@@ -356,6 +370,9 @@ class ObjectMenuController(
         draftCylinder = null
         isNewCylinder = false
         cylinderSnapshot = null
+        draftCoin = null
+        isNewCoin = false
+        coinSnapshot = null
         canvas.freeDrawEnabled = false
         canvas.bezierInputEnabled = false
         canvas.bezierInputLayer = null
@@ -532,6 +549,25 @@ class ObjectMenuController(
                 it.topRingColor = color
                 canvas.invalidate()
                 showComposeCylinder3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(COIN_EMBLEM_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.WHITE)
+            val target = (canvas.selectedLayer as? Coin3DLayer) ?: draftCoin
+            target?.let {
+                it.emblemColor = color
+                canvas.invalidate()
+                showComposeCoin3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(COIN_BASE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, 0xFFFFD700.toInt())
+            val target = (canvas.selectedLayer as? Coin3DLayer) ?: draftCoin
+            target?.let {
+                it.baseColor = color
+                it.useCustomColor = true
+                canvas.invalidate()
+                showComposeCoin3DSheet(it)
             }
         }
     }
@@ -2405,6 +2441,496 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 2.8 3D Coin / Koin Promo Studio (koin diskon s/d token holografis neon)
+    //     Alur instant: menu Koin 3D ditekan → koin emas "%" langsung muncul
+    //     di kanvas + panel (preset, ukiran, material, tilt/spin, detail, efek).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun showComposeCoin3DSheet(coinToEdit: Coin3DLayer? = null) {
+        val coin = coinToEdit ?: draftCoin ?: createNewDraftCoin()
+        showComposeCoin3DDetail(coin)
+    }
+
+    private fun createNewDraftCoin(): Coin3DLayer {
+        val coin = canvas.addCoin3DLayer().also {
+            isNewCoin = true
+        }
+        draftCoin = coin
+        coinSnapshot = coin.copyLayer()
+        canvas.selectedLayer = coin
+        return coin
+    }
+
+    /** Menerapkan preset cepat koin (definisi tunggal dari Coin3DDetailComposable). */
+    private fun applyCoinPreset(coin: Coin3DLayer, key: String) {
+        val preset = CoinPresets[key] ?: return
+        coin.contentMode = CoinContentMode.PRESET_SYMBOL
+        coin.symbolType = preset.symbolType
+        coin.customText = preset.customText
+        coin.materialType = preset.materialType
+        coin.baseColor = preset.baseColor
+        coin.useCustomColor = preset.useCustomColor
+        coin.emblemColor = preset.emblemColor
+        coin.reededEdgeEnabled = preset.reededEdgeEnabled
+        coin.sparkleEnabled = preset.sparkleEnabled
+        if (preset.neonEnabled) {
+            coin.neonEnabled = true
+            coin.neonColor = preset.baseColor
+            coin.neonRadius = 18f
+            coin.neonIntensity = 1.1f
+        } else {
+            coin.neonEnabled = false
+        }
+        canvas.invalidate()
+    }
+
+    private fun showComposeCoin3DDetail(coin: Coin3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_3D_COIN
+        updateToolStripSelection(OBJ_3D_COIN)
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val switchingCoin = draftCoin !== coin
+        draftCoin = coin
+        if (switchingCoin) isNewCoin = false
+        coinSnapshot = coin.copyLayer()
+
+        host.setContent {
+            var currentDiameter by remember { mutableStateOf(coin.diameter) }
+            var currentThickness by remember { mutableStateOf(coin.thickness) }
+            var currentTilt by remember { mutableStateOf(coin.tiltAngle) }
+            var currentSpin by remember { mutableStateOf(coin.spinAngle) }
+            var currentContentMode by remember { mutableStateOf(coin.contentMode) }
+            var currentSymbol by remember { mutableStateOf(coin.symbolType) }
+            var currentCustomText by remember { mutableStateOf(coin.customText) }
+            var currentEmboss by remember { mutableStateOf(coin.embossDepth) }
+            var currentEmblemColor by remember { mutableStateOf(coin.emblemColor) }
+            var currentReeded by remember { mutableStateOf(coin.reededEdgeEnabled) }
+            var currentMaterial by remember { mutableStateOf(coin.materialType) }
+            var currentBaseColor by remember { mutableStateOf(coin.baseColor) }
+            var currentUseCustom by remember { mutableStateOf(coin.useCustomColor) }
+            var currentSparkleEnabled by remember { mutableStateOf(coin.sparkleEnabled) }
+            var currentSparkleAngle by remember { mutableStateOf(coin.sparkleAngle) }
+            var currentSparkleSize by remember { mutableStateOf(coin.sparkleSize) }
+            var currentFloorShadow by remember { mutableStateOf(coin.floorShadowEnabled) }
+            var currentFloorShadowOpacity by remember {
+                mutableStateOf((coin.floorShadowOpacity * 100f).coerceIn(0f, 100f))
+            }
+            var currentOpacity by remember { mutableStateOf(coin.opacity / 255f * 100f) }
+
+            Coin3DDetailPage(
+                diameter = currentDiameter,
+                thickness = currentThickness,
+                tiltAngle = currentTilt,
+                spinAngle = currentSpin,
+                contentMode = currentContentMode,
+                symbolType = currentSymbol,
+                customText = currentCustomText,
+                embossDepth = currentEmboss,
+                emblemColor = currentEmblemColor,
+                reededEdgeEnabled = currentReeded,
+                reedCount = coin.reedCount,
+                materialType = currentMaterial,
+                baseColor = currentBaseColor,
+                useCustomColor = currentUseCustom,
+                sparkleEnabled = currentSparkleEnabled,
+                sparkleAngle = currentSparkleAngle,
+                sparkleSize = currentSparkleSize,
+                floorShadowEnabled = currentFloorShadow,
+                floorShadowOpacityPct = currentFloorShadowOpacity,
+                opacityPct = currentOpacity,
+                onPresetClick = { key ->
+                    applyCoinPreset(coin, key)
+                    currentContentMode = coin.contentMode
+                    currentSymbol = coin.symbolType
+                    currentCustomText = coin.customText
+                    currentMaterial = coin.materialType
+                    currentBaseColor = coin.baseColor
+                    currentUseCustom = coin.useCustomColor
+                    currentEmblemColor = coin.emblemColor
+                    currentReeded = coin.reededEdgeEnabled
+                    currentSparkleEnabled = coin.sparkleEnabled
+                },
+                onContentModeChange = { m ->
+                    currentContentMode = m
+                    coin.contentMode = m
+                    canvas.invalidate()
+                },
+                onSymbolChange = { s ->
+                    currentSymbol = s
+                    coin.symbolType = s
+                    canvas.invalidate()
+                },
+                onCustomTextChange = { t ->
+                    currentCustomText = t
+                    coin.customText = t
+                    currentContentMode = CoinContentMode.CUSTOM_TEXT
+                    coin.contentMode = CoinContentMode.CUSTOM_TEXT
+                    canvas.invalidate()
+                },
+                onEmbossDepthChange = { v ->
+                    currentEmboss = v
+                    coin.embossDepth = v.coerceIn(0f, 12f)
+                    canvas.invalidate()
+                },
+                onEmblemColorChange = { c ->
+                    currentEmblemColor = c
+                    coin.emblemColor = c
+                    canvas.invalidate()
+                },
+                onOpenEmblemColorPicker = {
+                    val original = coin.emblemColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = coin.emblemColor,
+                        resultKey = COIN_EMBLEM_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        coin.emblemColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        coin.emblemColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "CoinEmblemColorPicker")
+                },
+                onMaterialChange = { m ->
+                    currentMaterial = m
+                    coin.materialType = m
+                    coin.useCustomColor = false
+                    canvas.invalidate()
+                },
+                onCustomColorChange = { c ->
+                    currentBaseColor = c
+                    coin.baseColor = c
+                    coin.useCustomColor = true
+                    canvas.invalidate()
+                },
+                onOpenBaseColorPicker = {
+                    val original = coin.baseColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = coin.baseColor,
+                        resultKey = COIN_BASE_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        coin.baseColor = color
+                        coin.useCustomColor = true
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        coin.baseColor = original
+                        coin.useCustomColor = true
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "CoinBaseColorPicker")
+                },
+                onDiameterChange = { v ->
+                    currentDiameter = v
+                    coin.diameter = v.coerceIn(20f, 1000f)
+                    canvas.invalidate()
+                },
+                onThicknessChange = { v ->
+                    currentThickness = v
+                    coin.thickness = v.coerceIn(0f, 200f)
+                    canvas.invalidate()
+                },
+                onTiltChange = { v ->
+                    currentTilt = v
+                    coin.tiltAngle = v.coerceIn(0f, 75f)
+                    canvas.invalidate()
+                },
+                onSpinChange = { v ->
+                    currentSpin = v
+                    coin.spinAngle = ((v % 360f) + 360f) % 360f
+                    canvas.invalidate()
+                },
+                onReededChange = { en ->
+                    currentReeded = en
+                    coin.reededEdgeEnabled = en
+                    canvas.invalidate()
+                },
+                onSparkleEnabledChange = { en ->
+                    currentSparkleEnabled = en
+                    coin.sparkleEnabled = en
+                    canvas.invalidate()
+                },
+                onSparkleAngleChange = { v ->
+                    currentSparkleAngle = v
+                    coin.sparkleAngle = v
+                    canvas.invalidate()
+                },
+                onSparkleSizeChange = { v ->
+                    currentSparkleSize = v
+                    coin.sparkleSize = v.coerceIn(2f, 200f)
+                    canvas.invalidate()
+                },
+                onFloorShadowEnabledChange = { en ->
+                    currentFloorShadow = en
+                    coin.floorShadowEnabled = en
+                    canvas.invalidate()
+                },
+                onFloorShadowOpacityChange = { pct ->
+                    currentFloorShadowOpacity = pct
+                    coin.floorShadowOpacity = (pct / 100f).coerceIn(0f, 1f)
+                    canvas.invalidate()
+                },
+                onOpacityChange = { pct ->
+                    currentOpacity = pct
+                    coin.opacity = (pct / 100f * 255f).toInt().coerceIn(0, 255)
+                    canvas.invalidate()
+                },
+                onOpenShadowEditor = {
+                    canvas.invalidate()
+                    showCoin3DShadowSheet(coin)
+                },
+                onOpenNeonEditor = {
+                    canvas.invalidate()
+                    showCoin3DNeonSheet(coin)
+                },
+                onReset = {
+                    currentDiameter = 160f
+                    currentThickness = 22f
+                    currentTilt = 35f
+                    currentSpin = 0f
+                    currentContentMode = CoinContentMode.PRESET_SYMBOL
+                    currentSymbol = CoinSymbol.PERCENT
+                    currentCustomText = "50%"
+                    currentEmboss = 4f
+                    currentEmblemColor = 0xFFFFFFFF.toInt()
+                    currentReeded = true
+                    currentMaterial = CoinMaterial.GOLD
+                    currentBaseColor = 0xFFFFD700.toInt()
+                    currentUseCustom = false
+                    currentSparkleEnabled = true
+                    currentSparkleAngle = -45f
+                    currentSparkleSize = 28f
+                    currentFloorShadow = true
+                    currentFloorShadowOpacity = 50f
+                    currentOpacity = 100f
+                    coin.diameter = 160f
+                    coin.thickness = 22f
+                    coin.tiltAngle = 35f
+                    coin.spinAngle = 0f
+                    coin.contentMode = CoinContentMode.PRESET_SYMBOL
+                    coin.symbolType = CoinSymbol.PERCENT
+                    coin.customText = "50%"
+                    coin.embossDepth = 4f
+                    coin.emblemColor = 0xFFFFFFFF.toInt()
+                    coin.reededEdgeEnabled = true
+                    coin.reedCount = 36
+                    coin.materialType = CoinMaterial.GOLD
+                    coin.baseColor = 0xFFFFD700.toInt()
+                    coin.useCustomColor = false
+                    coin.sparkleEnabled = true
+                    coin.sparkleAngle = -45f
+                    coin.sparkleSize = 28f
+                    coin.floorShadowEnabled = true
+                    coin.floorShadowOpacity = 0.5f
+                    coin.opacity = 255
+                    coin.neonEnabled = false
+                    coin.neonColor = 0xFF00E5FF.toInt()
+                    coin.neonRadius = 18f
+                    coin.neonIntensity = 1f
+                    coin.shadowEnabled = false
+                    coin.shadowColor = 0xFF000000.toInt()
+                    coin.shadowOpacity = 0.6f
+                    coin.shadowRadius = 12f
+                    coin.shadowDx = 0f
+                    coin.shadowDy = 6f
+                    canvas.invalidate()
+                },
+                onApply = {
+                    canvas.runRecordedAction(if (isNewCoin) "Add 3D Coin" else "Modify 3D Coin") {}
+                    showSnackbar("3D Coin saved")
+                    draftCoin = null
+                    isNewCoin = false
+                    coinSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                onCancel = {
+                    if (isNewCoin) {
+                        canvas.removeLayer(coin)
+                    } else {
+                        coinSnapshot?.let { snap ->
+                            coin.diameter = snap.diameter
+                            coin.thickness = snap.thickness
+                            coin.tiltAngle = snap.tiltAngle
+                            coin.spinAngle = snap.spinAngle
+                            coin.contentMode = snap.contentMode
+                            coin.symbolType = snap.symbolType
+                            coin.customText = snap.customText
+                            coin.embossDepth = snap.embossDepth
+                            coin.emblemColor = snap.emblemColor
+                            coin.reededEdgeEnabled = snap.reededEdgeEnabled
+                            coin.reedCount = snap.reedCount
+                            coin.materialType = snap.materialType
+                            coin.baseColor = snap.baseColor
+                            coin.useCustomColor = snap.useCustomColor
+                            coin.sparkleEnabled = snap.sparkleEnabled
+                            coin.sparkleAngle = snap.sparkleAngle
+                            coin.sparkleSize = snap.sparkleSize
+                            coin.floorShadowEnabled = snap.floorShadowEnabled
+                            coin.floorShadowOpacity = snap.floorShadowOpacity
+                            coin.opacity = snap.opacity
+                            coin.neonEnabled = snap.neonEnabled
+                            coin.neonColor = snap.neonColor
+                            coin.neonRadius = snap.neonRadius
+                            coin.neonIntensity = snap.neonIntensity
+                            coin.shadowEnabled = snap.shadowEnabled
+                            coin.shadowColor = snap.shadowColor
+                            coin.shadowRadius = snap.shadowRadius
+                            coin.shadowOpacity = snap.shadowOpacity
+                            coin.shadowDx = snap.shadowDx
+                            coin.shadowDy = snap.shadowDy
+                        }
+                    }
+                    canvas.invalidate()
+                    draftCoin = null
+                    isNewCoin = false
+                    coinSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showCoin3DShadowSheet(coin: Coin3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            ShadowDetailPage(
+                title = "Koin Shadow",
+                enabled = coin.shadowEnabled,
+                color = coin.shadowColor,
+                radius = coin.shadowRadius.coerceIn(0f, 40f),
+                opacityPct = (coin.shadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = coin.shadowDx.coerceIn(-30f, 30f),
+                dy = coin.shadowDy.coerceIn(-30f, 30f),
+                onEnabledChange = { en -> coin.shadowEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> coin.shadowColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = coin.shadowColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = coin.shadowColor,
+                        resultKey = "coin_shadow_color_key"
+                    )
+                    dialog.onColorChanged = { c -> coin.shadowColor = c; canvas.invalidate() }
+                    dialog.onCancel = { coin.shadowColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "CoinShadowColorPicker")
+                },
+                onRadiusChange = { r -> coin.shadowRadius = r; canvas.invalidate() },
+                onOpacityChange = { opPct -> coin.shadowOpacity = (opPct / 100f).coerceIn(0f, 1f); canvas.invalidate() },
+                onDxChange = { x -> coin.shadowDx = x; canvas.invalidate() },
+                onDyChange = { y -> coin.shadowDy = y; canvas.invalidate() },
+                onReset = {
+                    coin.shadowEnabled = true
+                    coin.shadowColor = 0xFF000000.toInt()
+                    coin.shadowRadius = 12f
+                    coin.shadowOpacity = 0.7f
+                    coin.shadowDx = 0f
+                    coin.shadowDy = 10f
+                    canvas.invalidate()
+                },
+                onApply = { showComposeCoin3DSheet(coin) },
+                onCancel = {
+                    coinSnapshot?.let { snap ->
+                        coin.shadowEnabled = snap.shadowEnabled
+                        coin.shadowColor = snap.shadowColor
+                        coin.shadowRadius = snap.shadowRadius
+                        coin.shadowOpacity = snap.shadowOpacity
+                        coin.shadowDx = snap.shadowDx
+                        coin.shadowDy = snap.shadowDy
+                    }
+                    canvas.invalidate()
+                    showComposeCoin3DSheet(coin)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showCoin3DNeonSheet(coin: Coin3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            NeonDetailPage(
+                enabled = coin.neonEnabled,
+                color = coin.neonColor,
+                radius = coin.neonRadius.coerceIn(1f, 40f),
+                intensity = coin.neonIntensity,
+                coreEnabled = coin.neonCoreEnabled,
+                onEnabledChange = { en -> coin.neonEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> coin.neonColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = coin.neonColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = coin.neonColor,
+                        resultKey = "coin_neon_color_key"
+                    )
+                    dialog.onColorChanged = { c -> coin.neonColor = c; canvas.invalidate() }
+                    dialog.onCancel = { coin.neonColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "CoinNeonColorPicker")
+                },
+                onRadiusChange = { r -> coin.neonRadius = r; canvas.invalidate() },
+                onIntensityChange = { i -> coin.neonIntensity = i; canvas.invalidate() },
+                onCoreEnabledChange = { en -> coin.neonCoreEnabled = en; canvas.invalidate() },
+                onReset = {
+                    coin.neonEnabled = true
+                    coin.neonColor = if (coin.materialType == CoinMaterial.NEON_CYBER) coin.baseColor else 0xFF00E5FF.toInt()
+                    coin.neonRadius = 18f
+                    coin.neonIntensity = 1f
+                    coin.neonCoreEnabled = true
+                    canvas.invalidate()
+                },
+                onApply = { showComposeCoin3DSheet(coin) },
+                onCancel = {
+                    coinSnapshot?.let { snap ->
+                        coin.neonEnabled = snap.neonEnabled
+                        coin.neonColor = snap.neonColor
+                        coin.neonRadius = snap.neonRadius
+                        coin.neonIntensity = snap.neonIntensity
+                        coin.neonCoreEnabled = snap.neonCoreEnabled
+                    }
+                    canvas.invalidate()
+                    showComposeCoin3DSheet(coin)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 3. Free Draw Studio Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -2872,6 +3398,13 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 binding.bottomNavigation.selectedItemId = R.id.nav_add
             }
             showComposeCylinder3DSheet(layer)
+        }
+        // Koin 3D terpilih → buka Studio Koin 3D
+        if (layer is Coin3DLayer && activeTag != OBJ_3D_COIN && draftCoin !== layer) {
+            if (activeTag.isNotEmpty()) {
+                binding.bottomNavigation.selectedItemId = R.id.nav_add
+            }
+            showComposeCoin3DSheet(layer)
         }
     }
 
