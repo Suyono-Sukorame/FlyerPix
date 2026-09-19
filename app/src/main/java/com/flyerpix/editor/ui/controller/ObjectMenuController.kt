@@ -44,6 +44,9 @@ import com.flyerpix.editor.canvas.model.Sphere3DLayer
 import com.flyerpix.editor.canvas.model.SphereMaterial
 import com.flyerpix.editor.canvas.model.StrokeStyle
 import com.flyerpix.editor.canvas.model.TextOnPathLayer
+import com.flyerpix.editor.canvas.model.Torus3DLayer
+import com.flyerpix.editor.canvas.model.TorusMaterial
+import com.flyerpix.editor.canvas.model.TorusStyle
 import com.flyerpix.editor.databinding.ActivityEditorBinding
 import com.flyerpix.editor.ui.EditorActivity
 import com.flyerpix.editor.ui.compose.*
@@ -75,6 +78,7 @@ class ObjectMenuController(
         const val OBJ_3D_CYLINDER = "3d_cylinder"
         const val OBJ_3D_COIN   = "3d_coin"
         const val OBJ_3D_CAPSULE = "3d_capsule"
+        const val OBJ_3D_TORUS  = "3d_torus"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
@@ -97,6 +101,9 @@ class ObjectMenuController(
         private const val CAPSULE_PRIMARY_COLOR_RESULT_KEY = "obj_capsule_primary_color_key"
         private const val CAPSULE_SECONDARY_COLOR_RESULT_KEY = "obj_capsule_secondary_color_key"
         private const val CAPSULE_TEXT_COLOR_RESULT_KEY = "obj_capsule_text_color_key"
+        private const val TORUS_BASE_COLOR_RESULT_KEY = "obj_torus_base_color_key"
+        private const val TORUS_ICING_COLOR_RESULT_KEY = "obj_torus_icing_color_key"
+        private const val TORUS_GEM_COLOR_RESULT_KEY = "obj_torus_gem_color_key"
     }
 
     private val fragmentManager: FragmentManager get() = activity.supportFragmentManager
@@ -164,6 +171,11 @@ class ObjectMenuController(
     private var draftCapsule: Capsule3DLayer? = null
     private var isNewCapsule: Boolean = false
     private var capsuleSnapshot: Capsule3DLayer? = null
+
+    // Draft layer 3D Torus/Donat-Cincin (untuk instant-create & rollback)
+    private var draftTorus: Torus3DLayer? = null
+    private var isNewTorus: Boolean = false
+    private var torusSnapshot: Torus3DLayer? = null
 
     /** State Brush Color draw sheet yang bisa di-update live dari color picker dialog. */
     private val liveDrawBrushColor = mutableStateOf(0)
@@ -299,7 +311,8 @@ class ObjectMenuController(
             Spec(OBJ_3D_SPHERE, "3D Sphere", R.drawable.ic_sphere_3d_24px),
             Spec(OBJ_3D_CYLINDER, "Podium 3D", R.drawable.ic_podium_3d_24px),
             Spec(OBJ_3D_COIN, "Koin 3D", R.drawable.ic_coin_3d_24px),
-            Spec(OBJ_3D_CAPSULE, "Kapsul 3D", R.drawable.ic_capsule_3d_24px)
+            Spec(OBJ_3D_CAPSULE, "Kapsul 3D", R.drawable.ic_capsule_3d_24px),
+            Spec(OBJ_3D_TORUS, "Donat 3D", R.drawable.ic_torus_3d_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectToolStripInclude.objectToolStripContainer
@@ -364,6 +377,7 @@ class ObjectMenuController(
             OBJ_3D_CYLINDER -> showComposeCylinder3DSheet()
             OBJ_3D_COIN -> showComposeCoin3DSheet()
             OBJ_3D_CAPSULE -> showComposeCapsule3DSheet()
+            OBJ_3D_TORUS -> showComposeTorus3DSheet()
         }
         onAddSettingsOpenChanged?.invoke(true)
         onPanelChanged()
@@ -392,6 +406,9 @@ class ObjectMenuController(
         draftCapsule = null
         isNewCapsule = false
         capsuleSnapshot = null
+        draftTorus = null
+        isNewTorus = false
+        torusSnapshot = null
         canvas.freeDrawEnabled = false
         canvas.bezierInputEnabled = false
         canvas.bezierInputLayer = null
@@ -614,6 +631,33 @@ class ObjectMenuController(
                 it.textColor = color
                 canvas.invalidate()
                 showComposeCapsule3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(TORUS_BASE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, 0xFFFFD700.toInt())
+            val target = (canvas.selectedLayer as? Torus3DLayer) ?: draftTorus
+            target?.let {
+                it.baseColor = color
+                canvas.invalidate()
+                showComposeTorus3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(TORUS_ICING_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, 0xFFFF69B4.toInt())
+            val target = (canvas.selectedLayer as? Torus3DLayer) ?: draftTorus
+            target?.let {
+                it.icingColor = color
+                canvas.invalidate()
+                showComposeTorus3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(TORUS_GEM_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, 0xFF00E5FF.toInt())
+            val target = (canvas.selectedLayer as? Torus3DLayer) ?: draftTorus
+            target?.let {
+                it.gemColor = color
+                canvas.invalidate()
+                showComposeTorus3DSheet(it)
             }
         }
     }
@@ -3486,6 +3530,523 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 2.10 3D Torus / Donat-Cincin 3D Studio (cincin berlubang, donat bakery,
+    //      perhiasan, portal neon). Alur instant: menu "Donat 3D" ditekan →
+    //      cincin emas metal langsung muncul di kanvas + panel (preset, gaya,
+    //      material, krim & meses, permata, dimensi, bayangan, finishing).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun showComposeTorus3DSheet(torusToEdit: Torus3DLayer? = null) {
+        val torus = torusToEdit ?: draftTorus ?: createNewDraftTorus()
+        showComposeTorus3DDetail(torus)
+    }
+
+    private fun createNewDraftTorus(): Torus3DLayer {
+        val torus = canvas.addTorus3DLayer().also {
+            isNewTorus = true
+        }
+        draftTorus = torus
+        torusSnapshot = torus.copyLayer()
+        canvas.selectedLayer = torus
+        return torus
+    }
+
+    /** Menerapkan preset cepat cincin/donat 3D (definisi dari Torus3DDetailComposable). */
+    private fun applyTorusPreset(torus: Torus3DLayer, key: String) {
+        val preset = TorusPresets[key] ?: return
+        torus.style = preset.style
+        torus.materialType = preset.materialType
+        torus.baseColor = preset.baseColor
+        torus.icingEnabled = preset.icingEnabled
+        torus.icingColor = preset.icingColor
+        torus.sprinklesEnabled = preset.sprinklesEnabled
+        torus.sprinkleDensity = preset.sprinkleDensity
+        torus.gemEnabled = preset.gemEnabled
+        torus.gemColor = preset.gemColor
+        torus.gemSize = preset.gemSize
+        torus.specularIntensity = preset.specularIntensity
+        torus.tiltAngle = preset.tiltAngle
+        torus.spinAngle = preset.spinAngle
+        torus.floatingElevation = preset.floatingElevation
+        torus.floorShadowOpacity = (preset.floorShadowOpacityPct / 100f).coerceIn(0f, 1f)
+        if (preset.neonEnabled) {
+            torus.neonEnabled = true
+            torus.neonColor = preset.neonColor
+            torus.neonRadius = 18f
+            torus.neonIntensity = 1.1f
+        } else {
+            torus.neonEnabled = false
+        }
+        canvas.invalidate()
+    }
+
+    private fun showComposeTorus3DDetail(torus: Torus3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_3D_TORUS
+        updateToolStripSelection(OBJ_3D_TORUS)
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val switchingTorus = draftTorus !== torus
+        draftTorus = torus
+        if (switchingTorus) isNewTorus = false
+        torusSnapshot = torus.copyLayer()
+
+        host.setContent {
+            var currentMajor by remember { mutableStateOf(torus.majorRadius) }
+            var currentTube by remember { mutableStateOf(torus.tubeThickness) }
+            var currentTilt by remember { mutableStateOf(torus.tiltAngle) }
+            var currentSpin by remember { mutableStateOf(torus.spinAngle) }
+            var currentStyle by remember { mutableStateOf(torus.style) }
+            var currentMaterial by remember { mutableStateOf(torus.materialType) }
+            var currentBase by remember { mutableStateOf(torus.baseColor) }
+            var currentIcingEnabled by remember { mutableStateOf(torus.icingEnabled) }
+            var currentIcingColor by remember { mutableStateOf(torus.icingColor) }
+            var currentSprinkles by remember { mutableStateOf(torus.sprinklesEnabled) }
+            var currentSprinkleDensity by remember { mutableStateOf(torus.sprinkleDensity) }
+            var currentGemEnabled by remember { mutableStateOf(torus.gemEnabled) }
+            var currentGemColor by remember { mutableStateOf(torus.gemColor) }
+            var currentGemSize by remember { mutableStateOf(torus.gemSize) }
+            var currentSpecular by remember { mutableStateOf(torus.specularIntensity) }
+            var currentElevation by remember { mutableStateOf(torus.floatingElevation) }
+            var currentFloorShadow by remember { mutableStateOf(torus.floorShadowEnabled) }
+            var currentFloorShadowOpacity by remember {
+                mutableStateOf((torus.floorShadowOpacity * 100f).coerceIn(0f, 100f))
+            }
+            var currentOpacity by remember { mutableStateOf(torus.opacity / 255f * 100f) }
+
+            Torus3DDetailPage(
+                majorRadius = currentMajor,
+                tubeThickness = currentTube,
+                tiltAngle = currentTilt,
+                spinAngle = currentSpin,
+                style = currentStyle,
+                materialType = currentMaterial,
+                baseColor = currentBase,
+                icingEnabled = currentIcingEnabled,
+                icingColor = currentIcingColor,
+                sprinklesEnabled = currentSprinkles,
+                sprinkleDensity = currentSprinkleDensity,
+                gemEnabled = currentGemEnabled,
+                gemColor = currentGemColor,
+                gemSize = currentGemSize,
+                specularIntensity = currentSpecular,
+                floatingElevation = currentElevation,
+                floorShadowEnabled = currentFloorShadow,
+                floorShadowOpacityPct = currentFloorShadowOpacity,
+                opacityPct = currentOpacity,
+                onPresetClick = { key ->
+                    applyTorusPreset(torus, key)
+                    currentStyle = torus.style
+                    currentMaterial = torus.materialType
+                    currentBase = torus.baseColor
+                    currentIcingEnabled = torus.icingEnabled
+                    currentIcingColor = torus.icingColor
+                    currentSprinkles = torus.sprinklesEnabled
+                    currentSprinkleDensity = torus.sprinkleDensity
+                    currentGemEnabled = torus.gemEnabled
+                    currentGemColor = torus.gemColor
+                    currentGemSize = torus.gemSize
+                    currentSpecular = torus.specularIntensity
+                    currentTilt = torus.tiltAngle
+                    currentSpin = torus.spinAngle
+                    currentElevation = torus.floatingElevation
+                    currentFloorShadowOpacity = torus.floorShadowOpacity * 100f
+                },
+                onStyleChange = { m ->
+                    currentStyle = m
+                    if (m == TorusStyle.SWEET_DONUT) torus.icingEnabled = true
+                    if (m == TorusStyle.LUXURY_JEWELRY) torus.gemEnabled = true
+                    torus.style = m
+                    canvas.invalidate()
+                },
+                onMaterialChange = { m ->
+                    currentMaterial = m
+                    torus.materialType = m
+                    canvas.invalidate()
+                },
+                onBaseColorChange = { c ->
+                    currentBase = c
+                    torus.baseColor = c
+                    canvas.invalidate()
+                },
+                onOpenBaseColorPicker = {
+                    val original = torus.baseColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = torus.baseColor,
+                        resultKey = TORUS_BASE_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        torus.baseColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        torus.baseColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "TorusBaseColorPicker")
+                },
+                onIcingEnabledChange = { en ->
+                    currentIcingEnabled = en
+                    torus.icingEnabled = en
+                    canvas.invalidate()
+                },
+                onIcingColorChange = { c ->
+                    currentIcingColor = c
+                    torus.icingColor = c
+                    canvas.invalidate()
+                },
+                onOpenIcingColorPicker = {
+                    val original = torus.icingColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = torus.icingColor,
+                        resultKey = TORUS_ICING_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        torus.icingColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        torus.icingColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "TorusIcingColorPicker")
+                },
+                onSprinklesEnabledChange = { en ->
+                    currentSprinkles = en
+                    torus.sprinklesEnabled = en
+                    canvas.invalidate()
+                },
+                onSprinkleDensityChange = { d ->
+                    currentSprinkleDensity = d
+                    torus.sprinkleDensity = d.coerceIn(0, 60)
+                    canvas.invalidate()
+                },
+                onGemEnabledChange = { en ->
+                    currentGemEnabled = en
+                    torus.gemEnabled = en
+                    canvas.invalidate()
+                },
+                onGemColorChange = { c ->
+                    currentGemColor = c
+                    torus.gemColor = c
+                    canvas.invalidate()
+                },
+                onOpenGemColorPicker = {
+                    val original = torus.gemColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = torus.gemColor,
+                        resultKey = TORUS_GEM_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        torus.gemColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        torus.gemColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "TorusGemColorPicker")
+                },
+                onGemSizeChange = { v ->
+                    currentGemSize = v
+                    torus.gemSize = v.coerceIn(8f, 70f)
+                    canvas.invalidate()
+                },
+                onMajorRadiusChange = { v ->
+                    currentMajor = v
+                    torus.majorRadius = v.coerceIn(20f, 600f)
+                    canvas.invalidate()
+                },
+                onTubeThicknessChange = { v ->
+                    currentTube = v
+                    torus.tubeThickness = v.coerceIn(4f, torus.majorRadius * 0.88f)
+                    canvas.invalidate()
+                },
+                onTiltChange = { v ->
+                    currentTilt = v
+                    torus.tiltAngle = v.coerceIn(0f, 85f)
+                    canvas.invalidate()
+                },
+                onSpinChange = { v ->
+                    currentSpin = v
+                    torus.spinAngle = ((v % 360f) + 360f) % 360f
+                    canvas.invalidate()
+                },
+                onSpecularIntensityChange = { v ->
+                    currentSpecular = v
+                    torus.specularIntensity = v.coerceIn(0f, 2f)
+                    canvas.invalidate()
+                },
+                onFloatingElevationChange = { v ->
+                    currentElevation = v
+                    torus.floatingElevation = v.coerceIn(0f, 120f)
+                    canvas.invalidate()
+                },
+                onFloorShadowEnabledChange = { en ->
+                    currentFloorShadow = en
+                    torus.floorShadowEnabled = en
+                    canvas.invalidate()
+                },
+                onFloorShadowOpacityChange = { pct ->
+                    currentFloorShadowOpacity = pct
+                    torus.floorShadowOpacity = (pct / 100f).coerceIn(0f, 1f)
+                    canvas.invalidate()
+                },
+                onOpacityChange = { pct ->
+                    currentOpacity = pct
+                    torus.opacity = (pct / 100f * 255f).toInt().coerceIn(0, 255)
+                    canvas.invalidate()
+                },
+                onOpenShadowEditor = {
+                    canvas.invalidate()
+                    showTorus3DShadowSheet(torus)
+                },
+                onOpenNeonEditor = {
+                    canvas.invalidate()
+                    showTorus3DNeonSheet(torus)
+                },
+                onReset = {
+                    currentMajor = 130f
+                    currentTube = 38f
+                    currentTilt = 40f
+                    currentSpin = 0f
+                    currentStyle = TorusStyle.MODERN_ABSTRACT
+                    currentMaterial = TorusMaterial.METALLIC_GOLD
+                    currentBase = 0xFFFFD700.toInt()
+                    currentIcingEnabled = false
+                    currentIcingColor = 0xFFFF69B4.toInt()
+                    currentSprinkles = false
+                    currentSprinkleDensity = 24
+                    currentGemEnabled = false
+                    currentGemColor = 0xFF00E5FF.toInt()
+                    currentGemSize = 28f
+                    currentSpecular = 0.85f
+                    currentElevation = 20f
+                    currentFloorShadow = true
+                    currentFloorShadowOpacity = 50f
+                    currentOpacity = 100f
+                    torus.majorRadius = 130f
+                    torus.tubeThickness = 38f
+                    torus.tiltAngle = 40f
+                    torus.spinAngle = 0f
+                    torus.style = TorusStyle.MODERN_ABSTRACT
+                    torus.materialType = TorusMaterial.METALLIC_GOLD
+                    torus.baseColor = 0xFFFFD700.toInt()
+                    torus.icingEnabled = false
+                    torus.icingColor = 0xFFFF69B4.toInt()
+                    torus.sprinklesEnabled = false
+                    torus.sprinkleDensity = 24
+                    torus.gemEnabled = false
+                    torus.gemColor = 0xFF00E5FF.toInt()
+                    torus.gemSize = 28f
+                    torus.specularIntensity = 0.85f
+                    torus.floatingElevation = 20f
+                    torus.floorShadowEnabled = true
+                    torus.floorShadowOpacity = 0.5f
+                    torus.opacity = 255
+                    torus.neonEnabled = false
+                    torus.neonColor = 0xFF00E5FF.toInt()
+                    torus.neonRadius = 18f
+                    torus.neonIntensity = 1f
+                    torus.shadowEnabled = false
+                    torus.shadowColor = 0xFF000000.toInt()
+                    torus.shadowOpacity = 0.5f
+                    torus.shadowRadius = 24f
+                    torus.shadowDx = 0f
+                    torus.shadowDy = 4f
+                    canvas.invalidate()
+                },
+                onApply = {
+                    canvas.runRecordedAction(if (isNewTorus) "Add 3D Donat" else "Modify 3D Donat") {}
+                    showSnackbar("3D Donat saved")
+                    draftTorus = null
+                    isNewTorus = false
+                    torusSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                onCancel = {
+                    if (isNewTorus) {
+                        canvas.removeLayer(torus)
+                    } else {
+                        torusSnapshot?.let { snap ->
+                            torus.majorRadius = snap.majorRadius
+                            torus.tubeThickness = snap.tubeThickness
+                            torus.tiltAngle = snap.tiltAngle
+                            torus.spinAngle = snap.spinAngle
+                            torus.style = snap.style
+                            torus.materialType = snap.materialType
+                            torus.baseColor = snap.baseColor
+                            torus.icingEnabled = snap.icingEnabled
+                            torus.icingColor = snap.icingColor
+                            torus.sprinklesEnabled = snap.sprinklesEnabled
+                            torus.sprinkleDensity = snap.sprinkleDensity
+                            torus.gemEnabled = snap.gemEnabled
+                            torus.gemColor = snap.gemColor
+                            torus.gemSize = snap.gemSize
+                            torus.specularIntensity = snap.specularIntensity
+                            torus.floatingElevation = snap.floatingElevation
+                            torus.floorShadowEnabled = snap.floorShadowEnabled
+                            torus.floorShadowOpacity = snap.floorShadowOpacity
+                            torus.opacity = snap.opacity
+                            torus.neonEnabled = snap.neonEnabled
+                            torus.neonColor = snap.neonColor
+                            torus.neonRadius = snap.neonRadius
+                            torus.neonIntensity = snap.neonIntensity
+                            torus.shadowEnabled = snap.shadowEnabled
+                            torus.shadowColor = snap.shadowColor
+                            torus.shadowRadius = snap.shadowRadius
+                            torus.shadowOpacity = snap.shadowOpacity
+                            torus.shadowDx = snap.shadowDx
+                            torus.shadowDy = snap.shadowDy
+                        }
+                    }
+                    canvas.invalidate()
+                    draftTorus = null
+                    isNewTorus = false
+                    torusSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showTorus3DShadowSheet(torus: Torus3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            ShadowDetailPage(
+                title = "Donat Shadow",
+                enabled = torus.shadowEnabled,
+                color = torus.shadowColor,
+                radius = torus.shadowRadius.coerceIn(0f, 40f),
+                opacityPct = (torus.shadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = torus.shadowDx.coerceIn(-30f, 30f),
+                dy = torus.shadowDy.coerceIn(-30f, 30f),
+                onEnabledChange = { en -> torus.shadowEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> torus.shadowColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = torus.shadowColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = torus.shadowColor,
+                        resultKey = "torus_shadow_color_key"
+                    )
+                    dialog.onColorChanged = { c -> torus.shadowColor = c; canvas.invalidate() }
+                    dialog.onCancel = { torus.shadowColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "TorusShadowColorPicker")
+                },
+                onRadiusChange = { r -> torus.shadowRadius = r; canvas.invalidate() },
+                onOpacityChange = { opPct -> torus.shadowOpacity = (opPct / 100f).coerceIn(0f, 1f); canvas.invalidate() },
+                onDxChange = { x -> torus.shadowDx = x; canvas.invalidate() },
+                onDyChange = { y -> torus.shadowDy = y; canvas.invalidate() },
+                onReset = {
+                    torus.shadowEnabled = true
+                    torus.shadowColor = 0xFF000000.toInt()
+                    torus.shadowRadius = 24f
+                    torus.shadowOpacity = 0.7f
+                    torus.shadowDx = 0f
+                    torus.shadowDy = 8f
+                    canvas.invalidate()
+                },
+                onApply = { showComposeTorus3DSheet(torus) },
+                onCancel = {
+                    torusSnapshot?.let { snap ->
+                        torus.shadowEnabled = snap.shadowEnabled
+                        torus.shadowColor = snap.shadowColor
+                        torus.shadowRadius = snap.shadowRadius
+                        torus.shadowOpacity = snap.shadowOpacity
+                        torus.shadowDx = snap.shadowDx
+                        torus.shadowDy = snap.shadowDy
+                    }
+                    canvas.invalidate()
+                    showComposeTorus3DSheet(torus)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showTorus3DNeonSheet(torus: Torus3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            NeonDetailPage(
+                enabled = torus.neonEnabled,
+                color = torus.neonColor,
+                radius = torus.neonRadius.coerceIn(1f, 40f),
+                intensity = torus.neonIntensity,
+                coreEnabled = torus.neonCoreEnabled,
+                onEnabledChange = { en -> torus.neonEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> torus.neonColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = torus.neonColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = torus.neonColor,
+                        resultKey = "torus_neon_color_key"
+                    )
+                    dialog.onColorChanged = { c -> torus.neonColor = c; canvas.invalidate() }
+                    dialog.onCancel = { torus.neonColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "TorusNeonColorPicker")
+                },
+                onRadiusChange = { r -> torus.neonRadius = r; canvas.invalidate() },
+                onIntensityChange = { i -> torus.neonIntensity = i; canvas.invalidate() },
+                onCoreEnabledChange = { en -> torus.neonCoreEnabled = en; canvas.invalidate() },
+                onReset = {
+                    torus.neonEnabled = true
+                    torus.neonColor = if (torus.style == TorusStyle.CYBER_NEON) torus.baseColor else 0xFF00E5FF.toInt()
+                    torus.neonRadius = 18f
+                    torus.neonIntensity = 1f
+                    torus.neonCoreEnabled = true
+                    canvas.invalidate()
+                },
+                onApply = { showComposeTorus3DSheet(torus) },
+                onCancel = {
+                    torusSnapshot?.let { snap ->
+                        torus.neonEnabled = snap.neonEnabled
+                        torus.neonColor = snap.neonColor
+                        torus.neonRadius = snap.neonRadius
+                        torus.neonIntensity = snap.neonIntensity
+                        torus.neonCoreEnabled = snap.neonCoreEnabled
+                    }
+                    canvas.invalidate()
+                    showComposeTorus3DSheet(torus)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 3. Free Draw Studio Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -3967,6 +4528,13 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 binding.bottomNavigation.selectedItemId = R.id.nav_add
             }
             showComposeCapsule3DSheet(layer)
+        }
+        // Torus / Donat-Cincin 3D terpilih → buka Studio Donat 3D
+        if (layer is Torus3DLayer && activeTag != OBJ_3D_TORUS && draftTorus !== layer) {
+            if (activeTag.isNotEmpty()) {
+                binding.bottomNavigation.selectedItemId = R.id.nav_add
+            }
+            showComposeTorus3DSheet(layer)
         }
     }
 

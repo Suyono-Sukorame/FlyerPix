@@ -75,6 +75,9 @@ import com.flyerpix.editor.canvas.model.Sphere3DLayer
 import com.flyerpix.editor.canvas.model.SphereMaterial
 import com.flyerpix.editor.canvas.model.StickerLayer
 import com.flyerpix.editor.canvas.model.TextLayer
+import com.flyerpix.editor.canvas.model.Torus3DLayer
+import com.flyerpix.editor.canvas.model.TorusMaterial
+import com.flyerpix.editor.canvas.model.TorusStyle
 import com.flyerpix.editor.project.ProjectModel
 import java.io.File
 import java.io.FileOutputStream
@@ -1063,6 +1066,9 @@ class PixelCanvasView @JvmOverloads constructor(
         DRAGGING_COIN_TILT_HANDLE,
         DRAGGING_CAPSULE_END_HANDLE,
         DRAGGING_CAPSULE_ROTATE_HANDLE,
+        DRAGGING_TORUS_SIZE_HANDLE,
+        DRAGGING_TORUS_THICKNESS_HANDLE,
+        DRAGGING_TORUS_TILT_HANDLE,
     }
 
     var currentTouchState: TouchState = TouchState.IDLE
@@ -1113,6 +1119,10 @@ private var cylinderTiltStartRadiusY: Float = 0f
     private var capsuleEndStartAxisX: Float = 0f
     private var capsuleRotateStartAngle: Float = 0f
     private var capsuleRotateCenter: Pair<Float, Float> = Pair(0f, 0f)
+    // ── State Drag Handle Cincin 3D Torus ────────────────────────────────────
+    private var torusSizeStartMajor: Float = 0f
+    private var torusThicknessStart: Float = 0f
+    private var torusTiltStart: Float = 0f
     // ── Mode Eyedropper (Prompt 42) ──────────────────────────────────────────
 
     /** Apakah kanvas sedang dalam mode eyedropper (pipet warna). */
@@ -2901,6 +2911,13 @@ private var cylinderTiltStartRadiusY: Float = 0f
                 }
             }
 
+            // 4h. Overlay handle Cincin 3D Torus: ukuran, ketebalan, tilt
+            selectedLayer?.let { layer ->
+                if (!editorZoomMode && layer.isVisible && !layer.isLocked && layer is Torus3DLayer) {
+                    drawTorus3DOverlay(canvas, layer)
+                }
+            }
+
             // 4b. Render anchor visualization untuk mode edit Bezier (Phase 1)
             if (bezierEditMode && selectedBezierLayer != null && !editorZoomMode) {
                 drawBezierAnchorOverlay(canvas, selectedBezierLayer!!)
@@ -3397,6 +3414,59 @@ private var cylinderTiltStartRadiusY: Float = 0f
         canvas.drawPath(diamond, borderPaint)
     }
 
+    /** Overlay handle Cincin 3D Torus: ukuran (kanan), ketebalan (bawah), tilt (atas). */
+    private fun drawTorus3DOverlay(canvas: Canvas, layer: Torus3DLayer) {
+        val (w, h) = layer.getUnwarpedDimensions()
+        if (w <= 0f || h <= 0f) return
+        val density = resources.displayMetrics.density
+
+        val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xAA00A8FF.toInt()
+            strokeWidth = 1.5f * density
+            style = Paint.Style.STROKE
+            pathEffect = DashPathEffect(floatArrayOf(6f * density, 5f * density), 0f)
+        }
+        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF00A8FF.toInt()
+            style = Paint.Style.FILL
+        }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            strokeWidth = 2f * density
+            style = Paint.Style.STROKE
+        }
+
+        val l = layer.computeLayout()
+        val (ccx, ccy) = layer.mapLocalPointToCanvas(l.cx, l.cy, w, h)
+
+        val (slx, sly) = layer.getSizeHandleLocal()
+        val (sx, sy) = layer.mapLocalPointToCanvas(slx, sly, w, h)
+        val (tkx, tky) = layer.getThicknessHandleLocal()
+        val (tx, ty) = layer.mapLocalPointToCanvas(tkx, tky, w, h)
+        val (tlx, tly) = layer.getTiltHandleLocal()
+        val (px, py) = layer.mapLocalPointToCanvas(tlx, tly, w, h)
+
+        canvas.drawLine(ccx, ccy, sx, sy, guidePaint)
+        canvas.drawLine(ccx, ccy, px, py, guidePaint)
+
+        val size = 7f * density
+        canvas.drawCircle(sx, sy, size, fillPaint)
+        canvas.drawCircle(sx, sy, size, borderPaint)
+
+        val diamond = Path().apply {
+            moveTo(tx, ty - size)
+            lineTo(tx + size, ty)
+            lineTo(tx, ty + size)
+            lineTo(tx - size, ty)
+            close()
+        }
+        canvas.drawPath(diamond, fillPaint)
+        canvas.drawPath(diamond, borderPaint)
+
+        canvas.drawCircle(px, py, size * 0.8f, fillPaint)
+        canvas.drawCircle(px, py, size * 0.8f, borderPaint)
+    }
+
     private fun drawTextEditLabel(canvas: Canvas, pts: FloatArray) {
         val left = minOf(pts[0], pts[2], pts[4], pts[6])
         val top = minOf(pts[1], pts[3], pts[5], pts[7])
@@ -3736,6 +3806,63 @@ private var cylinderTiltStartRadiusY: Float = 0f
             atan2((touchY - ccy).toDouble(), (touchX - ccx).toDouble())
         ).toFloat()
         layer.rotationAngle = layer.normAngle(ang)
+        hasTouchTransformed = true
+        invalidate()
+    }
+
+    /** Menyiapkan drag handle ukuran (outer radius) Cincin 3D Torus. */
+    private fun beginTorusSizeDrag(layer: Torus3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        torusSizeStartMajor = layer.majorRadius
+        torusThicknessStart = layer.tubeThickness
+        currentTouchState = TouchState.DRAGGING_TORUS_SIZE_HANDLE
+        isDragging = false
+        invalidate()
+    }
+
+    private fun beginTorusThicknessDrag(layer: Torus3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        torusThicknessStart = layer.tubeThickness
+        torusSizeStartMajor = layer.majorRadius
+        currentTouchState = TouchState.DRAGGING_TORUS_THICKNESS_HANDLE
+        isDragging = false
+        invalidate()
+    }
+
+    private fun beginTorusTiltDrag(layer: Torus3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        torusTiltStart = layer.tiltAngle
+        currentTouchState = TouchState.DRAGGING_TORUS_TILT_HANDLE
+        isDragging = false
+        invalidate()
+    }
+
+    /** Menyesuaikan radius utama (ukuran cincin) dari pergeseran horizontal. */
+    private fun updateTorusSizeDrag(layer: Torus3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        val eps = 1f
+        val (cx0, cy0) = layer.mapLocalPointToCanvas(layer.computeLayout().cx, layer.computeLayout().cy, w, h)
+        val dx = (touchX - cx0).coerceAtLeast(eps)
+        val ppm = when (layer.majorRadius) {
+            in 0f..120f -> 0.7f
+            in 121f..280f -> 1.0f
+            else -> 1.4f
+        }
+        layer.majorRadius = (torusSizeStartMajor + dx * ppm).coerceIn(40f, 500f)
+        hasTouchTransformed = true
+        invalidate()
+    }
+
+    /** Menyesuaikan ketebalan tabung dari pergeseran vertikal. */
+    private fun updateTorusThicknessDrag(layer: Torus3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        val (cx0, cy0) = layer.mapLocalPointToCanvas(layer.computeLayout().cx, layer.computeLayout().cy, w, h)
+        layer.tubeThickness = (torusThicknessStart + (touchY - cy0) * 0.5f)
+            .coerceIn(8f, layer.majorRadius * 0.85f)
+        hasTouchTransformed = true
+        invalidate()
+    }
+
+    /** Menyesuaikan sudut kemiringan dari pergeseran vertikal. */
+    private fun updateTorusTiltDrag(layer: Torus3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        val (cx0, cy0) = layer.mapLocalPointToCanvas(layer.computeLayout().cx, layer.computeLayout().cy, w, h)
+        layer.tiltAngle = (torusTiltStart - (touchY - cy0) * 0.35f)
+            .coerceIn(0f, 78f)
         hasTouchTransformed = true
         invalidate()
     }
@@ -4661,6 +4788,84 @@ private var cylinderTiltStartRadiusY: Float = 0f
             }
         }
 
+        // 1b8. Tangani geser handle ukuran Cincin 3D Torus
+        if (currentTouchState == TouchState.DRAGGING_TORUS_SIZE_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is Torus3DLayer && !layer.isLocked) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) updateTorusSizeDrag(layer, event.x, event.y, w, h)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Ubah Ukuran Cincin 3D", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
+        // 1b9. Tangani geser handle ketebalan Cincin 3D Torus
+        if (currentTouchState == TouchState.DRAGGING_TORUS_THICKNESS_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is Torus3DLayer && !layer.isLocked) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) updateTorusThicknessDrag(layer, event.x, event.y, w, h)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Ubah Ketebalan Cincin 3D", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
+        // 1b10. Tangani geser handle tilt Cincin 3D Torus
+        if (currentTouchState == TouchState.DRAGGING_TORUS_TILT_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is Torus3DLayer && !layer.isLocked) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) updateTorusTiltDrag(layer, event.x, event.y, w, h)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Ubah Kemiringan Cincin 3D", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
         // Handle rotasi di kanvas dihapus (rotasi via slider toolbar / gestur dua jari),
         // sehingga tidak ada blok interaksi DRAGGING_ROTATE_HANDLE.
 
@@ -4817,6 +5022,54 @@ private var cylinderTiltStartRadiusY: Float = 0f
                             val touchRadius = 28f * resources.displayMetrics.density
                             if (hypot(event.x - rx, event.y - ry) <= touchRadius) {
                                 beginCapsuleRotateDrag(layer, event.x, event.y, w, h)
+                                return true
+                            }
+                        }
+                    }
+                }
+
+                // Cek sentuhan handle ukuran (kanan) Cincin 3D Torus
+                selectedLayer?.let { layer ->
+                    if (!layer.isLocked && layer is Torus3DLayer) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            val (slx, sly) = layer.getSizeHandleLocal()
+                            val (sx, sy) = layer.mapLocalPointToCanvas(slx, sly, w, h)
+                            val touchRadius = 28f * resources.displayMetrics.density
+                            if (hypot(event.x - sx, event.y - sy) <= touchRadius) {
+                                beginTorusSizeDrag(layer, event.x, event.y, w, h)
+                                return true
+                            }
+                        }
+                    }
+                }
+
+                // Cek sentuhan handle ketebalan (bawah) Cincin 3D Torus
+                selectedLayer?.let { layer ->
+                    if (!layer.isLocked && layer is Torus3DLayer) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            val (tkx, tky) = layer.getThicknessHandleLocal()
+                            val (tx, ty) = layer.mapLocalPointToCanvas(tkx, tky, w, h)
+                            val touchRadius = 28f * resources.displayMetrics.density
+                            if (hypot(event.x - tx, event.y - ty) <= touchRadius) {
+                                beginTorusThicknessDrag(layer, event.x, event.y, w, h)
+                                return true
+                            }
+                        }
+                    }
+                }
+
+                // Cek sentuhan handle tilt (atas) Cincin 3D Torus
+                selectedLayer?.let { layer ->
+                    if (!layer.isLocked && layer is Torus3DLayer) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            val (tlx, tly) = layer.getTiltHandleLocal()
+                            val (px, py) = layer.mapLocalPointToCanvas(tlx, tly, w, h)
+                            val touchRadius = 28f * resources.displayMetrics.density
+                            if (hypot(event.x - px, event.y - py) <= touchRadius) {
+                                beginTorusTiltDrag(layer, event.x, event.y, w, h)
                                 return true
                             }
                         }
@@ -5823,6 +6076,61 @@ private var cylinderTiltStartRadiusY: Float = 0f
             floatingElevation = 15f,
             floorShadowEnabled = true,
             floorShadowOpacity = 0.5f,
+            // Posisi: horizontal tengah, vertikal sekitar 40% ke atas dari tengah.
+            x = cx - contentW / 2f,
+            y = cy - contentH * 0.4f
+        )
+        addLayer(layer)
+        return layer
+    }
+
+    /**
+     * Menambahkan objek Cincin 3D / Donat 3D default (torus lapis emas glossy)
+     * di tengah kanvas, sebagai [Torus3DLayer] dengan kemiringan 3D + bayangan lantai.
+     */
+    fun addTorus3DLayer(): Torus3DLayer {
+        val cx = if (width > 0) width / 2f else 540f
+        val cy = if (height > 0) height / 2f else 540f
+        val base = ((minOf(width, height).takeIf { it > 0 }?.toFloat() ?: 400f) * 0.30f).coerceIn(36f, 240f)
+        val majorRadius = base
+        val contentW = (majorRadius + majorRadius * 0.34f) * 2f
+        val contentH = (majorRadius + majorRadius * 0.34f) * 2f
+        val layer = Torus3DLayer(
+            majorRadius = majorRadius,
+            tubeThickness = majorRadius * 0.30f,
+            tiltAngle = 40f,
+            spinAngle = 0f,
+            style = TorusStyle.MODERN_ABSTRACT,
+            materialType = TorusMaterial.METALLIC_GOLD,
+            baseColor = 0xFFFFD700.toInt(),
+            icingEnabled = false,
+            icingColor = 0xFFFF69B4.toInt(),
+            sprinklesEnabled = false,
+            sprinkleDensity = 24,
+            gemEnabled = false,
+            gemColor = 0xFF00E5FF.toInt(),
+            gemSize = 28f,
+            specularIntensity = 0.85f,
+            floatingElevation = 20f,
+            floorShadowEnabled = true,
+            floorShadowOpacity = 0.5f,
+            shadowEnabled = false,
+            shadowColor = 0xFF000000.toInt(),
+            shadowRadius = 24f,
+            shadowOpacity = 0.5f,
+            shadowDx = 0f,
+            shadowDy = 4f,
+            embossEnabled = false,
+            embossLightAngle = -45f,
+            embossIntensity = 1f,
+            embossAmbient = 0.3f,
+            embossSpecular = 0.7f,
+            embossBevel = 2f,
+            perspectiveEnabled = false,
+            neonEnabled = false,
+            neonColor = 0xFF00E5FF.toInt(),
+            neonRadius = 18f,
+            neonIntensity = 1f,
             // Posisi: horizontal tengah, vertikal sekitar 40% ke atas dari tengah.
             x = cx - contentW / 2f,
             y = cy - contentH * 0.4f
