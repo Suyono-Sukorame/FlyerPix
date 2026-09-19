@@ -29,6 +29,8 @@ import com.flyerpix.editor.canvas.model.GradientColor
 import com.flyerpix.editor.canvas.model.PenLayer
 import com.flyerpix.editor.canvas.model.ShapeLayer
 import com.flyerpix.editor.canvas.model.ShapeType
+import com.flyerpix.editor.canvas.model.Sphere3DLayer
+import com.flyerpix.editor.canvas.model.SphereMaterial
 import com.flyerpix.editor.canvas.model.StrokeStyle
 import com.flyerpix.editor.canvas.model.TextOnPathLayer
 import com.flyerpix.editor.databinding.ActivityEditorBinding
@@ -58,6 +60,7 @@ class ObjectMenuController(
         const val OBJ_BEZIER   = "obj_bezier"
         const val OBJ_ARROW    = "obj_arrow"
         const val OBJ_3D_BOX   = "obj_3d_box"
+        const val OBJ_3D_SPHERE = "3d_sphere"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
@@ -69,6 +72,9 @@ class ObjectMenuController(
         private const val BEZIER_COLOR_RESULT_KEY = "obj_bezier_color_key"
         private const val BOX_BASE_COLOR_RESULT_KEY = "obj_box_base_color_key"
         private const val BOX_STROKE_COLOR_RESULT_KEY = "obj_box_stroke_color_key"
+        private const val SPHERE_BASE_COLOR_RESULT_KEY = "obj_sphere_base_color_key"
+        private const val SPHERE_STROKE_COLOR_RESULT_KEY = "obj_sphere_stroke_color_key"
+        private const val SPHERE_NEON_COLOR_RESULT_KEY = "obj_sphere_neon_color_key"
     }
 
     private val fragmentManager: FragmentManager get() = activity.supportFragmentManager
@@ -116,6 +122,11 @@ class ObjectMenuController(
     private var draftBox: Box3DLayer? = null
     private var isNewBox: Boolean = false
     private var boxSnapshot: Box3DLayer? = null
+
+    // Draft layer 3D Sphere (untuk instant-create & rollback)
+    private var draftSphere: Sphere3DLayer? = null
+    private var isNewSphere: Boolean = false
+    private var sphereSnapshot: Sphere3DLayer? = null
 
     /** State Brush Color draw sheet yang bisa di-update live dari color picker dialog. */
     private val liveDrawBrushColor = mutableStateOf(0)
@@ -247,7 +258,8 @@ class ObjectMenuController(
             Spec(OBJ_SHAPES,   "Shapes",  R.drawable.ic_nav_shapes_24px),
             Spec(OBJ_BEZIER,   "Bezier",  R.drawable.ic_curve_24px),
             Spec(OBJ_ARROW,    "Arrow",   R.drawable.ic_arrow_24px),
-            Spec(OBJ_3D_BOX,   "3D Box",  R.drawable.ic_3d_box_24px)
+            Spec(OBJ_3D_BOX,   "3D Box",  R.drawable.ic_3d_box_24px),
+            Spec(OBJ_3D_SPHERE, "3D Sphere", R.drawable.ic_sphere_3d_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectToolStripInclude.objectToolStripContainer
@@ -308,6 +320,7 @@ class ObjectMenuController(
             OBJ_BEZIER  -> showComposeBezierSheet()
             OBJ_ARROW   -> showComposeArrowSheet()
             OBJ_3D_BOX  -> showComposeBox3DSheet()
+            OBJ_3D_SPHERE -> showComposeSphere3DSheet()
         }
         onAddSettingsOpenChanged?.invoke(true)
         onPanelChanged()
@@ -324,6 +337,9 @@ class ObjectMenuController(
         draftPen = null
         draftBox = null
         boxSnapshot = null
+        draftSphere = null
+        isNewSphere = false
+        sphereSnapshot = null
         canvas.freeDrawEnabled = false
         canvas.bezierInputEnabled = false
         canvas.bezierInputLayer = null
@@ -446,6 +462,33 @@ class ObjectMenuController(
                 it.strokeColor = color
                 canvas.invalidate()
                 showComposeBox3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(SPHERE_BASE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.WHITE)
+            val target = (canvas.selectedLayer as? Sphere3DLayer) ?: draftSphere
+            target?.let {
+                it.baseColor = color
+                canvas.invalidate()
+                showComposeSphere3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(SPHERE_STROKE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.BLACK)
+            val target = (canvas.selectedLayer as? Sphere3DLayer) ?: draftSphere
+            target?.let {
+                it.strokeColor = color
+                canvas.invalidate()
+                showComposeSphere3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(SPHERE_NEON_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.BLACK)
+            val target = (canvas.selectedLayer as? Sphere3DLayer) ?: draftSphere
+            target?.let {
+                it.neonColor = color
+                canvas.invalidate()
+                showComposeSphere3DSheet(it)
             }
         }
     }
@@ -1504,6 +1547,285 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 2.6 3D Sphere Studio (objek 3D orb dengan pencahayaan vektor)
+    //     Alur instant: menu 3D Sphere ditekan → bola glossy langsung muncul di
+    //     tengah kanvas + panel pengaturan (material, cahaya, lantai, dll.)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun showComposeSphere3DSheet(sphereToEdit: Sphere3DLayer? = null) {
+        val sphere = sphereToEdit ?: draftSphere ?: createNewDraftSphere()
+        showComposeSphere3DDetail(sphere)
+    }
+
+    private fun createNewDraftSphere(): Sphere3DLayer {
+        val sphere = canvas.addSphere3DLayer().also {
+            isNewSphere = true
+        }
+        draftSphere = sphere
+        sphereSnapshot = sphere.copyLayer()
+        canvas.selectedLayer = sphere
+        return sphere
+    }
+
+    private fun showComposeSphere3DDetail(sphere: Sphere3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_3D_SPHERE
+        updateToolStripSelection(OBJ_3D_SPHERE)
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val switchingSphere = draftSphere !== sphere
+        draftSphere = sphere
+        if (switchingSphere) isNewSphere = false
+        sphereSnapshot = sphere.copyLayer()
+
+        host.setContent {
+            var currentMaterial by remember { mutableStateOf(sphere.material) }
+            var currentRadius by remember { mutableStateOf(sphere.radius) }
+            var currentBaseColor by remember { mutableStateOf(sphere.baseColor) }
+            var currentLightAngle by remember { mutableStateOf(sphere.lightAngle) }
+            var currentLightDistance by remember { mutableStateOf(sphere.lightDistance) }
+            var currentLightIntensity by remember { mutableStateOf(sphere.lightIntensity) }
+            var currentOpacity by remember { mutableStateOf(sphere.opacity / 255f * 100f) }
+            var currentFloorShadow by remember { mutableStateOf(sphere.floorShadowEnabled) }
+            var currentFloorElevation by remember { mutableStateOf(sphere.floorElevation) }
+            var currentFloorShadowOpacity by remember {
+                mutableStateOf(sphere.floorShadowOpacity / 1f * 100f)
+            }
+            var currentStrokeWidth by remember { mutableStateOf(sphere.strokeWidth) }
+            var currentStrokeColor by remember { mutableStateOf(sphere.strokeColor) }
+            var currentStrokeOpacity by remember {
+                mutableStateOf(sphere.strokeOpacity / 255f * 100f)
+            }
+            var currentNeonEnabled by remember { mutableStateOf(sphere.neonEnabled) }
+            var currentNeonColor by remember { mutableStateOf(sphere.neonColor) }
+            var currentNeonRadius by remember { mutableStateOf(sphere.neonRadius) }
+            var currentNeonIntensity by remember { mutableStateOf(sphere.neonIntensity) }
+
+            Sphere3DDetailPage(
+                material = currentMaterial,
+                diameter = currentRadius,
+                baseColor = currentBaseColor,
+                lightAngle = currentLightAngle,
+                lightDistance = currentLightDistance,
+                lightIntensity = currentLightIntensity,
+                opacityPct = currentOpacity,
+                floorShadowEnabled = currentFloorShadow,
+                floorElevation = currentFloorElevation,
+                floorShadowOpacityPct = currentFloorShadowOpacity,
+                strokeWidth = currentStrokeWidth,
+                strokeColor = currentStrokeColor,
+                strokeOpacityPct = currentStrokeOpacity,
+                neonEnabled = currentNeonEnabled,
+                neonColor = currentNeonColor,
+                neonRadius = currentNeonRadius,
+                neonIntensity = currentNeonIntensity,
+                onMaterialChange = { m ->
+                    currentMaterial = m
+                    sphere.material = m
+                    canvas.invalidate()
+                },
+                onRadiusChange = { v ->
+                    currentRadius = v
+                    sphere.radius = v.coerceIn(2f, 2000f)
+                    canvas.invalidate()
+                },
+                onBaseColorChange = { c ->
+                    currentBaseColor = c
+                    sphere.baseColor = c
+                    canvas.invalidate()
+                },
+                onOpenBaseColorPicker = {
+                    val original = sphere.baseColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = sphere.baseColor,
+                        resultKey = SPHERE_BASE_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        sphere.baseColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        sphere.baseColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "SphereBaseColorPicker")
+                },
+                onLightAngleChange = { a ->
+                    currentLightAngle = a
+                    sphere.lightAngle = a
+                    canvas.invalidate()
+                },
+                onLightDistanceChange = { d ->
+                    currentLightDistance = d
+                    sphere.lightDistance = d
+                    canvas.invalidate()
+                },
+                onLightIntensityChange = { i ->
+                    currentLightIntensity = i
+                    sphere.lightIntensity = i
+                    canvas.invalidate()
+                },
+                onOpacityChange = { pct ->
+                    currentOpacity = pct
+                    sphere.opacity = (pct / 100f * 255f).toInt().coerceIn(0, 255)
+                    canvas.invalidate()
+                },
+                onFloorShadowEnabledChange = { en ->
+                    currentFloorShadow = en
+                    sphere.floorShadowEnabled = en
+                    canvas.invalidate()
+                },
+                onFloorElevationChange = { v ->
+                    currentFloorElevation = v
+                    sphere.floorElevation = v
+                    canvas.invalidate()
+                },
+                onFloorShadowOpacityChange = { pct ->
+                    currentFloorShadowOpacity = pct
+                    sphere.floorShadowOpacity = (pct / 100f).coerceIn(0f, 1f)
+                    canvas.invalidate()
+                },
+                onStrokeWidthChange = { v ->
+                    currentStrokeWidth = v
+                    sphere.strokeWidth = v
+                    canvas.invalidate()
+                },
+                onStrokeColorChange = { c ->
+                    currentStrokeColor = c
+                    sphere.strokeColor = c
+                    canvas.invalidate()
+                },
+                onOpenStrokeColorPicker = {
+                    val original = sphere.strokeColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = sphere.strokeColor,
+                        resultKey = SPHERE_STROKE_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        sphere.strokeColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        sphere.strokeColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "SphereStrokeColorPicker")
+                },
+                onStrokeOpacityChange = { pct ->
+                    currentStrokeOpacity = pct
+                    sphere.strokeOpacity = (pct / 100f * 255f).toInt().coerceIn(0, 255)
+                    canvas.invalidate()
+                },
+                onNeonEnabledChange = { en ->
+                    currentNeonEnabled = en
+                    sphere.neonEnabled = en
+                    canvas.invalidate()
+                },
+                onNeonColorChange = { c ->
+                    currentNeonColor = c
+                    sphere.neonColor = c
+                    canvas.invalidate()
+                },
+                onOpenNeonColorPicker = {
+                    val original = sphere.neonColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = sphere.neonColor,
+                        resultKey = SPHERE_NEON_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        sphere.neonColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        sphere.neonColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "SphereNeonColorPicker")
+                },
+                onNeonRadiusChange = { v ->
+                    currentNeonRadius = v
+                    sphere.neonRadius = v
+                    canvas.invalidate()
+                },
+                onNeonIntensityChange = { v ->
+                    currentNeonIntensity = v
+                    sphere.neonIntensity = v
+                    canvas.invalidate()
+                },
+                onReset = {
+                    sphere.material = SphereMaterial.GLOSSY
+                    sphere.radius = 120f
+                    sphere.baseColor = 0xFF1769FF.toInt()
+                    sphere.lightAngle = -45f
+                    sphere.lightDistance = 0.45f
+                    sphere.lightIntensity = 1f
+                    sphere.opacity = 255
+                    sphere.floorShadowEnabled = true
+                    sphere.floorElevation = 20f
+                    sphere.floorShadowOpacity = 0.5f
+                    sphere.strokeWidth = 0f
+                    sphere.strokeColor = android.graphics.Color.BLACK
+                    sphere.strokeOpacity = 255
+                    sphere.neonEnabled = false
+                    sphere.neonColor = 0xFF00E5FF.toInt()
+                    sphere.neonRadius = 16f
+                    sphere.neonIntensity = 1f
+                    canvas.invalidate()
+                },
+                onApply = {
+                    canvas.runRecordedAction(if (isNewSphere) "Add 3D Sphere" else "Modify 3D Sphere") {}
+                    showSnackbar("3D Sphere saved")
+                    draftSphere = null
+                    isNewSphere = false
+                    sphereSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                onCancel = {
+                    if (isNewSphere) {
+                        canvas.removeLayer(sphere)
+                    } else {
+                        sphereSnapshot?.let { snap ->
+                            sphere.material = snap.material
+                            sphere.radius = snap.radius
+                            sphere.baseColor = snap.baseColor
+                            sphere.lightAngle = snap.lightAngle
+                            sphere.lightDistance = snap.lightDistance
+                            sphere.lightIntensity = snap.lightIntensity
+                            sphere.opacity = snap.opacity
+                            sphere.floorShadowEnabled = snap.floorShadowEnabled
+                            sphere.floorElevation = snap.floorElevation
+                            sphere.floorShadowOpacity = snap.floorShadowOpacity
+                            sphere.strokeWidth = snap.strokeWidth
+                            sphere.strokeColor = snap.strokeColor
+                            sphere.strokeOpacity = snap.strokeOpacity
+                            sphere.neonEnabled = snap.neonEnabled
+                            sphere.neonColor = snap.neonColor
+                            sphere.neonRadius = snap.neonRadius
+                            sphere.neonIntensity = snap.neonIntensity
+                        }
+                    }
+                    canvas.invalidate()
+                    draftSphere = null
+                    isNewSphere = false
+                    sphereSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 3. Free Draw Studio Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -1957,6 +2279,13 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 binding.bottomNavigation.selectedItemId = R.id.nav_add
             }
             showComposeBox3DSheet(layer)
+        }
+        // Sphere3D terpilih → buka Studio 3D Sphere
+        if (layer is Sphere3DLayer && activeTag != OBJ_3D_SPHERE && draftSphere !== layer) {
+            if (activeTag.isNotEmpty()) {
+                binding.bottomNavigation.selectedItemId = R.id.nav_add
+            }
+            showComposeSphere3DSheet(layer)
         }
     }
 

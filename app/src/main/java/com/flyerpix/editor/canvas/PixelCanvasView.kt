@@ -60,6 +60,8 @@ import com.flyerpix.editor.canvas.model.ImageLayer
 import com.flyerpix.editor.canvas.model.PenLayer
 import com.flyerpix.editor.canvas.model.ShapeLayer
 import com.flyerpix.editor.canvas.model.ShapeType
+import com.flyerpix.editor.canvas.model.Sphere3DLayer
+import com.flyerpix.editor.canvas.model.SphereMaterial
 import com.flyerpix.editor.canvas.model.StickerLayer
 import com.flyerpix.editor.canvas.model.TextLayer
 import com.flyerpix.editor.project.ProjectModel
@@ -1042,7 +1044,8 @@ class PixelCanvasView @JvmOverloads constructor(
         DRAGGING_ROTATE_HANDLE,
         DRAGGING_PERSPECTIVE_HANDLE,
         DRAGGING_BOX3D_DEPTH_HANDLE,
-        DRAGGING_BOX3D_VP_HANDLE
+        DRAGGING_BOX3D_VP_HANDLE,
+        DRAGGING_SPHERE_LIGHT_HANDLE
     }
 
     var currentTouchState: TouchState = TouchState.IDLE
@@ -1069,6 +1072,10 @@ class PixelCanvasView @JvmOverloads constructor(
     private var box3DDepthStartDist: Float = 0f
     private var box3DDepthBaseX: Float = 0f
     private var box3DDepthBaseY: Float = 0f
+
+    // ── State Drag Handle Cahaya 3D Sphere ───────────────────────────────────
+    private var sphereLightStartAngle: Float = 0f
+    private var sphereLightStartDist: Float = 0f
 
     // ── Mode Eyedropper (Prompt 42) ──────────────────────────────────────────
 
@@ -2830,6 +2837,13 @@ class PixelCanvasView @JvmOverloads constructor(
                 }
             }
 
+            // 4d. Overlay handle cahaya 3D Sphere: titik kilau yang bisa digeser
+            selectedLayer?.let { layer ->
+                if (!editorZoomMode && layer.isVisible && !layer.isLocked && layer is Sphere3DLayer) {
+                    drawSphere3DOverlay(canvas, layer)
+                }
+            }
+
             // 4b. Render anchor visualization untuk mode edit Bezier (Phase 1)
             if (bezierEditMode && selectedBezierLayer != null && !editorZoomMode) {
                 drawBezierAnchorOverlay(canvas, selectedBezierLayer!!)
@@ -3141,6 +3155,52 @@ class PixelCanvasView @JvmOverloads constructor(
         canvas.drawPath(diamondPath, borderPaint)
     }
 
+    /**
+     * Overlay handle interaktif sumber cahaya 3D Sphere: lingkaran panduan kecil
+     * di titik kilau yang dapat digeser langsung dengan jari.
+     */
+    private fun drawSphere3DOverlay(canvas: Canvas, layer: Sphere3DLayer) {
+        val (w, h) = layer.getUnwarpedDimensions()
+        if (w <= 0f || h <= 0f) return
+        val density = resources.displayMetrics.density
+        val (hlx, hly) = layer.getHighlightLocal()
+        val (hmx, hmy) = layer.mapLocalPointToCanvas(hlx, hly, w, h)
+
+        // Garis panduan dari pusat bola ke handle.
+        val (prx, pry) = layer.mapLocalPointToCanvas(w / 2f, layer.radius, w, h)
+        val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xAA00A8FF.toInt()
+            strokeWidth = 1.5f * density
+            style = Paint.Style.STROKE
+            pathEffect = DashPathEffect(floatArrayOf(6f * density, 5f * density), 0f)
+        }
+        canvas.drawLine(prx, pry, hmx, hmy, guidePaint)
+
+        // Lingkaran sunburst (panduan arah datang cahaya).
+        val sunRadius = 5f * density
+        val sunPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFFFFFF.toInt()
+            style = Paint.Style.FILL
+        }
+        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF00A8FF.toInt()
+            style = Paint.Style.FILL
+        }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            strokeWidth = 2f * density
+            style = Paint.Style.STROKE
+        }
+        for (i in 0 until 4) {
+            val a = (i * 90f + 45f) * (Math.PI / 180.0)
+            val ax = hmx + Math.cos(a).toFloat() * sunRadius * 2f
+            val ay = hmy + Math.sin(a).toFloat() * sunRadius * 2f
+            canvas.drawCircle(ax, ay, 1.5f * density, dotPaint)
+        }
+        canvas.drawCircle(hmx, hmy, sunRadius, sunPaint)
+        canvas.drawCircle(hmx, hmy, sunRadius, borderPaint)
+    }
+
     private fun drawTextEditLabel(canvas: Canvas, pts: FloatArray) {
         val left = minOf(pts[0], pts[2], pts[4], pts[6])
         val top = minOf(pts[1], pts[3], pts[5], pts[7])
@@ -3342,6 +3402,34 @@ class PixelCanvasView @JvmOverloads constructor(
         val dist = hypot(touchX - box3DDepthBaseX, touchY - box3DDepthBaseY).coerceAtLeast(1f)
         val factor = dist / box3DDepthStartDist
         layer.boxDepth = (box3DDepthStartDepth * factor).coerceIn(10f, 2000f)
+        hasTouchTransformed = true
+        invalidate()
+    }
+
+    /**
+     * Memulai drag handle sumber cahaya 3D Sphere: mencatat nilai awal arah cahaya
+     * agar dapat di-rollback via undo.
+     */
+    private fun beginSphereLightDrag(layer: Sphere3DLayer) {
+        sphereLightStartAngle = layer.lightAngle
+        sphereLightStartDist = layer.lightDistance
+        currentTouchState = TouchState.DRAGGING_SPHERE_LIGHT_HANDLE
+        isDragging = false
+        invalidate()
+    }
+
+    /** Memperbarui arah & jarak cahaya mengikuti posisi jari relatif pusat bola. */
+    private fun updateSphereLightDrag(layer: Sphere3DLayer, touchX: Float, touchY: Float) {
+        val (w, h) = layer.getUnwarpedDimensions()
+        if (w <= 0f || h <= 0f) return
+        val (lx, ly) = layer.mapCanvasPointToLocal(touchX, touchY, w, h)
+        // Posisi kilau lokal = pusat + (sin θ, −cos θ)·dist → invers: θ = atan2(dx, −dy).
+        val dx = lx - layer.radius
+        val dy = ly - layer.radius
+        val dist = hypot(dx, dy)
+        layer.lightAngle = (Math.toDegrees(Math.atan2(dx.toDouble(), (-dy).toDouble())).toFloat())
+            .coerceIn(-180f, 180f)
+        layer.lightDistance = (dist / layer.radius.coerceAtLeast(1f)).coerceIn(0f, 0.8f)
         hasTouchTransformed = true
         invalidate()
     }
@@ -4113,6 +4201,31 @@ class PixelCanvasView @JvmOverloads constructor(
             }
         }
 
+        // 1b2. Tangani geser handle sumber cahaya 3D Sphere (arah kilau)
+        if (currentTouchState == TouchState.DRAGGING_SPHERE_LIGHT_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is Sphere3DLayer && !layer.isLocked) {
+                        updateSphereLightDrag(layer, event.x, event.y)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Arahkan Cahaya 3D", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
         // Handle rotasi di kanvas dihapus (rotasi via slider toolbar / gestur dua jari),
         // sehingga tidak ada blok interaksi DRAGGING_ROTATE_HANDLE.
 
@@ -4173,6 +4286,22 @@ class PixelCanvasView @JvmOverloads constructor(
                             val touchRadius = 28f * resources.displayMetrics.density
                             if (hypot(event.x - hx, event.y - hy) <= touchRadius) {
                                 beginBox3DDepthDrag(layer, hfx, hfy, event.x, event.y)
+                                return true
+                            }
+                        }
+                    }
+                }
+
+                // Cek apakah sentuhan mengenai handle sumber cahaya 3D Sphere
+                selectedLayer?.let { layer ->
+                    if (!layer.isLocked && layer is Sphere3DLayer) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            val (hlx, hly) = layer.getHighlightLocal()
+                            val (hx, hy) = layer.mapLocalPointToCanvas(hlx, hly, w, h)
+                            val touchRadius = 28f * resources.displayMetrics.density
+                            if (hypot(event.x - hx, event.y - hy) <= touchRadius) {
+                                beginSphereLightDrag(layer)
                                 return true
                             }
                         }
@@ -5052,6 +5181,31 @@ class PixelCanvasView @JvmOverloads constructor(
             baseColor = 0xFF1769FF.toInt(),
             x = cx - w / 2f,
             y = cy - h / 2f
+        )
+        addLayer(layer)
+        return layer
+    }
+
+    /**
+     * Menambahkan objek 3D Sphere (bola) default di tengah kanvas sebagai
+     * [Sphere3DLayer] dengan material glossy dan cahaya kiri-atas.
+     */
+    fun addSphere3DLayer(): Sphere3DLayer {
+        val cx = if (width > 0) width / 2f else 540f
+        val cy = if (height > 0) height / 2f else 540f
+        val r = ((minOf(width, height).takeIf { it > 0 }?.toFloat() ?: 400f) * 0.30f).coerceIn(40f, 300f)
+        val layer = Sphere3DLayer(
+            radius = r,
+            material = SphereMaterial.GLOSSY,
+            baseColor = 0xFF1769FF.toInt(),
+            lightAngle = -45f,
+            lightDistance = 0.45f,
+            lightIntensity = 1f,
+            floorShadowEnabled = true,
+            floorElevation = 20f,
+            floorShadowOpacity = 0.5f,
+            x = cx - r,
+            y = cy - r
         )
         addLayer(layer)
         return layer
