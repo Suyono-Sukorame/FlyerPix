@@ -24,6 +24,10 @@ import com.flyerpix.editor.canvas.model.ArrowStyle
 import com.flyerpix.editor.canvas.model.BezierInputFlow
 import com.flyerpix.editor.canvas.model.Box3DLayer
 import com.flyerpix.editor.canvas.model.Box3DPerspectiveMode
+import com.flyerpix.editor.canvas.model.ButtonIcon
+import com.flyerpix.editor.canvas.model.Capsule3DLayer
+import com.flyerpix.editor.canvas.model.CapsuleMaterial
+import com.flyerpix.editor.canvas.model.CapsuleMode
 import com.flyerpix.editor.canvas.model.Coin3DLayer
 import com.flyerpix.editor.canvas.model.CoinContentMode
 import com.flyerpix.editor.canvas.model.CoinMaterial
@@ -31,6 +35,7 @@ import com.flyerpix.editor.canvas.model.CoinSymbol
 import com.flyerpix.editor.canvas.model.Cylinder3DLayer
 import com.flyerpix.editor.canvas.model.GradientType
 import com.flyerpix.editor.canvas.model.GradientColor
+import com.flyerpix.editor.canvas.model.IconPosition
 import com.flyerpix.editor.canvas.model.PenLayer
 import com.flyerpix.editor.canvas.model.PodiumStyle
 import com.flyerpix.editor.canvas.model.ShapeLayer
@@ -69,6 +74,7 @@ class ObjectMenuController(
         const val OBJ_3D_SPHERE = "3d_sphere"
         const val OBJ_3D_CYLINDER = "3d_cylinder"
         const val OBJ_3D_COIN   = "3d_coin"
+        const val OBJ_3D_CAPSULE = "3d_capsule"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
@@ -88,6 +94,9 @@ class ObjectMenuController(
         private const val CYLINDER_RING_COLOR_RESULT_KEY = "obj_cylinder_ring_color_key"
         private const val COIN_EMBLEM_COLOR_RESULT_KEY = "obj_coin_emblem_color_key"
         private const val COIN_BASE_COLOR_RESULT_KEY = "obj_coin_base_color_key"
+        private const val CAPSULE_PRIMARY_COLOR_RESULT_KEY = "obj_capsule_primary_color_key"
+        private const val CAPSULE_SECONDARY_COLOR_RESULT_KEY = "obj_capsule_secondary_color_key"
+        private const val CAPSULE_TEXT_COLOR_RESULT_KEY = "obj_capsule_text_color_key"
     }
 
     private val fragmentManager: FragmentManager get() = activity.supportFragmentManager
@@ -150,6 +159,11 @@ class ObjectMenuController(
     private var draftCoin: Coin3DLayer? = null
     private var isNewCoin: Boolean = false
     private var coinSnapshot: Coin3DLayer? = null
+
+    // Draft layer 3D Capsule (untuk instant-create & rollback)
+    private var draftCapsule: Capsule3DLayer? = null
+    private var isNewCapsule: Boolean = false
+    private var capsuleSnapshot: Capsule3DLayer? = null
 
     /** State Brush Color draw sheet yang bisa di-update live dari color picker dialog. */
     private val liveDrawBrushColor = mutableStateOf(0)
@@ -284,7 +298,8 @@ class ObjectMenuController(
             Spec(OBJ_3D_BOX,   "3D Box",  R.drawable.ic_3d_box_24px),
             Spec(OBJ_3D_SPHERE, "3D Sphere", R.drawable.ic_sphere_3d_24px),
             Spec(OBJ_3D_CYLINDER, "Podium 3D", R.drawable.ic_podium_3d_24px),
-            Spec(OBJ_3D_COIN, "Koin 3D", R.drawable.ic_coin_3d_24px)
+            Spec(OBJ_3D_COIN, "Koin 3D", R.drawable.ic_coin_3d_24px),
+            Spec(OBJ_3D_CAPSULE, "Kapsul 3D", R.drawable.ic_capsule_3d_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectToolStripInclude.objectToolStripContainer
@@ -348,6 +363,7 @@ class ObjectMenuController(
             OBJ_3D_SPHERE -> showComposeSphere3DSheet()
             OBJ_3D_CYLINDER -> showComposeCylinder3DSheet()
             OBJ_3D_COIN -> showComposeCoin3DSheet()
+            OBJ_3D_CAPSULE -> showComposeCapsule3DSheet()
         }
         onAddSettingsOpenChanged?.invoke(true)
         onPanelChanged()
@@ -373,6 +389,9 @@ class ObjectMenuController(
         draftCoin = null
         isNewCoin = false
         coinSnapshot = null
+        draftCapsule = null
+        isNewCapsule = false
+        capsuleSnapshot = null
         canvas.freeDrawEnabled = false
         canvas.bezierInputEnabled = false
         canvas.bezierInputLayer = null
@@ -568,6 +587,33 @@ class ObjectMenuController(
                 it.useCustomColor = true
                 canvas.invalidate()
                 showComposeCoin3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(CAPSULE_PRIMARY_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, 0xFFE53935.toInt())
+            val target = (canvas.selectedLayer as? Capsule3DLayer) ?: draftCapsule
+            target?.let {
+                it.primaryColor = color
+                canvas.invalidate()
+                showComposeCapsule3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(CAPSULE_SECONDARY_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, 0xFFFFB300.toInt())
+            val target = (canvas.selectedLayer as? Capsule3DLayer) ?: draftCapsule
+            target?.let {
+                it.secondaryColor = color
+                canvas.invalidate()
+                showComposeCapsule3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(CAPSULE_TEXT_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.WHITE)
+            val target = (canvas.selectedLayer as? Capsule3DLayer) ?: draftCapsule
+            target?.let {
+                it.textColor = color
+                canvas.invalidate()
+                showComposeCapsule3DSheet(it)
             }
         }
     }
@@ -2930,6 +2976,515 @@ class ObjectMenuController(
         }
     }
 
+    // 2.9 3D Capsule / Kapsul Promo Studio (tombol CTA s/d pil medis dua warna)
+    //     Alur instant: menu Kapsul 3D ditekan → kapsul CTA "BELI SEKARANG"
+    //     langsung muncul di kanvas + panel (preset, mode, material, sliders,
+    //     bayangan lantai, finishing).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun showComposeCapsule3DSheet(capsuleToEdit: Capsule3DLayer? = null) {
+        val capsule = capsuleToEdit ?: draftCapsule ?: createNewDraftCapsule()
+        showComposeCapsule3DDetail(capsule)
+    }
+
+    private fun createNewDraftCapsule(): Capsule3DLayer {
+        val capsule = canvas.addCapsule3DLayer().also {
+            isNewCapsule = true
+        }
+        draftCapsule = capsule
+        capsuleSnapshot = capsule.copyLayer()
+        canvas.selectedLayer = capsule
+        return capsule
+    }
+
+    /** Menerapkan preset cepat kapsul (definisi tunggal dari Capsule3DDetailComposable). */
+    private fun applyCapsulePreset(capsule: Capsule3DLayer, key: String) {
+        val preset = CapsulePresets[key] ?: return
+        capsule.mode = preset.mode
+        capsule.primaryColor = preset.primaryColor
+        capsule.secondaryColor = preset.secondaryColor
+        capsule.splitRatio = preset.splitRatio
+        capsule.buttonText = preset.buttonText
+        capsule.textColor = preset.textColor
+        capsule.isTextBold = preset.isTextBold
+        capsule.iconType = preset.iconType
+        capsule.iconPosition = preset.iconPosition
+        capsule.material = preset.materialType
+        capsule.specularIntensity = preset.specularIntensity
+        if (preset.neonEnabled) {
+            capsule.neonEnabled = true
+            capsule.neonColor = preset.neonColor
+            capsule.neonRadius = 16f
+            capsule.neonIntensity = 1.1f
+        } else {
+            capsule.neonEnabled = false
+        }
+        canvas.invalidate()
+    }
+
+    private fun showComposeCapsule3DDetail(capsule: Capsule3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_3D_CAPSULE
+        updateToolStripSelection(OBJ_3D_CAPSULE)
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val switchingCapsule = draftCapsule !== capsule
+        draftCapsule = capsule
+        if (switchingCapsule) isNewCapsule = false
+        capsuleSnapshot = capsule.copyLayer()
+
+        host.setContent {
+            var currentLength by remember { mutableStateOf(capsule.capsuleLength) }
+            var currentRadius by remember { mutableStateOf(capsule.capsuleRadius) }
+            var currentRotation by remember { mutableStateOf(capsule.rotationAngle) }
+            var currentMode by remember { mutableStateOf(capsule.mode) }
+            var currentMaterial by remember { mutableStateOf(capsule.material) }
+            var currentPrimary by remember { mutableStateOf(capsule.primaryColor) }
+            var currentSecondary by remember { mutableStateOf(capsule.secondaryColor) }
+            var currentSplit by remember { mutableStateOf(capsule.splitRatio) }
+            var currentButtonText by remember { mutableStateOf(capsule.buttonText) }
+            var currentTextColor by remember { mutableStateOf(capsule.textColor) }
+            var currentTextSize by remember { mutableStateOf(capsule.textSize) }
+            var currentTextBold by remember { mutableStateOf(capsule.isTextBold) }
+            var currentIconType by remember { mutableStateOf(capsule.iconType) }
+            var currentIconPosition by remember { mutableStateOf(capsule.iconPosition) }
+            var currentSpecular by remember { mutableStateOf(capsule.specularIntensity) }
+            var currentElevation by remember { mutableStateOf(capsule.floatingElevation) }
+            var currentFloorShadow by remember { mutableStateOf(capsule.floorShadowEnabled) }
+            var currentFloorShadowOpacity by remember {
+                mutableStateOf((capsule.floorShadowOpacity * 100f).coerceIn(0f, 100f))
+            }
+            var currentOpacity by remember { mutableStateOf(capsule.opacity / 255f * 100f) }
+
+            Capsule3DDetailPage(
+                capsuleLength = currentLength,
+                capsuleRadius = currentRadius,
+                rotationAngle = currentRotation,
+                mode = currentMode,
+                material = currentMaterial,
+                primaryColor = currentPrimary,
+                secondaryColor = currentSecondary,
+                splitRatio = currentSplit,
+                buttonText = currentButtonText,
+                textColor = currentTextColor,
+                textSize = currentTextSize,
+                isTextBold = currentTextBold,
+                iconType = currentIconType,
+                iconPosition = currentIconPosition,
+                specularIntensity = currentSpecular,
+                floatingElevation = currentElevation,
+                floorShadowEnabled = currentFloorShadow,
+                floorShadowOpacityPct = currentFloorShadowOpacity,
+                opacityPct = currentOpacity,
+                onPresetClick = { key ->
+                    applyCapsulePreset(capsule, key)
+                    currentMode = capsule.mode
+                    currentMaterial = capsule.material
+                    currentPrimary = capsule.primaryColor
+                    currentSecondary = capsule.secondaryColor
+                    currentSplit = capsule.splitRatio
+                    currentButtonText = capsule.buttonText
+                    currentTextColor = capsule.textColor
+                    currentTextBold = capsule.isTextBold
+                    currentIconType = capsule.iconType
+                    currentIconPosition = capsule.iconPosition
+                    currentSpecular = capsule.specularIntensity
+                },
+                onModeChange = { m ->
+                    currentMode = m
+                    capsule.mode = m
+                    canvas.invalidate()
+                },
+                onPrimaryColorChange = { c ->
+                    currentPrimary = c
+                    capsule.primaryColor = c
+                    canvas.invalidate()
+                },
+                onOpenPrimaryColorPicker = {
+                    val original = capsule.primaryColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = capsule.primaryColor,
+                        resultKey = CAPSULE_PRIMARY_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        capsule.primaryColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        capsule.primaryColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "CapsulePrimaryColorPicker")
+                },
+                onSecondaryColorChange = { c ->
+                    currentSecondary = c
+                    capsule.secondaryColor = c
+                    canvas.invalidate()
+                },
+                onOpenSecondaryColorPicker = {
+                    val original = capsule.secondaryColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = capsule.secondaryColor,
+                        resultKey = CAPSULE_SECONDARY_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        capsule.secondaryColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        capsule.secondaryColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "CapsuleSecondaryColorPicker")
+                },
+                onSplitRatioChange = { v ->
+                    currentSplit = v
+                    capsule.splitRatio = v.coerceIn(0f, 1f)
+                    canvas.invalidate()
+                },
+                onButtonTextChange = { t ->
+                    currentButtonText = t
+                    capsule.buttonText = t
+                    canvas.invalidate()
+                },
+                onTextColorChange = { c ->
+                    currentTextColor = c
+                    capsule.textColor = c
+                    canvas.invalidate()
+                },
+                onOpenTextColorPicker = {
+                    val original = capsule.textColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = capsule.textColor,
+                        resultKey = CAPSULE_TEXT_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        capsule.textColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        capsule.textColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "CapsuleTextColorPicker")
+                },
+                onTextSizeChange = { v ->
+                    currentTextSize = v
+                    capsule.textSize = v.coerceIn(4f, 40f)
+                    canvas.invalidate()
+                },
+                onTextBoldChange = { en ->
+                    currentTextBold = en
+                    capsule.isTextBold = en
+                    canvas.invalidate()
+                },
+                onIconTypeChange = { ic ->
+                    currentIconType = ic
+                    capsule.iconType = ic
+                    canvas.invalidate()
+                },
+                onIconPositionChange = { ip ->
+                    currentIconPosition = ip
+                    capsule.iconPosition = ip
+                    canvas.invalidate()
+                },
+                onMaterialChange = { m ->
+                    currentMaterial = m
+                    capsule.material = m
+                    canvas.invalidate()
+                },
+                onSpecularIntensityChange = { v ->
+                    currentSpecular = v
+                    capsule.specularIntensity = v.coerceIn(0f, 2f)
+                    canvas.invalidate()
+                },
+                onLengthChange = { v ->
+                    currentLength = v
+                    capsule.capsuleLength = v.coerceIn(20f, 900f)
+                    canvas.invalidate()
+                },
+                onRadiusChange = { v ->
+                    currentRadius = v
+                    capsule.capsuleRadius = v.coerceIn(4f, 200f)
+                    canvas.invalidate()
+                },
+                onRotationChange = { v ->
+                    currentRotation = v
+                    capsule.rotationAngle = ((v % 360f) + 360f) % 360f
+                    canvas.invalidate()
+                },
+                onFloatingElevationChange = { v ->
+                    currentElevation = v
+                    capsule.floatingElevation = v.coerceIn(0f, 120f)
+                    canvas.invalidate()
+                },
+                onFloorShadowEnabledChange = { en ->
+                    currentFloorShadow = en
+                    capsule.floorShadowEnabled = en
+                    canvas.invalidate()
+                },
+                onFloorShadowOpacityChange = { pct ->
+                    currentFloorShadowOpacity = pct
+                    capsule.floorShadowOpacity = (pct / 100f).coerceIn(0f, 1f)
+                    canvas.invalidate()
+                },
+                onOpacityChange = { pct ->
+                    currentOpacity = pct
+                    capsule.opacity = (pct / 100f * 255f).toInt().coerceIn(0, 255)
+                    canvas.invalidate()
+                },
+                onOpenShadowEditor = {
+                    canvas.invalidate()
+                    showCapsule3DShadowSheet(capsule)
+                },
+                onOpenNeonEditor = {
+                    canvas.invalidate()
+                    showCapsule3DNeonSheet(capsule)
+                },
+                onReset = {
+                    currentLength = 240f
+                    currentRadius = 45f
+                    currentRotation = 0f
+                    currentMode = CapsuleMode.CTA_BUTTON
+                    currentMaterial = CapsuleMaterial.GLOSSY
+                    currentPrimary = 0xFFE53935.toInt()
+                    currentSecondary = 0xFFFFB300.toInt()
+                    currentSplit = 0.5f
+                    currentButtonText = "BELI SEKARANG"
+                    currentTextColor = 0xFFFFFFFF.toInt()
+                    currentTextSize = 16f
+                    currentTextBold = true
+                    currentIconType = ButtonIcon.CART
+                    currentIconPosition = IconPosition.LEFT_OF_TEXT
+                    currentSpecular = 0.85f
+                    currentElevation = 15f
+                    currentFloorShadow = true
+                    currentFloorShadowOpacity = 50f
+                    currentOpacity = 100f
+                    capsule.capsuleLength = 240f
+                    capsule.capsuleRadius = 45f
+                    capsule.rotationAngle = 0f
+                    capsule.mode = CapsuleMode.CTA_BUTTON
+                    capsule.material = CapsuleMaterial.GLOSSY
+                    capsule.primaryColor = 0xFFE53935.toInt()
+                    capsule.secondaryColor = 0xFFFFB300.toInt()
+                    capsule.splitRatio = 0.5f
+                    capsule.seamColor = 0x33000000
+                    capsule.buttonText = "BELI SEKARANG"
+                    capsule.textColor = 0xFFFFFFFF.toInt()
+                    capsule.textSize = 16f
+                    capsule.isTextBold = true
+                    capsule.iconType = ButtonIcon.CART
+                    capsule.iconPosition = IconPosition.LEFT_OF_TEXT
+                    capsule.specularIntensity = 0.85f
+                    capsule.floatingElevation = 15f
+                    capsule.floorShadowEnabled = true
+                    capsule.floorShadowOpacity = 0.5f
+                    capsule.opacity = 255
+                    capsule.neonEnabled = false
+                    capsule.neonColor = 0xFF00E5FF.toInt()
+                    capsule.neonRadius = 16f
+                    capsule.neonIntensity = 1f
+                    capsule.shadowEnabled = false
+                    capsule.shadowColor = 0xFF000000.toInt()
+                    capsule.shadowOpacity = 0.6f
+                    capsule.shadowRadius = 8f
+                    capsule.shadowDx = 0f
+                    capsule.shadowDy = 5f
+                    canvas.invalidate()
+                },
+                onApply = {
+                    canvas.runRecordedAction(if (isNewCapsule) "Add 3D Capsule" else "Modify 3D Capsule") {}
+                    showSnackbar("3D Capsule saved")
+                    draftCapsule = null
+                    isNewCapsule = false
+                    capsuleSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                onCancel = {
+                    if (isNewCapsule) {
+                        canvas.removeLayer(capsule)
+                    } else {
+                        capsuleSnapshot?.let { snap ->
+                            capsule.capsuleLength = snap.capsuleLength
+                            capsule.capsuleRadius = snap.capsuleRadius
+                            capsule.rotationAngle = snap.rotationAngle
+                            capsule.mode = snap.mode
+                            capsule.material = snap.material
+                            capsule.primaryColor = snap.primaryColor
+                            capsule.secondaryColor = snap.secondaryColor
+                            capsule.splitRatio = snap.splitRatio
+                            capsule.seamColor = snap.seamColor
+                            capsule.buttonText = snap.buttonText
+                            capsule.textColor = snap.textColor
+                            capsule.textSize = snap.textSize
+                            capsule.isTextBold = snap.isTextBold
+                            capsule.iconType = snap.iconType
+                            capsule.iconPosition = snap.iconPosition
+                            capsule.lightAngle = snap.lightAngle
+                            capsule.specularIntensity = snap.specularIntensity
+                            capsule.floatingElevation = snap.floatingElevation
+                            capsule.floorShadowEnabled = snap.floorShadowEnabled
+                            capsule.floorShadowOpacity = snap.floorShadowOpacity
+                            capsule.opacity = snap.opacity
+                            capsule.neonEnabled = snap.neonEnabled
+                            capsule.neonColor = snap.neonColor
+                            capsule.neonRadius = snap.neonRadius
+                            capsule.neonIntensity = snap.neonIntensity
+                            capsule.shadowEnabled = snap.shadowEnabled
+                            capsule.shadowColor = snap.shadowColor
+                            capsule.shadowRadius = snap.shadowRadius
+                            capsule.shadowOpacity = snap.shadowOpacity
+                            capsule.shadowDx = snap.shadowDx
+                            capsule.shadowDy = snap.shadowDy
+                        }
+                    }
+                    canvas.invalidate()
+                    draftCapsule = null
+                    isNewCapsule = false
+                    capsuleSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showCapsule3DShadowSheet(capsule: Capsule3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            ShadowDetailPage(
+                title = "Kapsul Shadow",
+                enabled = capsule.shadowEnabled,
+                color = capsule.shadowColor,
+                radius = capsule.shadowRadius.coerceIn(0f, 40f),
+                opacityPct = (capsule.shadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = capsule.shadowDx.coerceIn(-30f, 30f),
+                dy = capsule.shadowDy.coerceIn(-30f, 30f),
+                onEnabledChange = { en -> capsule.shadowEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> capsule.shadowColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = capsule.shadowColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = capsule.shadowColor,
+                        resultKey = "capsule_shadow_color_key"
+                    )
+                    dialog.onColorChanged = { c -> capsule.shadowColor = c; canvas.invalidate() }
+                    dialog.onCancel = { capsule.shadowColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "CapsuleShadowColorPicker")
+                },
+                onRadiusChange = { r -> capsule.shadowRadius = r; canvas.invalidate() },
+                onOpacityChange = { opPct -> capsule.shadowOpacity = (opPct / 100f).coerceIn(0f, 1f); canvas.invalidate() },
+                onDxChange = { x -> capsule.shadowDx = x; canvas.invalidate() },
+                onDyChange = { y -> capsule.shadowDy = y; canvas.invalidate() },
+                onReset = {
+                    capsule.shadowEnabled = true
+                    capsule.shadowColor = 0xFF000000.toInt()
+                    capsule.shadowRadius = 12f
+                    capsule.shadowOpacity = 0.7f
+                    capsule.shadowDx = 0f
+                    capsule.shadowDy = 10f
+                    canvas.invalidate()
+                },
+                onApply = { showComposeCapsule3DSheet(capsule) },
+                onCancel = {
+                    capsuleSnapshot?.let { snap ->
+                        capsule.shadowEnabled = snap.shadowEnabled
+                        capsule.shadowColor = snap.shadowColor
+                        capsule.shadowRadius = snap.shadowRadius
+                        capsule.shadowOpacity = snap.shadowOpacity
+                        capsule.shadowDx = snap.shadowDx
+                        capsule.shadowDy = snap.shadowDy
+                    }
+                    canvas.invalidate()
+                    showComposeCapsule3DSheet(capsule)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showCapsule3DNeonSheet(capsule: Capsule3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            NeonDetailPage(
+                enabled = capsule.neonEnabled,
+                color = capsule.neonColor,
+                radius = capsule.neonRadius.coerceIn(1f, 40f),
+                intensity = capsule.neonIntensity,
+                coreEnabled = capsule.neonCoreEnabled,
+                onEnabledChange = { en -> capsule.neonEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> capsule.neonColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = capsule.neonColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = capsule.neonColor,
+                        resultKey = "capsule_neon_color_key"
+                    )
+                    dialog.onColorChanged = { c -> capsule.neonColor = c; canvas.invalidate() }
+                    dialog.onCancel = { capsule.neonColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "CapsuleNeonColorPicker")
+                },
+                onRadiusChange = { r -> capsule.neonRadius = r; canvas.invalidate() },
+                onIntensityChange = { i -> capsule.neonIntensity = i; canvas.invalidate() },
+                onCoreEnabledChange = { en -> capsule.neonCoreEnabled = en; canvas.invalidate() },
+                onReset = {
+                    capsule.neonEnabled = true
+                    capsule.neonColor = if (capsule.material == CapsuleMaterial.CYBER_NEON) capsule.primaryColor else 0xFF00E5FF.toInt()
+                    capsule.neonRadius = 16f
+                    capsule.neonIntensity = 1f
+                    capsule.neonCoreEnabled = true
+                    canvas.invalidate()
+                },
+                onApply = { showComposeCapsule3DSheet(capsule) },
+                onCancel = {
+                    capsuleSnapshot?.let { snap ->
+                        capsule.neonEnabled = snap.neonEnabled
+                        capsule.neonColor = snap.neonColor
+                        capsule.neonRadius = snap.neonRadius
+                        capsule.neonIntensity = snap.neonIntensity
+                        capsule.neonCoreEnabled = snap.neonCoreEnabled
+                    }
+                    canvas.invalidate()
+                    showComposeCapsule3DSheet(capsule)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // 3. Free Draw Studio Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
@@ -3405,6 +3960,13 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 binding.bottomNavigation.selectedItemId = R.id.nav_add
             }
             showComposeCoin3DSheet(layer)
+        }
+        // Kapsul 3D terpilih → buka Studio Kapsul 3D
+        if (layer is Capsule3DLayer && activeTag != OBJ_3D_CAPSULE && draftCapsule !== layer) {
+            if (activeTag.isNotEmpty()) {
+                binding.bottomNavigation.selectedItemId = R.id.nav_add
+            }
+            showComposeCapsule3DSheet(layer)
         }
     }
 

@@ -49,14 +49,19 @@ import com.flyerpix.editor.canvas.model.AnchorPoint
 import com.flyerpix.editor.canvas.model.AnchorType
 import com.flyerpix.editor.canvas.model.ArrowLayer
 import com.flyerpix.editor.canvas.model.Box3DLayer
+import com.flyerpix.editor.canvas.model.ButtonIcon
 import com.flyerpix.editor.canvas.model.CanvasBackground
 import com.flyerpix.editor.canvas.model.CanvasBackgroundMode
+import com.flyerpix.editor.canvas.model.Capsule3DLayer
+import com.flyerpix.editor.canvas.model.CapsuleMaterial
+import com.flyerpix.editor.canvas.model.CapsuleMode
 import com.flyerpix.editor.canvas.model.Coin3DLayer
 import com.flyerpix.editor.canvas.model.CoinContentMode
 import com.flyerpix.editor.canvas.model.CoinMaterial
 import com.flyerpix.editor.canvas.model.CoinSymbol
 import com.flyerpix.editor.canvas.model.Cylinder3DLayer
 import com.flyerpix.editor.canvas.model.HitAnchor
+import com.flyerpix.editor.canvas.model.IconPosition
 import com.flyerpix.editor.canvas.model.CanvasLayer
 import com.flyerpix.editor.canvas.model.ExportFormat
 import com.flyerpix.editor.canvas.model.ExportQuality
@@ -78,6 +83,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.hypot
+import kotlin.math.atan2
 import kotlin.math.max
 
 
@@ -1054,7 +1060,9 @@ class PixelCanvasView @JvmOverloads constructor(
         DRAGGING_SPHERE_LIGHT_HANDLE,
         DRAGGING_CYLINDER_SIZE_HANDLE,
         DRAGGING_CYLINDER_TILT_HANDLE,
-        DRAGGING_COIN_TILT_HANDLE
+        DRAGGING_COIN_TILT_HANDLE,
+        DRAGGING_CAPSULE_END_HANDLE,
+        DRAGGING_CAPSULE_ROTATE_HANDLE,
     }
 
     var currentTouchState: TouchState = TouchState.IDLE
@@ -1100,6 +1108,11 @@ private var cylinderTiltStartRadiusY: Float = 0f
     private var coinSpinStartAngle: Float = 0f
 
     private var coinHandleStartLocal: Pair<Float, Float> = Pair(0f, 0f)
+    // ── State Drag Handle Kapsul 3D ──────────────────────────────────────────
+    private var capsuleEndStartLen: Float = 0f
+    private var capsuleEndStartAxisX: Float = 0f
+    private var capsuleRotateStartAngle: Float = 0f
+    private var capsuleRotateCenter: Pair<Float, Float> = Pair(0f, 0f)
     // ── Mode Eyedropper (Prompt 42) ──────────────────────────────────────────
 
     /** Apakah kanvas sedang dalam mode eyedropper (pipet warna). */
@@ -2881,6 +2894,13 @@ private var cylinderTiltStartRadiusY: Float = 0f
                 }
             }
 
+            // 4g. Overlay handle Kapsul 3D: panjang (ujung) + putar (diamond)
+            selectedLayer?.let { layer ->
+                if (!editorZoomMode && layer.isVisible && !layer.isLocked && layer is Capsule3DLayer) {
+                    drawCapsule3DOverlay(canvas, layer)
+                }
+            }
+
             // 4b. Render anchor visualization untuk mode edit Bezier (Phase 1)
             if (bezierEditMode && selectedBezierLayer != null && !editorZoomMode) {
                 drawBezierAnchorOverlay(canvas, selectedBezierLayer!!)
@@ -3330,6 +3350,53 @@ private var cylinderTiltStartRadiusY: Float = 0f
         canvas.drawCircle(px, py, size, borderPaint)
     }
 
+    /** Overlay handle Kapsul 3D: lingkaran ujung (panjang) + diamond putar. */
+    private fun drawCapsule3DOverlay(canvas: Canvas, layer: Capsule3DLayer) {
+        val (w, h) = layer.getUnwarpedDimensions()
+        if (w <= 0f || h <= 0f) return
+        val density = resources.displayMetrics.density
+
+        val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xAA00A8FF.toInt()
+            strokeWidth = 1.5f * density
+            style = Paint.Style.STROKE
+            pathEffect = DashPathEffect(floatArrayOf(6f * density, 5f * density), 0f)
+        }
+        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF00A8FF.toInt()
+            style = Paint.Style.FILL
+        }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            strokeWidth = 2f * density
+            style = Paint.Style.STROKE
+        }
+
+        val l = layer.computeLayout()
+        val (ccx, ccy) = layer.mapLocalPointToCanvas(l.cx, l.cy, w, h)
+        val (elx, ely) = layer.getEndHandleLocal()
+        val (ex, ey) = layer.mapLocalPointToCanvas(elx, ely, w, h)
+        val (rlx, rly) = layer.getRotateHandleLocal()
+        val (rx, ry) = layer.mapLocalPointToCanvas(rlx, rly, w, h)
+
+        canvas.drawLine(ccx, ccy, ex, ey, guidePaint)
+        canvas.drawLine(ccx, ccy, rx, ry, guidePaint)
+
+        val size = 7f * density
+        canvas.drawCircle(ex, ey, size, fillPaint)
+        canvas.drawCircle(ex, ey, size, borderPaint)
+
+        val diamond = Path().apply {
+            moveTo(rx, ry - size)
+            lineTo(rx + size, ry)
+            lineTo(rx, ry + size)
+            lineTo(rx - size, ry)
+            close()
+        }
+        canvas.drawPath(diamond, fillPaint)
+        canvas.drawPath(diamond, borderPaint)
+    }
+
     private fun drawTextEditLabel(canvas: Canvas, pts: FloatArray) {
         val left = minOf(pts[0], pts[2], pts[4], pts[6])
         val top = minOf(pts[1], pts[3], pts[5], pts[7])
@@ -3626,6 +3693,49 @@ private var cylinderTiltStartRadiusY: Float = 0f
         layer.tiltAngle = (coinTiltStartAngle - dy * 0.35f).coerceIn(0f, 75f)
         val newSpin = coinSpinStartAngle + dx * 0.5f
         layer.spinAngle = ((newSpin % 360f) + 360f) % 360f
+        hasTouchTransformed = true
+        invalidate()
+    }
+
+    /** Memulai drag handle ujung atau handle putar Kapsul 3D. */
+    private fun beginCapsuleEndDrag(layer: Capsule3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        capsuleEndStartLen = layer.capsuleLength
+        val lStart = layer.computeLayout()
+        val (clx, cly) = layer.mapCanvasPointToLocal(touchX, touchY, w, h)
+        capsuleEndStartAxisX = layer.toCapsuleAxis(clx, cly, lStart).first
+        currentTouchState = TouchState.DRAGGING_CAPSULE_END_HANDLE
+        isDragging = false
+        invalidate()
+    }
+
+    private fun beginCapsuleRotateDrag(layer: Capsule3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        capsuleRotateStartAngle = layer.rotationAngle
+        val (cw0, ch0) = layer.getUnwarpedDimensions()
+        val lc = layer.computeLayout()
+        capsuleRotateCenter = layer.mapLocalPointToCanvas(lc.cx, lc.cy, cw0, ch0)
+        currentTouchState = TouchState.DRAGGING_CAPSULE_ROTATE_HANDLE
+        isDragging = false
+        invalidate()
+    }
+
+    /** Memperbarui panjang kapsul dari pergeseran horizontal pada sumbu kapsul. */
+    private fun updateCapsuleEndDrag(layer: Capsule3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        val (clx, cly) = layer.mapCanvasPointToLocal(touchX, touchY, w, h)
+        val (ax, _) = layer.toCapsuleAxis(clx, cly, layer.computeLayout())
+        val newLen = (capsuleEndStartLen + 2f * (ax - capsuleEndStartAxisX))
+            .coerceIn(60f, 640f)
+        layer.capsuleLength = newLen
+        hasTouchTransformed = true
+        invalidate()
+    }
+
+    /** Memperbarui sudut kemiringan kapsul mengikuti arah sentuhan dari pusat. */
+    private fun updateCapsuleRotateDrag(layer: Capsule3DLayer, touchX: Float, touchY: Float) {
+        val (ccx, ccy) = capsuleRotateCenter
+        val ang = Math.toDegrees(
+            atan2((touchY - ccy).toDouble(), (touchX - ccx).toDouble())
+        ).toFloat()
+        layer.rotationAngle = layer.normAngle(ang)
         hasTouchTransformed = true
         invalidate()
     }
@@ -4500,6 +4610,57 @@ private var cylinderTiltStartRadiusY: Float = 0f
             }
         }
 
+        // 1b6. Tangani geser handle panjang Kapsul 3D
+        if (currentTouchState == TouchState.DRAGGING_CAPSULE_END_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is Capsule3DLayer && !layer.isLocked) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) updateCapsuleEndDrag(layer, event.x, event.y, w, h)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Ubah Panjang Kapsul 3D", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
+        // 1b7. Tangani geser handle putar Kapsul 3D
+        if (currentTouchState == TouchState.DRAGGING_CAPSULE_ROTATE_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is Capsule3DLayer && !layer.isLocked) {
+                        updateCapsuleRotateDrag(layer, event.x, event.y)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Putar Kapsul 3D", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
         // Handle rotasi di kanvas dihapus (rotasi via slider toolbar / gestur dua jari),
         // sehingga tidak ada blok interaksi DRAGGING_ROTATE_HANDLE.
 
@@ -4624,6 +4785,38 @@ private var cylinderTiltStartRadiusY: Float = 0f
                             val touchRadius = 28f * resources.displayMetrics.density
                             if (hypot(event.x - tx, event.y - ty) <= touchRadius) {
                                 beginCoinTiltDrag(layer, event.x, event.y, w, h)
+                                return true
+                            }
+                        }
+                    }
+                }
+
+                // Cek sentuhan handle ujung (panjang) Kapsul 3D
+                selectedLayer?.let { layer ->
+                    if (!layer.isLocked && layer is Capsule3DLayer) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            val (elx, ely) = layer.getEndHandleLocal()
+                            val (ex, ey) = layer.mapLocalPointToCanvas(elx, ely, w, h)
+                            val touchRadius = 28f * resources.displayMetrics.density
+                            if (hypot(event.x - ex, event.y - ey) <= touchRadius) {
+                                beginCapsuleEndDrag(layer, event.x, event.y, w, h)
+                                return true
+                            }
+                        }
+                    }
+                }
+
+                // Cek sentuhan handle putar (diamond) Kapsul 3D
+                selectedLayer?.let { layer ->
+                    if (!layer.isLocked && layer is Capsule3DLayer) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            val (rlx, rly) = layer.getRotateHandleLocal()
+                            val (rx, ry) = layer.mapLocalPointToCanvas(rlx, rly, w, h)
+                            val touchRadius = 28f * resources.displayMetrics.density
+                            if (hypot(event.x - rx, event.y - ry) <= touchRadius) {
+                                beginCapsuleRotateDrag(layer, event.x, event.y, w, h)
                                 return true
                             }
                         }
@@ -5597,6 +5790,42 @@ private var cylinderTiltStartRadiusY: Float = 0f
             // Posisi: horizontal tengah, vertikal sekitar 35% ke atas dari tengah.
             x = cx - contentW / 2f,
             y = cy - contentH * 0.35f
+        )
+        addLayer(layer)
+        return layer
+    }
+
+    /**
+     * Menambahkan objek Kapsul 3D default berlogo CTA "BELI SEKARANG" di tengah
+     * kanvas, sebagai [Capsule3DLayer] dengan kilau glossy + teks & ikon promosi.
+     */
+    fun addCapsule3DLayer(): Capsule3DLayer {
+        val cx = if (width > 0) width / 2f else 540f
+        val cy = if (height > 0) height / 2f else 540f
+        val base = ((minOf(width, height).takeIf { it > 0 }?.toFloat() ?: 400f) * 0.30f).coerceIn(36f, 240f)
+        val contentW = base * 3.4f
+        val contentH = base * 1.2f
+        val layer = Capsule3DLayer(
+            capsuleLength = base * 3f,
+            capsuleRadius = base * 0.42f,
+            rotationAngle = 0f,
+            mode = CapsuleMode.CTA_BUTTON,
+            material = CapsuleMaterial.GLOSSY,
+            primaryColor = 0xFFE53935.toInt(),
+            secondaryColor = 0xFFFFB300.toInt(),
+            splitRatio = 0.5f,
+            buttonText = "BELI SEKARANG",
+            textColor = Color.WHITE,
+            isTextBold = true,
+            iconType = ButtonIcon.CART,
+            iconPosition = IconPosition.LEFT_OF_TEXT,
+            specularIntensity = 0.85f,
+            floatingElevation = 15f,
+            floorShadowEnabled = true,
+            floorShadowOpacity = 0.5f,
+            // Posisi: horizontal tengah, vertikal sekitar 40% ke atas dari tengah.
+            x = cx - contentW / 2f,
+            y = cy - contentH * 0.4f
         )
         addLayer(layer)
         return layer
