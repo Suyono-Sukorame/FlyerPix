@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
+import kotlin.math.absoluteValue
 import com.flyerpix.editor.R
 import com.flyerpix.editor.canvas.model.ShapeType
 import com.flyerpix.editor.canvas.model.StrokeStyle
@@ -47,6 +48,10 @@ private val SWATCH_COLORS = listOf(
 /**
  * Compose bottom sheet untuk Shape detail controls (redesigned to match 3D Rotate pattern).
  * Linear layout dengan scrollable left column + fixed right column buttons.
+ *
+ * Urutan kontrol mengikuti alur natural:
+ * Pilih Objek ➔ Fill Color ➔ Geometry (Corner/Star/Arc) ➔ Opacity ➔ Stroke Color ➔
+ * Stroke Width ➔ Stroke Detail (Opacity/Style/Join) ➔ Effects Finishing.
  */
 @Composable
 fun ShapeDetailPage(
@@ -74,6 +79,14 @@ fun ShapeDetailPage(
     onStrokeStyleChange: (StrokeStyle) -> Unit,
     onArcStartAngleChange: (Float) -> Unit,
     onArcSweepAngleChange: (Float) -> Unit,
+    starPoints: Int,
+    starInnerRatio: Float,
+    onStarPointsChange: (Int) -> Unit,
+    onStarInnerRatioChange: (Float) -> Unit,
+    onOpenShadowEditor: () -> Unit,
+    onOpenNeonEditor: () -> Unit,
+    onOpenEmbossEditor: () -> Unit,
+    onOpenGradientEditor: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
     maxHeightPx: Int = 420  // Same as 3D Rotate
@@ -86,8 +99,11 @@ fun ShapeDetailPage(
     var strokeOpacityState by remember(strokeOpacity) { mutableStateOf(strokeOpacity) }
     var strokeColorState by remember(strokeColor) { mutableStateOf(strokeColor) }
     var strokeStyleState by remember(strokeStyle) { mutableStateOf(strokeStyle) }
+    var strokeJoinState by remember(strokeJoin) { mutableStateOf(strokeJoin) }
     var arcStartAngleState by remember(arcStartAngle) { mutableStateOf(arcStartAngle) }
     var arcSweepAngleState by remember(arcSweepAngle) { mutableStateOf(arcSweepAngle) }
+    var starPointsState by remember(starPoints) { mutableStateOf(starPoints) }
+    var starInnerRatioState by remember(starInnerRatio) { mutableStateOf(starInnerRatio) }
     var showShapePicker by remember { mutableStateOf(false) }
 
     Box(
@@ -134,7 +150,7 @@ fun ShapeDetailPage(
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // SECTION: Shape Preset
+                        // ── 1. Pilih Objek (Shape Preset) ──────────────────────
                         Text(
                             text = "Shape",
                             style = MaterialTheme.typography.caption,
@@ -173,57 +189,7 @@ fun ShapeDetailPage(
                             )
                         }
 
-                        // SECTION: Geometry
-                        Divider(color = Color(PanelDivider), thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(2.dp))
-
-                        ShapeControlRow(
-                            label = "Corner Radius",
-                            value = cornerRadiusState,
-                            onValueChange = { new ->
-                                cornerRadiusState = new
-                                onCornerRadiusChange(new)
-                            },
-                            valueRange = 0f..100f,
-                            suffix = " px"
-                        )
-
-                        ShapeControlRow(
-                            label = "Opacity",
-                            value = opacityState,
-                            onValueChange = { new ->
-                                opacityState = new
-                                onOpacityChange(new)
-                            },
-                            valueRange = 0f..100f,
-                            suffix = "%"
-                        )
-
-                        if (shapeTypeState == ShapeType.ARC) {
-                            ShapeControlRow(
-                                label = "Arc Start",
-                                value = arcStartAngleState,
-                                onValueChange = { new ->
-                                    arcStartAngleState = new
-                                    onArcStartAngleChange(new)
-                                },
-                                valueRange = -360f..360f,
-                                suffix = "°"
-                            )
-
-                            ShapeControlRow(
-                                label = "Arc Sweep",
-                                value = arcSweepAngleState,
-                                onValueChange = { new ->
-                                    arcSweepAngleState = new
-                                    onArcSweepAngleChange(new)
-                                },
-                                valueRange = -360f..360f,
-                                suffix = "°"
-                            )
-                        }
-
-                        // SECTION: Fill Color
+                        // ── 2. Fill Color ───────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
@@ -261,108 +227,111 @@ fun ShapeDetailPage(
                                 )
                             }
 
+                            if (fillColorState !in SWATCH_COLORS) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(fillColorState))
+                                        .border(2.5.dp, PrimaryBlue, CircleShape)
+                                )
+                            }
+
                             AddColorSwatchButton(onClick = onOpenFillColorPicker, buttonSize = 32.dp)
                         }
 
-                        // SECTION: Stroke
+                        // ── 3. Geometry & Morfologi (kondisional per tipe) ─────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
-                        // NEW: Effects Quick Buttons
-                        Text(
-                            text = "Effects",
-                            style = MaterialTheme.typography.caption,
-                            color = Color(TextSecondary),
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Button(
-                                onClick = { 
-                                    // Will be handled by parent activity to show shadow editor
+                        if (shapeTypeState == ShapeType.ROUNDED_RECTANGLE || shapeTypeState == ShapeType.RECTANGLE) {
+                            ShapeControlRow(
+                                label = "Corner Radius",
+                                value = cornerRadiusState,
+                                onValueChange = { new ->
+                                    cornerRadiusState = new
+                                    onCornerRadiusChange(new)
                                 },
-                                modifier = Modifier.weight(1f).height(32.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = Color(0xFFF0F7FF),
-                                    contentColor = PrimaryBlue
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Shadow", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Button(
-                                onClick = { 
-                                    // Will be handled by parent activity to show emboss editor
+                                valueRange = 0f..100f,
+                                suffix = " px"
+                            )
+                        }
+
+                        if (shapeTypeState == ShapeType.STAR) {
+                            ShapeControlRow(
+                                label = "Star Points",
+                                value = starPointsState.toFloat(),
+                                onValueChange = { new ->
+                                    val pts = new.toInt().coerceIn(3, 12)
+                                    starPointsState = pts
+                                    onStarPointsChange(pts)
                                 },
-                                modifier = Modifier.weight(1f).height(32.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = Color(0xFFF0F7FF),
-                                    contentColor = PrimaryBlue
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Emboss", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                valueRange = 3f..12f,
+                                suffix = ""
+                            )
+
+                            ShapeControlRow(
+                                label = "Inner Ratio",
+                                value = starInnerRatioState,
+                                onValueChange = { new ->
+                                    starInnerRatioState = new
+                                    onStarInnerRatioChange(new)
+                                },
+                                valueRange = 0.1f..0.9f,
+                                suffix = ""
+                            )
+                        }
+
+                        if (shapeTypeState == ShapeType.ARC) {
+                            ShapeControlRow(
+                                label = "Arc Start",
+                                value = arcStartAngleState,
+                                onValueChange = { new ->
+                                    arcStartAngleState = new
+                                    onArcStartAngleChange(new)
+                                },
+                                valueRange = -360f..360f,
+                                suffix = "°"
+                            )
+
+                            ShapeControlRow(
+                                label = "Arc Sweep",
+                                value = arcSweepAngleState,
+                                onValueChange = { new ->
+                                    val clamped = if (new == 0f) 1f else new
+                                    arcSweepAngleState = clamped
+                                    onArcSweepAngleChange(clamped)
+                                },
+                                valueRange = -360f..360f,
+                                suffix = "°"
+                            )
+
+                            // Peringatan visual: sweep mendekati 0° membuat shape tak terlihat
+                            if (arcSweepAngleState.absoluteValue < 5f) {
+                                Text(
+                                    text = "⚠ Too small",
+                                    color = Color(0xFFFF6B00),
+                                    fontSize = 9.sp,
+                                    modifier = Modifier.padding(start = 64.dp)
+                                )
                             }
                         }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Button(
-                                onClick = { 
-                                    // Will be handled by parent activity to show gradient editor
-                                    // TODO: Open GradientEditorComposable
-                                },
-                                modifier = Modifier.weight(1f).height(32.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = Color(0xFFE8F5FF),
-                                    contentColor = Color(0xFF00A8FF)
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Gradient", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Button(
-                                onClick = { 
-                                    // Will be handled by parent activity to show neon editor
-                                },
-                                modifier = Modifier.weight(1f).height(32.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = Color(0xFFF0F7FF),
-                                    contentColor = PrimaryBlue
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Neon", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-
+                        // ── 4. Opacity ──────────────────────────────────────────
                         ShapeControlRow(
-                            label = "Stroke Width",
-                            value = strokeWidthState,
+                            label = "Opacity",
+                            value = opacityState,
                             onValueChange = { new ->
-                                strokeWidthState = new
-                                onStrokeWidthChange(new)
-                            },
-                            valueRange = 0f..50f,
-                            suffix = " px"
-                        )
-
-                        ShapeControlRow(
-                            label = "Stroke Opacity",
-                            value = strokeOpacityState,
-                            onValueChange = { new ->
-                                strokeOpacityState = new
-                                onStrokeOpacityChange(new)
+                                opacityState = new
+                                onOpacityChange(new)
                             },
                             valueRange = 0f..100f,
                             suffix = "%"
                         )
+
+                        // ── 5. Stroke ───────────────────────────────────────────
+                        Divider(color = Color(PanelDivider), thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
                             text = "Stroke Color",
@@ -398,52 +367,222 @@ fun ShapeDetailPage(
                                 )
                             }
 
+                            if (strokeColorState !in SWATCH_COLORS) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(strokeColorState))
+                                        .border(2.5.dp, PrimaryBlue, CircleShape)
+                                )
+                            }
+
                             AddColorSwatchButton(onClick = onOpenStrokeColorPicker, buttonSize = 32.dp)
                         }
 
+                        ShapeControlRow(
+                            label = "Stroke Width",
+                            value = strokeWidthState,
+                            onValueChange = { new ->
+                                strokeWidthState = new
+                                onStrokeWidthChange(new)
+                            },
+                            valueRange = 0f..50f,
+                            suffix = " px"
+                        )
+
+                        // Smart Disclosure: detail stroke hanya relevan jika ada garis tepi
+                        if (strokeWidthState > 0f) {
+                            ShapeControlRow(
+                                label = "Stroke Opacity",
+                                value = strokeOpacityState,
+                                onValueChange = { new ->
+                                    strokeOpacityState = new
+                                    onStrokeOpacityChange(new)
+                                },
+                                valueRange = 0f..100f,
+                                suffix = "%"
+                            )
+
+                            Text(
+                                text = "Stroke Style",
+                                style = MaterialTheme.typography.caption,
+                                color = Color(TextSecondary),
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf(
+                                    StrokeStyle.SOLID to "Solid",
+                                    StrokeStyle.DASHED to "Dash",
+                                    StrokeStyle.DOTTED to "Dot"
+                                ).forEach { (style, label) ->
+                                    val isSelected = strokeStyleState == style
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) Color(0xFFE8F0FE) else Color(0xFFF8FAFC))
+                                            .border(
+                                                width = if (isSelected) 1.5.dp else 1.dp,
+                                                color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .clickable {
+                                                strokeStyleState = style
+                                                onStrokeStyleChange(style)
+                                            }
+                                            .padding(vertical = 6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.caption,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) PrimaryBlue else Color(0xFF1A1A2E),
+                                            fontSize = 10.sp
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = "Stroke Join",
+                                style = MaterialTheme.typography.caption,
+                                color = Color(TextSecondary),
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf(
+                                    Paint.Join.MITER to "Miter",
+                                    Paint.Join.BEVEL to "Bevel",
+                                    Paint.Join.ROUND to "Round"
+                                ).forEach { (join, label) ->
+                                    val isSelected = strokeJoinState == join
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) Color(0xFFE8F0FE) else Color(0xFFF8FAFC))
+                                            .border(
+                                                width = if (isSelected) 1.5.dp else 1.dp,
+                                                color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .clickable {
+                                                strokeJoinState = join
+                                                onStrokeJoinChange(join)
+                                            }
+                                            .padding(vertical = 6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.caption,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) PrimaryBlue else Color(0xFF1A1A2E),
+                                            fontSize = 10.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── 6. Effects Finishing (tahap akhir) ─────────────────
+                        Divider(color = Color(PanelDivider), thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(2.dp))
+
                         Text(
-                            text = "Stroke Style",
+                            text = "Effects",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
 
+                        // Badge status: efek menyelimuti Stroke atau Fill
+                        val strokeTarget = strokeWidthState > 0f
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (strokeTarget) Color(0xFFE8F0FE) else Color(0xFFE9F7EC))
+                                .padding(horizontal = 6.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = if (strokeTarget)
+                                    "Efek diterapkan pada Garis Tepi (Stroke)"
+                                else
+                                    "Efek diterapkan pada Bidang Isi (Fill)",
+                                style = MaterialTheme.typography.caption,
+                                fontWeight = FontWeight.Medium,
+                                color = if (strokeTarget) PrimaryBlue else Color(0xFF2E7D32),
+                                fontSize = 9.sp
+                            )
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            listOf(
-                                StrokeStyle.SOLID to "Solid",
-                                StrokeStyle.DASHED to "Dash",
-                                StrokeStyle.DOTTED to "Dot"
-                            ).forEach { (style, label) ->
-                                val isSelected = strokeStyleState == style
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSelected) Color(0xFFE8F0FE) else Color(0xFFF8FAFC))
-                                        .border(
-                                            width = if (isSelected) 1.5.dp else 1.dp,
-                                            color = if (isSelected) PrimaryBlue else Color(0xFFE2E8F0),
-                                            shape = RoundedCornerShape(8.dp)
-                                        )
-                                        .clickable { 
-                                            strokeStyleState = style
-                                            onStrokeStyleChange(style) 
-                                        }
-                                        .padding(vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.caption,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) PrimaryBlue else Color(0xFF1A1A2E),
-                                        fontSize = 10.sp
-                                    )
-                                }
+                            Button(
+                                onClick = onOpenShadowEditor,
+                                modifier = Modifier.weight(1f).height(32.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFFF0F7FF),
+                                    contentColor = PrimaryBlue
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Shadow", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = onOpenEmbossEditor,
+                                modifier = Modifier.weight(1f).height(32.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFFF0F7FF),
+                                    contentColor = PrimaryBlue
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Emboss", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Button(
+                                onClick = onOpenGradientEditor,
+                                modifier = Modifier.weight(1f).height(32.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFFE8F5FF),
+                                    contentColor = Color(0xFF00A8FF)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Gradient", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = onOpenNeonEditor,
+                                modifier = Modifier.weight(1f).height(32.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = Color(0xFFF0F7FF),
+                                    contentColor = PrimaryBlue
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Neon", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -493,24 +632,24 @@ fun ShapeDetailPage(
                                 shapeTypeState = ShapeType.RECTANGLE
                                 cornerRadiusState = 0f
                                 opacityState = 100f
-                                fillColorState = 0xFFFFFFFF.toInt()
+                                fillColorState = 0xFF1769FF.toInt()
                                 strokeWidthState = 0f
                                 strokeOpacityState = 100f
                                 strokeColorState = 0xFF000000.toInt()
                                 strokeStyleState = StrokeStyle.SOLID
                                 arcStartAngleState = 0f
-                                arcSweepAngleState = 90f
+                                arcSweepAngleState = 270f
 
                                 onShapeTypeChange(ShapeType.RECTANGLE)
                                 onCornerRadiusChange(0f)
                                 onOpacityChange(100f)
-                                onFillColorChange(0xFFFFFFFF.toInt())
+                                onFillColorChange(0xFF1769FF.toInt())
                                 onStrokeWidthChange(0f)
                                 onStrokeOpacityChange(100f)
                                 onStrokeColorChange(0xFF000000.toInt())
                                 onStrokeStyleChange(StrokeStyle.SOLID)
                                 onArcStartAngleChange(0f)
-                                onArcSweepAngleChange(90f)
+                                onArcSweepAngleChange(270f)
                             },
                             modifier = Modifier.fillMaxWidth(),
                             contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)

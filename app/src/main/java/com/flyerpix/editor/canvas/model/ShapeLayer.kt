@@ -12,6 +12,7 @@ import android.graphics.Shader
 import java.util.UUID
 import com.flyerpix.editor.canvas.model.GradientColor
 import com.flyerpix.editor.canvas.model.GradientType
+import com.flyerpix.editor.canvas.renderer.EffectRenderUtils
 
 /**
  * Tipe bentuk geometris yang didukung oleh [ShapeLayer].
@@ -230,6 +231,15 @@ data class ShapeLayer(
         val (w, h) = getUnwarpedDimensions()
         if (w <= 0f || h <= 0f) return
 
+        // Sanitasi paint di AWAL: pastikan bebas dari pollution layer sebelumnya
+        // (shader/pathEffect/maskFilter/style/alpha sisa) sebelum menggambar.
+        paint.style = Paint.Style.FILL
+        paint.strokeWidth = 0f
+        paint.pathEffect = null
+        paint.shader = null
+        paint.maskFilter = null
+        paint.setShadowLayer(0f, 0f, 0f, 0)
+
         val saveCount = canvas.save()
 
         // 1. Transformasi layer luar (Posisi, Skala, Rotasi berpusat pada titik tengah)
@@ -245,115 +255,245 @@ data class ShapeLayer(
             canvas.concat(pMat)
         }
 
-        // 3. Gambar bentuk dengan drop shadow, neon, emboss, atau inner shadow
+        // 3. Bentuk geometri & efek
         val path = buildPath()
-
-        // Apply gradient shader if available (EXCEPT when effects are enabled)
+        val rect = RectF(0f, 0f, width, height)
         val currentGradient = gradient
-        val hasEffect = shadowEnabled || neonEnabled || embossEnabled || extrudeEnabled || innerShadowEnabled
-        if (currentGradient != null && !hasEffect) {
-            paint.shader = currentGradient.createShader(RectF(0f, 0f, width, height))
-            paint.color = fillColor
-        } else {
-            // Solid color rendering (for effects compatibility)
-            paint.color = fillColor
-            paint.shader = null
+        val hasStroke = strokeWidth > 0f
+
+        // pathEffect untuk stroke (SOLID / DASHED / DOTTED)
+        val currentPathEffect = when (strokeStyle) {
+            StrokeStyle.SOLID -> null
+            StrokeStyle.DASHED -> DashPathEffect(floatArrayOf(strokeWidth * 3f, strokeWidth * 2f), 0f)
+            StrokeStyle.DOTTED -> DashPathEffect(floatArrayOf(strokeWidth, strokeWidth * 2f), 0f)
         }
 
-        if (extrudeEnabled && extrudeDepth > 0) {
-            paint.style = Paint.Style.FILL
+        if (hasStroke) {
+            // ───────────────────────────────────────────────────────────────
+            // MODE STROKE-TARGETED: Fill digambar solid (polos, tanpa efek luar
+            // agar kontur tegas), sedangkan Stroke menjadi target utama efek.
+            // ───────────────────────────────────────────────────────────────
+            paint.shader = null
+            paint.color = fillColor
             paint.alpha = opacity.coerceIn(0, 255)
+            paint.style = Paint.Style.FILL
             paint.strokeWidth = 0f
-
-            // 3D Extrusion (FIRST — provides depth base)
-            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.draw3DExtrusionEffect(
-                canvas,
-                this,
-                width,
-                height,
-                fillColor,
-                drawContent = { c, p ->
-                    p.style = Paint.Style.FILL
-                    if (shapeType == ShapeType.ARC) {
-                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
-                    } else {
-                        c.drawPath(path, p)
-                    }
-                }
-            )
-        } else if (shadowEnabled && shadowRadius > 0f) {
-            // Handle drop shadow (via generic effect renderer)
-            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
-                canvas,
-                this,
-                width,
-                height,
-                shadowColor,
-                drawContent = { c, p ->
-                    p.style = Paint.Style.FILL
-                    p.color = fillColor
-                    p.alpha = opacity.coerceIn(0, 255)
-                    if (shapeType == ShapeType.ARC) {
-                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
-                    } else {
-                        c.drawPath(path, p)
-                    }
-                }
-            )
-        } else if (neonEnabled) {
-            // Neon effect (no shadow)
-            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
-                canvas,
-                this,
-                width,
-                height,
-                drawContent = { c, p ->
-                    p.style = Paint.Style.FILL
-                    p.color = neonColor
-                    p.alpha = opacity.coerceIn(0, 255)
-                    if (shapeType == ShapeType.ARC) {
-                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
-                    } else {
-                        c.drawPath(path, p)
-                    }
-                }
-            )
-        } else if (embossEnabled) {
-            // Emboss effect (no shadow)
-            com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
-                canvas,
-                this,
-                width,
-                height,
-                fillColor,
-                drawContentBase = { c, p ->
-                    p.style = Paint.Style.FILL
-                    p.color = fillColor
-                    p.alpha = opacity.coerceIn(0, 255)
-                    if (shapeType == ShapeType.ARC) {
-                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
-                    } else {
-                        c.drawPath(path, p)
-                    }
-                },
-                drawContentEmboss = { c, p ->
-                    if (shapeType == ShapeType.ARC) {
-                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
-                    } else {
-                        c.drawPath(path, p)
-                    }
-                }
-            )
-        } else {
-            // Normal rendering tanpa extrude/shadow/neon/emboss
             if (shapeType == ShapeType.ARC) {
-                canvas.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, paint)
+                canvas.drawArc(rect, arcStartAngle, arcSweepAngle, true, paint)
             } else {
                 canvas.drawPath(path, paint)
             }
+
+            // Helper menggambar stroke: geometry only (warna/alpha ditentukan
+            // oleh Paint yang disuntikkan effect renderer).
+            val drawStroke: (Canvas, Paint) -> Unit = { c, p ->
+                p.style = Paint.Style.STROKE
+                p.strokeWidth = strokeWidth
+                p.strokeJoin = strokeJoin
+                p.pathEffect = currentPathEffect
+                if (shapeType == ShapeType.ARC) {
+                    c.drawArc(rect, arcStartAngle, arcSweepAngle, false, p)
+                } else {
+                    c.drawPath(path, p)
+                }
+            }
+
+            var strokeEffectDrawn = false
+
+            if (extrudeEnabled && extrudeDepth > 0) {
+                EffectRenderUtils.draw3DExtrusionEffect(canvas, this, width, height, strokeColor, drawStroke)
+                strokeEffectDrawn = true
+            } else if (shadowEnabled && shadowRadius > 0f) {
+                EffectRenderUtils.drawDropShadowEffect(
+                    canvas,
+                    this,
+                    width,
+                    height,
+                    shadowColor,
+                    drawContent = { c, p ->
+                        // Siluet bayangan + crisp stroke memakai warna stroke
+                        // (konsisten dengan pola fill legacy).
+                        p.style = Paint.Style.STROKE
+                        p.strokeWidth = strokeWidth
+                        p.strokeJoin = strokeJoin
+                        p.pathEffect = currentPathEffect
+                        p.color = strokeColor
+                        p.alpha = strokeOpacity.coerceIn(0, 255)
+                        if (shapeType == ShapeType.ARC) {
+                            c.drawArc(rect, arcStartAngle, arcSweepAngle, false, p)
+                        } else {
+                            c.drawPath(path, p)
+                        }
+                    }
+                )
+                strokeEffectDrawn = true
+            } else if (neonEnabled) {
+                // Warna neon di-set oleh renderer (neonColor), drawStroke tidak
+                // menimpanya sehingga glow memakai neonColor yang sebenarnya.
+                EffectRenderUtils.drawNeonEffect(canvas, this, width, height, drawStroke)
+                strokeEffectDrawn = true
+            } else if (embossEnabled) {
+                EffectRenderUtils.drawEmbossEffect(
+                    canvas,
+                    this,
+                    width,
+                    height,
+                    strokeColor,
+                    drawContentBase = drawStroke,
+                    drawContentEmboss = drawStroke
+                )
+                strokeEffectDrawn = true
+            } else if (gradientEnabled && currentGradient != null) {
+                // Gradient diterapkan pada sapuan stroke.
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = strokeWidth
+                paint.strokeJoin = strokeJoin
+                paint.pathEffect = currentPathEffect
+                paint.shader = currentGradient.createShader(rect)
+                paint.color = strokeColor
+                paint.alpha = strokeOpacity.coerceIn(0, 255)
+                if (shapeType == ShapeType.ARC) {
+                    canvas.drawArc(rect, arcStartAngle, arcSweepAngle, false, paint)
+                } else {
+                    canvas.drawPath(path, paint)
+                }
+                paint.shader = null
+                strokeEffectDrawn = true
+            }
+
+            if (!strokeEffectDrawn) {
+                // Stroke polos (tanpa efek).
+                paint.shader = null
+                paint.style = Paint.Style.STROKE
+                paint.color = strokeColor
+                paint.alpha = strokeOpacity.coerceIn(0, 255)
+                paint.strokeWidth = strokeWidth
+                paint.strokeJoin = strokeJoin
+                paint.pathEffect = currentPathEffect
+                if (shapeType == ShapeType.ARC) {
+                    canvas.drawArc(rect, arcStartAngle, arcSweepAngle, false, paint)
+                } else {
+                    canvas.drawPath(path, paint)
+                }
+            }
+        } else {
+            // ───────────────────────────────────────────────────────────────
+            // MODE FILL-TARGETED (perilaku lama): efek diterapkan pada bidang isi.
+            // ───────────────────────────────────────────────────────────────
+            val hasEffect = shadowEnabled || neonEnabled || embossEnabled || extrudeEnabled || innerShadowEnabled
+
+            // Apply gradient shader if available (EXCEPT when effects are enabled)
+            if (currentGradient != null && !hasEffect) {
+                paint.shader = currentGradient.createShader(rect)
+                paint.color = fillColor
+                paint.alpha = opacity.coerceIn(0, 255)
+            } else {
+                // Solid color rendering (for effects compatibility)
+                paint.color = fillColor
+                paint.shader = null
+                paint.alpha = opacity.coerceIn(0, 255)
+            }
+
+            if (extrudeEnabled && extrudeDepth > 0) {
+                paint.style = Paint.Style.FILL
+                paint.alpha = opacity.coerceIn(0, 255)
+                paint.strokeWidth = 0f
+
+                // 3D Extrusion (FIRST — provides depth base)
+                com.flyerpix.editor.canvas.renderer.EffectRenderUtils.draw3DExtrusionEffect(
+                    canvas,
+                    this,
+                    width,
+                    height,
+                    fillColor,
+                    drawContent = { c, p ->
+                        p.style = Paint.Style.FILL
+                        if (shapeType == ShapeType.ARC) {
+                            c.drawArc(rect, arcStartAngle, arcSweepAngle, true, p)
+                        } else {
+                            c.drawPath(path, p)
+                        }
+                    }
+                )
+            } else if (shadowEnabled && shadowRadius > 0f) {
+                // Handle drop shadow (via generic effect renderer)
+                com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawDropShadowEffect(
+                    canvas,
+                    this,
+                    width,
+                    height,
+                    shadowColor,
+                    drawContent = { c, p ->
+                        p.style = Paint.Style.FILL
+                        p.color = fillColor
+                        p.alpha = opacity.coerceIn(0, 255)
+                        if (shapeType == ShapeType.ARC) {
+                            c.drawArc(rect, arcStartAngle, arcSweepAngle, true, p)
+                        } else {
+                            c.drawPath(path, p)
+                        }
+                    }
+                )
+            } else if (neonEnabled) {
+                // Neon effect (no shadow)
+                com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawNeonEffect(
+                    canvas,
+                    this,
+                    width,
+                    height,
+                    drawContent = { c, p ->
+                        p.style = Paint.Style.FILL
+                        p.color = neonColor
+                        p.alpha = opacity.coerceIn(0, 255)
+                        if (shapeType == ShapeType.ARC) {
+                            c.drawArc(rect, arcStartAngle, arcSweepAngle, true, p)
+                        } else {
+                            c.drawPath(path, p)
+                        }
+                    }
+                )
+            } else if (embossEnabled) {
+                // Emboss effect (no shadow)
+                com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawEmbossEffect(
+                    canvas,
+                    this,
+                    width,
+                    height,
+                    fillColor,
+                    drawContentBase = { c, p ->
+                        p.style = Paint.Style.FILL
+                        p.color = fillColor
+                        p.alpha = opacity.coerceIn(0, 255)
+                        if (shapeType == ShapeType.ARC) {
+                            c.drawArc(rect, arcStartAngle, arcSweepAngle, true, p)
+                        } else {
+                            c.drawPath(path, p)
+                        }
+                    },
+                    drawContentEmboss = { c, p ->
+                        if (shapeType == ShapeType.ARC) {
+                            c.drawArc(rect, arcStartAngle, arcSweepAngle, true, p)
+                        } else {
+                            c.drawPath(path, p)
+                        }
+                    }
+                )
+            } else {
+                // Normal rendering tanpa extrude/shadow/neon/emboss.
+                // paint.alpha di-set ulang agar opacity slider merespon pada
+                // bentuk polos (sebelumnya leak: memakai nilai sisa Paint bersama).
+                paint.style = Paint.Style.FILL
+                paint.strokeWidth = 0f
+                paint.alpha = opacity.coerceIn(0, 255)
+                if (shapeType == ShapeType.ARC) {
+                    canvas.drawArc(rect, arcStartAngle, arcSweepAngle, true, paint)
+                } else {
+                    canvas.drawPath(path, paint)
+                }
+            }
         }
 
-        // Handle inner shadow (applies after main fill)
+        // Handle inner shadow (applies after main fill, both modes)
         if (innerShadowEnabled && innerShadowRadius > 0f) {
             com.flyerpix.editor.canvas.renderer.EffectRenderUtils.drawInnerShadowEffect(
                 canvas,
@@ -364,7 +504,7 @@ data class ShapeLayer(
                 drawContent = { c, p ->
                     p.style = Paint.Style.FILL
                     if (shapeType == ShapeType.ARC) {
-                        c.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, true, p)
+                        c.drawArc(rect, arcStartAngle, arcSweepAngle, true, p)
                     } else {
                         c.drawPath(path, p)
                     }
@@ -372,30 +512,14 @@ data class ShapeLayer(
             )
         }
 
-        // Reset shader before stroke rendering
-        paint.shader = null
-
-        // Stroke
-        if (strokeWidth > 0f) {
-            paint.style = Paint.Style.STROKE
-            paint.color = strokeColor
-            paint.alpha = strokeOpacity.coerceIn(0, 255) // Gunakan stroke opacity terpisah
-            paint.strokeWidth = strokeWidth
-            paint.strokeJoin = strokeJoin // Apply join style
-            paint.pathEffect = when (strokeStyle) {
-                StrokeStyle.SOLID -> null
-                StrokeStyle.DASHED -> DashPathEffect(floatArrayOf(strokeWidth * 3f, strokeWidth * 2f), 0f)
-                StrokeStyle.DOTTED -> DashPathEffect(floatArrayOf(strokeWidth, strokeWidth * 2f), 0f)
-            }
-            if (shapeType == ShapeType.ARC) {
-                canvas.drawArc(RectF(0f, 0f, width, height), arcStartAngle, arcSweepAngle, false, paint)
-            } else {
-                canvas.drawPath(path, paint)
-            }
-        }
-
+        // Reset shader & pathEffect milik layer ini (jangan bocor ke layer lain)
         paint.pathEffect = null
         paint.shader = null
+
+        // ── Sanitasi paint bersama ke state default dijaga dari pollution ──
+        paint.style = Paint.Style.FILL
+        paint.strokeWidth = 0f
+        paint.maskFilter = null
 
         canvas.restoreToCount(saveCount)
     }

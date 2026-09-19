@@ -818,6 +818,12 @@ class PixelCanvasView @JvmOverloads constructor(
         canvas.rotate(layer.rotation, cx, cy)
     }
 
+    /** Sanitasi paint bersama agar tidak terjadi shared-Paint pollution antar layer. */
+    private fun sanitizeSharedPaint() {
+        renderPaint.style = android.graphics.Paint.Style.FILL
+        renderPaint.strokeWidth = 0f
+    }
+
     /** Merender seluruh layer terlihat secara berurutan sesuai z-index. */
     private fun drawVisibleLayers(canvas: Canvas) {
         for (i in 0 until layers.size) {
@@ -837,7 +843,9 @@ class PixelCanvasView @JvmOverloads constructor(
                     renderPaint.applyLayerBlend(layer)
                     val saveCount = canvas.saveLayer(null, renderPaint)
                     if (clipPath != null) canvas.clipPath(clipPath)
+                    sanitizeSharedPaint()
                     layer.draw(canvas, renderPaint)
+                    sanitizeSharedPaint()
                     // Apply mask DST_IN
                     if (hasMask && layer.maskBitmap != null) {
                         val maskPaint = android.graphics.Paint().apply {
@@ -858,7 +866,9 @@ class PixelCanvasView @JvmOverloads constructor(
                     renderPaint.clearBlend()
                     val saveCount = canvas.save()
                     if (clipPath != null) canvas.clipPath(clipPath)
+                    sanitizeSharedPaint()
                     layer.draw(canvas, renderPaint)
+                    sanitizeSharedPaint()
                     canvas.restoreToCount(saveCount)
                 }
             }
@@ -2098,13 +2108,17 @@ class PixelCanvasView @JvmOverloads constructor(
                 if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
                     renderPaint.applyLayerBlend(layer)
                     val saveCount = offscreen.saveLayer(null, renderPaint)
+                    sanitizeSharedPaint()
                     layer.draw(offscreen, renderPaint)
+                    sanitizeSharedPaint()
                     offscreen.restoreToCount(saveCount)
                     renderPaint.clearBlend()
                 } else {
                     renderPaint.clearBlend()
                     val saveCount = offscreen.save()
+                    sanitizeSharedPaint()
                     layer.draw(offscreen, renderPaint)
+                    sanitizeSharedPaint()
                     offscreen.restoreToCount(saveCount)
                 }
             }
@@ -2502,7 +2516,11 @@ class PixelCanvasView @JvmOverloads constructor(
         off.translate(-vp.left, -vp.top)
         drawBackgroundOnCanvas(off, RectF(0f, 0f, w.toFloat(), h.toFloat()))
         for (layer in layers) {
-            if (layer.isVisible) layer.draw(off, renderPaint)
+            if (layer.isVisible) {
+                sanitizeSharedPaint()
+                layer.draw(off, renderPaint)
+                sanitizeSharedPaint()
+            }
         }
     }
 
@@ -4683,13 +4701,17 @@ class PixelCanvasView @JvmOverloads constructor(
                 if (layer.blendMode != PorterDuff.Mode.SRC_OVER || layer.blendExtra != null) {
                     renderPaint.applyLayerBlend(layer)
                     val layerSave = offscreenCanvas.saveLayer(null, renderPaint)
+                    sanitizeSharedPaint()
                     layer.draw(offscreenCanvas, renderPaint)
+                    sanitizeSharedPaint()
                     offscreenCanvas.restoreToCount(layerSave)
                     renderPaint.clearBlend()
                 } else {
                     renderPaint.clearBlend()
                     val layerSave = offscreenCanvas.save()
+                    sanitizeSharedPaint()
                     layer.draw(offscreenCanvas, renderPaint)
+                    sanitizeSharedPaint()
                     offscreenCanvas.restoreToCount(layerSave)
                 }
             }

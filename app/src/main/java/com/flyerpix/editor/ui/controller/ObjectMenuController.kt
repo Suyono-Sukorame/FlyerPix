@@ -89,6 +89,20 @@ class ObjectMenuController(
     private var shapeSnapshotArcStartAngle: Float = 0f
     private var shapeSnapshotArcSweepAngle: Float = 270f
 
+    // Snapshot tambahan untuk rollback Cancel dari effect sheets
+    private var shapeSnapshotShadowEnabled: Boolean = false
+    private var shapeSnapshotShadowColor: Int = 0xFF000000.toInt()
+    private var shapeSnapshotShadowRadius: Float = 8f
+    private var shapeSnapshotShadowOpacity: Float = 0.6f
+    private var shapeSnapshotShadowDx: Float = 4f
+    private var shapeSnapshotShadowDy: Float = 4f
+    private var shapeSnapshotNeonEnabled: Boolean = false
+    private var shapeSnapshotNeonColor: Int = 0xFF00BFFF.toInt()
+    private var shapeSnapshotNeonRadius: Float = 10f
+    private var shapeSnapshotNeonIntensity: Float = 1f
+    private var shapeSnapshotEmbossEnabled: Boolean = false
+    private var shapeSnapshotGradientEnabled: Boolean = false
+
     private var draftArrow: ArrowLayer? = null
     private var draftPen: PenLayer? = null
     private val bezierFlow = BezierInputFlow()
@@ -127,8 +141,8 @@ class ObjectMenuController(
             if (alignedH > 0) return alignedH
         }
         // Fallback if home panel not yet measured
-        val floorPx = (107 * density).toInt()
-        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.12f).toInt()
+        val floorPx = (300 * density).toInt()
+        val targetPx = (activity.resources.displayMetrics.heightPixels * 0.40f).toInt()
         return targetPx.coerceAtLeast(floorPx)
     }
 
@@ -362,7 +376,8 @@ class ObjectMenuController(
     private fun setupColorResultListeners() {
         fragmentManager.setFragmentResultListener(SHAPE_FILL_RESULT_KEY, activity) { _, bundle ->
             val color = bundleSolidColor(bundle, Color.WHITE)
-            draftShape?.let {
+            val target = (canvas.selectedLayer as? ShapeLayer) ?: draftShape
+            target?.let {
                 it.fillColor = color
                 canvas.invalidate()
                 showComposeShapeSheet(it)
@@ -370,7 +385,8 @@ class ObjectMenuController(
         }
         fragmentManager.setFragmentResultListener(SHAPE_STROKE_RESULT_KEY, activity) { _, bundle ->
             val color = bundleSolidColor(bundle, Color.BLACK)
-            draftShape?.let {
+            val target = (canvas.selectedLayer as? ShapeLayer) ?: draftShape
+            target?.let {
                 it.strokeColor = color
                 canvas.invalidate()
                 showComposeShapeSheet(it)
@@ -474,6 +490,18 @@ class ObjectMenuController(
         shapeSnapshotStrokeStyle = shape.strokeStyle
         shapeSnapshotArcStartAngle = shape.arcStartAngle
         shapeSnapshotArcSweepAngle = shape.arcSweepAngle
+        shapeSnapshotShadowEnabled = shape.shadowEnabled
+        shapeSnapshotShadowColor   = shape.shadowColor
+        shapeSnapshotShadowRadius  = shape.shadowRadius
+        shapeSnapshotShadowOpacity = shape.shadowOpacity
+        shapeSnapshotShadowDx      = shape.shadowDx
+        shapeSnapshotShadowDy      = shape.shadowDy
+        shapeSnapshotNeonEnabled   = shape.neonEnabled
+        shapeSnapshotNeonColor     = shape.neonColor
+        shapeSnapshotNeonRadius    = shape.neonRadius
+        shapeSnapshotNeonIntensity = shape.neonIntensity
+        shapeSnapshotEmbossEnabled = shape.embossEnabled
+        shapeSnapshotGradientEnabled = shape.gradientEnabled
     }
 
     /**
@@ -496,11 +524,16 @@ class ObjectMenuController(
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { canvas.invalidate() }
 
-        if (draftShape == null) {
-            draftShape = shape
+        // Draft selalu mengikat layer yang sedang aktif diedit (bukan terpatok
+        // layer pertama). Snapshot diperbarui tiap kali detail dibuka agar
+        // rollback Cancel akurat. isNewShape hanya benar untuk shape yang baru
+        // dibuat studio — editing layer lama selalu reset ke false.
+        val switchingShape = draftShape !== shape
+        draftShape = shape
+        if (switchingShape) {
             isNewShape = false
-            backupShapeSnapshot(shape)
         }
+        backupShapeSnapshot(shape)
 
         host.setContent {
             var currentType by remember { mutableStateOf(shape.shapeType) }
@@ -514,6 +547,8 @@ class ObjectMenuController(
             var currentStrokeStyle by remember { mutableStateOf(shape.strokeStyle) }
             var currentArcStartAngle by remember { mutableStateOf(shape.arcStartAngle) }
             var currentArcSweepAngle by remember { mutableStateOf(shape.arcSweepAngle) }
+            var currentStarPoints by remember { mutableStateOf(shape.starPoints) }
+            var currentStarInnerRatio by remember { mutableStateOf(shape.starInnerRadiusRatio) }
 
             ShapeDetailPage(
                 shapeType = currentType,
@@ -527,6 +562,8 @@ class ObjectMenuController(
                 strokeStyle = currentStrokeStyle,
                 arcStartAngle = currentArcStartAngle,
                 arcSweepAngle = currentArcSweepAngle,
+                starPoints = currentStarPoints,
+                starInnerRatio = currentStarInnerRatio,
                 onShapeTypeChange = { type ->
                     currentType = type
                     shape.shapeType = type
@@ -623,10 +660,25 @@ class ObjectMenuController(
                     shape.arcSweepAngle = angle
                     canvas.invalidate()
                 },
+                onStarPointsChange = { pts ->
+                    currentStarPoints = pts
+                    shape.starPoints = pts
+                    canvas.invalidate()
+                },
+                onStarInnerRatioChange = { ratio ->
+                    currentStarInnerRatio = ratio
+                    shape.starInnerRadiusRatio = ratio
+                    canvas.invalidate()
+                },
+                onOpenShadowEditor = { showShapeShadowSheet(shape) },
+                onOpenNeonEditor = { showShapeNeonSheet(shape) },
+                onOpenEmbossEditor = { showShapeEmbossSheet(shape) },
+                onOpenGradientEditor = { showShapeGradientSheet(shape) },
                 onApply = {
                     canvas.runRecordedAction(if (isNewShape) "Add Shape" else "Modify Shape") {}
                     showSnackbar("Shape saved")
                     draftShape = null
+                    isNewShape = false
                     deselect(restoreStrip = true)
                 },
                 onCancel = {
@@ -645,6 +697,18 @@ class ObjectMenuController(
                         shape.strokeStyle = shapeSnapshotStrokeStyle
                         shape.arcStartAngle = shapeSnapshotArcStartAngle
                         shape.arcSweepAngle = shapeSnapshotArcSweepAngle
+                        shape.shadowEnabled = shapeSnapshotShadowEnabled
+                        shape.shadowColor = shapeSnapshotShadowColor
+                        shape.shadowRadius = shapeSnapshotShadowRadius
+                        shape.shadowOpacity = shapeSnapshotShadowOpacity
+                        shape.shadowDx = shapeSnapshotShadowDx
+                        shape.shadowDy = shapeSnapshotShadowDy
+                        shape.neonEnabled = shapeSnapshotNeonEnabled
+                        shape.neonColor = shapeSnapshotNeonColor
+                        shape.neonRadius = shapeSnapshotNeonRadius
+                        shape.neonIntensity = shapeSnapshotNeonIntensity
+                        shape.embossEnabled = shapeSnapshotEmbossEnabled
+                        shape.gradientEnabled = shapeSnapshotGradientEnabled
                     }
                     canvas.invalidate()
                     draftShape = null
@@ -653,6 +717,339 @@ class ObjectMenuController(
                 maxHeightPx = sheetMaxH
             )
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2.1 Effect Sheets dari Shape Panel (Shadow / Neon / Emboss / Gradient)
+    //     Alur linear: sheet efek menggantikan Shape panel. Apply/Cancel selalu
+    //     kembali ke Shape panel. Cancel melakukan rollback snapshot efek.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun showShapeShadowSheet(shape: ShapeLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            ShadowDetailPage(
+                title = "Shape Shadow",
+                enabled = shape.shadowEnabled,
+                color = shape.shadowColor,
+                radius = shape.shadowRadius.coerceIn(0f, 40f),
+                opacityPct = (shape.shadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = shape.shadowDx.coerceIn(-30f, 30f),
+                dy = shape.shadowDy.coerceIn(-30f, 30f),
+                onEnabledChange = { en ->
+                    shape.shadowEnabled = en
+                    canvas.invalidate()
+                },
+                onColorChange = { c ->
+                    shape.shadowColor = c
+                    canvas.invalidate()
+                },
+                onColorPickRequested = {
+                    val original = shape.shadowColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = shape.shadowColor,
+                        resultKey = "shape_shadow_color_key"
+                    )
+                    dialog.onColorChanged = { c ->
+                        shape.shadowColor = c
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        shape.shadowColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "ShapeShadowColorPicker")
+                },
+                onRadiusChange = { r ->
+                    shape.shadowRadius = r
+                    canvas.invalidate()
+                },
+                onOpacityChange = { opPct ->
+                    shape.shadowOpacity = (opPct / 100f).coerceIn(0f, 1f)
+                    canvas.invalidate()
+                },
+                onDxChange = { x ->
+                    shape.shadowDx = x
+                    canvas.invalidate()
+                },
+                onDyChange = { y ->
+                    shape.shadowDy = y
+                    canvas.invalidate()
+                },
+                onReset = {
+                    shape.shadowEnabled = true
+                    shape.shadowColor = 0xFF000000.toInt()
+                    shape.shadowRadius = 10f
+                    shape.shadowOpacity = 0.6f
+                    shape.shadowDx = 0f
+                    shape.shadowDy = 0f
+                    canvas.invalidate()
+                },
+                onApply = { showComposeShapeSheet(shape) },
+                onCancel = {
+                    shape.shadowEnabled = shapeSnapshotShadowEnabled
+                    shape.shadowColor = shapeSnapshotShadowColor
+                    shape.shadowRadius = shapeSnapshotShadowRadius
+                    shape.shadowOpacity = shapeSnapshotShadowOpacity
+                    shape.shadowDx = shapeSnapshotShadowDx
+                    shape.shadowDy = shapeSnapshotShadowDy
+                    canvas.invalidate()
+                    showComposeShapeSheet(shape)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showShapeNeonSheet(shape: ShapeLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            NeonDetailPage(
+                enabled = shape.neonEnabled,
+                color = shape.neonColor,
+                radius = shape.neonRadius.coerceIn(1f, 40f),
+                intensity = shape.neonIntensity,
+                coreEnabled = shape.neonCoreEnabled,
+                onEnabledChange = { en ->
+                    shape.neonEnabled = en
+                    canvas.invalidate()
+                },
+                onColorChange = { c ->
+                    shape.neonColor = c
+                    canvas.invalidate()
+                },
+                onColorPickRequested = {
+                    val original = shape.neonColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = shape.neonColor,
+                        resultKey = "shape_neon_color_key"
+                    )
+                    dialog.onColorChanged = { c ->
+                        shape.neonColor = c
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        shape.neonColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "ShapeNeonColorPicker")
+                },
+                onRadiusChange = { r ->
+                    shape.neonRadius = r
+                    canvas.invalidate()
+                },
+                onIntensityChange = { i ->
+                    shape.neonIntensity = i
+                    canvas.invalidate()
+                },
+                onCoreEnabledChange = { en ->
+                    shape.neonCoreEnabled = en
+                    canvas.invalidate()
+                },
+                onReset = {
+                    shape.neonEnabled = true
+                    shape.neonColor = 0xFF00E5FF.toInt()
+                    shape.neonRadius = 12f
+                    shape.neonIntensity = 1f
+                    shape.neonCoreEnabled = true
+                    canvas.invalidate()
+                },
+                onApply = { showComposeShapeSheet(shape) },
+                onCancel = {
+                    shape.neonEnabled = shapeSnapshotNeonEnabled
+                    shape.neonColor = shapeSnapshotNeonColor
+                    shape.neonRadius = shapeSnapshotNeonRadius
+                    shape.neonIntensity = shapeSnapshotNeonIntensity
+                    canvas.invalidate()
+                    showComposeShapeSheet(shape)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showShapeEmbossSheet(shape: ShapeLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            EmbossDetailPage(
+                enabled = shape.embossEnabled,
+                lightAngle = shape.embossLightAngle,
+                intensity = shape.embossIntensity,
+                ambient = shape.embossAmbient,
+                specular = shape.embossSpecular,
+                bevel = shape.embossBevel,
+                onEnabledChange = { en ->
+                    shape.embossEnabled = en
+                    canvas.invalidate()
+                },
+                onLightAngleChange = { v ->
+                    shape.embossLightAngle = v
+                    canvas.invalidate()
+                },
+                onIntensityChange = { v ->
+                    shape.embossIntensity = v
+                    canvas.invalidate()
+                },
+                onAmbientChange = { v ->
+                    shape.embossAmbient = v
+                    canvas.invalidate()
+                },
+                onSpecularChange = { v ->
+                    shape.embossSpecular = v
+                    canvas.invalidate()
+                },
+                onBevelChange = { v ->
+                    shape.embossBevel = v
+                    canvas.invalidate()
+                },
+                onReset = {
+                    shape.embossEnabled = true
+                    shape.embossLightAngle = 90f
+                    shape.embossIntensity = 1f
+                    shape.embossAmbient = 0.5f
+                    shape.embossSpecular = 10f
+                    shape.embossBevel = 3f
+                    canvas.invalidate()
+                },
+                onApply = { showComposeShapeSheet(shape) },
+                onCancel = {
+                    shape.embossEnabled = shapeSnapshotEmbossEnabled
+                    canvas.invalidate()
+                    showComposeShapeSheet(shape)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showShapeGradientSheet(shape: ShapeLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val grad = shape.gradient
+        val c1 = grad?.colors?.getOrNull(0) ?: Color.WHITE
+        val c2 = if (grad != null && grad.colors.size > 1) grad.colors[1] else Color.BLACK
+        val fallbackType = GradientType.LINEAR
+
+        host.setContent {
+            GradientDetailPage(
+                enabled = shape.gradientEnabled,
+                color1 = c1,
+                color2 = c2,
+                type = grad?.type ?: fallbackType,
+                angle = grad?.angle ?: 0f,
+                activePreset = grad?.name?.takeIf { it.isNotBlank() },
+                onEnabledChange = { en ->
+                    if (en && shape.gradient == null) shape.gradient = defaultGradient()
+                    shape.gradientEnabled = en
+                    canvas.invalidate()
+                },
+                onTypeChange = { t ->
+                    val cur = shape.gradient ?: defaultGradient()
+                    if (cur.type != t) shape.gradient = cur.copy(type = t, name = "")
+                    shape.gradientEnabled = true
+                    canvas.invalidate()
+                },
+                onColor1Change = { c -> setGradientColorAt(shape, 0, c) },
+                onColor2Change = { c -> setGradientColorAt(shape, 1, c) },
+                onAngleChange = { a ->
+                    val cur = shape.gradient ?: defaultGradient()
+                    shape.gradient = cur.copy(angle = a, name = "")
+                    shape.gradientEnabled = true
+                    canvas.invalidate()
+                },
+                onPreset = { p ->
+                    val colors = com.flyerpix.editor.ui.compose.gradientPresetColors(p)
+                    shape.gradient = (shape.gradient ?: defaultGradient()).copy(
+                        colors = colors.copyOf(),
+                        positions = null,
+                        type = GradientType.LINEAR,
+                        angle = 0f,
+                        name = p
+                    )
+                    shape.gradientEnabled = true
+                    canvas.invalidate()
+                },
+                onReset = {
+                    shape.gradient = null
+                    shape.gradientEnabled = false
+                    canvas.invalidate()
+                },
+                onApply = { showComposeShapeSheet(shape) },
+                onCancel = {
+                    shape.gradientEnabled = shapeSnapshotGradientEnabled
+                    canvas.invalidate()
+                    showComposeShapeSheet(shape)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun defaultGradient(): GradientColor =
+        GradientColor(
+            colors = intArrayOf(Color.WHITE, Color.BLACK),
+            type = GradientType.LINEAR,
+            angle = 0f,
+            name = ""
+        )
+
+    private fun setGradientColorAt(shape: ShapeLayer, index: Int, color: Int) {
+        val cur = shape.gradient ?: defaultGradient()
+        val base = cur.colors
+        val newColors = if (base.size >= 2) base.copyOf() else IntArray(2) { i ->
+            when {
+                i == 0 && base.isNotEmpty() -> base[0]
+                i == 0 -> Color.WHITE
+                else -> Color.BLACK
+            }
+        }
+        if (index < newColors.size) newColors[index] = color
+        shape.gradient = cur.copy(colors = newColors)
+        shape.gradientEnabled = true
+        canvas.invalidate()
     }
 
     // ─────────────────────────────────────────────────────────────────────────

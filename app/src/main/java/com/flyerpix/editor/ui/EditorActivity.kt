@@ -508,7 +508,10 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         // ke menu Text tidak menimpa menu Presets saat pertama membuka aplikasi.
         pixelCanvasView.post { textPanelController.finishInitialization() }
 
-        // Shape Panel Controller - Mengelola Shape Settings panel (Initialize first)
+        // Legacy — shape editing sudah via ObjectMenuController Compose sheet.
+        // Controller tetap di-init untuk stabilitas (hideShapeSettings dipanggil saat
+        // pindah halaman), namun showShapeSettings() tidak pernah dipanggil lagi dan
+        // shapeSettingsPanel.root selalu GONE sehingga cannot muncul secara tidak sengaja.
         shapePanelController = ShapePanelController(
             this,
             binding,
@@ -516,6 +519,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             { showSnackbar(it) },
             onCanvasChanged = { fitCanvasToOpenPanels() }
         )
+        binding.shapeSettingsPanel.root.visibility = View.GONE
 
         // Layer Panel Controller
         layerPanel = LayerPanelController(
