@@ -48,6 +48,7 @@ import com.flyerpix.editor.canvas.history.SnapshotCommand
 import com.flyerpix.editor.canvas.model.AnchorPoint
 import com.flyerpix.editor.canvas.model.AnchorType
 import com.flyerpix.editor.canvas.model.ArrowLayer
+import com.flyerpix.editor.canvas.model.Box3DLayer
 import com.flyerpix.editor.canvas.model.CanvasBackground
 import com.flyerpix.editor.canvas.model.CanvasBackgroundMode
 import com.flyerpix.editor.canvas.model.HitAnchor
@@ -1039,7 +1040,9 @@ class PixelCanvasView @JvmOverloads constructor(
         DRAGGING_LAYER,
         DRAGGING_RESIZE_HANDLE,
         DRAGGING_ROTATE_HANDLE,
-        DRAGGING_PERSPECTIVE_HANDLE
+        DRAGGING_PERSPECTIVE_HANDLE,
+        DRAGGING_BOX3D_DEPTH_HANDLE,
+        DRAGGING_BOX3D_VP_HANDLE
     }
 
     var currentTouchState: TouchState = TouchState.IDLE
@@ -1060,6 +1063,12 @@ class PixelCanvasView @JvmOverloads constructor(
     private var resizeAnchorFracY: Float = 0f
     private var resizeStartWrapWidth: Float = 0f
     private var resizeStartTextSize: Float = 0f
+
+    // ── State Drag Depth Handle 3D Box ───────────────────────────────────────
+    private var box3DDepthStartDepth: Float = 0f
+    private var box3DDepthStartDist: Float = 0f
+    private var box3DDepthBaseX: Float = 0f
+    private var box3DDepthBaseY: Float = 0f
 
     // ── Mode Eyedropper (Prompt 42) ──────────────────────────────────────────
 
@@ -2814,6 +2823,13 @@ class PixelCanvasView @JvmOverloads constructor(
                 }
             }
 
+            // 4c. Overlay handle interaktif 3D Box: depth handle (seret kedalaman)
+            selectedLayer?.let { layer ->
+                if (!editorZoomMode && layer.isVisible && !layer.isLocked && layer is Box3DLayer) {
+                    drawBox3DOverlay(canvas, layer)
+                }
+            }
+
             // 4b. Render anchor visualization untuk mode edit Bezier (Phase 1)
             if (bezierEditMode && selectedBezierLayer != null && !editorZoomMode) {
                 drawBezierAnchorOverlay(canvas, selectedBezierLayer!!)
@@ -3082,6 +3098,49 @@ class PixelCanvasView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Overlay handle interaktif 3D Box: garis bantu arah kedalaman + handle
+     * belah ketupat cyan di pusat sisi belakang (seret untuk mengubah kedalaman).
+     */
+    private fun drawBox3DOverlay(canvas: Canvas, layer: Box3DLayer) {
+        val (w, h) = layer.getUnwarpedDimensions()
+        if (w <= 0f || h <= 0f) return
+        val density = resources.displayMetrics.density
+
+        val (fcx, fcy) = layer.getFrontFaceCenterLocal()
+        val (hfx, hfy) = layer.mapLocalPointToCanvas(fcx, fcy, w, h)
+        val (bcx, bcy) = layer.getBackFaceCenterLocal()
+        val (hx, hy) = layer.mapLocalPointToCanvas(bcx, bcy, w, h)
+
+        val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xAA00A8FF.toInt()
+            strokeWidth = 1.5f * density
+            style = Paint.Style.STROKE
+            pathEffect = DashPathEffect(floatArrayOf(6f * density, 5f * density), 0f)
+        }
+        canvas.drawLine(hfx, hfy, hx, hy, guidePaint)
+
+        val size = 9f * density
+        val diamondPath = Path().apply {
+            moveTo(hx, hy - size)
+            lineTo(hx + size, hy)
+            lineTo(hx, hy + size)
+            lineTo(hx - size, hy)
+            close()
+        }
+        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF00A8FF.toInt()
+            style = Paint.Style.FILL
+        }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            strokeWidth = 2f * density
+            style = Paint.Style.STROKE
+        }
+        canvas.drawPath(diamondPath, fillPaint)
+        canvas.drawPath(diamondPath, borderPaint)
+    }
+
     private fun drawTextEditLabel(canvas: Canvas, pts: FloatArray) {
         val left = minOf(pts[0], pts[2], pts[4], pts[6])
         val top = minOf(pts[1], pts[3], pts[5], pts[7])
@@ -3256,6 +3315,35 @@ class PixelCanvasView @JvmOverloads constructor(
         isDragging = false
         invalidate()
         return true
+    }
+
+    /**
+     * Memulai drag handle kedalaman 3D Box: mencatat posisi pusat sisi depan
+     * (acuan tetap) dan jarak awal jari ke acuan.
+     */
+    private fun beginBox3DDepthDrag(
+        layer: Box3DLayer,
+        frontCenterX: Float,
+        frontCenterY: Float,
+        touchX: Float,
+        touchY: Float
+    ) {
+        box3DDepthStartDepth = layer.boxDepth
+        box3DDepthStartDist = hypot(touchX - frontCenterX, touchY - frontCenterY).coerceAtLeast(1f)
+        box3DDepthBaseX = frontCenterX
+        box3DDepthBaseY = frontCenterY
+        currentTouchState = TouchState.DRAGGING_BOX3D_DEPTH_HANDLE
+        isDragging = false
+        invalidate()
+    }
+
+    /** Memperbarui kedalaman 3D Box mengikuti jarak jari ke pusat sisi depan. */
+    private fun updateBox3DDepthDrag(layer: Box3DLayer, touchX: Float, touchY: Float) {
+        val dist = hypot(touchX - box3DDepthBaseX, touchY - box3DDepthBaseY).coerceAtLeast(1f)
+        val factor = dist / box3DDepthStartDist
+        layer.boxDepth = (box3DDepthStartDepth * factor).coerceIn(10f, 2000f)
+        hasTouchTransformed = true
+        invalidate()
     }
 
     /**
@@ -4000,6 +4088,31 @@ class PixelCanvasView @JvmOverloads constructor(
             }
         }
 
+        // 1b. Tangani geser handle kedalaman 3D Box (seret titik belakang)
+        if (currentTouchState == TouchState.DRAGGING_BOX3D_DEPTH_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is Box3DLayer && !layer.isLocked) {
+                        updateBox3DDepthDrag(layer, event.x, event.y)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Resize Kedalaman 3D", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
         // Handle rotasi di kanvas dihapus (rotasi via slider toolbar / gestur dua jari),
         // sehingga tidak ada blok interaksi DRAGGING_ROTATE_HANDLE.
 
@@ -4047,6 +4160,24 @@ class PixelCanvasView @JvmOverloads constructor(
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 activePointerId = event.getPointerId(0)
+
+                // Cek apakah sentuhan mengenai handle kedalaman 3D Box (if active)
+                selectedLayer?.let { layer ->
+                    if (!layer.isLocked && layer is Box3DLayer) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            val (fcx, fcy) = layer.getFrontFaceCenterLocal()
+                            val (bcx, bcy) = layer.getBackFaceCenterLocal()
+                            val (hfx, hfy) = layer.mapLocalPointToCanvas(fcx, fcy, w, h)
+                            val (hx, hy) = layer.mapLocalPointToCanvas(bcx, bcy, w, h)
+                            val touchRadius = 28f * resources.displayMetrics.density
+                            if (hypot(event.x - hx, event.y - hy) <= touchRadius) {
+                                beginBox3DDepthDrag(layer, hfx, hfy, event.x, event.y)
+                                return true
+                            }
+                        }
+                    }
+                }
 
                 // Cek apakah sentuhan mengenai tombol handle sudut Bounding Box (Prompt 26, 27, 28, 29)
                 val handle = getTransformHandleAt(event.x, event.y)
@@ -4896,6 +5027,29 @@ class PixelCanvasView @JvmOverloads constructor(
             headSize = head,
             headEnabled = true,
             headColor = 0xFF1769FF.toInt(),
+            x = cx - w / 2f,
+            y = cy - h / 2f
+        )
+        addLayer(layer)
+        return layer
+    }
+
+    /**
+     * Menambahkan objek 3D Box (balok) default di tengah kanvas sebagai
+     * [Box3DLayer] dengan proyeksi isometrik.
+     */
+    fun addBox3DLayer(): Box3DLayer {
+        val cx = if (width > 0) width / 2f else 540f
+        val cy = if (height > 0) height / 2f else 540f
+        val base = (minOf(width, height).takeIf { it > 0 }?.toFloat() ?: 400f) * 0.4f
+        val w = base
+        val h = base * 0.82f
+        val d = base * 0.7f
+        val layer = Box3DLayer(
+            boxWidth = w,
+            boxHeight = h,
+            boxDepth = d,
+            baseColor = 0xFF1769FF.toInt(),
             x = cx - w / 2f,
             y = cy - h / 2f
         )

@@ -22,6 +22,8 @@ import com.flyerpix.editor.canvas.model.AnchorType
 import com.flyerpix.editor.canvas.model.ArrowLayer
 import com.flyerpix.editor.canvas.model.ArrowStyle
 import com.flyerpix.editor.canvas.model.BezierInputFlow
+import com.flyerpix.editor.canvas.model.Box3DLayer
+import com.flyerpix.editor.canvas.model.Box3DPerspectiveMode
 import com.flyerpix.editor.canvas.model.GradientType
 import com.flyerpix.editor.canvas.model.GradientColor
 import com.flyerpix.editor.canvas.model.PenLayer
@@ -55,6 +57,7 @@ class ObjectMenuController(
         const val OBJ_SHAPES   = "obj_shapes"
         const val OBJ_BEZIER   = "obj_bezier"
         const val OBJ_ARROW    = "obj_arrow"
+        const val OBJ_3D_BOX   = "obj_3d_box"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
@@ -64,6 +67,8 @@ class ObjectMenuController(
         private const val DRAW_COLOR_RESULT_KEY = "obj_draw_color_key"
         private const val ARROW_COLOR_RESULT_KEY = "obj_arrow_color_key"
         private const val BEZIER_COLOR_RESULT_KEY = "obj_bezier_color_key"
+        private const val BOX_BASE_COLOR_RESULT_KEY = "obj_box_base_color_key"
+        private const val BOX_STROKE_COLOR_RESULT_KEY = "obj_box_stroke_color_key"
     }
 
     private val fragmentManager: FragmentManager get() = activity.supportFragmentManager
@@ -106,6 +111,11 @@ class ObjectMenuController(
     private var draftArrow: ArrowLayer? = null
     private var draftPen: PenLayer? = null
     private val bezierFlow = BezierInputFlow()
+
+    // Draft layer 3D Box (untuk instant-create & rollback)
+    private var draftBox: Box3DLayer? = null
+    private var isNewBox: Boolean = false
+    private var boxSnapshot: Box3DLayer? = null
 
     /** State Brush Color draw sheet yang bisa di-update live dari color picker dialog. */
     private val liveDrawBrushColor = mutableStateOf(0)
@@ -236,7 +246,8 @@ class ObjectMenuController(
             Spec(OBJ_SELECT,   "Select",  R.drawable.ic_mask_24px),
             Spec(OBJ_SHAPES,   "Shapes",  R.drawable.ic_nav_shapes_24px),
             Spec(OBJ_BEZIER,   "Bezier",  R.drawable.ic_curve_24px),
-            Spec(OBJ_ARROW,    "Arrow",   R.drawable.ic_arrow_24px)
+            Spec(OBJ_ARROW,    "Arrow",   R.drawable.ic_arrow_24px),
+            Spec(OBJ_3D_BOX,   "3D Box",  R.drawable.ic_3d_box_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectToolStripInclude.objectToolStripContainer
@@ -296,6 +307,7 @@ class ObjectMenuController(
             OBJ_SHAPES  -> showComposeShapeSheet()
             OBJ_BEZIER  -> showComposeBezierSheet()
             OBJ_ARROW   -> showComposeArrowSheet()
+            OBJ_3D_BOX  -> showComposeBox3DSheet()
         }
         onAddSettingsOpenChanged?.invoke(true)
         onPanelChanged()
@@ -310,6 +322,8 @@ class ObjectMenuController(
         draftShape = null
         draftArrow = null
         draftPen = null
+        draftBox = null
+        boxSnapshot = null
         canvas.freeDrawEnabled = false
         canvas.bezierInputEnabled = false
         canvas.bezierInputLayer = null
@@ -413,6 +427,25 @@ class ObjectMenuController(
                 it.strokeColor = color
                 canvas.invalidate()
                 showComposeBezierSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(BOX_BASE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.WHITE)
+            val target = (canvas.selectedLayer as? Box3DLayer) ?: draftBox
+            target?.let {
+                it.baseColor = color
+                it.customFaceColors = null
+                canvas.invalidate()
+                showComposeBox3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(BOX_STROKE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.BLACK)
+            val target = (canvas.selectedLayer as? Box3DLayer) ?: draftBox
+            target?.let {
+                it.strokeColor = color
+                canvas.invalidate()
+                showComposeBox3DSheet(it)
             }
         }
     }
@@ -1053,6 +1086,424 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 2.5 3D Box Studio (objek geometri 3D Box)
+    //     Alur instant: menu 3D Box ditekan → balok isometrik langsung muncul di
+    //     kanvas + panel pengaturan lengkap terbuka instan.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun showComposeBox3DSheet(boxToEdit: Box3DLayer? = null) {
+        val box = boxToEdit ?: draftBox ?: createNewDraftBox()
+        showComposeBox3DDetail(box)
+    }
+
+    private fun createNewDraftBox(): Box3DLayer {
+        val box = canvas.addBox3DLayer().also {
+            isNewBox = true
+        }
+        draftBox = box
+        boxSnapshot = box.copyLayer()
+        canvas.selectedLayer = box
+        return box
+    }
+
+    private fun showComposeBox3DDetail(box: Box3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_3D_BOX
+        updateToolStripSelection(OBJ_3D_BOX)
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val switchingBox = draftBox !== box
+        draftBox = box
+        if (switchingBox) isNewBox = false
+        boxSnapshot = box.copyLayer()
+
+        host.setContent {
+            var currentMode by remember { mutableStateOf(box.perspectiveMode) }
+            var currentWidth by remember { mutableStateOf(box.boxWidth) }
+            var currentHeight by remember { mutableStateOf(box.boxHeight) }
+            var currentDepth by remember { mutableStateOf(box.boxDepth) }
+            var currentAngleX by remember { mutableStateOf(box.angleX) }
+            var currentAngleY by remember { mutableStateOf(box.angleY) }
+            var currentBaseColor by remember { mutableStateOf(box.baseColor) }
+            var currentAutoShading by remember { mutableStateOf(box.autoShadingEnabled) }
+            var currentFaceOpacity by remember { mutableStateOf(box.faceOpacity / 255f * 100f) }
+            var currentStrokeWidth by remember { mutableStateOf(box.strokeWidth) }
+            var currentStrokeColor by remember { mutableStateOf(box.strokeColor) }
+            var currentStrokeOpacity by remember { mutableStateOf(box.strokeOpacity / 255f * 100f) }
+            var currentShowHidden by remember { mutableStateOf(box.showHiddenEdges) }
+
+            Box3DDetailPage(
+                mode = currentMode,
+                widthD = currentWidth,
+                heightD = currentHeight,
+                depthD = currentDepth,
+                angleX = currentAngleX,
+                angleY = currentAngleY,
+                baseColor = currentBaseColor,
+                autoShading = currentAutoShading,
+                faceOpacity = currentFaceOpacity,
+                strokeWidth = currentStrokeWidth,
+                strokeColor = currentStrokeColor,
+                strokeOpacity = currentStrokeOpacity,
+                showHiddenEdges = currentShowHidden,
+                onModeChange = { m ->
+                    currentMode = m
+                    box.perspectiveMode = m
+                    canvas.invalidate()
+                },
+                onWidthChange = { v ->
+                    currentWidth = v
+                    box.boxWidth = v
+                    canvas.invalidate()
+                },
+                onHeightChange = { v ->
+                    currentHeight = v
+                    box.boxHeight = v
+                    canvas.invalidate()
+                },
+                onDepthChange = { v ->
+                    currentDepth = v
+                    box.boxDepth = v
+                    canvas.invalidate()
+                },
+                onAngleXChange = { v ->
+                    currentAngleX = v
+                    box.angleX = v
+                    canvas.invalidate()
+                },
+                onAngleYChange = { v ->
+                    currentAngleY = v
+                    box.angleY = v
+                    canvas.invalidate()
+                },
+                onBaseColorChange = { c ->
+                    currentBaseColor = c
+                    box.baseColor = c
+                    box.customFaceColors = null
+                    canvas.invalidate()
+                },
+                onOpenBaseColorPicker = {
+                    val original = box.baseColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = box.baseColor,
+                        resultKey = BOX_BASE_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        box.baseColor = color
+                        box.customFaceColors = null
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        box.baseColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "BoxBaseColorPicker")
+                },
+                onAutoShadingChange = { en ->
+                    currentAutoShading = en
+                    box.autoShadingEnabled = en
+                    if (en) box.customFaceColors = null
+                    canvas.invalidate()
+                },
+                onFaceOpacityChange = { pct ->
+                    currentFaceOpacity = pct
+                    box.faceOpacity = (pct / 100f * 255f).toInt()
+                    canvas.invalidate()
+                },
+                onStrokeWidthChange = { v ->
+                    currentStrokeWidth = v
+                    box.strokeWidth = v
+                    canvas.invalidate()
+                },
+                onStrokeColorChange = { c ->
+                    currentStrokeColor = c
+                    box.strokeColor = c
+                    canvas.invalidate()
+                },
+                onOpenStrokeColorPicker = {
+                    val original = box.strokeColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = box.strokeColor,
+                        resultKey = BOX_STROKE_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        box.strokeColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        box.strokeColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "BoxStrokeColorPicker")
+                },
+                onStrokeOpacityChange = { pct ->
+                    currentStrokeOpacity = pct
+                    box.strokeOpacity = (pct / 100f * 255f).toInt()
+                    canvas.invalidate()
+                },
+                onShowHiddenEdgesChange = { en ->
+                    currentShowHidden = en
+                    box.showHiddenEdges = en
+                    canvas.invalidate()
+                },
+                onOpenShadowEditor = { showBox3DShadowSheet(box) },
+                onOpenNeonEditor = { showBox3DNeonSheet(box) },
+                onOpenEmbossEditor = { showBox3DEmbossSheet(box) },
+                onReset = {
+                    box.perspectiveMode = Box3DPerspectiveMode.ISOMETRIC
+                    box.boxWidth = 220f
+                    box.boxHeight = 180f
+                    box.boxDepth = 220f
+                    box.angleX = 0f
+                    box.angleY = 0f
+                    box.baseColor = 0xFF1769FF.toInt()
+                    box.autoShadingEnabled = true
+                    box.customFaceColors = null
+                    box.faceOpacity = 255
+                    box.strokeWidth = 0f
+                    box.strokeColor = android.graphics.Color.BLACK
+                    box.strokeOpacity = 255
+                    box.showHiddenEdges = false
+                    box.shadowEnabled = false
+                    box.neonEnabled = false
+                    box.embossEnabled = false
+                    canvas.invalidate()
+                },
+                onApply = {
+                    canvas.runRecordedAction(if (isNewBox) "Add 3D Box" else "Modify 3D Box") {}
+                    showSnackbar("3D Box saved")
+                    draftBox = null
+                    isNewBox = false
+                    boxSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                onCancel = {
+                    if (isNewBox) {
+                        canvas.removeLayer(box)
+                    } else {
+                        boxSnapshot?.let { snap ->
+                            box.perspectiveMode = snap.perspectiveMode
+                            box.boxWidth = snap.boxWidth
+                            box.boxHeight = snap.boxHeight
+                            box.boxDepth = snap.boxDepth
+                            box.angleX = snap.angleX
+                            box.angleY = snap.angleY
+                            box.baseColor = snap.baseColor
+                            box.autoShadingEnabled = snap.autoShadingEnabled
+                            box.customFaceColors = snap.customFaceColors?.clone()
+                            box.faceOpacity = snap.faceOpacity
+                            box.strokeWidth = snap.strokeWidth
+                            box.strokeColor = snap.strokeColor
+                            box.strokeOpacity = snap.strokeOpacity
+                            box.showHiddenEdges = snap.showHiddenEdges
+                            box.shadowEnabled = snap.shadowEnabled
+                            box.neonEnabled = snap.neonEnabled
+                            box.embossEnabled = snap.embossEnabled
+                        }
+                    }
+                    canvas.invalidate()
+                    draftBox = null
+                    isNewBox = false
+                    boxSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ── Effect sheets dari panel 3D Box ──────────────────────────────────────
+
+    private fun showBox3DShadowSheet(box: Box3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            ShadowDetailPage(
+                title = "Box Shadow",
+                enabled = box.shadowEnabled,
+                color = box.shadowColor,
+                radius = box.shadowRadius.coerceIn(0f, 40f),
+                opacityPct = (box.shadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = box.shadowDx.coerceIn(-30f, 30f),
+                dy = box.shadowDy.coerceIn(-30f, 30f),
+                onEnabledChange = { en -> box.shadowEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> box.shadowColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = box.shadowColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = box.shadowColor,
+                        resultKey = "box_shadow_color_key"
+                    )
+                    dialog.onColorChanged = { c -> box.shadowColor = c; canvas.invalidate() }
+                    dialog.onCancel = { box.shadowColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "BoxShadowColorPicker")
+                },
+                onRadiusChange = { r -> box.shadowRadius = r; canvas.invalidate() },
+                onOpacityChange = { opPct -> box.shadowOpacity = (opPct / 100f).coerceIn(0f, 1f); canvas.invalidate() },
+                onDxChange = { x -> box.shadowDx = x; canvas.invalidate() },
+                onDyChange = { y -> box.shadowDy = y; canvas.invalidate() },
+                onReset = {
+                    box.shadowEnabled = true
+                    box.shadowColor = 0xFF000000.toInt()
+                    box.shadowRadius = 10f
+                    box.shadowOpacity = 0.6f
+                    box.shadowDx = 0f
+                    box.shadowDy = 0f
+                    canvas.invalidate()
+                },
+                onApply = { showComposeBox3DSheet(box) },
+                onCancel = {
+                    boxSnapshot?.let { snap ->
+                        box.shadowEnabled = snap.shadowEnabled
+                        box.shadowColor = snap.shadowColor
+                        box.shadowRadius = snap.shadowRadius
+                        box.shadowOpacity = snap.shadowOpacity
+                        box.shadowDx = snap.shadowDx
+                        box.shadowDy = snap.shadowDy
+                    }
+                    canvas.invalidate()
+                    showComposeBox3DSheet(box)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showBox3DNeonSheet(box: Box3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            NeonDetailPage(
+                enabled = box.neonEnabled,
+                color = box.neonColor,
+                radius = box.neonRadius.coerceIn(1f, 40f),
+                intensity = box.neonIntensity,
+                coreEnabled = box.neonCoreEnabled,
+                onEnabledChange = { en -> box.neonEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> box.neonColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = box.neonColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = box.neonColor,
+                        resultKey = "box_neon_color_key"
+                    )
+                    dialog.onColorChanged = { c -> box.neonColor = c; canvas.invalidate() }
+                    dialog.onCancel = { box.neonColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "BoxNeonColorPicker")
+                },
+                onRadiusChange = { r -> box.neonRadius = r; canvas.invalidate() },
+                onIntensityChange = { i -> box.neonIntensity = i; canvas.invalidate() },
+                onCoreEnabledChange = { en -> box.neonCoreEnabled = en; canvas.invalidate() },
+                onReset = {
+                    box.neonEnabled = true
+                    box.neonColor = 0xFF00E5FF.toInt()
+                    box.neonRadius = 12f
+                    box.neonIntensity = 1f
+                    box.neonCoreEnabled = true
+                    canvas.invalidate()
+                },
+                onApply = { showComposeBox3DSheet(box) },
+                onCancel = {
+                    boxSnapshot?.let { snap ->
+                        box.neonEnabled = snap.neonEnabled
+                        box.neonColor = snap.neonColor
+                        box.neonRadius = snap.neonRadius
+                        box.neonIntensity = snap.neonIntensity
+                        box.neonCoreEnabled = snap.neonCoreEnabled
+                    }
+                    canvas.invalidate()
+                    showComposeBox3DSheet(box)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showBox3DEmbossSheet(box: Box3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            EmbossDetailPage(
+                enabled = box.embossEnabled,
+                lightAngle = box.embossLightAngle,
+                ambient = box.embossAmbient,
+                specular = box.embossSpecular,
+                intensity = box.embossIntensity,
+                bevel = box.embossBevel,
+                onEnabledChange = { en -> box.embossEnabled = en; canvas.invalidate() },
+                onLightAngleChange = { v -> box.embossLightAngle = v; canvas.invalidate() },
+                onAmbientChange = { v -> box.embossAmbient = v; canvas.invalidate() },
+                onSpecularChange = { v -> box.embossSpecular = v; canvas.invalidate() },
+                onIntensityChange = { v -> box.embossIntensity = v; canvas.invalidate() },
+                onBevelChange = { v -> box.embossBevel = v; canvas.invalidate() },
+                onReset = {
+                    box.embossEnabled = true
+                    box.embossLightAngle = 45f
+                    box.embossAmbient = 0.2f
+                    box.embossSpecular = 8f
+                    box.embossIntensity = 1f
+                    box.embossBevel = 3f
+                    canvas.invalidate()
+                },
+                onApply = { showComposeBox3DSheet(box) },
+                onCancel = {
+                    boxSnapshot?.let { snap ->
+                        box.embossEnabled = snap.embossEnabled
+                        box.embossLightAngle = snap.embossLightAngle
+                        box.embossAmbient = snap.embossAmbient
+                        box.embossSpecular = snap.embossSpecular
+                        box.embossIntensity = snap.embossIntensity
+                        box.embossBevel = snap.embossBevel
+                    }
+                    canvas.invalidate()
+                    showComposeBox3DSheet(box)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 3. Free Draw Studio Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -1499,6 +1950,13 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
         if (layer is PenLayer && layer.anchors.isNotEmpty() && activeTag != OBJ_BEZIER) {
             // User selected a PenLayer with anchors - enable edit mode
             showComposeBezierAnchorEditor(layer)
+        }
+        // Box3D terpilih → buka Studio 3D Box (kecuali sedang membuat/yang sama)
+        if (layer is Box3DLayer && activeTag != OBJ_3D_BOX && draftBox !== layer) {
+            if (activeTag.isNotEmpty()) {
+                binding.bottomNavigation.selectedItemId = R.id.nav_add
+            }
+            showComposeBox3DSheet(layer)
         }
     }
 
