@@ -51,6 +51,7 @@ import com.flyerpix.editor.canvas.model.ArrowLayer
 import com.flyerpix.editor.canvas.model.Box3DLayer
 import com.flyerpix.editor.canvas.model.CanvasBackground
 import com.flyerpix.editor.canvas.model.CanvasBackgroundMode
+import com.flyerpix.editor.canvas.model.Cylinder3DLayer
 import com.flyerpix.editor.canvas.model.HitAnchor
 import com.flyerpix.editor.canvas.model.CanvasLayer
 import com.flyerpix.editor.canvas.model.ExportFormat
@@ -58,6 +59,7 @@ import com.flyerpix.editor.canvas.model.ExportQuality
 import com.flyerpix.editor.canvas.model.GradientColor
 import com.flyerpix.editor.canvas.model.ImageLayer
 import com.flyerpix.editor.canvas.model.PenLayer
+import com.flyerpix.editor.canvas.model.PodiumStyle
 import com.flyerpix.editor.canvas.model.ShapeLayer
 import com.flyerpix.editor.canvas.model.ShapeType
 import com.flyerpix.editor.canvas.model.Sphere3DLayer
@@ -1045,7 +1047,9 @@ class PixelCanvasView @JvmOverloads constructor(
         DRAGGING_PERSPECTIVE_HANDLE,
         DRAGGING_BOX3D_DEPTH_HANDLE,
         DRAGGING_BOX3D_VP_HANDLE,
-        DRAGGING_SPHERE_LIGHT_HANDLE
+        DRAGGING_SPHERE_LIGHT_HANDLE,
+        DRAGGING_CYLINDER_SIZE_HANDLE,
+        DRAGGING_CYLINDER_TILT_HANDLE
     }
 
     var currentTouchState: TouchState = TouchState.IDLE
@@ -1076,6 +1080,13 @@ class PixelCanvasView @JvmOverloads constructor(
     // ── State Drag Handle Cahaya 3D Sphere ───────────────────────────────────
     private var sphereLightStartAngle: Float = 0f
     private var sphereLightStartDist: Float = 0f
+
+    // ── State Drag Handle Podium 3D Cylinder ─────────────────────────────────
+    private var cylinderSizeStartRadiusX: Float = 0f
+    private var cylinderSizeStartHeight: Float = 0f
+    private var cylinderSizeStartLocal: Pair<Float, Float> = Pair(0f, 0f)
+    private var cylinderTiltStartRadiusY: Float = 0f
+    private var cylinderTiltStartLocalY: Float = 0f
 
     // ── Mode Eyedropper (Prompt 42) ──────────────────────────────────────────
 
@@ -2844,6 +2855,13 @@ class PixelCanvasView @JvmOverloads constructor(
                 }
             }
 
+            // 4e. Overlay handle Podium 3D Cylinder: ukuran (diameter/tinggi) + tilt
+            selectedLayer?.let { layer ->
+                if (!editorZoomMode && layer.isVisible && !layer.isLocked && layer is Cylinder3DLayer) {
+                    drawCylinder3DOverlay(canvas, layer)
+                }
+            }
+
             // 4b. Render anchor visualization untuk mode edit Bezier (Phase 1)
             if (bezierEditMode && selectedBezierLayer != null && !editorZoomMode) {
                 drawBezierAnchorOverlay(canvas, selectedBezierLayer!!)
@@ -3201,6 +3219,64 @@ class PixelCanvasView @JvmOverloads constructor(
         canvas.drawCircle(hmx, hmy, sunRadius, borderPaint)
     }
 
+    /**
+     * Overlay handle interaktif Podium 3D Cylinder:
+     *  - Handle ukuran (lingkaran biru di sisi kanan dinding): tarik mendatar =
+     *    diameter panggung, tarik tegak = tinggi silinder.
+     *  - Handle kemiringan (belah ketupat di bibir panggung kanan): tarik tegak =
+     *    buka/tutup elips panggung (camera tilt).
+     */
+    private fun drawCylinder3DOverlay(canvas: Canvas, layer: Cylinder3DLayer) {
+        val (w, h) = layer.getUnwarpedDimensions()
+        if (w <= 0f || h <= 0f) return
+        val density = resources.displayMetrics.density
+
+        val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xAA00A8FF.toInt()
+            strokeWidth = 1.5f * density
+            style = Paint.Style.STROKE
+            pathEffect = DashPathEffect(floatArrayOf(6f * density, 5f * density), 0f)
+        }
+        val sizePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF00A8FF.toInt()
+            style = Paint.Style.FILL
+        }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            strokeWidth = 2f * density
+            style = Paint.Style.STROKE
+        }
+
+        // Handle ukuran: sisi kanan dinding.
+        val (slx, sly) = layer.getSizeHandleLocal()
+        val (hx, hy) = layer.mapLocalPointToCanvas(slx, sly, w, h)
+        val (plx, ply) = layer.getTiltHandleLocal()
+        val (px2, py2) = layer.mapLocalPointToCanvas(plx, ply, w, h)
+
+        // Garis panduan horizontal (diameter) & vertikal (tinggi).
+        val l = layer.computeLayout()
+        val (cxl, cyl) = layer.mapLocalPointToCanvas(l.cx, l.capCenterY, w, h)
+        canvas.drawLine(cxl, cyl, hx, hy, guidePaint)
+        canvas.drawLine(hx, hy, hx, py2, guidePaint)
+
+        // Titik handle ukuran (diameter + tinggi).
+        val size = 7f * density
+        canvas.drawCircle(hx, hy, size, sizePaint)
+        canvas.drawCircle(hx, hy, size, borderPaint)
+
+        // Handle kemiringan (belah ketupat) di bibir panggung atas.
+        val ds = 7f * density
+        val diamond = Path().apply {
+            moveTo(px2, py2 - ds)
+            lineTo(px2 + ds, py2)
+            lineTo(px2, py2 + ds)
+            lineTo(px2 - ds, py2)
+            close()
+        }
+        canvas.drawPath(diamond, sizePaint)
+        canvas.drawPath(diamond, borderPaint)
+    }
+
     private fun drawTextEditLabel(canvas: Canvas, pts: FloatArray) {
         val left = minOf(pts[0], pts[2], pts[4], pts[6])
         val top = minOf(pts[1], pts[3], pts[5], pts[7])
@@ -3430,6 +3506,51 @@ class PixelCanvasView @JvmOverloads constructor(
         layer.lightAngle = (Math.toDegrees(Math.atan2(dx.toDouble(), (-dy).toDouble())).toFloat())
             .coerceIn(-180f, 180f)
         layer.lightDistance = (dist / layer.radius.coerceAtLeast(1f)).coerceIn(0f, 0.8f)
+        hasTouchTransformed = true
+        invalidate()
+    }
+
+    /**
+     * Memulai drag handle ukuran Podium 3D: mencatat nilai awal radiusX & tinggi
+     * plus titik lokal tangkapan agar MOVE menghitung delta secara konsisten.
+     */
+    private fun beginCylinderSizeDrag(layer: Cylinder3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        cylinderSizeStartRadiusX = layer.radiusX
+        cylinderSizeStartHeight = layer.cylinderHeight
+        cylinderSizeStartLocal = layer.mapCanvasPointToLocal(touchX, touchY, w, h)
+        currentTouchState = TouchState.DRAGGING_CYLINDER_SIZE_HANDLE
+        isDragging = false
+        invalidate()
+    }
+
+    /** Memperbarui diameter & tinggi podium mengikuti delta jari dalam ruang lokal. */
+    private fun updateCylinderSizeDrag(layer: Cylinder3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        val (clx, cly) = layer.mapCanvasPointToLocal(touchX, touchY, w, h)
+        val dx = clx - cylinderSizeStartLocal.first
+        val dy = cly - cylinderSizeStartLocal.second
+        layer.radiusX = (cylinderSizeStartRadiusX + dx).coerceIn(10f, 2000f)
+        layer.cylinderHeight = (cylinderSizeStartHeight - dy).coerceIn(10f, 1200f)
+        // Jaga radiusY tetap masuk akal terhadap diameter baru.
+        layer.radiusY = layer.radiusY.coerceAtMost(layer.radiusX * 1.5f)
+        hasTouchTransformed = true
+        invalidate()
+    }
+
+    /** Memulai drag handle kemiringan panggung (elips atas buka/tutup). */
+    private fun beginCylinderTiltDrag(layer: Cylinder3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        cylinderTiltStartRadiusY = layer.radiusY
+        cylinderTiltStartLocalY = layer.mapCanvasPointToLocal(touchX, touchY, w, h).second
+        currentTouchState = TouchState.DRAGGING_CYLINDER_TILT_HANDLE
+        isDragging = false
+        invalidate()
+    }
+
+    /** Memperbarui kemiringan panggung: tarik ke atas = elips lebih terbuka. */
+    private fun updateCylinderTiltDrag(layer: Cylinder3DLayer, touchX: Float, touchY: Float, w: Float, h: Float) {
+        val cly = layer.mapCanvasPointToLocal(touchX, touchY, w, h).second
+        val dy = cly - cylinderTiltStartLocalY
+        layer.radiusY = (cylinderTiltStartRadiusY - dy).coerceIn(4f, 300f)
+            .coerceAtMost(layer.radiusX * 1.5f)
         hasTouchTransformed = true
         invalidate()
     }
@@ -4226,6 +4347,58 @@ class PixelCanvasView @JvmOverloads constructor(
             }
         }
 
+        // 1b3. Tangani geser handle ukuran Podium 3D Cylinder
+        if (currentTouchState == TouchState.DRAGGING_CYLINDER_SIZE_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is Cylinder3DLayer && !layer.isLocked) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) updateCylinderSizeDrag(layer, event.x, event.y, w, h)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Resize Podium 3D", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
+        // 1b4. Tangani geser handle kemiringan Podium 3D Cylinder
+        if (currentTouchState == TouchState.DRAGGING_CYLINDER_TILT_HANDLE) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val layer = selectedLayer
+                    if (layer is Cylinder3DLayer && !layer.isLocked) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) updateCylinderTiltDrag(layer, event.x, event.y, w, h)
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (hasTouchTransformed) {
+                        touchStartState?.let { before ->
+                            recordAction("Kemiringan Podium 3D", before)
+                        }
+                    }
+                    touchStartState = null
+                    hasTouchTransformed = false
+                    currentTouchState = TouchState.IDLE
+                    invalidate()
+                    return true
+                }
+            }
+        }
+
         // Handle rotasi di kanvas dihapus (rotasi via slider toolbar / gestur dua jari),
         // sehingga tidak ada blok interaksi DRAGGING_ROTATE_HANDLE.
 
@@ -4302,6 +4475,38 @@ class PixelCanvasView @JvmOverloads constructor(
                             val touchRadius = 28f * resources.displayMetrics.density
                             if (hypot(event.x - hx, event.y - hy) <= touchRadius) {
                                 beginSphereLightDrag(layer)
+                                return true
+                            }
+                        }
+                    }
+                }
+
+                // Cek sentuhan handle ukuran Podium 3D Cylinder (sisi dinding kanan)
+                selectedLayer?.let { layer ->
+                    if (!layer.isLocked && layer is Cylinder3DLayer) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            val (slx, sly) = layer.getSizeHandleLocal()
+                            val (hx, hy) = layer.mapLocalPointToCanvas(slx, sly, w, h)
+                            val touchRadius = 28f * resources.displayMetrics.density
+                            if (hypot(event.x - hx, event.y - hy) <= touchRadius) {
+                                beginCylinderSizeDrag(layer, event.x, event.y, w, h)
+                                return true
+                            }
+                        }
+                    }
+                }
+
+                // Cek sentuhan handle kemiringan Podium 3D Cylinder (bibir panggung atas)
+                selectedLayer?.let { layer ->
+                    if (!layer.isLocked && layer is Cylinder3DLayer) {
+                        val (w, h) = layer.getUnwarpedDimensions()
+                        if (w > 0f && h > 0f) {
+                            val (tlx, tly) = layer.getTiltHandleLocal()
+                            val (tx, ty) = layer.mapLocalPointToCanvas(tlx, tly, w, h)
+                            val touchRadius = 28f * resources.displayMetrics.density
+                            if (hypot(event.x - tx, event.y - ty) <= touchRadius) {
+                                beginCylinderTiltDrag(layer, event.x, event.y, w, h)
                                 return true
                             }
                         }
@@ -5206,6 +5411,40 @@ class PixelCanvasView @JvmOverloads constructor(
             floorShadowOpacity = 0.5f,
             x = cx - r,
             y = cy - r
+        )
+        addLayer(layer)
+        return layer
+    }
+
+    /**
+     * Menambahkan objek Podium 3D Cylinder default di tengah-bawah kanvas sebagai
+     * [Cylinder3DLayer] studio putih dengan kilau cahaya kiri-atas.
+     */
+    fun addCylinder3DLayer(): Cylinder3DLayer {
+        val cx = if (width > 0) width / 2f else 540f
+        val cy = if (height > 0) height / 2f else 540f
+        val base = ((minOf(width, height).takeIf { it > 0 }?.toFloat() ?: 400f) * 0.34f).coerceIn(40f, 260f)
+        val rx = base
+        val ry = base * 0.32f
+        val hgt = base * 0.55f
+        val contentW = rx * 2f
+        val contentH = hgt + ry * 2f
+        val layer = Cylinder3DLayer(
+            radiusX = rx,
+            radiusY = ry,
+            cylinderHeight = hgt,
+            tierCount = 1,
+            style = PodiumStyle.MINIMAL_STUDIO,
+            baseColor = 0xFFF3F4F6.toInt(),
+            topRingEnabled = true,
+            topRingColor = 0xFFD4AF37.toInt(),
+            topRingWidth = 3f,
+            lightAngle = -45f,
+            floorShadowEnabled = true,
+            floorShadowOpacity = 0.5f,
+            // Posisi: horizontal tengah, vertikal sekitar 55% ke bawah (pemeran produk).
+            x = cx - contentW / 2f,
+            y = cy - contentH * 0.3f
         )
         addLayer(layer)
         return layer

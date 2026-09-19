@@ -24,9 +24,11 @@ import com.flyerpix.editor.canvas.model.ArrowStyle
 import com.flyerpix.editor.canvas.model.BezierInputFlow
 import com.flyerpix.editor.canvas.model.Box3DLayer
 import com.flyerpix.editor.canvas.model.Box3DPerspectiveMode
+import com.flyerpix.editor.canvas.model.Cylinder3DLayer
 import com.flyerpix.editor.canvas.model.GradientType
 import com.flyerpix.editor.canvas.model.GradientColor
 import com.flyerpix.editor.canvas.model.PenLayer
+import com.flyerpix.editor.canvas.model.PodiumStyle
 import com.flyerpix.editor.canvas.model.ShapeLayer
 import com.flyerpix.editor.canvas.model.ShapeType
 import com.flyerpix.editor.canvas.model.Sphere3DLayer
@@ -61,6 +63,7 @@ class ObjectMenuController(
         const val OBJ_ARROW    = "obj_arrow"
         const val OBJ_3D_BOX   = "obj_3d_box"
         const val OBJ_3D_SPHERE = "3d_sphere"
+        const val OBJ_3D_CYLINDER = "3d_cylinder"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
@@ -75,6 +78,9 @@ class ObjectMenuController(
         private const val SPHERE_BASE_COLOR_RESULT_KEY = "obj_sphere_base_color_key"
         private const val SPHERE_STROKE_COLOR_RESULT_KEY = "obj_sphere_stroke_color_key"
         private const val SPHERE_NEON_COLOR_RESULT_KEY = "obj_sphere_neon_color_key"
+        private const val CYLINDER_BASE_COLOR_RESULT_KEY = "obj_cylinder_base_color_key"
+        private const val CYLINDER_TOP_COLOR_RESULT_KEY = "obj_cylinder_top_color_key"
+        private const val CYLINDER_RING_COLOR_RESULT_KEY = "obj_cylinder_ring_color_key"
     }
 
     private val fragmentManager: FragmentManager get() = activity.supportFragmentManager
@@ -127,6 +133,11 @@ class ObjectMenuController(
     private var draftSphere: Sphere3DLayer? = null
     private var isNewSphere: Boolean = false
     private var sphereSnapshot: Sphere3DLayer? = null
+
+    // Draft layer 3D Cylinder / Podium (untuk instant-create & rollback)
+    private var draftCylinder: Cylinder3DLayer? = null
+    private var isNewCylinder: Boolean = false
+    private var cylinderSnapshot: Cylinder3DLayer? = null
 
     /** State Brush Color draw sheet yang bisa di-update live dari color picker dialog. */
     private val liveDrawBrushColor = mutableStateOf(0)
@@ -259,7 +270,8 @@ class ObjectMenuController(
             Spec(OBJ_BEZIER,   "Bezier",  R.drawable.ic_curve_24px),
             Spec(OBJ_ARROW,    "Arrow",   R.drawable.ic_arrow_24px),
             Spec(OBJ_3D_BOX,   "3D Box",  R.drawable.ic_3d_box_24px),
-            Spec(OBJ_3D_SPHERE, "3D Sphere", R.drawable.ic_sphere_3d_24px)
+            Spec(OBJ_3D_SPHERE, "3D Sphere", R.drawable.ic_sphere_3d_24px),
+            Spec(OBJ_3D_CYLINDER, "Podium 3D", R.drawable.ic_podium_3d_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectToolStripInclude.objectToolStripContainer
@@ -321,6 +333,7 @@ class ObjectMenuController(
             OBJ_ARROW   -> showComposeArrowSheet()
             OBJ_3D_BOX  -> showComposeBox3DSheet()
             OBJ_3D_SPHERE -> showComposeSphere3DSheet()
+            OBJ_3D_CYLINDER -> showComposeCylinder3DSheet()
         }
         onAddSettingsOpenChanged?.invoke(true)
         onPanelChanged()
@@ -340,6 +353,9 @@ class ObjectMenuController(
         draftSphere = null
         isNewSphere = false
         sphereSnapshot = null
+        draftCylinder = null
+        isNewCylinder = false
+        cylinderSnapshot = null
         canvas.freeDrawEnabled = false
         canvas.bezierInputEnabled = false
         canvas.bezierInputLayer = null
@@ -489,6 +505,33 @@ class ObjectMenuController(
                 it.neonColor = color
                 canvas.invalidate()
                 showComposeSphere3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(CYLINDER_BASE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.WHITE)
+            val target = (canvas.selectedLayer as? Cylinder3DLayer) ?: draftCylinder
+            target?.let {
+                it.baseColor = color
+                canvas.invalidate()
+                showComposeCylinder3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(CYLINDER_TOP_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.WHITE)
+            val target = (canvas.selectedLayer as? Cylinder3DLayer) ?: draftCylinder
+            target?.let {
+                it.topColor = color
+                canvas.invalidate()
+                showComposeCylinder3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(CYLINDER_RING_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.WHITE)
+            val target = (canvas.selectedLayer as? Cylinder3DLayer) ?: draftCylinder
+            target?.let {
+                it.topRingColor = color
+                canvas.invalidate()
+                showComposeCylinder3DSheet(it)
             }
         }
     }
@@ -1826,6 +1869,542 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 2.7 3D Cylinder / Podium Studio (panggung pemajang produk 3D)
+    //     Alur instant: menu Podium 3D ditekan → podium silinder langsung muncul
+    //     di kanvas + panel (gaya, level, ukuran, warna, ring, lantai, finishing).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun showComposeCylinder3DSheet(cylinderToEdit: Cylinder3DLayer? = null) {
+        val cylinder = cylinderToEdit ?: draftCylinder ?: createNewDraftCylinder()
+        showComposeCylinder3DDetail(cylinder)
+    }
+
+    private fun createNewDraftCylinder(): Cylinder3DLayer {
+        val cylinder = canvas.addCylinder3DLayer().also {
+            isNewCylinder = true
+        }
+        draftCylinder = cylinder
+        cylinderSnapshot = cylinder.copyLayer()
+        canvas.selectedLayer = cylinder
+        return cylinder
+    }
+
+    /** Menerapkan palet warna default sesuai [PodiumStyle]. */
+    private fun applyStylePresets(cylinder: Cylinder3DLayer, style: PodiumStyle) {
+        cylinder.style = style
+        when (style) {
+            PodiumStyle.MINIMAL_STUDIO -> {
+                cylinder.baseColor = 0xFFF3F4F6.toInt()
+                cylinder.topColor = null
+                cylinder.topRingColor = 0xFFC0C0C0.toInt()
+                cylinder.neonEnabled = false
+                cylinder.neonColor = 0xFF00E5FF.toInt()
+            }
+            PodiumStyle.LUXURY_GOLD -> {
+                cylinder.baseColor = 0xFFD9A441.toInt()
+                cylinder.topColor = null
+                cylinder.topRingColor = 0xFFFFD700.toInt()
+                cylinder.neonEnabled = false
+                cylinder.neonColor = 0xFFFFC93C.toInt()
+            }
+            PodiumStyle.DARK_ELEGANCE -> {
+                cylinder.baseColor = 0xFF26262E.toInt()
+                cylinder.topColor = null
+                cylinder.topRingColor = 0xFF8A8F98.toInt()
+                cylinder.neonEnabled = false
+                cylinder.neonColor = 0xFFB0B6C4.toInt()
+            }
+            PodiumStyle.PASTEL_POP -> {
+                cylinder.baseColor = 0xFFF9C5D5.toInt()
+                cylinder.topColor = null
+                cylinder.topRingColor = 0xFFFF8FB1.toInt()
+                cylinder.neonEnabled = false
+                cylinder.neonColor = 0xFFFF9BB8.toInt()
+            }
+            PodiumStyle.CYBER_NEON -> {
+                cylinder.baseColor = 0xFF0E1030.toInt()
+                cylinder.topColor = null
+                cylinder.topRingColor = 0xFF00E5FF.toInt()
+                cylinder.neonEnabled = true
+                cylinder.neonColor = 0xFF00E5FF.toInt()
+                cylinder.neonRadius = 18f
+                cylinder.neonIntensity = 1.1f
+            }
+        }
+    }
+
+    private fun showComposeCylinder3DDetail(cylinder: Cylinder3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_3D_CYLINDER
+        updateToolStripSelection(OBJ_3D_CYLINDER)
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val switchingCylinder = draftCylinder !== cylinder
+        draftCylinder = cylinder
+        if (switchingCylinder) isNewCylinder = false
+        cylinderSnapshot = cylinder.copyLayer()
+
+        host.setContent {
+            var currentStyle by remember { mutableStateOf(cylinder.style) }
+            var currentTierCount by remember { mutableStateOf(cylinder.tierCount) }
+            var currentRadiusX by remember { mutableStateOf(cylinder.radiusX) }
+            var currentHeight by remember { mutableStateOf(cylinder.cylinderHeight) }
+            var currentRadiusY by remember { mutableStateOf(cylinder.radiusY) }
+            var currentBaseColor by remember { mutableStateOf(cylinder.baseColor) }
+            var currentTopColorEnabled by remember { mutableStateOf(cylinder.topColor != null) }
+            var currentTopColor by remember { mutableStateOf(cylinder.topColor ?: cylinder.baseColor) }
+            var currentRingEnabled by remember { mutableStateOf(cylinder.topRingEnabled) }
+            var currentRingColor by remember { mutableStateOf(cylinder.topRingColor) }
+            var currentRingWidth by remember { mutableStateOf(cylinder.topRingWidth) }
+            var currentLightAngle by remember { mutableStateOf(cylinder.lightAngle) }
+            var currentFloorShadow by remember { mutableStateOf(cylinder.floorShadowEnabled) }
+            var currentFloorShadowOpacity by remember {
+                mutableStateOf(cylinder.floorShadowOpacity / 1f * 100f)
+            }
+            var currentOpacity by remember { mutableStateOf(cylinder.opacity / 255f * 100f) }
+
+            Cylinder3DDetailPage(
+                style = currentStyle,
+                tierCount = currentTierCount,
+                radiusX = currentRadiusX,
+                cylinderHeight = currentHeight,
+                radiusY = currentRadiusY,
+                baseColor = currentBaseColor,
+                topColorEnabled = currentTopColorEnabled,
+                topColor = currentTopColor,
+                topRingEnabled = currentRingEnabled,
+                topRingColor = currentRingColor,
+                topRingWidth = currentRingWidth,
+                lightAngle = currentLightAngle,
+                floorShadowEnabled = currentFloorShadow,
+                floorShadowOpacityPct = currentFloorShadowOpacity,
+                opacityPct = currentOpacity,
+                onStyleChange = { s ->
+                    currentStyle = s
+                    applyStylePresets(cylinder, s)
+                    currentBaseColor = cylinder.baseColor
+                    currentTopColorEnabled = cylinder.topColor != null
+                    currentTopColor = cylinder.topColor ?: cylinder.baseColor
+                    currentRingColor = cylinder.topRingColor
+                    canvas.invalidate()
+                },
+                onTierCountChange = { t ->
+                    currentTierCount = t
+                    cylinder.tierCount = t.coerceIn(1, 2)
+                    canvas.invalidate()
+                },
+                onRadiusXChange = { v ->
+                    currentRadiusX = v
+                    cylinder.radiusX = v.coerceAtLeast(1f)
+                    canvas.invalidate()
+                },
+                onCylinderHeightChange = { v ->
+                    currentHeight = v
+                    cylinder.cylinderHeight = v.coerceAtLeast(1f)
+                    canvas.invalidate()
+                },
+                onRadiusYChange = { v ->
+                    currentRadiusY = v
+                    cylinder.radiusY = v.coerceAtLeast(1f)
+                    canvas.invalidate()
+                },
+                onBaseColorChange = { c ->
+                    currentBaseColor = c
+                    cylinder.baseColor = c
+                    canvas.invalidate()
+                },
+                onOpenBaseColorPicker = {
+                    val original = cylinder.baseColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = cylinder.baseColor,
+                        resultKey = CYLINDER_BASE_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        cylinder.baseColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        cylinder.baseColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "CylinderBaseColorPicker")
+                },
+                onTopColorEnabledChange = { en ->
+                    currentTopColorEnabled = en
+                    cylinder.topColor = if (en) (cylinder.topColor ?: cylinder.baseColor) else null
+                    canvas.invalidate()
+                },
+                onTopColorChange = { c ->
+                    currentTopColor = c
+                    cylinder.topColor = c
+                    canvas.invalidate()
+                },
+                onOpenTopColorPicker = {
+                    val startColor = cylinder.topColor ?: cylinder.baseColor
+                    val origTop = cylinder.topColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = startColor,
+                        resultKey = CYLINDER_TOP_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        cylinder.topColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        cylinder.topColor = origTop
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "CylinderTopColorPicker")
+                },
+                onTopRingEnabledChange = { en ->
+                    currentRingEnabled = en
+                    cylinder.topRingEnabled = en
+                    canvas.invalidate()
+                },
+                onTopRingColorChange = { c ->
+                    currentRingColor = c
+                    cylinder.topRingColor = c
+                    canvas.invalidate()
+                },
+                onOpenRingColorPicker = {
+                    val original = cylinder.topRingColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = cylinder.topRingColor,
+                        resultKey = CYLINDER_RING_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        cylinder.topRingColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        cylinder.topRingColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "CylinderRingColorPicker")
+                },
+                onTopRingWidthChange = { v ->
+                    currentRingWidth = v
+                    cylinder.topRingWidth = v
+                    canvas.invalidate()
+                },
+                onLightAngleChange = { a ->
+                    currentLightAngle = a
+                    cylinder.lightAngle = a
+                    canvas.invalidate()
+                },
+                onFloorShadowEnabledChange = { en ->
+                    currentFloorShadow = en
+                    cylinder.floorShadowEnabled = en
+                    canvas.invalidate()
+                },
+                onFloorShadowOpacityChange = { pct ->
+                    currentFloorShadowOpacity = pct
+                    cylinder.floorShadowOpacity = (pct / 100f).coerceIn(0f, 1f)
+                    canvas.invalidate()
+                },
+                onOpacityChange = { pct ->
+                    currentOpacity = pct
+                    cylinder.opacity = (pct / 100f * 255f).toInt().coerceIn(0, 255)
+                    canvas.invalidate()
+                },
+                onOpenShadowEditor = {
+                    canvas.invalidate()
+                    showCylinder3DShadowSheet(cylinder)
+                },
+                onOpenEmbossEditor = {
+                    canvas.invalidate()
+                    showCylinder3DEmbossSheet(cylinder)
+                },
+                onOpenNeonEditor = {
+                    canvas.invalidate()
+                    showCylinder3DNeonSheet(cylinder)
+                },
+                onReset = {
+                    currentStyle = PodiumStyle.MINIMAL_STUDIO
+                    currentTierCount = 1
+                    currentRadiusX = 140f
+                    currentHeight = 90f
+                    currentRadiusY = 45f
+                    currentBaseColor = 0xFFF3F4F6.toInt()
+                    currentTopColorEnabled = false
+                    currentTopColor = 0xFFF3F4F6.toInt()
+                    currentRingEnabled = true
+                    currentRingColor = 0xFFD4AF37.toInt()
+                    currentRingWidth = 3f
+                    currentLightAngle = -45f
+                    currentFloorShadow = true
+                    currentFloorShadowOpacity = 50f
+                    currentOpacity = 100f
+                    cylinder.style = PodiumStyle.MINIMAL_STUDIO
+                    cylinder.radiusX = 140f
+                    cylinder.radiusY = 45f
+                    cylinder.cylinderHeight = 90f
+                    cylinder.tierCount = 1
+                    cylinder.tierRatio = 0.75f
+                    cylinder.baseColor = 0xFFF3F4F6.toInt()
+                    cylinder.topColor = null
+                    cylinder.topRingEnabled = true
+                    cylinder.topRingColor = 0xFFD4AF37.toInt()
+                    cylinder.topRingWidth = 3f
+                    cylinder.lightAngle = -45f
+                    cylinder.floorShadowEnabled = true
+                    cylinder.floorShadowOpacity = 0.5f
+                    cylinder.opacity = 255
+                    cylinder.neonEnabled = false
+                    cylinder.neonColor = 0xFF00E5FF.toInt()
+                    cylinder.neonRadius = 18f
+                    cylinder.neonIntensity = 1f
+                    cylinder.shadowEnabled = false
+                    cylinder.embossEnabled = false
+                    cylinder.shadowColor = 0xFF000000.toInt()
+                    cylinder.shadowOpacity = 0.6f
+                    cylinder.shadowRadius = 10f
+                    cylinder.shadowDx = 0f
+                    cylinder.shadowDy = 0f
+                    canvas.invalidate()
+                },
+                onApply = {
+                    canvas.runRecordedAction(if (isNewCylinder) "Add 3D Podium" else "Modify 3D Podium") {}
+                    showSnackbar("3D Podium saved")
+                    draftCylinder = null
+                    isNewCylinder = false
+                    cylinderSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                onCancel = {
+                    if (isNewCylinder) {
+                        canvas.removeLayer(cylinder)
+                    } else {
+                        cylinderSnapshot?.let { snap ->
+                            cylinder.style = snap.style
+                            cylinder.radiusX = snap.radiusX
+                            cylinder.radiusY = snap.radiusY
+                            cylinder.cylinderHeight = snap.cylinderHeight
+                            cylinder.tierCount = snap.tierCount
+                            cylinder.tierRatio = snap.tierRatio
+                            cylinder.baseColor = snap.baseColor
+                            cylinder.topColor = snap.topColor
+                            cylinder.topRingEnabled = snap.topRingEnabled
+                            cylinder.topRingColor = snap.topRingColor
+                            cylinder.topRingWidth = snap.topRingWidth
+                            cylinder.lightAngle = snap.lightAngle
+                            cylinder.floorShadowEnabled = snap.floorShadowEnabled
+                            cylinder.floorShadowOpacity = snap.floorShadowOpacity
+                            cylinder.opacity = snap.opacity
+                            cylinder.neonEnabled = snap.neonEnabled
+                            cylinder.neonColor = snap.neonColor
+                            cylinder.neonRadius = snap.neonRadius
+                            cylinder.neonIntensity = snap.neonIntensity
+                            cylinder.shadowEnabled = snap.shadowEnabled
+                            cylinder.shadowColor = snap.shadowColor
+                            cylinder.shadowRadius = snap.shadowRadius
+                            cylinder.shadowOpacity = snap.shadowOpacity
+                            cylinder.shadowDx = snap.shadowDx
+                            cylinder.shadowDy = snap.shadowDy
+                            cylinder.embossEnabled = snap.embossEnabled
+                        }
+                    }
+                    canvas.invalidate()
+                    draftCylinder = null
+                    isNewCylinder = false
+                    cylinderSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showCylinder3DShadowSheet(cylinder: Cylinder3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            ShadowDetailPage(
+                title = "Podium Shadow",
+                enabled = cylinder.shadowEnabled,
+                color = cylinder.shadowColor,
+                radius = cylinder.shadowRadius.coerceIn(0f, 40f),
+                opacityPct = (cylinder.shadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = cylinder.shadowDx.coerceIn(-30f, 30f),
+                dy = cylinder.shadowDy.coerceIn(-30f, 30f),
+                onEnabledChange = { en -> cylinder.shadowEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> cylinder.shadowColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = cylinder.shadowColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = cylinder.shadowColor,
+                        resultKey = "cylinder_shadow_color_key"
+                    )
+                    dialog.onColorChanged = { c -> cylinder.shadowColor = c; canvas.invalidate() }
+                    dialog.onCancel = { cylinder.shadowColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "CylinderShadowColorPicker")
+                },
+                onRadiusChange = { r -> cylinder.shadowRadius = r; canvas.invalidate() },
+                onOpacityChange = { opPct -> cylinder.shadowOpacity = (opPct / 100f).coerceIn(0f, 1f); canvas.invalidate() },
+                onDxChange = { x -> cylinder.shadowDx = x; canvas.invalidate() },
+                onDyChange = { y -> cylinder.shadowDy = y; canvas.invalidate() },
+                onReset = {
+                    cylinder.shadowEnabled = true
+                    cylinder.shadowColor = 0xFF000000.toInt()
+                    cylinder.shadowRadius = 12f
+                    cylinder.shadowOpacity = 0.6f
+                    cylinder.shadowDx = 0f
+                    cylinder.shadowDy = 6f
+                    canvas.invalidate()
+                },
+                onApply = { showComposeCylinder3DSheet(cylinder) },
+                onCancel = {
+                    cylinderSnapshot?.let { snap ->
+                        cylinder.shadowEnabled = snap.shadowEnabled
+                        cylinder.shadowColor = snap.shadowColor
+                        cylinder.shadowRadius = snap.shadowRadius
+                        cylinder.shadowOpacity = snap.shadowOpacity
+                        cylinder.shadowDx = snap.shadowDx
+                        cylinder.shadowDy = snap.shadowDy
+                    }
+                    canvas.invalidate()
+                    showComposeCylinder3DSheet(cylinder)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showCylinder3DNeonSheet(cylinder: Cylinder3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            NeonDetailPage(
+                enabled = cylinder.neonEnabled,
+                color = cylinder.neonColor,
+                radius = cylinder.neonRadius.coerceIn(1f, 40f),
+                intensity = cylinder.neonIntensity,
+                coreEnabled = cylinder.neonCoreEnabled,
+                onEnabledChange = { en -> cylinder.neonEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> cylinder.neonColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = cylinder.neonColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = cylinder.neonColor,
+                        resultKey = "cylinder_neon_color_key"
+                    )
+                    dialog.onColorChanged = { c -> cylinder.neonColor = c; canvas.invalidate() }
+                    dialog.onCancel = { cylinder.neonColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "CylinderNeonColorPicker")
+                },
+                onRadiusChange = { r -> cylinder.neonRadius = r; canvas.invalidate() },
+                onIntensityChange = { i -> cylinder.neonIntensity = i; canvas.invalidate() },
+                onCoreEnabledChange = { en -> cylinder.neonCoreEnabled = en; canvas.invalidate() },
+                onReset = {
+                    cylinder.neonEnabled = true
+                    cylinder.neonColor = 0xFF00E5FF.toInt()
+                    cylinder.neonRadius = 18f
+                    cylinder.neonIntensity = 1f
+                    cylinder.neonCoreEnabled = true
+                    canvas.invalidate()
+                },
+                onApply = { showComposeCylinder3DSheet(cylinder) },
+                onCancel = {
+                    cylinderSnapshot?.let { snap ->
+                        cylinder.neonEnabled = snap.neonEnabled
+                        cylinder.neonColor = snap.neonColor
+                        cylinder.neonRadius = snap.neonRadius
+                        cylinder.neonIntensity = snap.neonIntensity
+                        cylinder.neonCoreEnabled = snap.neonCoreEnabled
+                    }
+                    canvas.invalidate()
+                    showComposeCylinder3DSheet(cylinder)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showCylinder3DEmbossSheet(cylinder: Cylinder3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        host.setContent {
+            EmbossDetailPage(
+                enabled = cylinder.embossEnabled,
+                lightAngle = cylinder.embossLightAngle,
+                intensity = cylinder.embossIntensity,
+                ambient = cylinder.embossAmbient,
+                specular = cylinder.embossSpecular,
+                bevel = cylinder.embossBevel,
+                onEnabledChange = { en -> cylinder.embossEnabled = en; canvas.invalidate() },
+                onLightAngleChange = { v -> cylinder.embossLightAngle = v; canvas.invalidate() },
+                onIntensityChange = { v -> cylinder.embossIntensity = v; canvas.invalidate() },
+                onAmbientChange = { v -> cylinder.embossAmbient = v; canvas.invalidate() },
+                onSpecularChange = { v -> cylinder.embossSpecular = v; canvas.invalidate() },
+                onBevelChange = { v -> cylinder.embossBevel = v; canvas.invalidate() },
+                onReset = {
+                    cylinder.embossEnabled = true
+                    cylinder.embossLightAngle = 45f
+                    cylinder.embossAmbient = 0.2f
+                    cylinder.embossSpecular = 8f
+                    cylinder.embossIntensity = 1f
+                    cylinder.embossBevel = 3f
+                    canvas.invalidate()
+                },
+                onApply = { showComposeCylinder3DSheet(cylinder) },
+                onCancel = {
+                    cylinderSnapshot?.let { snap ->
+                        cylinder.embossEnabled = snap.embossEnabled
+                        cylinder.embossLightAngle = snap.embossLightAngle
+                        cylinder.embossAmbient = snap.embossAmbient
+                        cylinder.embossSpecular = snap.embossSpecular
+                        cylinder.embossIntensity = snap.embossIntensity
+                        cylinder.embossBevel = snap.embossBevel
+                    }
+                    canvas.invalidate()
+                    showComposeCylinder3DSheet(cylinder)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 3. Free Draw Studio Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -2286,6 +2865,13 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 binding.bottomNavigation.selectedItemId = R.id.nav_add
             }
             showComposeSphere3DSheet(layer)
+        }
+        // Podium 3D terpilih → buka Studio Podium 3D Cylinder
+        if (layer is Cylinder3DLayer && activeTag != OBJ_3D_CYLINDER && draftCylinder !== layer) {
+            if (activeTag.isNotEmpty()) {
+                binding.bottomNavigation.selectedItemId = R.id.nav_add
+            }
+            showComposeCylinder3DSheet(layer)
         }
     }
 
