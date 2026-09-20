@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    tools:ignore="RTLSymmetry">
+    <!-- Bulan sabit: lingkaran luar dikurangi lingkaran dalam (fill-rule evenodd) -->
+    <path
+        android:pathData="M10.5,4 a8,8 0 1,0 0,16 a8,8 0 1,0 0,-16 Z M14.5,4.5 a7.5,7.5 0 1,1 0,15 a7.5,7.5 0 1,1 0,-15 Z"
+        android:fillColor="#616161"
+        android:fillType="evenOdd"
+        tools:targetApi="21" />
+    <!-- Bintang 8 point kecil di dekat ujung kanan atas bulan sabit -->
+    <path
+        android:pathData="M18.5,2.6 L19.2,4.1 L20.8,4.1 L19.6,5.1 L20.0,6.7 L18.5,5.8 L17.0,6.7 L17.4,5.1 L16.2,4.1 L17.8,4.1 Z"
+        android:fillColor="#616161" />
+</vector>

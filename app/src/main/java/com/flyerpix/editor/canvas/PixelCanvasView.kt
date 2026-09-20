@@ -63,6 +63,10 @@ import com.flyerpix.editor.canvas.model.Cone3DLayer
 import com.flyerpix.editor.canvas.model.ConeMaterial
 import com.flyerpix.editor.canvas.model.ConeStripeMode
 import com.flyerpix.editor.canvas.model.ConeStyle
+import com.flyerpix.editor.canvas.model.CrescentMaterial
+import com.flyerpix.editor.canvas.model.CrescentStyle
+import com.flyerpix.editor.canvas.model.Moon3DLayer
+import com.flyerpix.editor.canvas.model.StarType
 import com.flyerpix.editor.canvas.model.Cylinder3DLayer
 import com.flyerpix.editor.canvas.model.HitAnchor
 import com.flyerpix.editor.canvas.model.IconPosition
@@ -6196,6 +6200,63 @@ private var cylinderTiltStartRadiusY: Float = 0f
             // Posisi: horizontal tengah, vertikal sekitar 40% ke atas dari tengah.
             x = cx - contentW / 2f,
             y = cy - contentH * 0.4f
+        )
+        addLayer(layer)
+        return layer
+    }
+
+    /**
+     * Adds a default 3D Crescent Moon (Gold Crescent) to the canvas center
+     * as a [Moon3DLayer] with wide crescent + hanging 8-point star.
+     */
+    fun addMoon3DLayer(): Moon3DLayer {
+        val cx = if (width > 0) width / 2f else 540f
+        val cy = if (height > 0) height / 2f else 540f
+        val r = ((minOf(width, height).takeIf { it > 0 }?.toFloat() ?: 400f) * 0.28f).coerceIn(40f, 240f)
+        val layer = Moon3DLayer(
+            outerRadius = r,
+            innerOffset = 0.55f,
+            extrusionDepth = r * 0.18f,
+            tiltAngle = 12f,
+            spinAngle = 0f,
+            style = CrescentStyle.WIDE_CRESCENT,
+            materialType = CrescentMaterial.LUXURY_GOLD,
+            baseColor = 0xFFD4AF37.toInt(),
+            lightAngle = -45f,
+            specularIntensity = 0.9f,
+            auraEnabled = true,
+            auraColor = 0xFFFFD700.toInt(),
+            auraRadius = 1.4f,
+            starType = StarType.STAR_8,
+            starScale = 0.28f,
+            starColor = 0xFFFFD700.toInt(),
+            hangingCordEnabled = true,
+            floorShadowEnabled = true,
+            floatingElevation = 20f,
+            floorShadowOpacity = 0.45f,
+            wireframeEnabled = false,
+            wireStrokeWidth = 2f,
+            wireColor = 0xFFD4AF37.toInt(),
+            wireStrokeOpacity = 0.6f,
+            shadowEnabled = false,
+            shadowColor = 0xFF000000.toInt(),
+            shadowRadius = 10f,
+            shadowOpacity = 0.6f,
+            shadowDx = 0f,
+            shadowDy = 5f,
+            embossEnabled = false,
+            embossLightAngle = -45f,
+            embossIntensity = 1f,
+            embossAmbient = 0.3f,
+            embossSpecular = 0.7f,
+            embossBevel = 2f,
+            perspectiveEnabled = false,
+            neonEnabled = false,
+            neonColor = 0xFF00E5FF.toInt(),
+            neonRadius = 20f,
+            neonIntensity = 1f,
+            x = cx - r,
+            y = cy - r
         )
         addLayer(layer)
         return layer

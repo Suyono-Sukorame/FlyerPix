@@ -36,6 +36,10 @@ import com.flyerpix.editor.canvas.model.Cone3DLayer
 import com.flyerpix.editor.canvas.model.ConeMaterial
 import com.flyerpix.editor.canvas.model.ConeStripeMode
 import com.flyerpix.editor.canvas.model.ConeStyle
+import com.flyerpix.editor.canvas.model.CrescentMaterial
+import com.flyerpix.editor.canvas.model.CrescentStyle
+import com.flyerpix.editor.canvas.model.Moon3DLayer
+import com.flyerpix.editor.canvas.model.StarType
 import com.flyerpix.editor.canvas.model.Cylinder3DLayer
 import com.flyerpix.editor.canvas.model.GradientType
 import com.flyerpix.editor.canvas.model.GradientColor
@@ -84,6 +88,7 @@ class ObjectMenuController(
         const val OBJ_3D_CAPSULE = "3d_capsule"
         const val OBJ_3D_TORUS  = "3d_torus"
         const val OBJ_3D_CONE   = "3d_cone"
+        const val OBJ_3D_MOON  = "3d_moon"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
@@ -112,6 +117,10 @@ class ObjectMenuController(
         private const val CONE_BASE_COLOR_RESULT_KEY = "obj_cone_base_color_key"
         private const val CONE_STRIPE_COLOR_RESULT_KEY = "obj_cone_stripe_color_key"
         private const val CONE_WIRE_COLOR_RESULT_KEY = "obj_cone_wire_color_key"
+
+        private const val MOON_BASE_COLOR_RESULT_KEY = "obj_moon_base_color_key"
+        private const val MOON_AURA_COLOR_RESULT_KEY = "obj_moon_aura_color_key"
+        private const val MOON_STAR_COLOR_RESULT_KEY = "obj_moon_star_color_key"
     }
 
     private val fragmentManager: FragmentManager get() = activity.supportFragmentManager
@@ -189,6 +198,11 @@ class ObjectMenuController(
     private var draftCone: Cone3DLayer? = null
     private var isNewCone: Boolean = false
     private var coneSnapshot: Cone3DLayer? = null
+
+    // Draft layer 3D Moon (for instant-create & rollback)
+    private var draftMoon: Moon3DLayer? = null
+    private var isNewMoon: Boolean = false
+    private var moonSnapshot: Moon3DLayer? = null
 
     /** State Brush Color draw sheet yang bisa di-update live dari color picker dialog. */
     private val liveDrawBrushColor = mutableStateOf(0)
@@ -326,7 +340,8 @@ class ObjectMenuController(
             Spec(OBJ_3D_COIN, "3D Coin", R.drawable.ic_coin_3d_24px),
             Spec(OBJ_3D_CAPSULE, "3D Capsule", R.drawable.ic_capsule_3d_24px),
             Spec(OBJ_3D_TORUS, "3D Donut", R.drawable.ic_torus_3d_24px),
-            Spec(OBJ_3D_CONE,   "3D Cone",  R.drawable.ic_cone_3d_24px)
+            Spec(OBJ_3D_CONE,   "3D Cone",  R.drawable.ic_cone_3d_24px),
+            Spec(OBJ_3D_MOON,  "3D Moon", R.drawable.ic_moon_3d_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectToolStripInclude.objectToolStripContainer
@@ -393,6 +408,7 @@ class ObjectMenuController(
             OBJ_3D_CAPSULE -> showComposeCapsule3DSheet()
             OBJ_3D_TORUS -> showComposeTorus3DSheet()
             OBJ_3D_CONE -> showComposeCone3DSheet()
+            OBJ_3D_MOON -> showComposeMoon3DSheet()
         }
         onAddSettingsOpenChanged?.invoke(true)
         onPanelChanged()
@@ -427,6 +443,9 @@ class ObjectMenuController(
         draftCone = null
         isNewCone = false
         coneSnapshot = null
+        draftMoon = null
+        isNewMoon = false
+        moonSnapshot = null
         canvas.freeDrawEnabled = false
         canvas.bezierInputEnabled = false
         canvas.bezierInputLayer = null
@@ -703,6 +722,33 @@ class ObjectMenuController(
                 it.wireColor = color
                 canvas.invalidate()
                 showComposeCone3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(MOON_BASE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, 0xFFD4AF37.toInt())
+            val target = (canvas.selectedLayer as? Moon3DLayer) ?: draftMoon
+            target?.let {
+                it.baseColor = color
+                canvas.invalidate()
+                showComposeMoon3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(MOON_AURA_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, 0xFFFFD700.toInt())
+            val target = (canvas.selectedLayer as? Moon3DLayer) ?: draftMoon
+            target?.let {
+                it.auraColor = color
+                canvas.invalidate()
+                showComposeMoon3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(MOON_STAR_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, 0xFFFFD700.toInt())
+            val target = (canvas.selectedLayer as? Moon3DLayer) ?: draftMoon
+            target?.let {
+                it.starColor = color
+                canvas.invalidate()
+                showComposeMoon3DSheet(it)
             }
         }
     }
@@ -4546,6 +4592,353 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2.10 3D Moon / Crescent Studio
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun showComposeMoon3DSheet(moonToEdit: Moon3DLayer? = null) {
+        val moon = moonToEdit ?: draftMoon ?: createNewDraftMoon()
+        showComposeMoon3DDetail(moon)
+    }
+
+    private fun createNewDraftMoon(): Moon3DLayer {
+        val moon = canvas.addMoon3DLayer().also {
+            isNewMoon = true
+        }
+        draftMoon = moon
+        moonSnapshot = moon.copyLayer()
+        canvas.selectedLayer = moon
+        return moon
+    }
+
+    private fun applyMoonPreset(moon: Moon3DLayer, key: String) {
+        val preset = MoonPresets[key] ?: return
+        moon.style = preset.style
+        moon.materialType = preset.materialType
+        moon.baseColor = preset.baseColor
+        moon.innerOffset = preset.innerOffset
+        moon.extrusionDepth = preset.extrusionDepth
+        moon.tiltAngle = preset.tiltAngle
+        moon.starType = preset.starType
+        moon.starScale = preset.starScale
+        moon.auraEnabled = preset.auraEnabled
+        moon.auraRadius = preset.auraRadius
+        moon.floorShadowOpacity = preset.floorShadowOpacity
+        moon.neonEnabled = preset.neonEnabled
+        if (preset.neonEnabled) {
+            moon.neonColor = 0xFF00E5FF.toInt()
+            moon.neonRadius = 20f
+            moon.neonIntensity = 1.1f
+        }
+        canvas.invalidate()
+    }
+
+    private fun showComposeMoon3DDetail(moon: Moon3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_3D_MOON
+        updateToolStripSelection(OBJ_3D_MOON)
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val switchingMoon = draftMoon !== moon
+        draftMoon = moon
+        if (switchingMoon) isNewMoon = false
+        moonSnapshot = moon.copyLayer()
+
+        host.setContent {
+            var currentStyle by remember { mutableStateOf(moon.style) }
+            var currentMaterial by remember { mutableStateOf(moon.materialType) }
+            var currentBaseColor by remember { mutableStateOf(moon.baseColor) }
+            var currentInnerOffset by remember { mutableStateOf(moon.innerOffset) }
+            var currentExtrusion by remember { mutableStateOf(moon.extrusionDepth) }
+            var currentTilt by remember { mutableStateOf(moon.tiltAngle) }
+            var currentSpin by remember { mutableStateOf(moon.spinAngle) }
+            var currentSpecular by remember { mutableStateOf(moon.specularIntensity) }
+            var currentAuraEnabled by remember { mutableStateOf(moon.auraEnabled) }
+            var currentAuraColor by remember { mutableStateOf(moon.auraColor) }
+            var currentAuraRadius by remember { mutableStateOf(moon.auraRadius) }
+            var currentStarType by remember { mutableStateOf(moon.starType) }
+            var currentStarScale by remember { mutableStateOf(moon.starScale) }
+            var currentStarColor by remember { mutableStateOf(moon.starColor) }
+            var currentCord by remember { mutableStateOf(moon.hangingCordEnabled) }
+            var currentWireframe by remember { mutableStateOf(moon.wireframeEnabled) }
+            var currentWireWidth by remember { mutableStateOf(moon.wireStrokeWidth) }
+            var currentWireColor by remember { mutableStateOf(moon.wireColor) }
+            var currentWireOpacity by remember { mutableStateOf(moon.wireStrokeOpacity * 100f) }
+            var currentFloorShadow by remember { mutableStateOf(moon.floorShadowEnabled) }
+            var currentElevation by remember { mutableStateOf(moon.floatingElevation) }
+            var currentFloorShadowOpacity by remember {
+                mutableStateOf((moon.floorShadowOpacity * 100f).coerceIn(0f, 100f))
+            }
+            var currentOpacity by remember { mutableStateOf(moon.opacity / 255f * 100f) }
+
+            Moon3DDetailPage(
+                outerRadius = moon.outerRadius,
+                innerOffset = currentInnerOffset,
+                extrusionDepth = currentExtrusion,
+                tiltAngle = currentTilt,
+                spinAngle = currentSpin,
+                style = currentStyle,
+                materialType = currentMaterial,
+                baseColor = currentBaseColor,
+                lightAngle = moon.lightAngle,
+                specularIntensity = currentSpecular,
+                auraEnabled = currentAuraEnabled,
+                auraColor = currentAuraColor,
+                auraRadius = currentAuraRadius,
+                starType = currentStarType,
+                starScale = currentStarScale,
+                starColor = currentStarColor,
+                hangingCordEnabled = currentCord,
+                floorShadowEnabled = currentFloorShadow,
+                floatingElevation = currentElevation,
+                floorShadowOpacityPct = currentFloorShadowOpacity,
+                opacityPct = currentOpacity,
+                wireframeEnabled = currentWireframe,
+                wireStrokeWidth = currentWireWidth,
+                wireColor = currentWireColor,
+                wireStrokeOpacityPct = currentWireOpacity,
+                onPresetClick = { key ->
+                    applyMoonPreset(moon, key)
+                    currentStyle = moon.style
+                    currentMaterial = moon.materialType
+                    currentBaseColor = moon.baseColor
+                    currentInnerOffset = moon.innerOffset
+                    currentExtrusion = moon.extrusionDepth
+                    currentTilt = moon.tiltAngle
+                    currentStarType = moon.starType
+                    currentStarScale = moon.starScale
+                    currentAuraEnabled = moon.auraEnabled
+                    currentAuraRadius = moon.auraRadius
+                    currentFloorShadowOpacity = moon.floorShadowOpacity * 100f
+                },
+                onStyleChange = { s -> currentStyle = s; moon.style = s; canvas.invalidate() },
+                onMaterialChange = { m -> currentMaterial = m; moon.materialType = m; canvas.invalidate() },
+                onBaseColorChange = { c -> currentBaseColor = c; moon.baseColor = c; canvas.invalidate() },
+                onOpenBaseColorPicker = {
+                    val original = moon.baseColor
+                    val dialog = ColorPickerDialog.newInstance(initialColor = moon.baseColor, resultKey = MOON_BASE_COLOR_RESULT_KEY)
+                    dialog.onColorChanged = { color -> moon.baseColor = color; canvas.invalidate() }
+                    dialog.onCancel = { moon.baseColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "MoonBaseColorPicker")
+                },
+                onInnerOffsetChange = { v -> currentInnerOffset = v; moon.innerOffset = v; canvas.invalidate() },
+                onExtrusionDepthChange = { v -> currentExtrusion = v; moon.extrusionDepth = v; canvas.invalidate() },
+                onTiltChange = { v -> currentTilt = v; moon.tiltAngle = v; canvas.invalidate() },
+                onSpinChange = { v -> currentSpin = v; moon.spinAngle = v; canvas.invalidate() },
+                onSpecularChange = { v -> currentSpecular = v; moon.specularIntensity = v; canvas.invalidate() },
+                onAuraEnabledChange = { en -> currentAuraEnabled = en; moon.auraEnabled = en; canvas.invalidate() },
+                onAuraColorChange = { c -> currentAuraColor = c; moon.auraColor = c; canvas.invalidate() },
+                onOpenAuraColorPicker = {
+                    val original = moon.auraColor
+                    val dialog = ColorPickerDialog.newInstance(initialColor = moon.auraColor, resultKey = MOON_AURA_COLOR_RESULT_KEY)
+                    dialog.onColorChanged = { color -> moon.auraColor = color; canvas.invalidate() }
+                    dialog.onCancel = { moon.auraColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "MoonAuraColorPicker")
+                },
+                onAuraRadiusChange = { v -> currentAuraRadius = v; moon.auraRadius = v; canvas.invalidate() },
+                onStarTypeChange = { t -> currentStarType = t; moon.starType = t; canvas.invalidate() },
+                onStarScaleChange = { v -> currentStarScale = v; moon.starScale = v; canvas.invalidate() },
+                onStarColorChange = { c -> currentStarColor = c; moon.starColor = c; canvas.invalidate() },
+                onOpenStarColorPicker = {
+                    val original = moon.starColor
+                    val dialog = ColorPickerDialog.newInstance(initialColor = moon.starColor, resultKey = MOON_STAR_COLOR_RESULT_KEY)
+                    dialog.onColorChanged = { color -> moon.starColor = color; canvas.invalidate() }
+                    dialog.onCancel = { moon.starColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "MoonStarColorPicker")
+                },
+                onHangingCordChange = { en -> currentCord = en; moon.hangingCordEnabled = en; canvas.invalidate() },
+                onWireframeEnabledChange = { en -> currentWireframe = en; moon.wireframeEnabled = en; canvas.invalidate() },
+                onWireStrokeWidthChange = { w -> currentWireWidth = w; moon.wireStrokeWidth = w; canvas.invalidate() },
+                onWireColorChange = { c -> currentWireColor = c; moon.wireColor = c; canvas.invalidate() },
+                onOpenWireColorPicker = {
+                    val original = moon.wireColor
+                    val dialog = ColorPickerDialog.newInstance(initialColor = moon.wireColor, resultKey = "moon_wire_color_key")
+                    dialog.onColorChanged = { color -> moon.wireColor = color; canvas.invalidate() }
+                    dialog.onCancel = { moon.wireColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "MoonWireColorPicker")
+                },
+                onWireStrokeOpacityChange = { pct -> currentWireOpacity = pct; moon.wireStrokeOpacity = (pct / 100f).coerceIn(0f, 1f); canvas.invalidate() },
+                onFloorShadowEnabledChange = { en -> currentFloorShadow = en; moon.floorShadowEnabled = en; canvas.invalidate() },
+                onElevationChange = { v -> currentElevation = v; moon.floatingElevation = v; canvas.invalidate() },
+                onFloorShadowOpacityChange = { pct -> currentFloorShadowOpacity = pct; moon.floorShadowOpacity = (pct / 100f).coerceIn(0f, 1f); canvas.invalidate() },
+                onOpacityChange = { pct -> currentOpacity = pct; moon.opacity = (pct / 100f * 255f).toInt().coerceIn(0, 255); canvas.invalidate() },
+                onOpenShadowEditor = { canvas.invalidate(); showMoon3DShadowSheet(moon) },
+                onOpenNeonEditor = { canvas.invalidate(); showMoon3DNeonSheet(moon) },
+                onOpenEmbossEditor = { canvas.invalidate(); showMoon3DEmbossSheet(moon) },
+                onReset = {
+                    currentStyle = CrescentStyle.WIDE_CRESCENT; currentMaterial = CrescentMaterial.LUXURY_GOLD
+                    currentBaseColor = 0xFFD4AF37.toInt(); currentInnerOffset = 0.55f; currentExtrusion = 28f
+                    currentTilt = 15f; currentSpin = 0f; currentSpecular = 0.9f
+                    currentAuraEnabled = true; currentAuraColor = 0xFFFFD700.toInt(); currentAuraRadius = 1.4f
+                    currentStarType = StarType.STAR_8; currentStarScale = 0.28f; currentStarColor = 0xFFFFD700.toInt()
+                    currentCord = true; currentWireframe = false; currentWireWidth = 2f
+                    currentWireColor = 0xFFD4AF37.toInt(); currentWireOpacity = 60f
+                    currentFloorShadow = true; currentElevation = 20f; currentFloorShadowOpacity = 45f; currentOpacity = 100f
+                    moon.style = CrescentStyle.WIDE_CRESCENT; moon.materialType = CrescentMaterial.LUXURY_GOLD
+                    moon.baseColor = 0xFFD4AF37.toInt(); moon.innerOffset = 0.55f; moon.extrusionDepth = 28f
+                    moon.tiltAngle = 15f; moon.spinAngle = 0f; moon.specularIntensity = 0.9f
+                    moon.auraEnabled = true; moon.auraColor = 0xFFFFD700.toInt(); moon.auraRadius = 1.4f
+                    moon.starType = StarType.STAR_8; moon.starScale = 0.28f; moon.starColor = 0xFFFFD700.toInt()
+                    moon.hangingCordEnabled = true; moon.wireframeEnabled = false; moon.wireStrokeWidth = 2f
+                    moon.wireColor = 0xFFD4AF37.toInt(); moon.wireStrokeOpacity = 0.6f
+                    moon.floorShadowEnabled = true; moon.floatingElevation = 20f; moon.floorShadowOpacity = 0.45f
+                    moon.opacity = 255; moon.neonEnabled = false; moon.neonColor = 0xFF00E5FF.toInt()
+                    moon.neonRadius = 20f; moon.neonIntensity = 1f; moon.shadowEnabled = false; moon.embossEnabled = false
+                    canvas.invalidate()
+                },
+                onApply = {
+                    canvas.runRecordedAction(if (isNewMoon) "Add 3D Moon" else "Modify 3D Moon") {}
+                    showSnackbar("3D Moon saved")
+                    draftMoon = null; isNewMoon = false; moonSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                onCancel = {
+                    if (isNewMoon) { canvas.removeLayer(moon) } else {
+                        moonSnapshot?.let { snap ->
+                            moon.style = snap.style; moon.materialType = snap.materialType; moon.baseColor = snap.baseColor
+                            moon.outerRadius = snap.outerRadius; moon.innerOffset = snap.innerOffset; moon.extrusionDepth = snap.extrusionDepth
+                            moon.tiltAngle = snap.tiltAngle; moon.spinAngle = snap.spinAngle; moon.lightAngle = snap.lightAngle
+                            moon.specularIntensity = snap.specularIntensity; moon.auraEnabled = snap.auraEnabled; moon.auraColor = snap.auraColor
+                            moon.auraRadius = snap.auraRadius; moon.starType = snap.starType; moon.starScale = snap.starScale
+                            moon.starColor = snap.starColor; moon.hangingCordEnabled = snap.hangingCordEnabled
+                            moon.wireframeEnabled = snap.wireframeEnabled; moon.wireStrokeWidth = snap.wireStrokeWidth
+                            moon.wireColor = snap.wireColor; moon.wireStrokeOpacity = snap.wireStrokeOpacity
+                            moon.floorShadowEnabled = snap.floorShadowEnabled; moon.floatingElevation = snap.floatingElevation
+                            moon.floorShadowOpacity = snap.floorShadowOpacity; moon.opacity = snap.opacity
+                            moon.neonEnabled = snap.neonEnabled; moon.neonColor = snap.neonColor; moon.neonRadius = snap.neonRadius
+                            moon.neonIntensity = snap.neonIntensity; moon.shadowEnabled = snap.shadowEnabled
+                            moon.shadowColor = snap.shadowColor; moon.shadowRadius = snap.shadowRadius; moon.shadowOpacity = snap.shadowOpacity
+                            moon.shadowDx = snap.shadowDx; moon.shadowDy = snap.shadowDy; moon.embossEnabled = snap.embossEnabled
+                        }
+                    }
+                    canvas.invalidate()
+                    draftMoon = null; isNewMoon = false; moonSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showMoon3DShadowSheet(moon: Moon3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+        host.setContent {
+            ShadowDetailPage(
+                title = "Moon Shadow",
+                enabled = moon.shadowEnabled,
+                color = moon.shadowColor,
+                radius = moon.shadowRadius.coerceIn(0f, 40f),
+                opacityPct = (moon.shadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = moon.shadowDx.coerceIn(-30f, 30f),
+                dy = moon.shadowDy.coerceIn(-30f, 30f),
+                onEnabledChange = { en -> moon.shadowEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> moon.shadowColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = moon.shadowColor
+                    val dialog = ColorPickerDialog.newInstance(initialColor = moon.shadowColor, resultKey = "moon_shadow_color_key")
+                    dialog.onColorChanged = { c -> moon.shadowColor = c; canvas.invalidate() }
+                    dialog.onCancel = { moon.shadowColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "MoonShadowColorPicker")
+                },
+                onRadiusChange = { r -> moon.shadowRadius = r; canvas.invalidate() },
+                onOpacityChange = { opPct -> moon.shadowOpacity = (opPct / 100f).coerceIn(0f, 1f); canvas.invalidate() },
+                onDxChange = { x -> moon.shadowDx = x; canvas.invalidate() },
+                onDyChange = { y -> moon.shadowDy = y; canvas.invalidate() },
+                onReset = { moon.shadowEnabled = true; moon.shadowColor = 0xFF000000.toInt(); moon.shadowRadius = 10f; moon.shadowOpacity = 0.6f; moon.shadowDx = 0f; moon.shadowDy = 5f; canvas.invalidate() },
+                onApply = { showComposeMoon3DSheet(moon) },
+                onCancel = { moonSnapshot?.let { snap -> moon.shadowEnabled = snap.shadowEnabled; moon.shadowColor = snap.shadowColor; moon.shadowRadius = snap.shadowRadius; moon.shadowOpacity = snap.shadowOpacity; moon.shadowDx = snap.shadowDx; moon.shadowDy = snap.shadowDy }; canvas.invalidate(); showComposeMoon3DSheet(moon) },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showMoon3DNeonSheet(moon: Moon3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+        host.setContent {
+            NeonDetailPage(
+                enabled = moon.neonEnabled,
+                color = moon.neonColor,
+                radius = moon.neonRadius.coerceIn(1f, 40f),
+                intensity = moon.neonIntensity,
+                coreEnabled = moon.neonCoreEnabled,
+                onEnabledChange = { en -> moon.neonEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> moon.neonColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = moon.neonColor
+                    val dialog = ColorPickerDialog.newInstance(initialColor = moon.neonColor, resultKey = "moon_neon_color_key")
+                    dialog.onColorChanged = { c -> moon.neonColor = c; canvas.invalidate() }
+                    dialog.onCancel = { moon.neonColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "MoonNeonColorPicker")
+                },
+                onRadiusChange = { r -> moon.neonRadius = r; canvas.invalidate() },
+                onIntensityChange = { i -> moon.neonIntensity = i; canvas.invalidate() },
+                onCoreEnabledChange = { en -> moon.neonCoreEnabled = en; canvas.invalidate() },
+                onReset = { moon.neonEnabled = true; moon.neonColor = 0xFF00E5FF.toInt(); moon.neonRadius = 20f; moon.neonIntensity = 1f; moon.neonCoreEnabled = true; canvas.invalidate() },
+                onApply = { showComposeMoon3DSheet(moon) },
+                onCancel = { moonSnapshot?.let { snap -> moon.neonEnabled = snap.neonEnabled; moon.neonColor = snap.neonColor; moon.neonRadius = snap.neonRadius; moon.neonIntensity = snap.neonIntensity; moon.neonCoreEnabled = snap.neonCoreEnabled }; canvas.invalidate(); showComposeMoon3DSheet(moon) },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showMoon3DEmbossSheet(moon: Moon3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+        host.setContent {
+            EmbossDetailPage(
+                enabled = moon.embossEnabled,
+                lightAngle = moon.embossLightAngle,
+                intensity = moon.embossIntensity,
+                ambient = moon.embossAmbient,
+                specular = moon.embossSpecular,
+                bevel = moon.embossBevel,
+                onEnabledChange = { en -> moon.embossEnabled = en; canvas.invalidate() },
+                onLightAngleChange = { v -> moon.embossLightAngle = v; canvas.invalidate() },
+                onIntensityChange = { v -> moon.embossIntensity = v; canvas.invalidate() },
+                onAmbientChange = { v -> moon.embossAmbient = v; canvas.invalidate() },
+                onSpecularChange = { v -> moon.embossSpecular = v; canvas.invalidate() },
+                onBevelChange = { v -> moon.embossBevel = v; canvas.invalidate() },
+                onReset = { moon.embossEnabled = true; moon.embossLightAngle = -45f; moon.embossIntensity = 1f; moon.embossAmbient = 0.3f; moon.embossSpecular = 0.7f; moon.embossBevel = 2f; canvas.invalidate() },
+                onApply = { showComposeMoon3DSheet(moon) },
+                onCancel = { moonSnapshot?.let { snap -> moon.embossEnabled = snap.embossEnabled; moon.embossLightAngle = snap.embossLightAngle; moon.embossIntensity = snap.embossIntensity; moon.embossAmbient = snap.embossAmbient; moon.embossSpecular = snap.embossSpecular; moon.embossBevel = snap.embossBevel }; canvas.invalidate(); showComposeMoon3DSheet(moon) },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
     // 3. Free Draw Studio Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -5041,6 +5434,13 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 binding.bottomNavigation.selectedItemId = R.id.nav_add
             }
             showComposeCone3DSheet(layer)
+        }
+        // Moon 3D selected -> open 3D Moon Studio
+        if (layer is Moon3DLayer && activeTag != OBJ_3D_MOON && draftMoon !== layer) {
+            if (activeTag.isNotEmpty()) {
+                binding.bottomNavigation.selectedItemId = R.id.nav_add
+            }
+            showComposeMoon3DSheet(layer)
         }
     }
 
