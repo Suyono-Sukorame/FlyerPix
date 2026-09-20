@@ -55,6 +55,11 @@
                     android:focusable="true"
                     android:focusableInTouchMode="true" />
 
+            <!-- Editor teks inline: overlay transparan + kotak EditText di atas kanvas -->
+            <include
+                    android:id="@+id/inlineTextEditorInclude"
+                    layout="@layout/layout_canvas_inline_text_editor" />
+
         </com.google.android.material.card.MaterialCardView>
 
     </androidx.constraintlayout.motion.widget.MotionLayout>
@@ -1296,5 +1301,15 @@
             app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Toolbar pemformatan editor teks inline (dok di atas keyboard) -->
+    <include
+            android:id="@+id/inlineTextToolbarInclude"
+            layout="@layout/layout_inline_text_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_margin="10dp"
+            android:visibility="gone" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

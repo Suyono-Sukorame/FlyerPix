@@ -62,6 +62,7 @@ import com.flyerpix.editor.ui.controller.EffectsController
 import com.flyerpix.editor.ui.controller.FontController
 import com.flyerpix.editor.ui.controller.TemplateController
 import com.flyerpix.editor.ui.controller.CanvasToolsController
+import com.flyerpix.editor.ui.controller.InlineTextEditorController
 import com.flyerpix.editor.ui.controller.ShapePanelController
 import com.flyerpix.editor.ui.controller.PanelHeightManager
 import com.flyerpix.editor.ui.composables.EraseBgBottomSheetComposable
@@ -91,6 +92,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     private lateinit var templateController: TemplateController
     private lateinit var canvasToolsController: CanvasToolsController
     private lateinit var shapePanelController: ShapePanelController
+
+    private lateinit var inlineTextEditor: InlineTextEditorController
 
     // ── Kanvas dimensi ──────────────────────────────────────────────────────
     private var canvasRatioW = 1
@@ -305,6 +308,20 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         this.title = ""
         pixelCanvasView = binding.pixelCanvasView
 
+        // ── Editor teks inline (on-canvas) ─────────────────────────────────
+        inlineTextEditor = InlineTextEditorController(
+            this,
+            pixelCanvasView,
+            binding.inlineTextEditorInclude.inlineEditorOverlay,
+            binding.inlineTextEditorInclude.inlineEditBox,
+            binding.inlineTextEditorInclude.inlineEditText,
+            binding.inlineTextToolbarInclude,
+            binding.inlineTextToolbarInclude.inlineTextToolbarRoot,
+            binding.parentLayout
+        ) { editing ->
+            setInlineEditingUi(editing)
+        }
+
         // ── Profiling: baca flag debug via system property ─────────────────
         // `adb shell setprop debug.flyerpix_profile 1` → aktifkan timer onDraw.
         // Polling kecil tiap 500ms cukup karena flag hanya untuk sesi debug.
@@ -373,7 +390,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
         // Dialog edit teks interaktif saat double-tap layer teks
         pixelCanvasView.onTextLayerDoubleTapListener = { textLayer ->
-            showEditTextDialog(textLayer)
+            startInlineTextEditing(textLayer)
         }
 
         setImage()
@@ -421,7 +438,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             pixelCanvasView,
             { showSnackbar(it) },
             onShowMenu = { showMenu(it) },
-            onEditTextRequested = { showEditTextDialog(it) },
+            onEditTextRequested = { startInlineTextEditing(it) },
             onFontRequested = { fontController.openFontPicker(it) },
             onCanvasChanged = { fitCanvasToOpenPanels() },
             onEffectSettingsOpenChanged = { effectSettingsOpen ->
@@ -526,7 +543,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             binding,
             pixelCanvasView,
             { showSnackbar(it) },
-            { showEditTextDialog(it) }
+            { startInlineTextEditing(it) }
         )
         layerPanel.initialize()
 
@@ -627,6 +644,29 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         }
         dialog.setOnDismissListener {
             pixelCanvasView.setTextEditMode(false)
+        }
+    }
+
+    /** Mulai editor teks inline untuk [textLayer] (rute utama semua aksi edit teks). */
+    fun startInlineTextEditing(textLayer: com.flyerpix.editor.canvas.model.TextLayer) {
+        inlineTextEditor.startEditing(textLayer)
+    }
+
+    /** Sembunyikan/tampilkan panel & navigasi bawah saat sesi editing inline berjalan. */
+    private fun setInlineEditingUi(editing: Boolean) {
+        val panelViews = listOf(
+            binding.bottomNavigation,
+            binding.editContainerPanel,
+            binding.textEditorBar,
+            binding.editObjectBar,
+            binding.objectMenuPanel,
+            binding.canvasMenuPanel,
+            binding.effectsMenuPanel,
+            binding.bottomControlPanelContainer
+        )
+        panelViews.forEach { it.visibility = if (editing) View.GONE else View.VISIBLE }
+        if (editing) {
+            fitCanvasToOpenPanels()
         }
     }
 
@@ -788,6 +828,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         else "W,${canvasRatioW}:${canvasRatioH}"
 
     override fun onBackPressed() {
+        if (inlineTextEditor.handleBackPress()) {
+            return
+        }
         if (pixelCanvasView.isEraseBgActive) {
             pixelCanvasView.cancelEraseBg()
             hideEraseBgPanel()
@@ -1256,7 +1299,7 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
         // Row 1: Edit Text, Copy, Size, Rotate
         row1.addView(makeIcon(R.drawable.ic_edit_24px, "Edit Text") {
-            showEditTextDialog(textLayer)
+            startInlineTextEditing(textLayer)
         })
         row1.addView(makeIcon(R.drawable.ic_copy_24px, "Copy") {
             pixelCanvasView.runRecordedAction("Copy Text") {

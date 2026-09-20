@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/inlineTextToolbarRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_text_edit_sheet"
+    android:clipToOutline="true"
+    android:orientation="vertical"
+    android:visibility="gone">
+
+    <HorizontalScrollView
+        android:id="@+id/inlineToolbarScroll"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:background="@drawable/bg_text_edit_toolbar"
+        android:layout_margin="10dp"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="6dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInlineDone"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="DONE"
+                android:textColor="@color/brand_blue"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                app:backgroundTint="#EAF3FF"
+                app:cornerRadius="20dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInlineCancel"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="CANCEL"
+                android:textColor="@color/light_text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                app:backgroundTint="@android:color/transparent"
+                app:cornerRadius="20dp" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="26dp"
+                android:layout_marginHorizontal="8dp"
+                android:background="#DDE4EF" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInlineBold"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="42dp"
+                android:layout_height="40dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:text="B"
+                android:textColor="#1F2A44"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_text_edit_format_button"
+                android:backgroundTint="@android:color/transparent"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInlineItalic"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="42dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:text="I"
+                android:textColor="#1F2A44"
+                android:textSize="15sp"
+                android:textStyle="italic"
+                android:background="@drawable/bg_text_edit_format_button"
+                android:backgroundTint="@android:color/transparent"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInlineUnderline"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="42dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:text="U"
+                android:textColor="#1F2A44"
+                android:textSize="15sp"
+                android:background="@drawable/bg_text_edit_format_button"
+                android:backgroundTint="@android:color/transparent"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInlineStrike"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="42dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:text="S"
+                android:textColor="#1F2A44"
+                android:textSize="15sp"
+                android:background="@drawable/bg_text_edit_format_button"
+                android:backgroundTint="@android:color/transparent"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInlineCase"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="Aa"
+                android:textColor="#1F2A44"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_text_edit_format_button"
+                android:backgroundTint="@android:color/transparent"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInlineColor"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingHorizontal="10dp"
+                android:text="Color"
+                android:textColor="#1F2A44"
+                android:textSize="12sp"
+                android:background="@drawable/bg_text_edit_format_button"
+                android:backgroundTint="@android:color/transparent"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_sharp_palette_24px"
+                app:iconPadding="4dp"
+                app:iconSize="18dp"
+                app:iconTint="#1F2A44" />
+
+            <View
+                android:id="@+id/inlineToolbarDivider"
+                android:layout_width="1dp"
+                android:layout_height="26dp"
+                android:layout_marginHorizontal="8dp"
+                android:background="#DDE4EF" />
+
+            <TextView
+                android:id="@+id/tvInlineCharCount"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:minWidth="64dp"
+                android:paddingStart="2dp"
+                android:paddingEnd="8dp"
+                android:text="0"
+                android:textColor="@color/light_text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <LinearLayout
+        android:id="@+id/inlineColorPalette"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <View
+            android:id="@+id/chipColor1"
+            style="@style/InlineColorChip"
+            android:contentDescription="White" />
+
+        <View
+            android:id="@+id/chipColor2"
+            style="@style/InlineColorChip"
+            android:contentDescription="Red" />
+
+        <View
+            android:id="@+id/chipColor3"
+            style="@style/InlineColorChip"
+            android:contentDescription="Orange" />
+
+        <View
+            android:id="@+id/chipColor4"
+            style="@style/InlineColorChip"
+            android:contentDescription="Yellow" />
+
+        <View
+            android:id="@+id/chipColor5"
+            style="@style/InlineColorChip"
+            android:contentDescription="Green" />
+
+        <View
+            android:id="@+id/chipColor6"
+            style="@style/InlineColorChip"
+            android:contentDescription="Cyan" />
+
+        <View
+            android:id="@+id/chipColor7"
+            style="@style/InlineColorChip"
+            android:contentDescription="Blue" />
+
+        <View
+            android:id="@+id/chipColor8"
+            style="@style/InlineColorChip"
+            android:contentDescription="Purple" />
+
+        <View
+            android:id="@+id/chipColor9"
+            style="@style/InlineColorChip"
+            android:contentDescription="Black" />
+    </LinearLayout>
+</LinearLayout>

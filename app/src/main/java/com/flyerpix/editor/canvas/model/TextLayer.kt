@@ -284,11 +284,19 @@ data class TextLayer(
     }
 
     private fun styledText(paint: TextPaint): CharSequence {
+        return styleRichText(text, richTextSpans, paint)
+    }
+
+    /**
+     * Menerapkan [RichTextSpan] ke [text] untuk satu pass render/pengukuran.
+     * Span warna hanya diaplikasikan bila pass menggunakan [textColor] (pass FILL murni).
+     */
+    fun styleRichText(text: String, spans: List<RichTextSpan>, paint: TextPaint): CharSequence {
         val content = if (text.isEmpty()) " " else text
-        if (richTextSpans.isEmpty() || paint.style != Paint.Style.FILL) return content
+        if (spans.isEmpty() || paint.style != Paint.Style.FILL) return content
 
         val styled = SpannableString(content)
-        richTextSpans.forEach { span ->
+        spans.forEach { span ->
             val start = span.start.coerceIn(0, content.length)
             val end = span.end.coerceIn(start, content.length)
             if (end <= start) return@forEach
@@ -306,7 +314,11 @@ data class TextLayer(
     }
 
     private fun createLayout(paint: TextPaint): StaticLayout {
-        val content = styledText(paint)
+        return createLayoutFor(text, richTextSpans, paint)
+    }
+
+    private fun createLayoutFor(text: String, spans: List<RichTextSpan>, paint: TextPaint): StaticLayout {
+        val content = styleRichText(text, spans, paint)
         val lines = content.split("\n")
         val useWrap = wrapTextEnabled && wrapWidth > 0f
         val layoutWidth = if (useWrap) {
@@ -353,6 +365,72 @@ data class TextLayer(
             if (width > maxLineWidth) maxLineWidth = width
         }
         return maxLineWidth.coerceAtLeast(1f)
+    }
+
+    /**
+     * Mengukur dimensi logis (belum diskalakan) kotak padding teks untuk teks &
+     * span arbitrary. Dipakai editor inline agar kotak overlay mengikuti WYSIWYG.
+     * @return Pair(lebar, tinggi) termasuk padding bbox.
+     */
+    fun measureRichContentDimensions(text: String, spans: List<RichTextSpan>): Pair<Float, Float> {
+        val fillPaint = obtainTextPaint(Paint.Style.FILL, textColor)
+        val layout = createLayoutFor(text, spans, fillPaint)
+        val padL = paddingLeft.coerceAtLeast(0f)
+        val padT = paddingTop.coerceAtLeast(0f)
+        val padR = paddingRight.coerceAtLeast(0f)
+        val padB = paddingBottom.coerceAtLeast(0f)
+        return Pair(layout.width + padL + padR, layout.height + padT + padB)
+    }
+
+    /**
+     * Menggambar "ghost" layer teks saat diedit inline: hanya background & kotak
+     * padding (tanpa isi teks/stroke/efek) sehingga teks asli tidak dobel dengan
+     * overlay EditText. Transformasi (translate/scale/rotate/3D/perspective)
+     * disalin dari [drawContent] agar posisi background tetap akurat.
+     */
+    fun drawEditingGhost(canvas: Canvas, paint: Paint) {
+        val fillPaint = obtainTextPaint(Paint.Style.FILL, textColor)
+        val layout = createLayout(fillPaint)
+        val w = layout.width.toFloat()
+        val h = layout.height.toFloat()
+
+        val padL = paddingLeft.coerceAtLeast(0f)
+        val padT = paddingTop.coerceAtLeast(0f)
+        val padR = paddingRight.coerceAtLeast(0f)
+        val padB = paddingBottom.coerceAtLeast(0f)
+        val pw = w + padL + padR
+        val ph = h + padT + padB
+        val cx = pw / 2f
+        val cy = ph / 2f
+
+        canvas.save()
+        canvas.translate(x, y)
+        canvas.scale(scale, scale, cx, cy)
+        canvas.rotate(rotation, cx, cy)
+
+        if (rotate3DX != 0f || rotate3DY != 0f || rotate3DZ != 0f) {
+            val camera = Camera()
+            val matrix3D = Matrix()
+            camera.save()
+            camera.rotateX(rotate3DX)
+            camera.rotateY(rotate3DY)
+            if (rotate3DZ != 0f) camera.rotateZ(rotate3DZ)
+            camera.getMatrix(matrix3D)
+            camera.restore()
+            matrix3D.preTranslate(-cx, -cy)
+            matrix3D.postTranslate(cx, cy)
+            canvas.concat(matrix3D)
+        }
+
+        if (perspectiveEnabled) {
+            getPerspectiveMatrix(pw, ph)?.let { pMatrix -> canvas.concat(pMatrix) }
+        }
+
+        if (bgEnabled) {
+            drawBackground(canvas, pw, ph)
+        }
+
+        canvas.restore()
     }
 
     // ─────────────────────────────────────────────────────────────────────────

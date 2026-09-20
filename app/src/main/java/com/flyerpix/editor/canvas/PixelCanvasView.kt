@@ -254,6 +254,7 @@ class PixelCanvasView @JvmOverloads constructor(
         canvasPanX = 0f
         canvasPanY = 0f
         onZoomChangedListener?.invoke(canvasZoom)
+        onViewportTransformChangedListener?.invoke()
         invalidate()
     }
 
@@ -287,6 +288,80 @@ class PixelCanvasView @JvmOverloads constructor(
             textEditMode = active
             invalidate()
         }
+    }
+
+    // ── Inline Text Editor (on-canvas, Option 1) ─────────────────────────────
+    /**
+     * ID layer [TextLayer] yang sedang diedit inline. Saat terisi:
+     *  - teks layer digambar sebagai "ghost" (tanpa isi/stroke) di [drawVisibleLayers],
+     *  - bounding box seleksi layer ditekan,
+     *  - seluruh sentuhan kanvas dikunci & tap di luar area teks memicu [onInlineEditTapOutside].
+     */
+    var editingTextLayerId: String? = null
+
+    /** Dipanggil saat pengguna mengetuk di luar kotak teks yang sedang diedit inline. */
+    var onInlineEditTapOutside: (() -> Unit)? = null
+
+    /** Dipanggil setiap viewport (zoom/pan) berubah agar overlay editor ikut diposisikan ulang. */
+    var onViewportTransformChangedListener: (() -> Unit)? = null
+
+    /** Transform nyata layer di layar (setelah zoom & pan viewport). */
+    data class LayerScreenTransform(val centerX: Float, val centerY: Float, val scale: Float, val rotation: Float)
+
+    /**
+     * Posisi & ukuran nyata layer di layar (device px), termasuk zoom & pan viewport.
+     */
+    fun getLayerScreenBounds(layer: com.flyerpix.editor.canvas.model.CanvasLayer): android.graphics.RectF {
+        updateCanvasTransformMatrices()
+        val pts = layer.getSelectionBoxPoints(0f)
+        val mapped = FloatArray(8)
+        canvasTransformMatrix.mapPoints(mapped, pts)
+        var left = Float.MAX_VALUE
+        var top = Float.MAX_VALUE
+        var right = -Float.MAX_VALUE
+        var bottom = -Float.MAX_VALUE
+        for (i in 0..3) {
+            val x = mapped[i * 2]
+            val y = mapped[i * 2 + 1]
+            if (x < left) left = x
+            if (x > right) right = x
+            if (y < top) top = y
+            if (y > bottom) bottom = y
+        }
+        return android.graphics.RectF(left, top, right, bottom)
+    }
+
+    /**
+     * Transform nyata layer di layar (pusat, skala efektif = scale*zoom, rotasi).
+     * Skala efektif dipakai untuk menskalakan textSize/padding overlay.
+     */
+    fun getLayerScreenTransform(layer: com.flyerpix.editor.canvas.model.CanvasLayer): LayerScreenTransform {
+        updateCanvasTransformMatrices()
+        val pts = layer.getSelectionBoxPoints(0f)
+        val mapped = FloatArray(8)
+        canvasTransformMatrix.mapPoints(mapped, pts)
+        val centerX = (mapped[0] + mapped[4]) / 2f
+        val centerY = (mapped[1] + mapped[5]) / 2f
+        val scaleEff = layer.scale * canvasZoom
+        return LayerScreenTransform(centerX, centerY, scaleEff.coerceAtLeast(0.01f), layer.rotation)
+    }
+
+    /** Geser viewport ke atas (deltaY positif = konten naik) agar kotak editor tak tertutup keyboard. */
+    fun panUpForInlineEditor(deltaY: Float) {
+        if (deltaY <= 0f) return
+        canvasPanY -= deltaY
+        clampCanvasPan()
+        invalidate()
+    }
+
+    fun getCanvasPanState(): Pair<Float, Float> = Pair(canvasPanX, canvasPanY)
+
+    /** Kembalikan pan viewport seperti sebelum inline editing (untuk undo auto-pan). */
+    fun restoreInlineEditorPan(x: Float, y: Float) {
+        canvasPanX = x
+        canvasPanY = y
+        clampCanvasPan()
+        invalidate()
     }
 
     // ── Bezier Edit Mode Methods ────────────────────────────────────────────
@@ -870,7 +945,7 @@ class PixelCanvasView @JvmOverloads constructor(
                     val saveCount = canvas.saveLayer(null, renderPaint)
                     if (clipPath != null) canvas.clipPath(clipPath)
                     sanitizeSharedPaint()
-                    layer.draw(canvas, renderPaint)
+                    drawLayerOrGhost(canvas, layer)
                     sanitizeSharedPaint()
                     // Apply mask DST_IN
                     if (hasMask && layer.maskBitmap != null) {
@@ -893,11 +968,20 @@ class PixelCanvasView @JvmOverloads constructor(
                     val saveCount = canvas.save()
                     if (clipPath != null) canvas.clipPath(clipPath)
                     sanitizeSharedPaint()
-                    layer.draw(canvas, renderPaint)
+                    drawLayerOrGhost(canvas, layer)
                     sanitizeSharedPaint()
                     canvas.restoreToCount(saveCount)
                 }
             }
+        }
+    }
+
+    /** Gambar layer normal, atau "ghost" (tanpa teks) bila sedang diedit inline. */
+    private fun drawLayerOrGhost(canvas: Canvas, layer: com.flyerpix.editor.canvas.model.CanvasLayer) {
+        if (layer.id == editingTextLayerId && layer is com.flyerpix.editor.canvas.model.TextLayer) {
+            layer.drawEditingGhost(canvas, renderPaint)
+        } else {
+            layer.draw(canvas, renderPaint)
         }
     }
 
@@ -2705,6 +2789,7 @@ private var cylinderTiltStartRadiusY: Float = 0f
         val bounds = canvasPanBounds()
         canvasPanX = canvasPanX.coerceIn(bounds[0], bounds[1])
         canvasPanY = canvasPanY.coerceIn(bounds[2], bounds[3])
+        onViewportTransformChangedListener?.invoke()
     }
 
     /** Returns trackStart, trackEnd, thumbStart and thumbEnd for one scrollbar. */
@@ -2872,7 +2957,9 @@ private var cylinderTiltStartRadiusY: Float = 0f
 
             // 3. Render Bounding Box seleksi garis putus-putus jika ada layer aktif (Prompt 25, 34)
             selectedLayer?.let { layer ->
-                if (!editorZoomMode && layer.isVisible && !layer.isLocked && !layer.perspectiveEnabled) {
+                if (!editorZoomMode && layer.isVisible && !layer.isLocked && !layer.perspectiveEnabled &&
+                    layer.id != editingTextLayerId
+                ) {
                     drawSelectionBoundingBox(canvas, layer)
                 }
             }
@@ -4279,6 +4366,18 @@ private var cylinderTiltStartRadiusY: Float = 0f
         if (!editorZoomMode && (canvasZoom != 1f || canvasPanX != 0f || canvasPanY != 0f)) {
             updateCanvasTransformMatrices()
             event.transform(canvasTransformInverse)
+        }
+
+        // 0.2. Mode editor inline: kunci seluruh sentuhan kanvas; tap di luar
+        // kotak teks yang sedang diedit memicu commit (fallback saat overlay
+        // tidak menerima sentuhan karena suatu hal).
+        if (editingTextLayerId != null) {
+            val editingLayer = layers.firstOrNull { it.id == editingTextLayerId }
+            if (event.actionMasked == MotionEvent.ACTION_UP) {
+                val inside = editingLayer?.containsCanvasPoint(event.x, event.y) == true
+                if (!inside) onInlineEditTapOutside?.invoke()
+            }
+            return true
         }
 
         // 0. Tangani mode eyedropper — intercept seluruh sentuhan (Prompt 42)
