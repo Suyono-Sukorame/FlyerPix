@@ -170,9 +170,9 @@
     </style>
 
     <style name="InlineColorChip">
-        <item name="android:layout_width">30dp</item>
-        <item name="android:layout_height">30dp</item>
-        <item name="android:layout_marginEnd">10dp</item>
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
         <item name="android:background">@drawable/bg_color_chip</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>

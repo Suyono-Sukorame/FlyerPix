@@ -654,19 +654,24 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
     /** Sembunyikan/tampilkan panel & navigasi bawah saat sesi editing inline berjalan. */
     private fun setInlineEditingUi(editing: Boolean) {
-        val panelViews = listOf(
-            binding.bottomNavigation,
-            binding.editContainerPanel,
-            binding.textEditorBar,
-            binding.editObjectBar,
-            binding.objectMenuPanel,
-            binding.canvasMenuPanel,
-            binding.effectsMenuPanel,
-            binding.bottomControlPanelContainer
-        )
-        panelViews.forEach { it.visibility = if (editing) View.GONE else View.VISIBLE }
         if (editing) {
+            listOf(
+                binding.bottomNavigation,
+                binding.editContainerPanel,
+                binding.textEditorBar,
+                binding.editObjectBar,
+                binding.objectMenuPanel,
+                binding.canvasMenuPanel,
+                binding.effectsMenuPanel,
+                binding.bottomControlPanelContainer
+            ).forEach { it.visibility = View.GONE }
             fitCanvasToOpenPanels()
+        } else {
+            // Restore via showMenu — handles all panel exclusivity, textEditorBar,
+            // applyEditContextVisuals(), and fitCanvasToOpenPanels() automatically.
+            binding.bottomNavigation.visibility = View.VISIBLE
+            binding.bottomNavigation.selectedItemId = R.id.nav_edit
+            showMenu(R.id.nav_edit)
         }
     }
 
