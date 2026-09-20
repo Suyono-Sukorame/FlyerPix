@@ -59,6 +59,10 @@ import com.flyerpix.editor.canvas.model.Coin3DLayer
 import com.flyerpix.editor.canvas.model.CoinContentMode
 import com.flyerpix.editor.canvas.model.CoinMaterial
 import com.flyerpix.editor.canvas.model.CoinSymbol
+import com.flyerpix.editor.canvas.model.Cone3DLayer
+import com.flyerpix.editor.canvas.model.ConeMaterial
+import com.flyerpix.editor.canvas.model.ConeStripeMode
+import com.flyerpix.editor.canvas.model.ConeStyle
 import com.flyerpix.editor.canvas.model.Cylinder3DLayer
 import com.flyerpix.editor.canvas.model.HitAnchor
 import com.flyerpix.editor.canvas.model.IconPosition
@@ -6130,6 +6134,64 @@ private var cylinderTiltStartRadiusY: Float = 0f
             neonEnabled = false,
             neonColor = 0xFF00E5FF.toInt(),
             neonRadius = 18f,
+            neonIntensity = 1f,
+            // Posisi: horizontal tengah, vertikal sekitar 40% ke atas dari tengah.
+            x = cx - contentW / 2f,
+            y = cy - contentH * 0.4f
+        )
+        addLayer(layer)
+        return layer
+    }
+
+    /**
+     * Menambahkan objek Kerucut 3D (Koni 3D) default bertema traffic cone di
+     * tengah kanvas, sebagai [Cone3DLayer] dengan band reflektif + bayangan lantai.
+     */
+    fun addCone3DLayer(): Cone3DLayer {
+        val cx = if (width > 0) width / 2f else 540f
+        val cy = if (height > 0) height / 2f else 540f
+        val base = ((minOf(width, height).takeIf { it > 0 }?.toFloat() ?: 400f) * 0.30f).coerceIn(40f, 260f)
+        val rx = base
+        val ry = base * 0.32f
+        val hgt = base * 1.05f
+        val contentW = rx * 2f
+        val contentH = hgt + ry * 2f
+        val layer = Cone3DLayer(
+            radiusX = rx,
+            radiusY = ry,
+            coneHeight = hgt,
+            flipApex = false,
+            style = ConeStyle.TRAFFIC_CONE,
+            materialType = ConeMaterial.MATTE,
+            baseColor = 0xFFFF7F1A.toInt(),
+            autoShade = true,
+            specularIntensity = 0.8f,
+            stripeMode = ConeStripeMode.TWO,
+            stripeColor = Color.WHITE,
+            stripeWidth = 44f,
+            wireframeEnabled = false,
+            wireStrokeWidth = 2.5f,
+            wireColor = 0xFF1A1A2E.toInt(),
+            wireStrokeOpacity = 0.55f,
+            floorShadowEnabled = true,
+            floatingElevation = 16f,
+            floorShadowOpacity = 0.5f,
+            shadowEnabled = false,
+            shadowColor = 0xFF000000.toInt(),
+            shadowRadius = 8f,
+            shadowOpacity = 0.6f,
+            shadowDx = 0f,
+            shadowDy = 5f,
+            embossEnabled = false,
+            embossLightAngle = -45f,
+            embossIntensity = 1f,
+            embossAmbient = 0.3f,
+            embossSpecular = 0.7f,
+            embossBevel = 2f,
+            perspectiveEnabled = false,
+            neonEnabled = false,
+            neonColor = 0xFF00E5FF.toInt(),
+            neonRadius = 16f,
             neonIntensity = 1f,
             // Posisi: horizontal tengah, vertikal sekitar 40% ke atas dari tengah.
             x = cx - contentW / 2f,

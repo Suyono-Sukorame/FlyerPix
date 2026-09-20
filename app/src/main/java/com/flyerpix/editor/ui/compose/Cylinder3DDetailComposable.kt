@@ -41,11 +41,11 @@ private val CYLINDER_SWATCH_COLORS = listOf(
 )
 
 private val RING_COLORS = listOf(
-    0xFFFFD700.toInt() to "Emas",
+    0xFFFFD700.toInt() to "Gold",
     0xFFC0C0C0.toInt() to "Silver",
     0xFFB76E79.toInt() to "Rose",
-    0xFFFFFFFF.toInt() to "Putih",
-    0xFF111111.toInt() to "Hitam"
+    0xFFFFFFFF.toInt() to "White",
+    0xFF111111.toInt() to "Black"
 )
 
 /**
@@ -156,9 +156,9 @@ fun Cylinder3DDetailPage(
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
-                        // ── 1. Gaya Panggung (Style Presets) ────────────────
+                        // ── 1. Stage Style ──────────────────────────────────────
                         Text(
-                            text = "Gaya Panggung",
+                            text = "Stage Style",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -204,12 +204,12 @@ fun Cylinder3DDetailPage(
                             }
                         }
 
-                        // ── 2. Bentuk & Tingkat Podium ───────────────────────
+                        // ── 2. Podium Tiers ─────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Level & Bentuk Podium",
+                            text = "Podium Tiers",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -219,7 +219,7 @@ fun Cylinder3DDetailPage(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            listOf(1 to "1 Tingkat", 2 to "2 Tingkat").forEach { (level, label) ->
+                            listOf(1 to "1 Tier", 2 to "2 Tiers").forEach { (level, label) ->
                                 val isSelected = tierCountState == level
                                 Box(
                                     modifier = Modifier
@@ -249,7 +249,7 @@ fun Cylinder3DDetailPage(
                             }
                         }
                         LabeledSliderRow(
-                            label = "Lebar Podium",
+                            label = "Radius",
                             value = radiusXState * 2f,
                             onValueChange = { v ->
                                 radiusXState = v / 2f
@@ -259,7 +259,7 @@ fun Cylinder3DDetailPage(
                             suffix = " px"
                         )
                         LabeledSliderRow(
-                            label = "Tinggi Silinder",
+                            label = "Height",
                             value = cylinderHeightState,
                             onValueChange = { v ->
                                 cylinderHeightState = v
@@ -269,7 +269,7 @@ fun Cylinder3DDetailPage(
                             suffix = " px"
                         )
                         LabeledSliderRow(
-                            label = "Perspective Tilt",
+                            label = "Tilt Angle",
                             value = radiusYState,
                             onValueChange = { v ->
                                 radiusYState = v
@@ -279,19 +279,19 @@ fun Cylinder3DDetailPage(
                             suffix = ""
                         )
 
-                        // ── 3. Warna Panggung & Badan ────────────────────────
+                        // ── 3. Color & Material ─────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Warna Panggung & Badan",
+                            text = "Color & Material",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
                         Text(
-                            text = "Warna Badan Silinder",
+                            text = "Stage Color",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontSize = 10.sp,
@@ -329,7 +329,7 @@ fun Cylinder3DDetailPage(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Warna Atas Independen",
+                                text = "Top Color",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -361,7 +361,7 @@ fun Cylinder3DDetailPage(
                                         .clickable(onClick = onOpenTopColorPicker)
                                 ) {}
                                 Text(
-                                    text = "Pilih warna permukaan atas",
+                                    text = "Pick top surface color",
                                     style = MaterialTheme.typography.caption,
                                     color = Color(TextSecondary),
                                     fontSize = 10.sp
@@ -369,7 +369,7 @@ fun Cylinder3DDetailPage(
                             }
                         }
 
-                        // ── 4. Hiasan Bibir Panggung (Ring) ──────────────────
+                        // ── 4. Accent Ring ──────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
@@ -378,7 +378,7 @@ fun Cylinder3DDetailPage(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Ring Bibir Panggung",
+                                text = "Accent Ring",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -421,7 +421,7 @@ fun Cylinder3DDetailPage(
                                     ) {
                                         Text(
                                             text = when (label) {
-                                                "Emas", "Silver", "Rose" -> ""
+                                                "Gold", "Silver", "Rose" -> ""
                                                 else -> label.substring(0, 1)
                                             },
                                             style = MaterialTheme.typography.caption,
@@ -436,7 +436,7 @@ fun Cylinder3DDetailPage(
                                 )
                             }
                             LabeledSliderRow(
-                                label = "Ketebalan Ring",
+                                label = "Ring Width",
                                 value = topRingWidthState,
                                 onValueChange = { v ->
                                     topRingWidthState = v
@@ -446,7 +446,7 @@ fun Cylinder3DDetailPage(
                                 suffix = " px"
                             )
                             LabeledSliderRow(
-                                label = "Arah Cahaya",
+                                label = "Light Angle",
                                 value = lightAngleState,
                                 onValueChange = { v ->
                                     lightAngleState = v
@@ -457,7 +457,7 @@ fun Cylinder3DDetailPage(
                             )
                         }
 
-                        // ── 5. Bayangan Lantai ───────────────────────────────
+                        // ── 5. Floor Shadow ─────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
@@ -466,7 +466,7 @@ fun Cylinder3DDetailPage(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Bayangan Lantai",
+                                text = "Floor Shadow",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -484,7 +484,7 @@ fun Cylinder3DDetailPage(
                             )
                         }
                         LabeledSliderRow(
-                            label = "Opacity Shadow",
+                            label = "Shadow Opacity",
                             value = floorShadowOpacityState,
                             onValueChange = { v ->
                                 floorShadowOpacityState = v
@@ -494,7 +494,7 @@ fun Cylinder3DDetailPage(
                             suffix = "%"
                         )
                         LabeledSliderRow(
-                            label = "Opacity Panggung",
+                            label = "Opacity",
                             value = opacityState,
                             onValueChange = { v ->
                                 opacityState = v
@@ -504,12 +504,12 @@ fun Cylinder3DDetailPage(
                             suffix = "%"
                         )
 
-                        // ── 6. Finishing Effects ─────────────────────────────
+                        // ── 6. Effects ──────────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Finishing Effects",
+                            text = "Effects",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -545,7 +545,7 @@ fun Cylinder3DDetailPage(
                             }
                         }
                         Text(
-                            text = "Tip: Drop Shadow membentuk bayangan panggung • Emboss meng-holis ring bibir • Neon Glow membuat ring & halo berpendar.",
+                            text = "Tip: Drop Shadow forms the stage shadow • Emboss bevels the ring • Neon Glow makes the ring & halo glow.",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontSize = 9.sp,

@@ -32,6 +32,10 @@ import com.flyerpix.editor.canvas.model.Coin3DLayer
 import com.flyerpix.editor.canvas.model.CoinContentMode
 import com.flyerpix.editor.canvas.model.CoinMaterial
 import com.flyerpix.editor.canvas.model.CoinSymbol
+import com.flyerpix.editor.canvas.model.Cone3DLayer
+import com.flyerpix.editor.canvas.model.ConeMaterial
+import com.flyerpix.editor.canvas.model.ConeStripeMode
+import com.flyerpix.editor.canvas.model.ConeStyle
 import com.flyerpix.editor.canvas.model.Cylinder3DLayer
 import com.flyerpix.editor.canvas.model.GradientType
 import com.flyerpix.editor.canvas.model.GradientColor
@@ -79,6 +83,7 @@ class ObjectMenuController(
         const val OBJ_3D_COIN   = "3d_coin"
         const val OBJ_3D_CAPSULE = "3d_capsule"
         const val OBJ_3D_TORUS  = "3d_torus"
+        const val OBJ_3D_CONE   = "3d_cone"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
@@ -104,6 +109,9 @@ class ObjectMenuController(
         private const val TORUS_BASE_COLOR_RESULT_KEY = "obj_torus_base_color_key"
         private const val TORUS_ICING_COLOR_RESULT_KEY = "obj_torus_icing_color_key"
         private const val TORUS_GEM_COLOR_RESULT_KEY = "obj_torus_gem_color_key"
+        private const val CONE_BASE_COLOR_RESULT_KEY = "obj_cone_base_color_key"
+        private const val CONE_STRIPE_COLOR_RESULT_KEY = "obj_cone_stripe_color_key"
+        private const val CONE_WIRE_COLOR_RESULT_KEY = "obj_cone_wire_color_key"
     }
 
     private val fragmentManager: FragmentManager get() = activity.supportFragmentManager
@@ -176,6 +184,11 @@ class ObjectMenuController(
     private var draftTorus: Torus3DLayer? = null
     private var isNewTorus: Boolean = false
     private var torusSnapshot: Torus3DLayer? = null
+
+    // Draft layer 3D Cone / Koni (untuk instant-create & rollback)
+    private var draftCone: Cone3DLayer? = null
+    private var isNewCone: Boolean = false
+    private var coneSnapshot: Cone3DLayer? = null
 
     /** State Brush Color draw sheet yang bisa di-update live dari color picker dialog. */
     private val liveDrawBrushColor = mutableStateOf(0)
@@ -309,10 +322,11 @@ class ObjectMenuController(
             Spec(OBJ_ARROW,    "Arrow",   R.drawable.ic_arrow_24px),
             Spec(OBJ_3D_BOX,   "3D Box",  R.drawable.ic_3d_box_24px),
             Spec(OBJ_3D_SPHERE, "3D Sphere", R.drawable.ic_sphere_3d_24px),
-            Spec(OBJ_3D_CYLINDER, "Podium 3D", R.drawable.ic_podium_3d_24px),
-            Spec(OBJ_3D_COIN, "Koin 3D", R.drawable.ic_coin_3d_24px),
-            Spec(OBJ_3D_CAPSULE, "Kapsul 3D", R.drawable.ic_capsule_3d_24px),
-            Spec(OBJ_3D_TORUS, "Donat 3D", R.drawable.ic_torus_3d_24px)
+            Spec(OBJ_3D_CYLINDER, "3D Podium", R.drawable.ic_podium_3d_24px),
+            Spec(OBJ_3D_COIN, "3D Coin", R.drawable.ic_coin_3d_24px),
+            Spec(OBJ_3D_CAPSULE, "3D Capsule", R.drawable.ic_capsule_3d_24px),
+            Spec(OBJ_3D_TORUS, "3D Donut", R.drawable.ic_torus_3d_24px),
+            Spec(OBJ_3D_CONE,   "3D Cone",  R.drawable.ic_cone_3d_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectToolStripInclude.objectToolStripContainer
@@ -378,6 +392,7 @@ class ObjectMenuController(
             OBJ_3D_COIN -> showComposeCoin3DSheet()
             OBJ_3D_CAPSULE -> showComposeCapsule3DSheet()
             OBJ_3D_TORUS -> showComposeTorus3DSheet()
+            OBJ_3D_CONE -> showComposeCone3DSheet()
         }
         onAddSettingsOpenChanged?.invoke(true)
         onPanelChanged()
@@ -409,6 +424,9 @@ class ObjectMenuController(
         draftTorus = null
         isNewTorus = false
         torusSnapshot = null
+        draftCone = null
+        isNewCone = false
+        coneSnapshot = null
         canvas.freeDrawEnabled = false
         canvas.bezierInputEnabled = false
         canvas.bezierInputLayer = null
@@ -658,6 +676,33 @@ class ObjectMenuController(
                 it.gemColor = color
                 canvas.invalidate()
                 showComposeTorus3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(CONE_BASE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, 0xFFFF7F1A.toInt())
+            val target = (canvas.selectedLayer as? Cone3DLayer) ?: draftCone
+            target?.let {
+                it.baseColor = color
+                canvas.invalidate()
+                showComposeCone3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(CONE_STRIPE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.WHITE)
+            val target = (canvas.selectedLayer as? Cone3DLayer) ?: draftCone
+            target?.let {
+                it.stripeColor = color
+                canvas.invalidate()
+                showComposeCone3DSheet(it)
+            }
+        }
+        fragmentManager.setFragmentResultListener(CONE_WIRE_COLOR_RESULT_KEY, activity) { _, bundle ->
+            val color = bundleSolidColor(bundle, Color.BLACK)
+            val target = (canvas.selectedLayer as? Cone3DLayer) ?: draftCone
+            target?.let {
+                it.wireColor = color
+                canvas.invalidate()
+                showComposeCone3DSheet(it)
             }
         }
     }
@@ -4047,6 +4092,460 @@ class ObjectMenuController(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 2.9 3D Cone / Koni Studio
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun showComposeCone3DSheet(coneToEdit: Cone3DLayer? = null) {
+        val cone = coneToEdit ?: draftCone ?: createNewDraftCone()
+        showComposeCone3DDetail(cone)
+    }
+
+    private fun createNewDraftCone(): Cone3DLayer {
+        val cone = canvas.addCone3DLayer().also {
+            isNewCone = true
+        }
+        draftCone = cone
+        coneSnapshot = cone.copyLayer()
+        canvas.selectedLayer = cone
+        return cone
+    }
+
+    private fun applyConeTilt(cone: Cone3DLayer, tiltDeg: Float) {
+        val t = tiltDeg.coerceIn(0f, 78f) / 78f
+        cone.radiusY = (cone.radiusX * (0.06f + t * 0.45f)).coerceIn(4f, 260f)
+    }
+
+    private fun extractConeTilt(cone: Cone3DLayer): Float {
+        if (cone.radiusX <= 0f) return 14f
+        val ratio = (cone.radiusY / cone.radiusX).coerceIn(0.06f, 0.51f)
+        return ((ratio - 0.06f) / 0.45f * 78f).coerceIn(0f, 78f)
+    }
+
+    private fun applyConePreset(cone: Cone3DLayer, key: String) {
+        val preset = ConePresets[key] ?: return
+        cone.style = preset.style
+        cone.materialType = preset.materialType
+        cone.baseColor = preset.baseColor
+        cone.autoShade = preset.autoShade
+        cone.specularIntensity = preset.specularIntensity
+        cone.stripeMode = preset.stripeMode
+        cone.stripeColor = preset.stripeColor
+        cone.stripeWidth = preset.stripeWidth
+        applyConeTilt(cone, preset.tiltAngle)
+        cone.floatingElevation = preset.floatingElevation
+        cone.floorShadowOpacity = (preset.floorShadowOpacityPct / 100f).coerceIn(0f, 1f)
+        cone.neonEnabled = preset.neonEnabled
+        cone.neonColor = preset.neonColor
+        canvas.invalidate()
+    }
+
+    private fun showComposeCone3DDetail(cone: Cone3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+
+        activeTag = OBJ_3D_CONE
+        updateToolStripSelection(OBJ_3D_CONE)
+
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+
+        val switchingCone = draftCone !== cone
+        draftCone = cone
+        if (switchingCone) isNewCone = false
+        coneSnapshot = cone.copyLayer()
+
+        host.setContent {
+            var currentStyle by remember { mutableStateOf(cone.style) }
+            var currentMaterial by remember { mutableStateOf(cone.materialType) }
+            var currentBaseColor by remember { mutableStateOf(cone.baseColor) }
+            var currentRadius by remember { mutableStateOf(cone.radiusX) }
+            var currentHeight by remember { mutableStateOf(cone.coneHeight) }
+            var currentTilt by remember { mutableStateOf(extractConeTilt(cone)) }
+            var currentFlip by remember { mutableStateOf(cone.flipApex) }
+            var currentAutoShade by remember { mutableStateOf(cone.autoShade) }
+            var currentSpecular by remember { mutableStateOf(cone.specularIntensity) }
+            var currentStripeMode by remember { mutableStateOf(cone.stripeMode) }
+            var currentStripeColor by remember { mutableStateOf(cone.stripeColor) }
+            var currentStripeWidth by remember { mutableStateOf(cone.stripeWidth) }
+            var currentWireframe by remember { mutableStateOf(cone.wireframeEnabled) }
+            var currentWireWidth by remember { mutableStateOf(cone.wireStrokeWidth) }
+            var currentWireColor by remember { mutableStateOf(cone.wireColor) }
+            var currentWireOpacity by remember { mutableStateOf(cone.wireStrokeOpacity * 100f) }
+            var currentFloorShadow by remember { mutableStateOf(cone.floorShadowEnabled) }
+            var currentElevation by remember { mutableStateOf(cone.floatingElevation) }
+            var currentFloorShadowOpacity by remember {
+                mutableStateOf((cone.floorShadowOpacity * 100f).coerceIn(0f, 100f))
+            }
+            var currentOpacity by remember { mutableStateOf(cone.opacity / 255f * 100f) }
+
+            Cone3DDetailPage(
+                style = currentStyle,
+                materialType = currentMaterial,
+                baseColor = currentBaseColor,
+                radiusX = currentRadius,
+                coneHeight = currentHeight,
+                tiltAngle = currentTilt,
+                flipApex = currentFlip,
+                autoShade = currentAutoShade,
+                specularIntensity = currentSpecular,
+                stripeMode = currentStripeMode,
+                stripeColor = currentStripeColor,
+                stripeWidth = currentStripeWidth,
+                wireframeEnabled = currentWireframe,
+                wireStrokeWidth = currentWireWidth,
+                wireColor = currentWireColor,
+                wireStrokeOpacityPct = currentWireOpacity,
+                floorShadowEnabled = currentFloorShadow,
+                floatingElevation = currentElevation,
+                floorShadowOpacityPct = currentFloorShadowOpacity,
+                opacityPct = currentOpacity,
+                onPresetClick = { key ->
+                    applyConePreset(cone, key)
+                    currentStyle = cone.style
+                    currentMaterial = cone.materialType
+                    currentBaseColor = cone.baseColor
+                    currentAutoShade = cone.autoShade
+                    currentSpecular = cone.specularIntensity
+                    currentStripeMode = cone.stripeMode
+                    currentStripeColor = cone.stripeColor
+                    currentStripeWidth = cone.stripeWidth
+                    currentTilt = extractConeTilt(cone)
+                    currentElevation = cone.floatingElevation
+                    currentFloorShadowOpacity = cone.floorShadowOpacity * 100f
+                },
+                onStyleChange = { s ->
+                    currentStyle = s
+                    cone.style = s
+                    canvas.invalidate()
+                },
+                onMaterialChange = { m ->
+                    currentMaterial = m
+                    cone.materialType = m
+                    canvas.invalidate()
+                },
+                onBaseColorChange = { c ->
+                    currentBaseColor = c
+                    cone.baseColor = c
+                    canvas.invalidate()
+                },
+                onOpenBaseColorPicker = {
+                    val original = cone.baseColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = cone.baseColor,
+                        resultKey = CONE_BASE_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        cone.baseColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        cone.baseColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "ConeBaseColorPicker")
+                },
+                onRadiusChange = { v ->
+                    currentRadius = v
+                    cone.radiusX = v.coerceAtLeast(1f)
+                    applyConeTilt(cone, currentTilt)
+                    canvas.invalidate()
+                },
+                onHeightChange = { v ->
+                    currentHeight = v
+                    cone.coneHeight = v.coerceAtLeast(1f)
+                    canvas.invalidate()
+                },
+                onTiltChange = { v ->
+                    currentTilt = v
+                    applyConeTilt(cone, v)
+                    canvas.invalidate()
+                },
+                onFlipApexChange = { f ->
+                    currentFlip = f
+                    cone.flipApex = f
+                    canvas.invalidate()
+                },
+                onAutoShadeChange = { a ->
+                    currentAutoShade = a
+                    cone.autoShade = a
+                    canvas.invalidate()
+                },
+                onSpecularChange = { s ->
+                    currentSpecular = s
+                    cone.specularIntensity = s
+                    canvas.invalidate()
+                },
+                onStripeModeChange = { m ->
+                    currentStripeMode = m
+                    cone.stripeMode = m
+                    canvas.invalidate()
+                },
+                onStripeColorChange = { c ->
+                    currentStripeColor = c
+                    cone.stripeColor = c
+                    canvas.invalidate()
+                },
+                onOpenStripeColorPicker = {
+                    val original = cone.stripeColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = cone.stripeColor,
+                        resultKey = CONE_STRIPE_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        cone.stripeColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        cone.stripeColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "ConeStripeColorPicker")
+                },
+                onStripeWidthChange = { w ->
+                    currentStripeWidth = w
+                    cone.stripeWidth = w
+                    canvas.invalidate()
+                },
+                onWireframeEnabledChange = { en ->
+                    currentWireframe = en
+                    cone.wireframeEnabled = en
+                    canvas.invalidate()
+                },
+                onWireStrokeWidthChange = { w ->
+                    currentWireWidth = w
+                    cone.wireStrokeWidth = w
+                    canvas.invalidate()
+                },
+                onWireColorChange = { c ->
+                    currentWireColor = c
+                    cone.wireColor = c
+                    canvas.invalidate()
+                },
+                onOpenWireColorPicker = {
+                    val original = cone.wireColor
+                    val dialog = ColorPickerDialog.newInstance(
+                        initialColor = cone.wireColor,
+                        resultKey = CONE_WIRE_COLOR_RESULT_KEY
+                    )
+                    dialog.onColorChanged = { color ->
+                        cone.wireColor = color
+                        canvas.invalidate()
+                    }
+                    dialog.onCancel = {
+                        cone.wireColor = original
+                        canvas.invalidate()
+                    }
+                    dialog.show(fragmentManager, "ConeWireColorPicker")
+                },
+                onWireStrokeOpacityChange = { pct ->
+                    currentWireOpacity = pct
+                    cone.wireStrokeOpacity = (pct / 100f).coerceIn(0f, 1f)
+                    canvas.invalidate()
+                },
+                onFloorShadowEnabledChange = { en ->
+                    currentFloorShadow = en
+                    cone.floorShadowEnabled = en
+                    canvas.invalidate()
+                },
+                onElevationChange = { v ->
+                    currentElevation = v
+                    cone.floatingElevation = v
+                    canvas.invalidate()
+                },
+                onFloorShadowOpacityChange = { pct ->
+                    currentFloorShadowOpacity = pct
+                    cone.floorShadowOpacity = (pct / 100f).coerceIn(0f, 1f)
+                    canvas.invalidate()
+                },
+                onOpacityChange = { pct ->
+                    currentOpacity = pct
+                    cone.opacity = (pct / 100f * 255f).toInt().coerceIn(0, 255)
+                    canvas.invalidate()
+                },
+                onOpenShadowEditor = { canvas.invalidate(); showCone3DShadowSheet(cone) },
+                onOpenNeonEditor = { canvas.invalidate(); showCone3DNeonSheet(cone) },
+                onOpenEmbossEditor = { canvas.invalidate(); showCone3DEmbossSheet(cone) },
+                onReset = {
+                    currentStyle = ConeStyle.TRAFFIC_CONE; currentMaterial = ConeMaterial.MATTE
+                    currentBaseColor = 0xFFFF7F1A.toInt(); currentRadius = 150f; currentHeight = 210f
+                    currentTilt = 14f; currentFlip = false; currentAutoShade = true; currentSpecular = 0.8f
+                    currentStripeMode = ConeStripeMode.TWO; currentStripeColor = 0xFFFFFFFF.toInt()
+                    currentStripeWidth = 44f; currentWireframe = false; currentWireWidth = 2.5f
+                    currentWireColor = 0xFF1A1A2E.toInt(); currentWireOpacity = 55f
+                    currentFloorShadow = true; currentElevation = 16f; currentFloorShadowOpacity = 50f
+                    currentOpacity = 100f
+                    cone.style = ConeStyle.TRAFFIC_CONE; cone.materialType = ConeMaterial.MATTE
+                    cone.baseColor = 0xFFFF7F1A.toInt(); cone.radiusX = 150f; cone.radiusY = 54f
+                    cone.coneHeight = 210f; cone.flipApex = false; cone.autoShade = true
+                    cone.specularIntensity = 0.8f; cone.stripeMode = ConeStripeMode.TWO
+                    cone.stripeColor = 0xFFFFFFFF.toInt(); cone.stripeWidth = 44f
+                    cone.wireframeEnabled = false; cone.wireStrokeWidth = 2.5f
+                    cone.wireColor = 0xFF1A1A2E.toInt(); cone.wireStrokeOpacity = 0.55f
+                    cone.floorShadowEnabled = true; cone.floatingElevation = 16f
+                    cone.floorShadowOpacity = 0.5f; cone.opacity = 255
+                    cone.neonEnabled = false; cone.neonColor = 0xFF00E5FF.toInt()
+                    cone.neonRadius = 16f; cone.neonIntensity = 1f
+                    cone.shadowEnabled = false; cone.embossEnabled = false
+                    cone.shadowColor = 0xFF000000.toInt(); cone.shadowOpacity = 0.6f
+                    cone.shadowRadius = 8f; cone.shadowDx = 0f; cone.shadowDy = 5f
+                    canvas.invalidate()
+                },
+                onApply = {
+                    canvas.runRecordedAction(if (isNewCone) "Add 3D Cone" else "Modify 3D Cone") {}
+                    showSnackbar("3D Cone saved")
+                    draftCone = null; isNewCone = false; coneSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                onCancel = {
+                    if (isNewCone) { canvas.removeLayer(cone) } else {
+                        coneSnapshot?.let { snap ->
+                            cone.style = snap.style; cone.materialType = snap.materialType
+                            cone.baseColor = snap.baseColor; cone.radiusX = snap.radiusX
+                            cone.radiusY = snap.radiusY; cone.coneHeight = snap.coneHeight
+                            cone.flipApex = snap.flipApex; cone.autoShade = snap.autoShade
+                            cone.specularIntensity = snap.specularIntensity
+                            cone.stripeMode = snap.stripeMode; cone.stripeColor = snap.stripeColor
+                            cone.stripeWidth = snap.stripeWidth
+                            cone.wireframeEnabled = snap.wireframeEnabled
+                            cone.wireStrokeWidth = snap.wireStrokeWidth; cone.wireColor = snap.wireColor
+                            cone.wireStrokeOpacity = snap.wireStrokeOpacity
+                            cone.floorShadowEnabled = snap.floorShadowEnabled
+                            cone.floatingElevation = snap.floatingElevation
+                            cone.floorShadowOpacity = snap.floorShadowOpacity
+                            cone.opacity = snap.opacity; cone.neonEnabled = snap.neonEnabled
+                            cone.neonColor = snap.neonColor; cone.neonRadius = snap.neonRadius
+                            cone.neonIntensity = snap.neonIntensity
+                            cone.shadowEnabled = snap.shadowEnabled
+                            cone.shadowColor = snap.shadowColor; cone.shadowRadius = snap.shadowRadius
+                            cone.shadowOpacity = snap.shadowOpacity; cone.shadowDx = snap.shadowDx
+                            cone.shadowDy = snap.shadowDy; cone.embossEnabled = snap.embossEnabled
+                        }
+                    }
+                    canvas.invalidate()
+                    draftCone = null; isNewCone = false; coneSnapshot = null
+                    deselect(restoreStrip = true)
+                },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showCone3DShadowSheet(cone: Cone3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+        host.setContent {
+            ShadowDetailPage(
+                title = "Cone Shadow",
+                enabled = cone.shadowEnabled,
+                color = cone.shadowColor,
+                radius = cone.shadowRadius.coerceIn(0f, 40f),
+                opacityPct = (cone.shadowOpacity * 100f).coerceIn(0f, 100f),
+                dx = cone.shadowDx.coerceIn(-30f, 30f),
+                dy = cone.shadowDy.coerceIn(-30f, 30f),
+                onEnabledChange = { en -> cone.shadowEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> cone.shadowColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = cone.shadowColor
+                    val dialog = ColorPickerDialog.newInstance(initialColor = cone.shadowColor, resultKey = "cone_shadow_color_key")
+                    dialog.onColorChanged = { c -> cone.shadowColor = c; canvas.invalidate() }
+                    dialog.onCancel = { cone.shadowColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "ConeShadowColorPicker")
+                },
+                onRadiusChange = { r -> cone.shadowRadius = r; canvas.invalidate() },
+                onOpacityChange = { opPct -> cone.shadowOpacity = (opPct / 100f).coerceIn(0f, 1f); canvas.invalidate() },
+                onDxChange = { x -> cone.shadowDx = x; canvas.invalidate() },
+                onDyChange = { y -> cone.shadowDy = y; canvas.invalidate() },
+                onReset = { cone.shadowEnabled = true; cone.shadowColor = 0xFF000000.toInt(); cone.shadowRadius = 8f; cone.shadowOpacity = 0.6f; cone.shadowDx = 0f; cone.shadowDy = 5f; canvas.invalidate() },
+                onApply = { showComposeCone3DSheet(cone) },
+                onCancel = { coneSnapshot?.let { snap -> cone.shadowEnabled = snap.shadowEnabled; cone.shadowColor = snap.shadowColor; cone.shadowRadius = snap.shadowRadius; cone.shadowOpacity = snap.shadowOpacity; cone.shadowDx = snap.shadowDx; cone.shadowDy = snap.shadowDy }; canvas.invalidate(); showComposeCone3DSheet(cone) },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showCone3DNeonSheet(cone: Cone3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+        host.setContent {
+            NeonDetailPage(
+                enabled = cone.neonEnabled,
+                color = cone.neonColor,
+                radius = cone.neonRadius.coerceIn(1f, 40f),
+                intensity = cone.neonIntensity,
+                coreEnabled = cone.neonCoreEnabled,
+                onEnabledChange = { en -> cone.neonEnabled = en; canvas.invalidate() },
+                onColorChange = { c -> cone.neonColor = c; canvas.invalidate() },
+                onColorPickRequested = {
+                    val original = cone.neonColor
+                    val dialog = ColorPickerDialog.newInstance(initialColor = cone.neonColor, resultKey = "cone_neon_color_key")
+                    dialog.onColorChanged = { c -> cone.neonColor = c; canvas.invalidate() }
+                    dialog.onCancel = { cone.neonColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "ConeNeonColorPicker")
+                },
+                onRadiusChange = { r -> cone.neonRadius = r; canvas.invalidate() },
+                onIntensityChange = { i -> cone.neonIntensity = i; canvas.invalidate() },
+                onCoreEnabledChange = { en -> cone.neonCoreEnabled = en; canvas.invalidate() },
+                onReset = { cone.neonEnabled = true; cone.neonColor = if (cone.style == ConeStyle.CYBER_NEON) cone.baseColor else 0xFF00E5FF.toInt(); cone.neonRadius = 16f; cone.neonIntensity = 1f; cone.neonCoreEnabled = true; canvas.invalidate() },
+                onApply = { showComposeCone3DSheet(cone) },
+                onCancel = { coneSnapshot?.let { snap -> cone.neonEnabled = snap.neonEnabled; cone.neonColor = snap.neonColor; cone.neonRadius = snap.neonRadius; cone.neonIntensity = snap.neonIntensity; cone.neonCoreEnabled = snap.neonCoreEnabled }; canvas.invalidate(); showComposeCone3DSheet(cone) },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    private fun showCone3DEmbossSheet(cone: Cone3DLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        binding.objectContentPanel.visibility = View.GONE
+        binding.objectMenuPanel.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        container.bringToFront()
+        val sheetMaxH = computeShapeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { canvas.invalidate() }
+        host.setContent {
+            EmbossDetailPage(
+                enabled = cone.embossEnabled,
+                lightAngle = cone.embossLightAngle,
+                intensity = cone.embossIntensity,
+                ambient = cone.embossAmbient,
+                specular = cone.embossSpecular,
+                bevel = cone.embossBevel,
+                onEnabledChange = { en -> cone.embossEnabled = en; canvas.invalidate() },
+                onLightAngleChange = { v -> cone.embossLightAngle = v; canvas.invalidate() },
+                onIntensityChange = { v -> cone.embossIntensity = v; canvas.invalidate() },
+                onAmbientChange = { v -> cone.embossAmbient = v; canvas.invalidate() },
+                onSpecularChange = { v -> cone.embossSpecular = v; canvas.invalidate() },
+                onBevelChange = { v -> cone.embossBevel = v; canvas.invalidate() },
+                onReset = { cone.embossEnabled = true; cone.embossLightAngle = -45f; cone.embossIntensity = 1f; cone.embossAmbient = 0.3f; cone.embossSpecular = 0.7f; cone.embossBevel = 2f; canvas.invalidate() },
+                onApply = { showComposeCone3DSheet(cone) },
+                onCancel = { coneSnapshot?.let { snap -> cone.embossEnabled = snap.embossEnabled; cone.embossLightAngle = snap.embossLightAngle; cone.embossIntensity = snap.embossIntensity; cone.embossAmbient = snap.embossAmbient; cone.embossSpecular = snap.embossSpecular; cone.embossBevel = snap.embossBevel }; canvas.invalidate(); showComposeCone3DSheet(cone) },
+                maxHeightPx = sheetMaxH
+            )
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 3. Free Draw Studio Sheet (Dynamic Height - Home Menu Aligned)
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -4535,6 +5034,13 @@ private fun showComposeArrowSheet(existingArrow: ArrowLayer? = null) {
                 binding.bottomNavigation.selectedItemId = R.id.nav_add
             }
             showComposeTorus3DSheet(layer)
+        }
+        // Cone 3D selected -> open 3D Cone Studio
+        if (layer is Cone3DLayer && activeTag != OBJ_3D_CONE && draftCone !== layer) {
+            if (activeTag.isNotEmpty()) {
+                binding.bottomNavigation.selectedItemId = R.id.nav_add
+            }
+            showComposeCone3DSheet(layer)
         }
     }
 

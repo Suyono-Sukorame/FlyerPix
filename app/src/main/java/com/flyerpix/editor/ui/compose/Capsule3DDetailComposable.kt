@@ -62,7 +62,7 @@ private val TEXT_COLORS = listOf(
     0xFFC62828.toInt()
 )
 
-/** Preset cepat kapsul — satu sumber kebenaran untuk kartu preset panel & controller. */
+/** Quick capsule presets — single source of truth for the panel preset cards & controller. */
 data class CapsuleQuickPreset(
     val mode: CapsuleMode,
     val primaryColor: Int,
@@ -82,17 +82,17 @@ data class CapsuleQuickPreset(
 val CapsulePresets: Map<String, CapsuleQuickPreset> = listOf(
     "cta_sale" to CapsuleQuickPreset(
         CapsuleMode.CTA_BUTTON, 0xFFE53935.toInt(), 0xFFFFB300.toInt(), 0.5f,
-        "BELI SEKARANG", 0xFFFFFFFF.toInt(), true, ButtonIcon.CART,
+        "BUY NOW", 0xFFFFFFFF.toInt(), true, ButtonIcon.CART,
         IconPosition.LEFT_OF_TEXT, CapsuleMaterial.GLOSSY, 0.85f, false, 0xFF00E5FF.toInt()
     ),
     "medis" to CapsuleQuickPreset(
         CapsuleMode.TWO_TONE_PILL, 0xFFE53935.toInt(), 0xFFFFB300.toInt(), 0.5f,
-        "OBAT", 0xFFFFFFFF.toInt(), true, ButtonIcon.NONE,
+        "MEDS", 0xFFFFFFFF.toInt(), true, ButtonIcon.NONE,
         IconPosition.LEFT_OF_TEXT, CapsuleMaterial.MATTE, 0.4f, false, 0xFF00E5FF.toInt()
     ),
     "cta_diskon" to CapsuleQuickPreset(
         CapsuleMode.CTA_BUTTON, 0xFFFFB300.toInt(), 0xFFE53935.toInt(), 0.5f,
-        "DISKON 70%", 0xFF1A1A2E.toInt(), true, ButtonIcon.FLASH,
+        "DISCOUNT 70%", 0xFF1A1A2E.toInt(), true, ButtonIcon.FLASH,
         IconPosition.RIGHT_OF_TEXT, CapsuleMaterial.GLOSSY, 0.9f, false, 0xFF00E5FF.toInt()
     ),
     "vip_gold" to CapsuleQuickPreset(
@@ -110,8 +110,8 @@ val CapsulePresets: Map<String, CapsuleQuickPreset> = listOf(
 /**
  * Compose bottom sheet untuk studio 3D Capsule / Kapsul Promo.
  *
- * Urutan kontrol: Preset Cepat ➔ Mode & Teks CTA ➔ Material Capsule ➔
- * Dimensi & Sudut 3D ➔ Pencahayaan & Bayangan ➔ Finishing Effects.
+ * Control order: Presets ➔ Mode & CTA Text ➔ Material & Shading ➔
+ * Size & Rotation ➔ Elevation & Shadow ➔ Effects.
  */
 @Composable
 fun Capsule3DDetailPage(
@@ -227,9 +227,9 @@ fun Capsule3DDetailPage(
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
-                        // ── 1. Preset Kapsul Cepat ──────────────────────────
+                        // ── 1. Presets ──────────────────────────────────────────
                         Text(
-                            text = "Preset Cepat",
+                            text = "Presets",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -241,8 +241,8 @@ fun Capsule3DDetailPage(
                         ) {
                             listOf(
                                 "cta_sale" to "CTA Sale",
-                                "medis" to "Medis",
-                                "cta_diskon" to "Diskon",
+                                "medis" to "Medical",
+                                "cta_diskon" to "Discount",
                                 "vip_gold" to "VIP Gold",
                                 "cyber_neon" to "Cyber"
                             ).forEach { (key, label) ->
@@ -288,12 +288,12 @@ fun Capsule3DDetailPage(
                             }
                         }
 
-                        // ── 2. Mode & Teks CTA ──────────────────────────────
+                        // ── 2. Mode ─────────────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Mode Kapsul",
+                            text = "Mode",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -304,8 +304,8 @@ fun Capsule3DDetailPage(
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             listOf(
-                                CapsuleMode.CTA_BUTTON to "Tombol CTA",
-                                CapsuleMode.TWO_TONE_PILL to "Pil 2 Warna"
+                                CapsuleMode.CTA_BUTTON to "CTA Button",
+                                CapsuleMode.TWO_TONE_PILL to "Two-Tone Pill"
                             ).forEach { (m, label) ->
                                 val isSelected = modeState == m
                                 Box(
@@ -337,8 +337,17 @@ fun Capsule3DDetailPage(
                         }
 
                         if (modeState == CapsuleMode.CTA_BUTTON) {
+                            Divider(color = Color(PanelDivider), thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Teks Tombol",
+                                text = "Text & Icon",
+                                style = MaterialTheme.typography.caption,
+                                color = Color(TextSecondary),
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                            Text(
+                                text = "Button Text",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -356,11 +365,11 @@ fun Capsule3DDetailPage(
                                 textStyle = MaterialTheme.typography.body2.copy(fontSize = 12.sp),
                                 singleLine = true,
                                 placeholder = {
-                                    Text("Teks bebas mis. BELI SEKARANG, GO MODERN", fontSize = 11.sp)
+                                    Text("Free text e.g. BUY NOW, GO MODERN", fontSize = 11.sp)
                                 }
                             )
                             Text(
-                                text = "Ikon",
+                                text = "Icon",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -371,7 +380,7 @@ fun Capsule3DDetailPage(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
                                 listOf(
-                                    ButtonIcon.NONE to "Tanpa",
+                                    ButtonIcon.NONE to "None",
                                     ButtonIcon.CART to "Cart",
                                     ButtonIcon.ARROW_RIGHT to "\u2192",
                                     ButtonIcon.FLASH to "\u26A1",
@@ -411,8 +420,8 @@ fun Capsule3DDetailPage(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
                                 listOf(
-                                    IconPosition.LEFT_OF_TEXT to "Ikon di Kiri",
-                                    IconPosition.RIGHT_OF_TEXT to "Ikon di Kanan"
+                                    IconPosition.LEFT_OF_TEXT to "Icon Left",
+                                    IconPosition.RIGHT_OF_TEXT to "Icon Right"
                                 ).forEach { (ip, label) ->
                                     val isSelected = iconPositionState == ip
                                     Box(
@@ -469,7 +478,7 @@ fun Capsule3DDetailPage(
                                     buttonSize = 22.dp
                                 )
                                 Text(
-                                    text = "Warna teks",
+                                    text = "Text Color",
                                     style = MaterialTheme.typography.caption,
                                     color = Color(TextSecondary),
                                     fontSize = 10.sp
@@ -480,7 +489,7 @@ fun Capsule3DDetailPage(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Teks Tebal",
+                                    text = "Bold",
                                     style = MaterialTheme.typography.caption,
                                     color = Color(TextSecondary),
                                     fontWeight = FontWeight.SemiBold,
@@ -498,7 +507,7 @@ fun Capsule3DDetailPage(
                                 )
                             }
                             LabeledSliderRow(
-                                label = "Ukuran Teks",
+                                label = "Text Size",
                                 value = textSizeState,
                                 onValueChange = { v ->
                                     textSizeState = v
@@ -510,8 +519,17 @@ fun Capsule3DDetailPage(
                         }
 
                         if (modeState == CapsuleMode.TWO_TONE_PILL) {
+                            Divider(color = Color(PanelDivider), thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Warna Sisi Kiri",
+                                text = "Two-Tone Split",
+                                style = MaterialTheme.typography.caption,
+                                color = Color(TextSecondary),
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                            Text(
+                                text = "Primary Color",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -545,7 +563,7 @@ fun Capsule3DDetailPage(
                                 )
                             }
                             Text(
-                                text = "Warna Sisi Kanan",
+                                text = "Secondary Color",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -579,7 +597,7 @@ fun Capsule3DDetailPage(
                                 )
                             }
                             LabeledSliderRow(
-                                label = "Posisi Pemisah",
+                                label = "Split Ratio",
                                 value = splitRatioState,
                                 onValueChange = { v ->
                                     splitRatioState = v
@@ -590,12 +608,12 @@ fun Capsule3DDetailPage(
                             )
                         }
 
-                        // ── 3. Material Capsule ─────────────────────────────
+                        // ── 3. Material & Shading ──────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Material Capsule",
+                            text = "Material & Shading",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -608,7 +626,7 @@ fun Capsule3DDetailPage(
                             listOf(
                                 CapsuleMaterial.GLOSSY to "Glossy",
                                 CapsuleMaterial.MATTE to "Matte",
-                                CapsuleMaterial.METALLIC to "Metalik",
+                                CapsuleMaterial.METALLIC to "Metallic",
                                 CapsuleMaterial.CYBER_NEON to "Neon"
                             ).forEach { (m, label) ->
                                 val isSelected = materialState == m
@@ -640,7 +658,7 @@ fun Capsule3DDetailPage(
                             }
                         }
                         LabeledSliderRow(
-                            label = "Intensitas Kilau",
+                            label = "Specular Highlight",
                             value = specularState,
                             onValueChange = { v ->
                                 specularState = v
@@ -650,19 +668,19 @@ fun Capsule3DDetailPage(
                             suffix = ""
                         )
 
-                        // ── 4. Dimensi & Sudut 3D ───────────────────────────
+                        // ── 4. Size & Rotation ────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Dimensi & Sudut 3D",
+                            text = "Size & Rotation",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
                         LabeledSliderRow(
-                            label = "Panjang",
+                            label = "Length",
                             value = lengthState,
                             onValueChange = { v ->
                                 lengthState = v
@@ -672,7 +690,7 @@ fun Capsule3DDetailPage(
                             suffix = " px"
                         )
                         LabeledSliderRow(
-                            label = "Ketebalan",
+                            label = "Radius",
                             value = radiusState,
                             onValueChange = { v ->
                                 radiusState = v
@@ -682,7 +700,7 @@ fun Capsule3DDetailPage(
                             suffix = " px"
                         )
                         LabeledSliderRow(
-                            label = "Kemiringan",
+                            label = "Rotation",
                             value = rotationState,
                             onValueChange = { v ->
                                 rotationState = v
@@ -692,16 +710,23 @@ fun Capsule3DDetailPage(
                             suffix = "°"
                         )
 
-                        // ── 5. Pencahayaan & Bayangan ───────────────────────
+                        // ── 5. Elevation & Shadow ─────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
+                        Text(
+                            text = "Elevation & Shadow",
+                            style = MaterialTheme.typography.caption,
+                            color = Color(TextSecondary),
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Bayangan Lantai",
+                                text = "Floor Shadow",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -719,7 +744,7 @@ fun Capsule3DDetailPage(
                             )
                         }
                         LabeledSliderRow(
-                            label = "Tinggi Melayang",
+                            label = "Elevation",
                             value = elevationState,
                             onValueChange = { v ->
                                 elevationState = v
@@ -729,7 +754,7 @@ fun Capsule3DDetailPage(
                             suffix = ""
                         )
                         LabeledSliderRow(
-                            label = "Opacity Shadow",
+                            label = "Shadow Opacity",
                             value = floorShadowOpacityState,
                             onValueChange = { v ->
                                 floorShadowOpacityState = v
@@ -739,7 +764,7 @@ fun Capsule3DDetailPage(
                             suffix = "%"
                         )
                         LabeledSliderRow(
-                            label = "Opacity Kapsul",
+                            label = "Opacity",
                             value = opacityState,
                             onValueChange = { v ->
                                 opacityState = v
@@ -749,12 +774,12 @@ fun Capsule3DDetailPage(
                             suffix = "%"
                         )
 
-                        // ── 6. Finishing Effects ─────────────────────────────
+                        // ── 6. Effects ─────────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Finishing Effects",
+                            text = "Effects",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -782,7 +807,7 @@ fun Capsule3DDetailPage(
                             }
                         }
                         Text(
-                            text = "Tip: Drop Shadow membuat kapsul melayang realistis • Neon Glow membuat kapsul holografis berpendar.",
+                            text = "Tip: Drop Shadow grounds the capsule realistically • Neon Glow turns the capsule holographic.",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontSize = 9.sp,

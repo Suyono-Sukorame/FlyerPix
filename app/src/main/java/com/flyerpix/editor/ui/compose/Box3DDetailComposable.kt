@@ -47,7 +47,7 @@ private val BOX3D_SWATCH_COLORS = listOf(
  *
  * Urutan kontrol mengikuti alur natural:
  * Mode Proyeksi ➔ Dimensi X/Y/Z ➔ Rotasi Sumbu ➔ Warna & Shading ➔ Rusuk
- * (Wireframe) ➔ Effects Finishing.
+ * (Wireframe) ➔ Effects.
  */
 @Composable
 fun Box3DDetailPage(
@@ -144,9 +144,9 @@ fun Box3DDetailPage(
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // ── 1. Mode Proyeksi ────────────────────────────────────
+                        // ── 1. Projection ────────────────────────────────────────
                         Text(
-                            text = "Mode Proyeksi",
+                            text = "Projection",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -158,9 +158,9 @@ fun Box3DDetailPage(
                         ) {
                             listOf(
                                 Box3DPerspectiveMode.ISOMETRIC to "Iso",
-                                Box3DPerspectiveMode.ONE_POINT to "1-Titik",
-                                Box3DPerspectiveMode.TWO_POINT to "2-Titik",
-                                Box3DPerspectiveMode.FREE_VP to "Bebas"
+                                Box3DPerspectiveMode.ONE_POINT to "1-Point",
+                                Box3DPerspectiveMode.TWO_POINT to "2-Point",
+                                Box3DPerspectiveMode.FREE_VP to "Free"
                             ).forEach { (m, label) ->
                                 val isSelected = modeState == m
                                 Box(
@@ -191,71 +191,71 @@ fun Box3DDetailPage(
                             }
                         }
 
-                        // ── 2. Dimensi Balok ─────────────────────────────────────
+                        // ── 2. Dimensions ───────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Dimensi (px)",
+                            text = "Dimensions",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
                         Box3DControlRow(
-                            label = "Lebar X",
+                            label = "Width X",
                             value = widthState,
                             onValueChange = { new -> widthState = new; onWidthChange(new) },
                             valueRange = 20f..800f,
                             suffix = " px"
                         )
                         Box3DControlRow(
-                            label = "Tinggi Y",
+                            label = "Height Y",
                             value = heightState,
                             onValueChange = { new -> heightState = new; onHeightChange(new) },
                             valueRange = 20f..800f,
                             suffix = " px"
                         )
                         Box3DControlRow(
-                            label = "Kedal. Z",
+                            label = "Depth Z",
                             value = depthState,
                             onValueChange = { new -> depthState = new; onDepthChange(new) },
                             valueRange = 20f..800f,
                             suffix = " px"
                         )
 
-                        // ── 3. Rotasi Sumbu ──────────────────────────────────────
+                        // ── 3. Rotation ──────────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Rotasi Sumbu",
+                            text = "Rotation",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
                         Box3DControlRow(
-                            label = "Sumbu X",
+                            label = "Axis X",
                             value = angleXState,
                             onValueChange = { new -> angleXState = new; onAngleXChange(new) },
                             valueRange = -180f..180f,
                             suffix = "°"
                         )
                         Box3DControlRow(
-                            label = "Sumbu Y",
+                            label = "Axis Y",
                             value = angleYState,
                             onValueChange = { new -> angleYState = new; onAngleYChange(new) },
                             valueRange = -180f..180f,
                             suffix = "°"
                         )
 
-                        // ── 4. Warna & Shading ───────────────────────────────────
+                        // ── 4. Color & Shading ───────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Warna & Shading",
+                            text = "Color & Shading",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -303,7 +303,7 @@ fun Box3DDetailPage(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Auto-Shading",
+                                text = "Auto Shade",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 modifier = Modifier.weight(1f),
@@ -317,26 +317,26 @@ fun Box3DDetailPage(
                         }
 
                         Box3DControlRow(
-                            label = "Opas. Sisi",
+                            label = "Face Opacity",
                             value = faceOpacityState,
                             onValueChange = { new -> faceOpacityState = new; onFaceOpacityChange(new) },
                             valueRange = 0f..100f,
                             suffix = "%"
                         )
 
-                        // ── 5. Rusuk (Wireframe) ─────────────────────────────────
+                        // ── 5. Wireframe ─────────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Rusuk (Wireframe)",
+                            text = "Wireframe",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
                         Box3DControlRow(
-                            label = "Ketebalan",
+                            label = "Thickness",
                             value = strokeWidthState,
                             onValueChange = { new -> strokeWidthState = new; onStrokeWidthChange(new) },
                             valueRange = 0f..20f,
@@ -379,7 +379,7 @@ fun Box3DDetailPage(
                             AddColorSwatchButton(onClick = onOpenStrokeColorPicker, buttonSize = 32.dp)
                         }
                         Box3DControlRow(
-                            label = "Opas. Garis",
+                            label = "Line Opacity",
                             value = strokeOpacityState,
                             onValueChange = { new -> strokeOpacityState = new; onStrokeOpacityChange(new) },
                             valueRange = 0f..100f,
@@ -390,7 +390,7 @@ fun Box3DDetailPage(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Rusuk Tersembunyi",
+                                text = "Hidden Edges",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 modifier = Modifier.weight(1f),
@@ -403,7 +403,7 @@ fun Box3DDetailPage(
                             )
                         }
 
-                        // ── 6. Effects Finishing ─────────────────────────────────
+                        // ── 6. Effects ─────────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 

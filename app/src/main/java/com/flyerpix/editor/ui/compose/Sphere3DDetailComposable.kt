@@ -160,7 +160,7 @@ fun Sphere3DDetailPage(
 
                         // ── 1. Material Selector ────────────────────────────────
                         Text(
-                            text = "Material Permukaan",
+                            text = "Material",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -206,12 +206,12 @@ fun Sphere3DDetailPage(
                             }
                         }
 
-                        // ── 2. Warna Dasar ──────────────────────────────────────
+                        // ── 2. Base Color ───────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Warna Dasar",
+                            text = "Base Color",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -246,12 +246,12 @@ fun Sphere3DDetailPage(
                             )
                         }
 
-                        // ── 3. Sumber Cahaya (Light Touchpad) ──────────────────
+                        // ── 3. Light Source (Touchpad) ──────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Sumber Cahaya",
+                            text = "Light Source",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -283,7 +283,7 @@ fun Sphere3DDetailPage(
                             )
                         }
                         LabeledSliderRow(
-                            label = "Intensitas Cahaya",
+                            label = "Light Intensity",
                             value = lightIntensityState,
                             onValueChange = { v ->
                                 lightIntensityState = v
@@ -293,12 +293,12 @@ fun Sphere3DDetailPage(
                             suffix = "x"
                         )
 
-                        // ── 4. Dimensi & Transparansi ─────────────────────────
+                        // ── 4. Size & Opacity ───────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Dimensi & Transparansi",
+                            text = "Size & Opacity",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -325,7 +325,7 @@ fun Sphere3DDetailPage(
                             suffix = "%"
                         )
 
-                        // ── 5. Bayangan Lantai ─────────────────────────────────
+                        // ── 5. Floor Shadow ─────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
@@ -352,7 +352,7 @@ fun Sphere3DDetailPage(
                             )
                         }
                         LabeledSliderRow(
-                            label = "Elevasi Float",
+                            label = "Elevation",
                             value = floorElevationState,
                             onValueChange = { v ->
                                 floorElevationState = v
@@ -362,7 +362,7 @@ fun Sphere3DDetailPage(
                             suffix = " px"
                         )
                         LabeledSliderRow(
-                            label = "Opacity Shadow",
+                            label = "Shadow Opacity",
                             value = floorShadowOpacityState,
                             onValueChange = { v ->
                                 floorShadowOpacityState = v
@@ -372,12 +372,12 @@ fun Sphere3DDetailPage(
                             suffix = "%"
                         )
 
-                        // ── 6. Outline & Neon Orb ─────────────────────────────
+                        // ── 6. Outline & Glow ───────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Outline Kartun & Neon Orb",
+                            text = "Outline & Glow",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -427,7 +427,7 @@ fun Sphere3DDetailPage(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Neon Orb Glow",
+                                text = "Neon Glow",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -459,7 +459,7 @@ fun Sphere3DDetailPage(
                                         .clickable(onClick = onOpenNeonColorPicker)
                                 ) {}
                                 LabeledSliderRow(
-                                    label = "Radius Glow",
+                                    label = "Glow Radius",
                                     value = neonRadiusState,
                                     onValueChange = { v ->
                                         neonRadiusState = v
@@ -471,7 +471,7 @@ fun Sphere3DDetailPage(
                                 )
                             }
                             LabeledSliderRow(
-                                label = "Intensitas Glow",
+                                label = "Glow Intensity",
                                 value = neonIntensityState,
                                 onValueChange = { v ->
                                     neonIntensityState = v

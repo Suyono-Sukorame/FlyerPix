@@ -59,7 +59,7 @@ private val GEM_COLORS = listOf(
     0xFFFFD700.toInt()
 )
 
-/** Preset cepat donat/cincin 3D — satu sumber kebenaran untuk kartu preset panel & controller. */
+/** Quick 3D donut/ring presets — single source of truth for the panel preset cards & controller. */
 data class TorusQuickPreset(
     val style: TorusStyle,
     val materialType: TorusMaterial,
@@ -114,10 +114,10 @@ val TorusPresets: Map<String, TorusQuickPreset> = listOf(
 ).associate { it.first to it.second }
 
 /**
- * Compose bottom sheet untuk studio 3D Donat / Cincin (Torus).
+ * Compose bottom sheet for the 3D Donut / Ring (Torus) studio.
  *
- * Urutan kontrol: Preset Cepat ➔ Gaya Tema ➔ Material ➔ Warna & Topping ➔
- * Dimensi & Sudut 3D ➔ Pencahayaan & Bayangan ➔ Finishing Effects.
+ * Control order: Presets ➔ Style ➔ Material ➔ Color & Toppings ➔
+ * Dimensions & Tilt ➔ Elevation & Shadow ➔ Effects.
  */
 @Composable
 fun Torus3DDetailPage(
@@ -233,9 +233,9 @@ fun Torus3DDetailPage(
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
-                        // ── 1. Preset Donat / Cincin Cepat ───────────────────
+                        // ── 1. Presets ──────────────────────────────────────────
                         Text(
-                            text = "Preset Cepat",
+                            text = "Presets",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -246,11 +246,11 @@ fun Torus3DDetailPage(
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             listOf(
-                                "gold_wedding" to "Cincin Emas",
-                                "strawberry_donut" to "Donat Stroberi",
-                                "cyber_portal" to "Portal Neon",
-                                "silver_chrome" to "Krom Perak",
-                                "choco_glaze" to "Donat Cokelat"
+                                "gold_wedding" to "Gold Ring",
+                                "strawberry_donut" to "Strawberry",
+                                "cyber_portal" to "Neon Portal",
+                                "silver_chrome" to "Silver Chrome",
+                                "choco_glaze" to "Chocolate"
                             ).forEach { (key, label) ->
                                 val preset = TorusPresets.getValue(key)
                                 val isActive = styleState == preset.style &&
@@ -298,12 +298,12 @@ fun Torus3DDetailPage(
                             }
                         }
 
-                        // ── 2. Gaya Tema ─────────────────────────────────────
+                        // ── 2. Style ─────────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Gaya Tema",
+                            text = "Style",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -314,10 +314,10 @@ fun Torus3DDetailPage(
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             listOf(
-                                TorusStyle.MODERN_ABSTRACT to "Modern Abstrak",
-                                TorusStyle.LUXURY_JEWELRY to "Perhiasan",
-                                TorusStyle.SWEET_DONUT to "Donat Bakery",
-                                TorusStyle.CYBER_NEON to "Portal Neon"
+                                TorusStyle.MODERN_ABSTRACT to "Geometric",
+                                TorusStyle.LUXURY_JEWELRY to "Jewelry Ring",
+                                TorusStyle.SWEET_DONUT to "Sweet Donut",
+                                TorusStyle.CYBER_NEON to "Neon Portal"
                             ).forEach { (m, label) ->
                                 val isSelected = styleState == m
                                 Box(
@@ -353,7 +353,7 @@ fun Torus3DDetailPage(
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Material Cincin",
+                            text = "Material",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -366,8 +366,8 @@ fun Torus3DDetailPage(
                             listOf(
                                 TorusMaterial.GLOSSY to "Glossy",
                                 TorusMaterial.MATTE to "Matte",
-                                TorusMaterial.METALLIC_GOLD to "Emas",
-                                TorusMaterial.CHROME_SILVER to "Krom",
+                                TorusMaterial.METALLIC_GOLD to "Gold",
+                                TorusMaterial.CHROME_SILVER to "Chrome",
                                 TorusMaterial.NEON to "Neon"
                             ).forEach { (m, label) ->
                                 val isSelected = materialState == m
@@ -399,9 +399,9 @@ fun Torus3DDetailPage(
                             }
                         }
 
-                        // ── 4. Warna Dasar ───────────────────────────────────
+                        // ── 4. Base Color ───────────────────────────────────
                         Text(
-                            text = "Warna Dasar",
+                            text = "Base Color",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -435,13 +435,13 @@ fun Torus3DDetailPage(
                             )
                         }
 
-                        // ── 5. Krim & Meses (Donat) ──────────────────────────
+                        // ── 5. Icing & Sprinkles (Donut) ────────────────────
                         if (styleState == TorusStyle.SWEET_DONUT) {
                             Divider(color = Color(PanelDivider), thickness = 1.dp)
                             Spacer(modifier = Modifier.height(2.dp))
 
                             Text(
-                                text = "Krim Leleh & Topping",
+                                text = "Icing Coating",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -452,7 +452,7 @@ fun Torus3DDetailPage(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Krim Leleh",
+                                    text = "Enable Icing",
                                     style = MaterialTheme.typography.caption,
                                     color = Color(TextSecondary),
                                     fontWeight = FontWeight.SemiBold,
@@ -503,7 +503,7 @@ fun Torus3DDetailPage(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Meses",
+                                    text = "Sprinkles",
                                     style = MaterialTheme.typography.caption,
                                     color = Color(TextSecondary),
                                     fontWeight = FontWeight.SemiBold,
@@ -522,7 +522,7 @@ fun Torus3DDetailPage(
                             }
                             if (sprinklesState) {
                                 LabeledSliderRow(
-                                    label = "Jumlah Meses",
+                                    label = "Sprinkle Density",
                                     value = sprinkleDensityState.toFloat(),
                                     onValueChange = { v ->
                                         sprinkleDensityState = v.toInt()
@@ -534,13 +534,13 @@ fun Torus3DDetailPage(
                             }
                         }
 
-                        // ── 6. Batu Permata (Perhiasan) ──────────────────────
+                        // ── 6. Gemstone (Jewelry) ───────────────────────────
                         if (styleState == TorusStyle.LUXURY_JEWELRY) {
                             Divider(color = Color(PanelDivider), thickness = 1.dp)
                             Spacer(modifier = Modifier.height(2.dp))
 
                             Text(
-                                text = "Batu Permata",
+                                text = "Gemstone",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -551,7 +551,7 @@ fun Torus3DDetailPage(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Tampilkan Permata",
+                                    text = "Mount Gem",
                                     style = MaterialTheme.typography.caption,
                                     color = Color(TextSecondary),
                                     fontWeight = FontWeight.SemiBold,
@@ -597,7 +597,7 @@ fun Torus3DDetailPage(
                                     )
                                 }
                                 LabeledSliderRow(
-                                    label = "Ukuran Permata",
+                                    label = "Gem Size",
                                     value = gemSizeState,
                                     onValueChange = { v ->
                                         gemSizeState = v
@@ -609,19 +609,19 @@ fun Torus3DDetailPage(
                             }
                         }
 
-                        // ── 7. Dimensi & Sudut 3D ────────────────────────────
+                        // ── 7. Dimensions & Tilt ────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Dimensi & Sudut 3D",
+                            text = "Dimensions & Tilt",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
                         LabeledSliderRow(
-                            label = "Radius Utama",
+                            label = "Major Radius",
                             value = majorState,
                             onValueChange = { v ->
                                 majorState = v
@@ -631,7 +631,7 @@ fun Torus3DDetailPage(
                             suffix = " px"
                         )
                         LabeledSliderRow(
-                            label = "Ketebalan Pipa",
+                            label = "Tube Thickness",
                             value = tubeState,
                             onValueChange = { v ->
                                 tubeState = v
@@ -641,7 +641,7 @@ fun Torus3DDetailPage(
                             suffix = " px"
                         )
                         LabeledSliderRow(
-                            label = "Kemiringan",
+                            label = "Tilt Angle",
                             value = tiltState,
                             onValueChange = { v ->
                                 tiltState = v
@@ -651,7 +651,7 @@ fun Torus3DDetailPage(
                             suffix = "°"
                         )
                         LabeledSliderRow(
-                            label = "Putar Foto",
+                            label = "Spin Angle",
                             value = spinState,
                             onValueChange = { v ->
                                 spinState = v
@@ -661,7 +661,7 @@ fun Torus3DDetailPage(
                             suffix = "°"
                         )
                         LabeledSliderRow(
-                            label = "Intensitas Kilau",
+                            label = "Specular Highlight",
                             value = specularState,
                             onValueChange = { v ->
                                 specularState = v
@@ -671,7 +671,7 @@ fun Torus3DDetailPage(
                             suffix = ""
                         )
 
-                        // ── 8. Pencahayaan & Bayangan ────────────────────────
+                        // ── 8. Elevation & Shadow ──────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
@@ -680,7 +680,7 @@ fun Torus3DDetailPage(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Bayangan Lantai",
+                                text = "Floor Shadow",
                                 style = MaterialTheme.typography.caption,
                                 color = Color(TextSecondary),
                                 fontWeight = FontWeight.SemiBold,
@@ -698,7 +698,7 @@ fun Torus3DDetailPage(
                             )
                         }
                         LabeledSliderRow(
-                            label = "Tinggi Melayang",
+                            label = "Elevation",
                             value = elevationState,
                             onValueChange = { v ->
                                 elevationState = v
@@ -708,7 +708,7 @@ fun Torus3DDetailPage(
                             suffix = ""
                         )
                         LabeledSliderRow(
-                            label = "Opacity Shadow",
+                            label = "Shadow Opacity",
                             value = floorShadowOpacityState,
                             onValueChange = { v ->
                                 floorShadowOpacityState = v
@@ -718,7 +718,7 @@ fun Torus3DDetailPage(
                             suffix = "%"
                         )
                         LabeledSliderRow(
-                            label = "Opacity Cincin",
+                            label = "Opacity",
                             value = opacityState,
                             onValueChange = { v ->
                                 opacityState = v
@@ -728,12 +728,12 @@ fun Torus3DDetailPage(
                             suffix = "%"
                         )
 
-                        // ── 9. Finishing Effects ─────────────────────────────
+                        // ── 9. Effects ─────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "Finishing Effects",
+                            text = "Effects",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontWeight = FontWeight.SemiBold,
@@ -761,7 +761,7 @@ fun Torus3DDetailPage(
                             }
                         }
                         Text(
-                            text = "Tip: Drop Shadow membuat cincin melayang realistis • Neon Glow membuat cincin jadi portal sci-fi berpendar.",
+                            text = "Tip: Drop Shadow grounds the ring realistically • Neon Glow turns the ring into a glowing sci-fi portal.",
                             style = MaterialTheme.typography.caption,
                             color = Color(TextSecondary),
                             fontSize = 9.sp,
