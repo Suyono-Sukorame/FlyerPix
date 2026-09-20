@@ -81,10 +81,23 @@ data class MoonQuickPreset(
     val auraEnabled: Boolean,
     val auraRadius: Float,
     val floorShadowOpacity: Float,
-    val neonEnabled: Boolean
+    val neonEnabled: Boolean,
+    val crescentPuffiness: Float = 1.0f,
+    val mosqueEnabled: Boolean = false,
+    val mosqueDomeColor: Int = 0xFFF5B813.toInt(),
+    val mosqueDoorColor: Int = 0xFF1B7A4B.toInt(),
+    val mosqueMinaretEnabled: Boolean = true,
+    val sparklesEnabled: Boolean = false
 )
 
 val MoonPresets: Map<String, MoonQuickPreset> = listOf(
+    "golden_ramadan" to MoonQuickPreset(
+        CrescentStyle.PUFFY_3D, CrescentMaterial.LUXURY_GOLD, 0xFFFFA726.toInt(),
+        0.48f, 35f, 12f, StarType.SPARKLE_4, 0.20f, true, 1.5f, 0.50f, false,
+        crescentPuffiness = 1.2f, mosqueEnabled = true,
+        mosqueDomeColor = 0xFFF5B813.toInt(), mosqueDoorColor = 0xFF1B7A4B.toInt(),
+        mosqueMinaretEnabled = true, sparklesEnabled = true
+    ),
     "luxury_gold" to MoonQuickPreset(
         CrescentStyle.WIDE_CRESCENT, CrescentMaterial.LUXURY_GOLD, 0xFFD4AF37.toInt(),
         0.55f, 28f, 15f, StarType.STAR_8, 0.28f, true, 1.4f, 0.45f, false
@@ -147,6 +160,13 @@ fun Moon3DDetailPage(
     wireStrokeWidth: Float,
     wireColor: Int,
     wireStrokeOpacityPct: Float,
+    // Puffy 3D / Mosque / Sparkles
+    crescentPuffiness: Float = 1.0f,
+    mosqueEnabled: Boolean = false,
+    mosqueDomeColor: Int = 0xFFF5B813.toInt(),
+    mosqueDoorColor: Int = 0xFF1B7A4B.toInt(),
+    mosqueMinaretEnabled: Boolean = true,
+    sparklesEnabled: Boolean = false,
     // Callbacks
     onPresetClick: (String) -> Unit,
     onStyleChange: (CrescentStyle) -> Unit,
@@ -179,6 +199,14 @@ fun Moon3DDetailPage(
     onOpenShadowEditor: () -> Unit,
     onOpenNeonEditor: () -> Unit,
     onOpenEmbossEditor: () -> Unit,
+    onCrescentPuffinessChange: (Float) -> Unit = {},
+    onMosqueEnabledChange: (Boolean) -> Unit = {},
+    onMosqueDomeColorChange: (Int) -> Unit = {},
+    onOpenMosqueDomeColorPicker: () -> Unit = {},
+    onMosqueDoorColorChange: (Int) -> Unit = {},
+    onOpenMosqueDoorColorPicker: () -> Unit = {},
+    onMosqueMinaretEnabledChange: (Boolean) -> Unit = {},
+    onSparklesEnabledChange: (Boolean) -> Unit = {},
     onReset: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
@@ -207,6 +235,12 @@ fun Moon3DDetailPage(
     var elevationState by remember(floatingElevation) { mutableStateOf(floatingElevation) }
     var floorShadowOpacityState by remember(floorShadowOpacityPct) { mutableStateOf(floorShadowOpacityPct) }
     var opacityState by remember(opacityPct) { mutableStateOf(opacityPct) }
+    var crescentPuffinessState by remember(crescentPuffiness) { mutableStateOf(crescentPuffiness) }
+    var mosqueEnabledState by remember(mosqueEnabled) { mutableStateOf(mosqueEnabled) }
+    var mosqueDomeColorState by remember(mosqueDomeColor) { mutableStateOf(mosqueDomeColor) }
+    var mosqueDoorColorState by remember(mosqueDoorColor) { mutableStateOf(mosqueDoorColor) }
+    var mosqueMinaretState by remember(mosqueMinaretEnabled) { mutableStateOf(mosqueMinaretEnabled) }
+    var sparklesEnabledState by remember(sparklesEnabled) { mutableStateOf(sparklesEnabled) }
 
     Box(
         modifier = Modifier
@@ -264,9 +298,9 @@ fun Moon3DDetailPage(
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             listOf(
+                                "golden_ramadan" to "Golden Ramadan",
                                 "luxury_gold" to "Luxury Gold",
-                                "rose_gold" to "Rose Gold",
-                                "silver_chrome" to "Silver"
+                                "rose_gold" to "Rose Gold"
                             ).forEach { (key, label) ->
                                 val preset = MoonPresets.getValue(key)
                                 val isActive = styleState == preset.style &&
@@ -294,6 +328,12 @@ fun Moon3DDetailPage(
                                             auraEnabledState = preset.auraEnabled
                                             auraRadiusState = preset.auraRadius
                                             floorShadowOpacityState = preset.floorShadowOpacity
+                                            crescentPuffinessState = preset.crescentPuffiness
+                                            mosqueEnabledState = preset.mosqueEnabled
+                                            mosqueDomeColorState = preset.mosqueDomeColor
+                                            mosqueDoorColorState = preset.mosqueDoorColor
+                                            mosqueMinaretState = preset.mosqueMinaretEnabled
+                                            sparklesEnabledState = preset.sparklesEnabled
                                             onPresetClick(key)
                                         }
                                         .padding(vertical = 9.dp),
@@ -314,8 +354,9 @@ fun Moon3DDetailPage(
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             listOf(
+                                "silver_chrome" to "Silver",
                                 "emerald" to "Emerald",
-                                "neon_ramadan" to "Neon Ramadan"
+                                "neon_ramadan" to "Neon"
                             ).forEach { (key, label) ->
                                 val preset = MoonPresets.getValue(key)
                                 val isActive = styleState == preset.style &&
@@ -343,6 +384,12 @@ fun Moon3DDetailPage(
                                             auraEnabledState = preset.auraEnabled
                                             auraRadiusState = preset.auraRadius
                                             floorShadowOpacityState = preset.floorShadowOpacity
+                                            crescentPuffinessState = preset.crescentPuffiness
+                                            mosqueEnabledState = preset.mosqueEnabled
+                                            mosqueDomeColorState = preset.mosqueDomeColor
+                                            mosqueDoorColorState = preset.mosqueDoorColor
+                                            mosqueMinaretState = preset.mosqueMinaretEnabled
+                                            sparklesEnabledState = preset.sparklesEnabled
                                             onPresetClick(key)
                                         }
                                         .padding(vertical = 9.dp),
@@ -399,7 +446,8 @@ fun Moon3DDetailPage(
                                 CrescentStyle.THIN_CRESCENT to "Thin",
                                 CrescentStyle.WIDE_CRESCENT to "Wide",
                                 CrescentStyle.FINIAL_SPIRE to "Finial",
-                                CrescentStyle.FLOATING_ORB to "Orb"
+                                CrescentStyle.FLOATING_ORB to "Orb",
+                                CrescentStyle.PUFFY_3D to "Puffy 3D"
                             ).forEach { (m, label) ->
                                 val isSelected = styleState == m
                                 Box(
@@ -449,6 +497,146 @@ fun Moon3DDetailPage(
                             valueRange = 4f..80f,
                             suffix = " px"
                         )
+                        if (styleState == CrescentStyle.PUFFY_3D) {
+                            LabeledSliderRow(
+                                label = "Puffiness / Volume",
+                                value = crescentPuffinessState,
+                                onValueChange = { v ->
+                                    crescentPuffinessState = v
+                                    onCrescentPuffinessChange(v)
+                                },
+                                valueRange = 0.5f..2.0f,
+                                suffix = "x"
+                            )
+                        }
+
+                        // ── 3D Mosque & Decor ──
+                        if (styleState == CrescentStyle.PUFFY_3D) {
+                            Divider(color = Color(PanelDivider), thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "3D Mosque & Decor",
+                                    style = MaterialTheme.typography.caption,
+                                    color = Color(TextSecondary),
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(horizontal = 4.dp)
+                                )
+                                Switch(
+                                    checked = mosqueEnabledState,
+                                    onCheckedChange = {
+                                        mosqueEnabledState = it
+                                        onMosqueEnabledChange(it)
+                                    },
+                                    modifier = Modifier.scale(0.8f)
+                                )
+                            }
+                            if (mosqueEnabledState) {
+                                Text(
+                                    text = "Dome Color",
+                                    style = MaterialTheme.typography.caption,
+                                    color = Color(TextSecondary),
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf(
+                                        0xFFF5B813.toInt(),
+                                        0xFFFFD700.toInt(),
+                                        0xFFE8B84B.toInt()
+                                    ).forEach { c ->
+                                        val isPicked = mosqueDomeColorState == c
+                                        Box(
+                                            modifier = Modifier
+                                                .size(if (isPicked) 26.dp else 22.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(c))
+                                                .border(2.dp, Color.White, CircleShape)
+                                                .then(
+                                                    if (isPicked) Modifier.border(2.dp, PrimaryBlue, CircleShape) else Modifier
+                                                )
+                                                .clickable {
+                                                    mosqueDomeColorState = c
+                                                    onMosqueDomeColorChange(c)
+                                                }
+                                        ) {}
+                                    }
+                                    AddColorSwatchButton(
+                                        onClick = onOpenMosqueDomeColorPicker,
+                                        buttonSize = 22.dp
+                                    )
+                                }
+                                Text(
+                                    text = "Door Color",
+                                    style = MaterialTheme.typography.caption,
+                                    color = Color(TextSecondary),
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf(
+                                        0xFF1B7A4B.toInt(),
+                                        0xFF2E8B57.toInt(),
+                                        0xFF0D5E3B.toInt()
+                                    ).forEach { c ->
+                                        val isPicked = mosqueDoorColorState == c
+                                        Box(
+                                            modifier = Modifier
+                                                .size(if (isPicked) 26.dp else 22.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(c))
+                                                .border(2.dp, Color.White, CircleShape)
+                                                .then(
+                                                    if (isPicked) Modifier.border(2.dp, PrimaryBlue, CircleShape) else Modifier
+                                                )
+                                                .clickable {
+                                                    mosqueDoorColorState = c
+                                                    onMosqueDoorColorChange(c)
+                                                }
+                                        ) {}
+                                    }
+                                    AddColorSwatchButton(
+                                        onClick = onOpenMosqueDoorColorPicker,
+                                        buttonSize = 22.dp
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Minarets",
+                                        style = MaterialTheme.typography.caption,
+                                        color = Color(TextSecondary),
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(horizontal = 4.dp)
+                                    )
+                                    Switch(
+                                        checked = mosqueMinaretState,
+                                        onCheckedChange = {
+                                            mosqueMinaretState = it
+                                            onMosqueMinaretEnabledChange(it)
+                                        },
+                                        modifier = Modifier.scale(0.8f)
+                                    )
+                                }
+                            }
+                        }
 
                         // ── 3. Orientation ────────────────────────────────────
                         Divider(color = Color(PanelDivider), thickness = 1.dp)
@@ -662,7 +850,8 @@ fun Moon3DDetailPage(
                                 StarType.NONE to "None",
                                 StarType.STAR_8 to "8-pt",
                                 StarType.STAR_5 to "5-pt",
-                                StarType.STAR_6 to "6-pt"
+                                StarType.STAR_6 to "6-pt",
+                                StarType.SPARKLE_4 to "Sparkle 4"
                             ).forEach { (m, label) ->
                                 val isSelected = starTypeState == m
                                 Box(
@@ -758,6 +947,30 @@ fun Moon3DDetailPage(
                                     },
                                     modifier = Modifier.scale(0.8f)
                                 )
+                            }
+                            if (starTypeState == StarType.SPARKLE_4) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Floating Sparkles",
+                                        style = MaterialTheme.typography.caption,
+                                        color = Color(TextSecondary),
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(horizontal = 4.dp)
+                                    )
+                                    Switch(
+                                        checked = sparklesEnabledState,
+                                        onCheckedChange = {
+                                            sparklesEnabledState = it
+                                            onSparklesEnabledChange(it)
+                                        },
+                                        modifier = Modifier.scale(0.8f)
+                                    )
+                                }
                             }
                         }
 

@@ -6206,8 +6206,8 @@ private var cylinderTiltStartRadiusY: Float = 0f
     }
 
     /**
-     * Adds a default 3D Crescent Moon (Gold Crescent) to the canvas center
-     * as a [Moon3DLayer] with wide crescent + hanging 8-point star.
+     * Adds a default 3D Crescent Moon (Golden Puffy Crescent) to the canvas center
+     * as a [Moon3DLayer] with puffy 3D style, mosque ornament, and sparkle stars.
      */
     fun addMoon3DLayer(): Moon3DLayer {
         val cx = if (width > 0) width / 2f else 540f
@@ -6215,29 +6215,35 @@ private var cylinderTiltStartRadiusY: Float = 0f
         val r = ((minOf(width, height).takeIf { it > 0 }?.toFloat() ?: 400f) * 0.28f).coerceIn(40f, 240f)
         val layer = Moon3DLayer(
             outerRadius = r,
-            innerOffset = 0.55f,
-            extrusionDepth = r * 0.18f,
+            innerOffset = 0.48f,
+            extrusionDepth = r * 0.22f,
             tiltAngle = 12f,
             spinAngle = 0f,
-            style = CrescentStyle.WIDE_CRESCENT,
+            style = CrescentStyle.PUFFY_3D,
             materialType = CrescentMaterial.LUXURY_GOLD,
-            baseColor = 0xFFD4AF37.toInt(),
+            baseColor = 0xFFFFA726.toInt(),
             lightAngle = -45f,
             specularIntensity = 0.9f,
             auraEnabled = true,
             auraColor = 0xFFFFD700.toInt(),
-            auraRadius = 1.4f,
-            starType = StarType.STAR_8,
-            starScale = 0.28f,
+            auraRadius = 1.5f,
+            starType = StarType.SPARKLE_4,
+            starScale = 0.20f,
             starColor = 0xFFFFD700.toInt(),
             hangingCordEnabled = true,
             floorShadowEnabled = true,
             floatingElevation = 20f,
-            floorShadowOpacity = 0.45f,
+            floorShadowOpacity = 0.50f,
             wireframeEnabled = false,
             wireStrokeWidth = 2f,
             wireColor = 0xFFD4AF37.toInt(),
             wireStrokeOpacity = 0.6f,
+            crescentPuffiness = 1.2f,
+            mosqueEnabled = true,
+            mosqueDomeColor = 0xFFF5B813.toInt(),
+            mosqueDoorColor = 0xFF1B7A4B.toInt(),
+            mosqueMinaretEnabled = true,
+            sparklesEnabled = true,
             shadowEnabled = false,
             shadowColor = 0xFF000000.toInt(),
             shadowRadius = 10f,

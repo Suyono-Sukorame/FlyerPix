@@ -4626,6 +4626,12 @@ class ObjectMenuController(
         moon.auraRadius = preset.auraRadius
         moon.floorShadowOpacity = preset.floorShadowOpacity
         moon.neonEnabled = preset.neonEnabled
+        moon.crescentPuffiness = preset.crescentPuffiness
+        moon.mosqueEnabled = preset.mosqueEnabled
+        moon.mosqueDomeColor = preset.mosqueDomeColor
+        moon.mosqueDoorColor = preset.mosqueDoorColor
+        moon.mosqueMinaretEnabled = preset.mosqueMinaretEnabled
+        moon.sparklesEnabled = preset.sparklesEnabled
         if (preset.neonEnabled) {
             moon.neonColor = 0xFF00E5FF.toInt()
             moon.neonRadius = 20f
@@ -4681,6 +4687,12 @@ class ObjectMenuController(
                 mutableStateOf((moon.floorShadowOpacity * 100f).coerceIn(0f, 100f))
             }
             var currentOpacity by remember { mutableStateOf(moon.opacity / 255f * 100f) }
+            var currentPuffiness by remember { mutableStateOf(moon.crescentPuffiness) }
+            var currentMosqueEnabled by remember { mutableStateOf(moon.mosqueEnabled) }
+            var currentMosqueDomeColor by remember { mutableStateOf(moon.mosqueDomeColor) }
+            var currentMosqueDoorColor by remember { mutableStateOf(moon.mosqueDoorColor) }
+            var currentMosqueMinaret by remember { mutableStateOf(moon.mosqueMinaretEnabled) }
+            var currentSparklesEnabled by remember { mutableStateOf(moon.sparklesEnabled) }
 
             Moon3DDetailPage(
                 outerRadius = moon.outerRadius,
@@ -4721,6 +4733,12 @@ class ObjectMenuController(
                     currentAuraEnabled = moon.auraEnabled
                     currentAuraRadius = moon.auraRadius
                     currentFloorShadowOpacity = moon.floorShadowOpacity * 100f
+                    currentPuffiness = moon.crescentPuffiness
+                    currentMosqueEnabled = moon.mosqueEnabled
+                    currentMosqueDomeColor = moon.mosqueDomeColor
+                    currentMosqueDoorColor = moon.mosqueDoorColor
+                    currentMosqueMinaret = moon.mosqueMinaretEnabled
+                    currentSparklesEnabled = moon.sparklesEnabled
                 },
                 onStyleChange = { s -> currentStyle = s; moon.style = s; canvas.invalidate() },
                 onMaterialChange = { m -> currentMaterial = m; moon.materialType = m; canvas.invalidate() },
@@ -4776,6 +4794,26 @@ class ObjectMenuController(
                 onOpenShadowEditor = { canvas.invalidate(); showMoon3DShadowSheet(moon) },
                 onOpenNeonEditor = { canvas.invalidate(); showMoon3DNeonSheet(moon) },
                 onOpenEmbossEditor = { canvas.invalidate(); showMoon3DEmbossSheet(moon) },
+                onCrescentPuffinessChange = { v -> currentPuffiness = v; moon.crescentPuffiness = v; canvas.invalidate() },
+                onMosqueEnabledChange = { en -> currentMosqueEnabled = en; moon.mosqueEnabled = en; canvas.invalidate() },
+                onMosqueDomeColorChange = { c -> currentMosqueDomeColor = c; moon.mosqueDomeColor = c; canvas.invalidate() },
+                onOpenMosqueDomeColorPicker = {
+                    val original = moon.mosqueDomeColor
+                    val dialog = ColorPickerDialog.newInstance(initialColor = moon.mosqueDomeColor, resultKey = "moon_mosque_dome_color_key")
+                    dialog.onColorChanged = { color -> moon.mosqueDomeColor = color; canvas.invalidate() }
+                    dialog.onCancel = { moon.mosqueDomeColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "MoonMosqueDomeColorPicker")
+                },
+                onMosqueDoorColorChange = { c -> currentMosqueDoorColor = c; moon.mosqueDoorColor = c; canvas.invalidate() },
+                onOpenMosqueDoorColorPicker = {
+                    val original = moon.mosqueDoorColor
+                    val dialog = ColorPickerDialog.newInstance(initialColor = moon.mosqueDoorColor, resultKey = "moon_mosque_door_color_key")
+                    dialog.onColorChanged = { color -> moon.mosqueDoorColor = color; canvas.invalidate() }
+                    dialog.onCancel = { moon.mosqueDoorColor = original; canvas.invalidate() }
+                    dialog.show(fragmentManager, "MoonMosqueDoorColorPicker")
+                },
+                onMosqueMinaretEnabledChange = { en -> currentMosqueMinaret = en; moon.mosqueMinaretEnabled = en; canvas.invalidate() },
+                onSparklesEnabledChange = { en -> currentSparklesEnabled = en; moon.sparklesEnabled = en; canvas.invalidate() },
                 onReset = {
                     currentStyle = CrescentStyle.WIDE_CRESCENT; currentMaterial = CrescentMaterial.LUXURY_GOLD
                     currentBaseColor = 0xFFD4AF37.toInt(); currentInnerOffset = 0.55f; currentExtrusion = 28f
@@ -4785,6 +4823,9 @@ class ObjectMenuController(
                     currentCord = true; currentWireframe = false; currentWireWidth = 2f
                     currentWireColor = 0xFFD4AF37.toInt(); currentWireOpacity = 60f
                     currentFloorShadow = true; currentElevation = 20f; currentFloorShadowOpacity = 45f; currentOpacity = 100f
+                    currentPuffiness = 1.0f; currentMosqueEnabled = false
+                    currentMosqueDomeColor = 0xFFF5B813.toInt(); currentMosqueDoorColor = 0xFF1B7A4B.toInt()
+                    currentMosqueMinaret = true; currentSparklesEnabled = false
                     moon.style = CrescentStyle.WIDE_CRESCENT; moon.materialType = CrescentMaterial.LUXURY_GOLD
                     moon.baseColor = 0xFFD4AF37.toInt(); moon.innerOffset = 0.55f; moon.extrusionDepth = 28f
                     moon.tiltAngle = 15f; moon.spinAngle = 0f; moon.specularIntensity = 0.9f
@@ -4795,6 +4836,9 @@ class ObjectMenuController(
                     moon.floorShadowEnabled = true; moon.floatingElevation = 20f; moon.floorShadowOpacity = 0.45f
                     moon.opacity = 255; moon.neonEnabled = false; moon.neonColor = 0xFF00E5FF.toInt()
                     moon.neonRadius = 20f; moon.neonIntensity = 1f; moon.shadowEnabled = false; moon.embossEnabled = false
+                    moon.crescentPuffiness = 1.0f; moon.mosqueEnabled = false
+                    moon.mosqueDomeColor = 0xFFF5B813.toInt(); moon.mosqueDoorColor = 0xFF1B7A4B.toInt()
+                    moon.mosqueMinaretEnabled = true; moon.sparklesEnabled = false
                     canvas.invalidate()
                 },
                 onApply = {
@@ -4820,6 +4864,9 @@ class ObjectMenuController(
                             moon.neonIntensity = snap.neonIntensity; moon.shadowEnabled = snap.shadowEnabled
                             moon.shadowColor = snap.shadowColor; moon.shadowRadius = snap.shadowRadius; moon.shadowOpacity = snap.shadowOpacity
                             moon.shadowDx = snap.shadowDx; moon.shadowDy = snap.shadowDy; moon.embossEnabled = snap.embossEnabled
+                            moon.crescentPuffiness = snap.crescentPuffiness; moon.mosqueEnabled = snap.mosqueEnabled
+                            moon.mosqueDomeColor = snap.mosqueDomeColor; moon.mosqueDoorColor = snap.mosqueDoorColor
+                            moon.mosqueMinaretEnabled = snap.mosqueMinaretEnabled; moon.sparklesEnabled = snap.sparklesEnabled
                         }
                     }
                     canvas.invalidate()
