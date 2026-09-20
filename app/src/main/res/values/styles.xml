@@ -184,4 +184,34 @@
         <item name="android:textColorPrimary">@color/brand_navy</item>
     </style>
 
+    <style name="ShapeAppearance.FlyerPix.Circle" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="ShapeAppearance.FlyerPix.Pill" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">20dp</item>
+    </style>
+
+    <style name="InlineToolbarRoundButton" parent="Widget.MaterialComponents.Button.UnelevatedButton">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.FlyerPix.Circle</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+    </style>
+
+    <style name="InlineToolbarPillButton" parent="Widget.MaterialComponents.Button.UnelevatedButton">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.FlyerPix.Pill</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+    </style>
+
 </resources>

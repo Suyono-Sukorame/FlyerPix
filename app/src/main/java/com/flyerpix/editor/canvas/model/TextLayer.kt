@@ -93,6 +93,21 @@ data class TextLayer(
     // ── Stroke / Outline ─────────────────────────────────────────────────────
     var strokeColor: Int = Color.BLACK,
     var strokeWidth: Float = 0f,
+    /** Alignment stroke terhadap kontur huruf: OUTSIDE (default) / CENTER / INSIDE. */
+    var strokeAlignment: StrokeAlignment = StrokeAlignment.OUTSIDE,
+    /** Stroke bergradasi; null = pakai [strokeColor] solid. */
+    var strokeGradientEnabled: Boolean = false,
+    var strokeGradient: GradientColor? = null,
+    /** Join garis tepi (MITER / BEVEL / ROUND). */
+    var strokeJoin: Paint.Join = Paint.Join.ROUND,
+    /** Style garis tepi: SOLID / DASHED / DOTTED. */
+    var strokeStyle: StrokeStyle = StrokeStyle.SOLID,
+    // ── Secondary Outline (Dual Outline / outline ganda) ────────────────────
+    /** Outline kedua di luar outline utama (efek "border ganda" seperti
+     *  aplikasi desain). null/disabled = tidak aktif. */
+    var stroke2Enabled: Boolean = false,
+    var stroke2Width: Float = 5f,
+    var stroke2Color: Int = Color.BLACK,
     // ── Drop Shadow ──────────────────────────────────────────────────────────
     override var shadowEnabled: Boolean = false,
     override var shadowColor: Int = Color.BLACK,

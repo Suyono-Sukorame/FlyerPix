@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_text_edit_sheet"
-    android:clipToOutline="true"
+    android:elevation="12dp"
     android:orientation="vertical"
     android:visibility="gone">
 
@@ -14,7 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="52dp"
         android:background="@drawable/bg_text_edit_toolbar"
-        android:layout_margin="10dp"
+        android:layout_margin="8dp"
         android:overScrollMode="never"
         android:scrollbars="none">
 
@@ -25,189 +25,186 @@
             android:orientation="horizontal"
             android:paddingHorizontal="6dp">
 
+            <!-- Tombol Selesai (Done) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnInlineDone"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+                style="@style/InlineToolbarPillButton"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
+                android:layout_height="36dp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
-                android:paddingHorizontal="10dp"
-                android:text="DONE"
-                android:textColor="@color/brand_blue"
-                android:textSize="11sp"
+                android:paddingStart="10dp"
+                android:paddingEnd="12dp"
+                android:text="Done"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
                 android:textStyle="bold"
-                app:backgroundTint="#EAF3FF"
-                app:cornerRadius="20dp" />
+                app:backgroundTint="#1769FF"
+                app:icon="@drawable/ic_check_24px"
+                app:iconPadding="4dp"
+                app:iconSize="16dp"
+                app:iconTint="@android:color/white"
+                app:strokeWidth="0dp" />
 
+            <!-- Tombol Batal (Cancel) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnInlineCancel"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+                style="@style/InlineToolbarPillButton"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="4dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
-                android:paddingHorizontal="10dp"
-                android:text="CANCEL"
-                android:textColor="@color/light_text_secondary"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                app:backgroundTint="@android:color/transparent"
-                app:cornerRadius="20dp" />
+                android:paddingStart="8dp"
+                android:paddingEnd="10dp"
+                android:text="Cancel"
+                android:textColor="#5F6B7A"
+                android:textSize="12sp"
+                app:backgroundTint="#EAF0F6"
+                app:icon="@drawable/ic_sharp_clear_24px"
+                app:iconPadding="4dp"
+                app:iconSize="16dp"
+                app:iconTint="#5F6B7A"
+                app:strokeWidth="0dp" />
 
             <View
                 android:layout_width="1dp"
-                android:layout_height="26dp"
+                android:layout_height="24dp"
                 android:layout_marginHorizontal="8dp"
                 android:background="#DDE4EF" />
 
+            <!-- Formatting: Bold -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnInlineBold"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="42dp"
-                android:layout_height="40dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
+                style="@style/InlineToolbarPillButton"
+                android:layout_width="38dp"
+                android:layout_height="36dp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
                 android:padding="0dp"
                 android:text="B"
                 android:textColor="#1F2A44"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
-                android:background="@drawable/bg_text_edit_format_button"
-                android:backgroundTint="@android:color/transparent"
-                app:cornerRadius="12dp" />
+                app:backgroundTint="@android:color/transparent"
+                app:strokeWidth="0dp" />
 
+            <!-- Formatting: Italic -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnInlineItalic"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="42dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="4dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
+                style="@style/InlineToolbarPillButton"
+                android:layout_width="38dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="2dp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
                 android:padding="0dp"
                 android:text="I"
                 android:textColor="#1F2A44"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="italic"
-                android:background="@drawable/bg_text_edit_format_button"
-                android:backgroundTint="@android:color/transparent"
-                app:cornerRadius="12dp" />
+                app:backgroundTint="@android:color/transparent"
+                app:strokeWidth="0dp" />
 
+            <!-- Formatting: Underline -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnInlineUnderline"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="42dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="4dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
+                style="@style/InlineToolbarPillButton"
+                android:layout_width="38dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="2dp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
                 android:padding="0dp"
                 android:text="U"
                 android:textColor="#1F2A44"
-                android:textSize="15sp"
-                android:background="@drawable/bg_text_edit_format_button"
-                android:backgroundTint="@android:color/transparent"
-                app:cornerRadius="12dp" />
+                android:textSize="14sp"
+                app:backgroundTint="@android:color/transparent"
+                app:strokeWidth="0dp" />
 
+            <!-- Formatting: Strikethrough -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnInlineStrike"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="42dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="4dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
+                style="@style/InlineToolbarPillButton"
+                android:layout_width="38dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="2dp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
                 android:padding="0dp"
                 android:text="S"
                 android:textColor="#1F2A44"
-                android:textSize="15sp"
-                android:background="@drawable/bg_text_edit_format_button"
-                android:backgroundTint="@android:color/transparent"
-                app:cornerRadius="12dp" />
+                android:textSize="14sp"
+                app:backgroundTint="@android:color/transparent"
+                app:strokeWidth="0dp" />
 
+            <!-- Formatting: Case -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnInlineCase"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+                style="@style/InlineToolbarPillButton"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginStart="6dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="4dp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
-                android:paddingHorizontal="10dp"
+                android:paddingHorizontal="8dp"
                 android:text="Aa"
                 android:textColor="#1F2A44"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                android:background="@drawable/bg_text_edit_format_button"
-                android:backgroundTint="@android:color/transparent"
-                app:cornerRadius="12dp" />
+                app:backgroundTint="@android:color/transparent"
+                app:strokeWidth="0dp" />
 
+            <!-- Formatting: Color -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnInlineColor"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+                style="@style/InlineToolbarPillButton"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
+                android:layout_height="36dp"
                 android:layout_marginStart="4dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
                 android:paddingHorizontal="10dp"
                 android:text="Color"
                 android:textColor="#1F2A44"
                 android:textSize="12sp"
-                android:background="@drawable/bg_text_edit_format_button"
-                android:backgroundTint="@android:color/transparent"
-                app:cornerRadius="12dp"
+                app:backgroundTint="@android:color/transparent"
                 app:icon="@drawable/ic_sharp_palette_24px"
                 app:iconPadding="4dp"
-                app:iconSize="18dp"
-                app:iconTint="#1F2A44" />
+                app:iconSize="16dp"
+                app:iconTint="#1F2A44"
+                app:strokeWidth="0dp" />
 
             <View
                 android:id="@+id/inlineToolbarDivider"
                 android:layout_width="1dp"
-                android:layout_height="26dp"
-                android:layout_marginHorizontal="8dp"
+                android:layout_height="24dp"
+                android:layout_marginHorizontal="6dp"
                 android:background="#DDE4EF" />
 
+            <!-- Karakter Count -->
             <TextView
                 android:id="@+id/tvInlineCharCount"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:gravity="center_vertical"
-                android:minWidth="64dp"
-                android:paddingStart="2dp"
+                android:minWidth="56dp"
+                android:paddingStart="4dp"
                 android:paddingEnd="8dp"
-                android:text="0"
+                android:text="0 chars"
                 android:textColor="@color/light_text_secondary"
-                android:textSize="12sp" />
+                android:textSize="11sp" />
         </LinearLayout>
     </HorizontalScrollView>
 
+    <!-- Baris Palet Warna Cepat -->
     <LinearLayout
         android:id="@+id/inlineColorPalette"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="10dp"
         android:gravity="center"
         android:orientation="horizontal"
         android:visibility="gone">

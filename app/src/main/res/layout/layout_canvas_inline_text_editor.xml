@@ -20,15 +20,17 @@
 
         <EditText
             android:id="@+id/inlineEditText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:background="@android:color/transparent"
             android:gravity="top|start"
             android:hint=""
+            android:includeFontPadding="false"
+            android:padding="0dp"
+            android:scrollbars="none"
             android:importantForAutofill="no"
             android:importantForAccessibility="yes"
             android:inputType="textMultiLine|textCapSentences"
-            android:textColor="#FFFFFF"
-            android:textSize="24sp" />
+            android:textColor="#FFFFFF" />
     </FrameLayout>
 </FrameLayout>

@@ -35,6 +35,26 @@ enum class StrokeStyle {
     DOTTED
 }
 
+
+/**
+ * Posisi garis tepi (stroke) relatif terhadap tepi huruf/bentuk.
+ *
+ * - [OUTSIDE] — Seluruh stroke berada di luar bentuk (crisp, tidak "makan"
+ *   rongga huruf seperti 'e'/'a'/'o' pada width besar). Untuk teks di-render
+ *   dengan stroke `width * 2` SEBELUM fill (separuh dalam tertutup fill),
+ *   sehingga hanya separuh luar yang terlihat → lega seperti Canva/Illustrator.
+ * - [CENTER]  — Stroke terpusat pada tepi (perilaku Android standar/legacy;
+ *   separuh luar + separuh dalam, dalam tertutup fill).
+ * - [INSIDE]  — Stroke digambar di dalam bentuk (mengikuti kontur rongga;
+ *   width * 2 DIGAMBAR SENGAJA menutupi sebagian fill, stroke terlihat penuh
+ *   pada kontur huruf/bentuk seperti Photoshop "inside stroke").
+ */
+enum class StrokeAlignment {
+    OUTSIDE,
+    CENTER,
+    INSIDE
+}
+
 /**
  * Representasi layer bentuk geometris pada kanvas PixelLab.
  *
@@ -75,6 +95,10 @@ data class ShapeLayer(
     var strokeOpacity: Int = 255, // Stroke opacity terpisah dari layer opacity
     var strokeJoin: Paint.Join = Paint.Join.MITER, // MITER, BEVEL, ROUND
     var strokeStyle: StrokeStyle = StrokeStyle.SOLID,
+    var strokeAlignment: StrokeAlignment = StrokeAlignment.OUTSIDE,
+    /** Stroke bergradasi untuk garis tepi bentuk (null = pakai [strokeColor]). */
+    var strokeGradientEnabled: Boolean = false,
+    var strokeGradient: GradientColor? = null,
     var arcStartAngle: Float = 0f,
     var arcSweepAngle: Float = 270f,
     // ── Rounded Rectangle ──────────────────────────────────────────────────
