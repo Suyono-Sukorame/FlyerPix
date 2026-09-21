@@ -83,6 +83,9 @@ class TabSticker : Fragment() {
                 R.id.chipTravel   -> getStickersForCategory(StickerCategory.TRAVEL)
                 R.id.chipObjects  -> getStickersForCategory(StickerCategory.OBJECTS)
                 R.id.chipSymbols  -> getStickersForCategory(StickerCategory.SYMBOLS)
+                R.id.chipOrnaments -> getStickersForCategory(StickerCategory.ISLAMIC_ORNAMENTS)
+                R.id.chipRibbons  -> getStickersForCategory(StickerCategory.BRUSH_RIBBONS)
+                R.id.chipEventIcons -> getStickersForCategory(StickerCategory.EVENT_ICONS)
                 else              -> getAllStickers()
             }
             adapter.updateItems(filtered)
@@ -299,7 +302,25 @@ class TabSticker : Fragment() {
             StickerItem("💥", "Boom", StickerCategory.SYMBOLS),
             StickerItem("🔴", "Red Circle", StickerCategory.SYMBOLS),
             StickerItem("🟢", "Green Circle", StickerCategory.SYMBOLS),
-            StickerItem("🔵", "Blue Circle", StickerCategory.SYMBOLS)
+            StickerItem("🔵", "Blue Circle", StickerCategory.SYMBOLS),
+
+            // ── Ornamen Islami (aset vektor) ──────────────────────────────
+            StickerItem("🕌", "Crescent Star", StickerCategory.ISLAMIC_ORNAMENTS, R.drawable.ic_ornament_crescent_star),
+            StickerItem("🌸", "Mandala", StickerCategory.ISLAMIC_ORNAMENTS, R.drawable.ic_ornament_mandala),
+            StickerItem("✳️", "Arabesque", StickerCategory.ISLAMIC_ORNAMENTS, R.drawable.ic_ornament_arabesque),
+            StickerItem("➖", "Flourish", StickerCategory.ISLAMIC_ORNAMENTS, R.drawable.ic_ornament_border_flourish),
+
+            // ── Pita / Ribbon (aset vektor) ───────────────────────────────
+            StickerItem("🖌️", "Brush Swash", StickerCategory.BRUSH_RIBBONS, R.drawable.ic_ribbon_brush_1),
+            StickerItem("🖍️", "Brush Stroke", StickerCategory.BRUSH_RIBBONS, R.drawable.ic_ribbon_brush_2),
+            StickerItem("🎀", "Banner Ribbon", StickerCategory.BRUSH_RIBBONS, R.drawable.ic_ribbon_banner_swash),
+            StickerItem("〰️", "Brush Underline", StickerCategory.BRUSH_RIBBONS, R.drawable.ic_ribbon_underline),
+
+            // ── Ikon Acara (aset vektor) ──────────────────────────────────
+            StickerItem("📅", "Event Date", StickerCategory.EVENT_ICONS, R.drawable.ic_event_calendar),
+            StickerItem("🎤", "Speaker Mic", StickerCategory.EVENT_ICONS, R.drawable.ic_event_mic),
+            StickerItem("🎟️", "Admission Ticket", StickerCategory.EVENT_ICONS, R.drawable.ic_event_ticket),
+            StickerItem("🏅", "Award Medal", StickerCategory.EVENT_ICONS, R.drawable.ic_event_medal)
         )
     }
 }

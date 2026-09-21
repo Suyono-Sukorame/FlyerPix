@@ -20,16 +20,28 @@ enum class StickerCategory(val label: String) {
     ACTIVITIES("⚽"),
     TRAVEL("🚗"),
     OBJECTS("💡"),
-    SYMBOLS("❤️")
+    SYMBOLS("❤️"),
+    // ── Aset grafis vektor (bukan emoji) ────────────────────────────────────
+    ISLAMIC_ORNAMENTS("🕌"),
+    BRUSH_RIBBONS("🎀"),
+    EVENT_ICONS("🎫")
 }
 
 /**
  * Representasi satu item stiker/emoji pada picker.
+ *
+ * @property emoji      Teks emoji; dipakai bila [drawableRes] null.
+ * @property label      Nama tampilan item.
+ * @property category   Kategori picker.
+ * @property drawableRes Resource vektor aset grafis; bila tidak null maka
+ *                       item dirender sebagai bitmap dari drawable ini,
+ *                       bukan dari [emoji].
  */
 data class StickerItem(
     val emoji: String,
     val label: String,
-    val category: StickerCategory
+    val category: StickerCategory,
+    val drawableRes: Int? = null
 )
 
 /**

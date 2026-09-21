@@ -1,0 +1,37 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+  <path
+      android:fillColor="#00000000"
+      android:strokeColor="#B8860B"
+      android:strokeWidth="1"
+      android:pathData="M2,24 A22,22 0 1 1 46,24 A22,22 0 1 1 2,24 Z" />
+  <group android:pivotX="24" android:pivotY="24" android:rotation="0">
+    <path android:fillColor="#0E7C7B" android:pathData="M24,24 Q20.5,12 24,7 Q27.5,12 24,24 Z" />
+  </group>
+  <group android:pivotX="24" android:pivotY="24" android:rotation="45">
+    <path android:fillColor="#0E7C7B" android:pathData="M24,24 Q20.5,12 24,7 Q27.5,12 24,24 Z" />
+  </group>
+  <group android:pivotX="24" android:pivotY="24" android:rotation="90">
+    <path android:fillColor="#0E7C7B" android:pathData="M24,24 Q20.5,12 24,7 Q27.5,12 24,24 Z" />
+  </group>
+  <group android:pivotX="24" android:pivotY="24" android:rotation="135">
+    <path android:fillColor="#0E7C7B" android:pathData="M24,24 Q20.5,12 24,7 Q27.5,12 24,24 Z" />
+  </group>
+  <group android:pivotX="24" android:pivotY="24" android:rotation="180">
+    <path android:fillColor="#0E7C7B" android:pathData="M24,24 Q20.5,12 24,7 Q27.5,12 24,24 Z" />
+  </group>
+  <group android:pivotX="24" android:pivotY="24" android:rotation="225">
+    <path android:fillColor="#0E7C7B" android:pathData="M24,24 Q20.5,12 24,7 Q27.5,12 24,24 Z" />
+  </group>
+  <group android:pivotX="24" android:pivotY="24" android:rotation="270">
+    <path android:fillColor="#0E7C7B" android:pathData="M24,24 Q20.5,12 24,7 Q27.5,12 24,24 Z" />
+  </group>
+  <group android:pivotX="24" android:pivotY="24" android:rotation="315">
+    <path android:fillColor="#0E7C7B" android:pathData="M24,24 Q20.5,12 24,7 Q27.5,12 24,24 Z" />
+  </group>
+  <path android:fillColor="#D4AF37" android:pathData="M24,18 A6,6 0 1 1 24,30 A6,6 0 1 1 24,18 Z" />
+  <path android:fillColor="#8E2C4B" android:pathData="M24,21 A3,3 0 1 1 24,27 A3,3 0 1 1 24,21 Z" />
+</vector>

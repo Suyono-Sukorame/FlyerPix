@@ -26,7 +26,16 @@ enum class ShapeType {
     STAR,
     HEART,
     HEXAGON,
-    DIAMOND
+    DIAMOND,
+    // ── Dekoratif & Islami ──────────────────────────────────────────────────
+    /** Lengkungan runcing gaya gerbang masjid (kubah / moorish-gothic arch). */
+    ISLAMIC_ARCH,
+    /** Rub el Hizb — bintang 8 sudut dari dua persegi bertumpuk (1 diputar 45°). */
+    EIGHT_POINT_STAR,
+    /** Pita/banner dengan ujung chevron bergerigi di kedua sisi. */
+    BANNER_RIBBON,
+    /** Badge kartu pembicara simetris dengan ujung runcing (double-arch). */
+    BADGE_OGEE
 }
 
 enum class StrokeStyle {
@@ -146,6 +155,10 @@ data class ShapeLayer(
             ShapeType.HEART             -> buildHeartPath()
             ShapeType.HEXAGON           -> buildHexagonPath()
             ShapeType.DIAMOND           -> buildDiamondPath()
+            ShapeType.ISLAMIC_ARCH      -> buildIslamicArchPath()
+            ShapeType.EIGHT_POINT_STAR  -> buildEightPointStarPath()
+            ShapeType.BANNER_RIBBON     -> buildBannerRibbonPath()
+            ShapeType.BADGE_OGEE        -> buildBadgeOgeePath()
         }
     }
 
@@ -246,6 +259,91 @@ data class ShapeLayer(
         path.lineTo(width, height / 2f)
         path.lineTo(width / 2f, height)
         path.lineTo(0f, height / 2f)
+        path.close()
+        return path
+    }
+
+    /**
+     * Lengkungan Islami runcing: dasar persegi yang bertransisi menjadi
+     * arch bergaya moorish/gothic dengan puncak runcing di tengah atas.
+     */
+    private fun buildIslamicArchPath(): Path {
+        val path = Path()
+        val springY = height * 0.45f
+        path.moveTo(0f, height)
+        path.lineTo(0f, springY)
+        // Sisi kiri menuju puncak runcing
+        path.quadTo(width * 0.5f, springY * 0.18f, width / 2f, 0f)
+        // Puncak menurun ke sisi kanan
+        path.quadTo(width * 0.5f, springY * 0.18f, width, springY)
+        path.lineTo(width, height)
+        path.close()
+        return path
+    }
+
+    /**
+     * Rub el Hizb: gabungan (union) dua persegi berukuran sama, satu diputar 45°,
+     * menghasilkan bintang berujung 8 yang simetris.
+     */
+    private fun buildEightPointStarPath(): Path {
+        val cx = width / 2f
+        val cy = height / 2f
+        val rx = width / 2f
+        val ry = height / 2f
+
+        val square = Path().apply {
+            moveTo(cx - rx, cy - ry)
+            lineTo(cx + rx, cy - ry)
+            lineTo(cx + rx, cy + ry)
+            lineTo(cx - rx, cy + ry)
+            close()
+        }
+        val diamond = Path().apply {
+            moveTo(cx, cy - ry)
+            lineTo(cx + rx, cy)
+            lineTo(cx, cy + ry)
+            lineTo(cx - rx, cy)
+            close()
+        }
+        val path = Path()
+        path.op(square, diamond, Path.Op.UNION)
+        return path
+    }
+
+    /**
+     * Pita/banner: persegi panjang dengan potongan chevron (notch) ke dalam
+     * pada kedua ujung horizontal — khas banner judul acara.
+     */
+    private fun buildBannerRibbonPath(): Path {
+        val path = Path()
+        val notch = (width * 0.10f).coerceAtMost(height * 0.6f)
+        path.moveTo(notch, 0f)
+        path.lineTo(width - notch, 0f)
+        path.lineTo(width, height / 2f)
+        path.lineTo(width - notch, height)
+        path.lineTo(notch, height)
+        path.lineTo(0f, height / 2f)
+        path.close()
+        return path
+    }
+
+    /**
+     * Badge ogee simetris: kartu dengan ujung kiri-kanan runcing dan lengkungan
+     * ganda halus di sisi atas & bawah — cocok untuk nama pembicara.
+     */
+    private fun buildBadgeOgeePath(): Path {
+        val path = Path()
+        val cx = width / 2f
+        val cy = height / 2f
+        path.moveTo(0f, cy)
+        // Lengkung kiri-atas ke tengah atas
+        path.cubicTo(width * 0.15f, 0f, width * 0.35f, 0f, cx, 0f)
+        // Lengkung kanan-atas ke ujung kanan
+        path.cubicTo(width * 0.65f, 0f, width * 0.85f, 0f, width, cy)
+        // Lengkung kanan-bawah ke tengah bawah
+        path.cubicTo(width * 0.85f, height, width * 0.65f, height, cx, height)
+        // Lengkung kiri-bawah kembali ke ujung kiri
+        path.cubicTo(width * 0.35f, height, width * 0.15f, height, 0f, cy)
         path.close()
         return path
     }

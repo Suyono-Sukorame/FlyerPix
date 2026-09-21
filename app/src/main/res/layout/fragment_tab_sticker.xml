@@ -79,6 +79,27 @@
                 android:layout_height="wrap_content"
                 android:text="❤️ Symbols" />
 
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipOrnaments"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🕌 Ornaments" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipRibbons"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🎀 Ribbons" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipEventIcons"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🎫 Event Icons" />
+
         </com.google.android.material.chip.ChipGroup>
 
     </HorizontalScrollView>

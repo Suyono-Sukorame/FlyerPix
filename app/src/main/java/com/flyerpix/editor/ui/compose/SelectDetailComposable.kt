@@ -195,6 +195,10 @@ fun SelectDetailPage(
                                             ShapeType.HEART -> "Heart"
                                             ShapeType.HEXAGON -> "Hexagon"
                                             ShapeType.DIAMOND -> "Diamond"
+                                            ShapeType.ISLAMIC_ARCH -> "Islamic Arch"
+                                            ShapeType.EIGHT_POINT_STAR -> "8-Point Star"
+                                            ShapeType.BANNER_RIBBON -> "Banner Ribbon"
+                                            ShapeType.BADGE_OGEE -> "Badge"
                                         }}",
                                         style = MaterialTheme.typography.caption,
                                         color = Color(PanelTextSecondary),

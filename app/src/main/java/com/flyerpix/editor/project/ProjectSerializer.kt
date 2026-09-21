@@ -382,9 +382,13 @@ object ProjectSerializer {
     )
 
     private fun imageLayerToDto(l: ImageLayer): LayerDto = baseLayerFields(l).copy(
-        type         = "IMAGE",
-        bitmapBase64 = bitmapToBase64(l.bitmap),
-        layerName    = l.layerName
+        type          = "IMAGE",
+        bitmapBase64  = bitmapToBase64(l.bitmap),
+        layerName     = l.layerName,
+        fadeEnabled   = if (l.fadeEnabled) true else null,
+        fadeType      = l.fadeType.name,
+        fadeIntensity = l.fadeIntensity,
+        fadeCurve     = l.fadeCurve
     )
 
     private fun stickerLayerToDto(l: StickerLayer): LayerDto = baseLayerFields(l).copy(
@@ -674,7 +678,13 @@ object ProjectSerializer {
                     perspectiveCorners = perspectiveCorners,
                     blendMode          = blendMode,
                     bitmap             = bitmap,
-                    layerName          = dto.layerName ?: "Image Layer"
+                    layerName          = dto.layerName ?: "Image Layer",
+                    fadeEnabled        = dto.fadeEnabled ?: false,
+                    fadeType           = dto.fadeType?.let {
+                        try { ImageFadeType.valueOf(it) } catch (e: Exception) { ImageFadeType.LINEAR_LEFT }
+                    } ?: ImageFadeType.LINEAR_LEFT,
+                    fadeIntensity      = dto.fadeIntensity ?: 0.5f,
+                    fadeCurve          = dto.fadeCurve ?: 1f
                 )
             }
 

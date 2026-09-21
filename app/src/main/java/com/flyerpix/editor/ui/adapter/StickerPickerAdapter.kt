@@ -32,7 +32,17 @@ class StickerPickerAdapter(
         val item = items[position]
 
         with(holder.binding) {
-            tvEmoji.text = item.emoji
+            val res = item.drawableRes
+            if (res != null) {
+                tvEmoji.visibility = android.view.View.GONE
+                ivIcon.visibility = android.view.View.VISIBLE
+                ivIcon.setImageResource(res)
+            } else {
+                ivIcon.visibility = android.view.View.GONE
+                ivIcon.setImageDrawable(null)
+                tvEmoji.visibility = android.view.View.VISIBLE
+                tvEmoji.text = item.emoji
+            }
 
             root.setOnClickListener {
                 onStickerSelected(item)

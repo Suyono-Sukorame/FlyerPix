@@ -3,11 +3,37 @@ package com.flyerpix.editor.canvas.model
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.RadialGradient
 import android.graphics.RectF
+import android.graphics.Shader
 import java.util.UUID
+
+/**
+ * Mode fade (soft edge / feathering) untuk [ImageLayer].
+ *
+ * Semua mode memudarkan piksel gambar ke transparan sehingga gambar menyatu
+ * mulus dengan latar belakang (mis. foto masjid yang melebur ke kanvas).
+ *
+ * - [LINEAR_LEFT]          — memudar dari tepi kiri.
+ * - [LINEAR_RIGHT]         — memudar dari tepi kanan.
+ * - [LINEAR_TOP]           — memudar dari tepi atas.
+ * - [LINEAR_BOTTOM]        — memudar dari tepi bawah.
+ * - [ALL_EDGES_FEATHER]    — memudar mulus di keempat sisi sekaligus.
+ * - [RADIAL]               — vignette radial/oval (tengah solid, tepi transparan).
+ */
+enum class ImageFadeType {
+    LINEAR_LEFT,
+    LINEAR_RIGHT,
+    LINEAR_TOP,
+    LINEAR_BOTTOM,
+    ALL_EDGES_FEATHER,
+    RADIAL
+}
 
 /**
  * Representasi layer gambar / bitmap pada kanvas PixelLab.
@@ -21,6 +47,7 @@ import java.util.UUID
  *  - Kunci (isLocked) & Visibilitas (isVisible)
  *  - Blending Mode (blendMode)
  *  - Transformasi Perspektif 3D warping (perspectiveEnabled & perspectiveCorners)
+ *  - Soft Edge / Gradient Fade (fadeEnabled, fadeType, fadeIntensity, fadeCurve)
  */
 open class ImageLayer(
     override var id: String = UUID.randomUUID().toString(),
@@ -49,7 +76,16 @@ open class ImageLayer(
     var fillColor: Int = Color.WHITE,
     var strokeColor: Int = Color.BLACK,
     var strokeWidth: Float = 0f,
-    var strokeOpacity: Int = 255
+    var strokeOpacity: Int = 255,
+    // ── Soft Edge / Gradient Fade (Feathering) ──────────────────────────────
+    /** Aktifkan pemudaran tepi gambar (soft edge). */
+    var fadeEnabled: Boolean = false,
+    /** Mode/arah pemudaran. Lihat [ImageFadeType]. */
+    var fadeType: ImageFadeType = ImageFadeType.LINEAR_LEFT,
+    /** Kedalaman pemudaran 0f..1f (fraksi dimensi yang dipakai untuk gradasi). */
+    var fadeIntensity: Float = 0.5f,
+    /** Eksponen kelengkungan falloff (>1 = makin lembut/gradual). */
+    var fadeCurve: Float = 1f
 ) : CanvasLayer(
     id = id,
     x = x,
@@ -63,6 +99,131 @@ open class ImageLayer(
     perspectiveCorners = perspectiveCorners,
     blendMode = blendMode
 ) {
+
+    // ── Cache bitmap hasil feathering agar tidak dibangun ulang tiap frame ──
+    private var fadedBitmapCache: Bitmap? = null
+    private var fadedBitmapCacheKey: Int = 0
+
+    /**
+     * Mengembalikan bitmap yang dipakai untuk render: bitmap asli bila fade
+     * nonaktif, atau salinan ter-mask (soft edge) bila [fadeEnabled] aktif.
+     * Hasil di-cache dan hanya dibangun ulang saat bitmap/parameter berubah.
+     */
+    private fun resolveRenderBitmap(): Bitmap {
+        if (!fadeEnabled || fadeIntensity <= 0.001f) return bitmap
+        if (bitmap.isRecycled) return bitmap
+
+        val key = fadeCacheKey()
+        val cached = fadedBitmapCache
+        if (cached != null && !cached.isRecycled && fadedBitmapCacheKey == key) return cached
+
+        val faded = buildFadedBitmap(bitmap) ?: return bitmap
+        fadedBitmapCache?.takeIf { it !== faded && !it.isRecycled }?.recycle()
+        fadedBitmapCache = faded
+        fadedBitmapCacheKey = key
+        return faded
+    }
+
+    private fun fadeCacheKey(): Int {
+        var h = System.identityHashCode(bitmap)
+        h = h * 31 + bitmap.generationId
+        h = h * 31 + fadeType.ordinal
+        h = h * 31 + fadeIntensity.hashCode()
+        h = h * 31 + fadeCurve.hashCode()
+        return h
+    }
+
+    /**
+     * Membangun salinan bitmap dengan tepi ter-feather menggunakan
+     * [PorterDuff.Mode.DST_IN] dan gradasi alpha.
+     */
+    private fun buildFadedBitmap(src: Bitmap): Bitmap? {
+        val w = src.width
+        val h = src.height
+        if (w <= 0 || h <= 0) return null
+        return try {
+            val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val c = Canvas(out)
+            c.drawBitmap(src, 0f, 0f, null)
+
+            val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+            }
+            val intensity = fadeIntensity.coerceIn(0f, 1f)
+            val curve = fadeCurve.coerceIn(0.2f, 4f)
+
+            fun drawLinear(x0: Float, y0: Float, x1: Float, y1: Float) {
+                maskPaint.shader = buildLinearFadeShader(x0, y0, x1, y1, curve)
+                c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), maskPaint)
+            }
+
+            when (fadeType) {
+                ImageFadeType.LINEAR_LEFT ->
+                    drawLinear(0f, 0f, w * intensity, 0f)
+                ImageFadeType.LINEAR_RIGHT ->
+                    drawLinear(w.toFloat(), 0f, w * (1f - intensity), 0f)
+                ImageFadeType.LINEAR_TOP ->
+                    drawLinear(0f, 0f, 0f, h * intensity)
+                ImageFadeType.LINEAR_BOTTOM ->
+                    drawLinear(0f, h.toFloat(), 0f, h * (1f - intensity))
+                ImageFadeType.ALL_EDGES_FEATHER -> {
+                    drawLinear(0f, 0f, w * intensity, 0f)
+                    drawLinear(w.toFloat(), 0f, w * (1f - intensity), 0f)
+                    drawLinear(0f, 0f, 0f, h * intensity)
+                    drawLinear(0f, h.toFloat(), 0f, h * (1f - intensity))
+                }
+                ImageFadeType.RADIAL -> {
+                    maskPaint.shader = buildRadialFadeShader(w, h, intensity, curve)
+                    c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), maskPaint)
+                }
+            }
+            maskPaint.shader = null
+            c.setBitmap(null)
+            out
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    /** Gradasi alpha 0 (tepi) → 255 (dalam) dengan kelengkungan [curve]. */
+    private fun buildLinearFadeShader(
+        x0: Float, y0: Float, x1: Float, y1: Float, curve: Float
+    ): LinearGradient {
+        val (colors, positions) = fadeStops(curve, fromOpaque = false)
+        return LinearGradient(x0, y0, x1, y1, colors, positions, Shader.TileMode.CLAMP)
+    }
+
+    /** Gradasi radial: alpha 255 di pusat → 0 di tepi, dibatasi [intensity]. */
+    private fun buildRadialFadeShader(w: Int, h: Int, intensity: Float, curve: Float): RadialGradient {
+        val radius = kotlin.math.hypot(w / 2.0, h / 2.0).toFloat().coerceAtLeast(1f)
+        val (colors, positions) = fadeStops(curve, fromOpaque = true)
+        // Solid sampai (1 - intensity) radius, lalu memudar sampai tepi.
+        val mapped = FloatArray(positions.size) { i ->
+            (1f - intensity) + positions[i] * intensity
+        }
+        return RadialGradient(
+            w / 2f, h / 2f, radius,
+            colors, mapped, Shader.TileMode.CLAMP
+        )
+    }
+
+    /**
+     * Menghasilkan stop gradasi alpha halus (9 sampel) mengikuti eksponen [curve].
+     * fromOpaque=true → alpha 255→0 (radial); false → alpha 0→255 (linear).
+     */
+    private fun fadeStops(curve: Float, fromOpaque: Boolean): Pair<IntArray, FloatArray> {
+        val steps = 8
+        val colors = IntArray(steps + 1)
+        val positions = FloatArray(steps + 1)
+        for (i in 0..steps) {
+            val t = i.toFloat() / steps
+            val shaped = Math.pow(t.toDouble(), curve.toDouble()).toFloat()
+            val alpha = ((if (fromOpaque) 1f - shaped else shaped) * 255f).toInt().coerceIn(0, 255)
+            colors[i] = alpha shl 24
+            positions[i] = t
+        }
+        return colors to positions
+    }
 
     companion object {
         /**
@@ -101,6 +262,9 @@ open class ImageLayer(
         val (w, h) = getUnwarpedDimensions()
         if (w <= 0f || h <= 0f) return
 
+        // Bitmap render efektif: asli atau hasil soft-edge/feather (cached).
+        val renderBitmap = resolveRenderBitmap()
+
         val saveCount = canvas.save()
 
         // 1. Transformasi layer luar (Posisi, Skala, Rotasi berpusat pada titik tengah layer)
@@ -128,7 +292,7 @@ open class ImageLayer(
                 h,
                 0xFF1769FF.toInt(),
                 drawContent = { c, p ->
-                    c.drawBitmap(bitmap, 0f, 0f, p)
+                    c.drawBitmap(renderBitmap, 0f, 0f, p)
                 }
             )
         } else if (shadowEnabled && shadowRadius > 0f) {
@@ -140,7 +304,7 @@ open class ImageLayer(
                 shadowColor,
                 drawContent = { c, p ->
                     p.alpha = opacity.coerceIn(0, 255)
-                    c.drawBitmap(bitmap, 0f, 0f, p)
+                    c.drawBitmap(renderBitmap, 0f, 0f, p)
                 }
             )
         } else if (neonEnabled) {
@@ -151,7 +315,7 @@ open class ImageLayer(
                 h,
                 drawContent = { c, p ->
                     p.alpha = opacity.coerceIn(0, 255)
-                    c.drawBitmap(bitmap, 0f, 0f, p)
+                    c.drawBitmap(renderBitmap, 0f, 0f, p)
                 }
             )
         } else if (embossEnabled) {
@@ -163,14 +327,14 @@ open class ImageLayer(
                 0xFF1769FF.toInt(), // Default color jika tidak ada texture/gradient
                 drawContentBase = { c, p ->
                     p.alpha = opacity.coerceIn(0, 255)
-                    c.drawBitmap(bitmap, 0f, 0f, p)
+                    c.drawBitmap(renderBitmap, 0f, 0f, p)
                 },
                 drawContentEmboss = { c, p ->
-                    c.drawBitmap(bitmap, 0f, 0f, p)
+                    c.drawBitmap(renderBitmap, 0f, 0f, p)
                 }
             )
         } else {
-            canvas.drawBitmap(bitmap, 0f, 0f, paint)
+            canvas.drawBitmap(renderBitmap, 0f, 0f, paint)
         }
 
         // Handle inner shadow (applies after main content)
@@ -182,7 +346,7 @@ open class ImageLayer(
                 h,
                 0xFF1769FF.toInt(),
                 drawContent = { c, p ->
-                    c.drawBitmap(bitmap, 0f, 0f, p)
+                    c.drawBitmap(renderBitmap, 0f, 0f, p)
                 }
             )
         }
@@ -302,6 +466,10 @@ open class ImageLayer(
         h = h * 31 + bitmap.height
         h = h * 31 + (if (adjustmentsEnabled) 1 else 0)
         h = h * 31 + adjustments.hashCode()
+        h = h * 31 + (if (fadeEnabled) 1 else 0)
+        h = h * 31 + fadeType.ordinal
+        h = h * 31 + fadeIntensity.hashCode()
+        h = h * 31 + fadeCurve.hashCode()
         return maskBlurSignature(h)
     }
 
@@ -321,7 +489,11 @@ open class ImageLayer(
             perspectiveCorners = perspectiveCorners.clone(),
             blendMode = blendMode,
             bitmap = bitmap,
-            layerName = layerName
+            layerName = layerName,
+            fadeEnabled = fadeEnabled,
+            fadeType = fadeType,
+            fadeIntensity = fadeIntensity,
+            fadeCurve = fadeCurve
         )
     }
 

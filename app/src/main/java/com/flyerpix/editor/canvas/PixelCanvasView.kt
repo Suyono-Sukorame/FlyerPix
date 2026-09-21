@@ -5688,6 +5688,35 @@ private var cylinderTiltStartRadiusY: Float = 0f
         return layer
     }
 
+    /**
+     * Menambahkan aset grafis vektor (drawable) sebagai [StickerLayer] di tengah kanvas.
+     *
+     * Drawable dirasterisasi ke Bitmap persegi [size] piksel sehingga dapat
+     * mengikuti seluruh pipeline transformasi layer seperti stiker lain.
+     *
+     * @param drawableRes Resource vektor aset grafis.
+     * @param name        Nama tampilan layer.
+     * @param size        Ukuran bitmap hasil rasterisasi (default 256).
+     */
+    fun addDrawableStickerLayer(drawableRes: Int, name: String = "Graphic", size: Int = 256): StickerLayer? {
+        val drawable = androidx.core.content.ContextCompat.getDrawable(context, drawableRes) ?: return null
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        drawable.setBounds(0, 0, size, size)
+        drawable.draw(canvas)
+
+        val layer = StickerLayer.fromBitmap(bmp, name)
+        if (width > 0 && height > 0) {
+            layer.x = (width / 2f) - (size / 2f)
+            layer.y = (height / 2f) - (size / 2f)
+        } else {
+            layer.x = 100f
+            layer.y = 100f
+        }
+        addLayer(layer)
+        return layer
+    }
+
     // ── Project Snapshot (Prompt 47) ──────────────────────────────────────────
 
     /**

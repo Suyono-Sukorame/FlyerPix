@@ -56,18 +56,21 @@ class ObjectPanelController(
         const val OBJ_PERSPECTIVE = "obj_perspective"
         const val OBJ_ADJUST      = "obj_adjust"
         const val OBJ_ERASE       = "obj_erase"
+        const val OBJ_FADE        = "obj_fade"
 
         const val COLOR_ACTIVE = 0xFF1769FF.toInt()
         const val COLOR_GRAY   = 0xFF616161.toInt()
 
         val sharedCoreEffectTags = setOf(
             OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE, OBJ_COLOR,
-            OBJ_STROKE, OBJ_SHADOW, OBJ_GRADIENT, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST, OBJ_ERASE
+            OBJ_STROKE, OBJ_SHADOW, OBJ_GRADIENT, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST, OBJ_ERASE,
+            OBJ_FADE
         )
 
         val composedObjectTags = setOf(
             OBJ_POSITION, OBJ_SCALE, OBJ_OPACITY, OBJ_ROTATE, OBJ_SELECT, OBJ_COLOR,
-            OBJ_SHADOW, OBJ_STROKE, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST, OBJ_GRADIENT, OBJ_ERASE
+            OBJ_SHADOW, OBJ_STROKE, OBJ_BLEND, OBJ_PERSPECTIVE, OBJ_ADJUST, OBJ_GRADIENT, OBJ_ERASE,
+            OBJ_FADE
         )
     }
 
@@ -138,7 +141,8 @@ class ObjectPanelController(
             Spec(OBJ_BLEND,       "Blend",       R.drawable.ic_layers_24px),
             Spec(OBJ_PERSPECTIVE, "Perspective", R.drawable.ic_perspective_24px),
             Spec(OBJ_ADJUST,      "Adjust",      R.drawable.ic_sharp_palette_24px),
-            Spec(OBJ_ERASE,       "Erase BG",    R.drawable.ic_eraser_24px)
+            Spec(OBJ_ERASE,       "Erase BG",    R.drawable.ic_eraser_24px),
+            Spec(OBJ_FADE,        "Soft Edge",   R.drawable.ic_soft_edge_24px)
         )
         val density = activity.resources.displayMetrics.density
         val container = binding.objectPropertyStripInclude.objectToolStripContainer
@@ -179,6 +183,10 @@ class ObjectPanelController(
         val layer = pixelCanvasView.selectedLayer
         if (layer == null || layer.isLocked || layer is TextLayer) {
             showSnackbar("Select an object (shape/image/sticker/etc.) first")
+            return
+        }
+        if (tag == OBJ_FADE && layer !is ImageLayer) {
+            showSnackbar("Soft Edge / Fade is available for photo layers")
             return
         }
         openEffectSettings(tag)
@@ -298,6 +306,15 @@ class ObjectPanelController(
                 val s = snapshot as? PenLayer
                 if (s != null) { layer.strokeColor = s.strokeColor; layer.strokeWidth = s.strokeWidth; layer.fillColor = s.fillColor }
             }
+            is ImageLayer -> {
+                val s = snapshot as? ImageLayer
+                if (s != null) {
+                    layer.fadeEnabled = s.fadeEnabled
+                    layer.fadeType = s.fadeType
+                    layer.fadeIntensity = s.fadeIntensity
+                    layer.fadeCurve = s.fadeCurve
+                }
+            }
         }
     }
 
@@ -349,6 +366,9 @@ class ObjectPanelController(
             }
             OBJ_ADJUST -> {
                 showComposeLayerAdjustSheet(layer)
+            }
+            OBJ_FADE -> {
+                if (composeHost != null && layer is ImageLayer) showComposeImageFadeSheet(layer)
             }
         }
         if (tag !in composedObjectTags) {
@@ -1455,6 +1475,68 @@ class ObjectPanelController(
             if (index < newColors.size) newColors[index] = color
             it.gradient = cur.copy(colors = newColors)
             it.gradientEnabled = true
+        }
+    }
+
+    /** Sheet Compose untuk Soft Edge / Gradient Fade pada layer foto (ImageLayer). */
+    private fun showComposeImageFadeSheet(layer: ImageLayer) {
+        val host = composeHost ?: return
+        val container = composeContainer ?: return
+        val wasOpen = effectSettingsOpen
+        binding.effectSettingsInclude.root.visibility = View.GONE
+        container.visibility = View.VISIBLE
+        if (!wasOpen) onEffectSettingsOpenChanged(true)
+
+        val sheetMaxH = computeComposeSheetHeight()
+        PanelHeightManager.setHeight(container, sheetMaxH)
+        container.post { pixelCanvasView.invalidate() }
+
+        host.setContent {
+            com.flyerpix.editor.ui.compose.ImageFadeDetailPage(
+                enabled = layer.fadeEnabled,
+                fadeType = layer.fadeType,
+                intensityPct = (layer.fadeIntensity * 100f).coerceIn(0f, 100f),
+                curve = layer.fadeCurve.coerceIn(0.2f, 4f),
+                onEnabledChange = { en ->
+                    applyToLayer { l ->
+                        if (l is ImageLayer) l.fadeEnabled = en
+                    }
+                },
+                onFadeTypeChange = { type ->
+                    applyToLayer { l ->
+                        if (l is ImageLayer) {
+                            l.fadeType = type
+                            l.fadeEnabled = true
+                        }
+                    }
+                },
+                onIntensityChange = { pct ->
+                    applyToLayer { l ->
+                        if (l is ImageLayer) {
+                            l.fadeIntensity = (pct / 100f).coerceIn(0f, 1f)
+                            l.fadeEnabled = true
+                        }
+                    }
+                },
+                onCurveChange = { c ->
+                    applyToLayer { l ->
+                        if (l is ImageLayer) l.fadeCurve = c.coerceIn(0.2f, 4f)
+                    }
+                },
+                onReset = {
+                    applyToLayer { l ->
+                        if (l is ImageLayer) {
+                            l.fadeEnabled = false
+                            l.fadeType = com.flyerpix.editor.canvas.model.ImageFadeType.LINEAR_LEFT
+                            l.fadeIntensity = 0.5f
+                            l.fadeCurve = 1f
+                        }
+                    }
+                },
+                onApply = { applyEffectSettings() },
+                onCancel = { cancelEffectSettings() },
+                maxHeightPx = sheetMaxH
+            )
         }
     }
 

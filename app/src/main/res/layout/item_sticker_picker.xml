@@ -13,12 +13,27 @@
     app:strokeColor="#DDDDDD"
     app:strokeWidth="1dp">
 
-    <TextView
-        android:id="@+id/tvEmoji"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:textSize="28sp"
-        android:text="😊" />
+        android:layout_height="match_parent">
+
+        <TextView
+            android:id="@+id/tvEmoji"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:textSize="28sp"
+            android:text="😊" />
+
+        <ImageView
+            android:id="@+id/ivIcon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@null"
+            android:visibility="gone" />
+
+    </FrameLayout>
 
 </com.google.android.material.card.MaterialCardView>

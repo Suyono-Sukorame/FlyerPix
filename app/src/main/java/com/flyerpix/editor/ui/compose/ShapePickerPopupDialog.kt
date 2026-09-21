@@ -5,7 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Card
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
@@ -18,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +42,7 @@ private val DialogUnselectedBg     = Color(0xFFF8FAFC)
 private val DialogSelectedBorder   = Color(0xFF1769FF)
 private val DialogUnselectedBorder = Color(0xFFE2E8F0)
 
-/** Urutan 9 bentuk esensial dalam grid 3 × 3. */
+/** Urutan bentuk esensial + dekoratif Islami dalam grid 3 kolom. */
 val SHAPE_TYPE_ENTRIES: List<Pair<ShapeType, String>> = listOf(
     ShapeType.RECTANGLE         to "Rectangle",
     ShapeType.ROUNDED_RECTANGLE to "Rounded",
@@ -49,7 +52,11 @@ val SHAPE_TYPE_ENTRIES: List<Pair<ShapeType, String>> = listOf(
     ShapeType.HEART             to "Heart",
     ShapeType.HEXAGON           to "Hexagon",
     ShapeType.DIAMOND           to "Diamond",
-    ShapeType.ARC               to "Arc"
+    ShapeType.ARC               to "Arc",
+    ShapeType.ISLAMIC_ARCH      to "Islamic Arch",
+    ShapeType.EIGHT_POINT_STAR  to "8-Point Star",
+    ShapeType.BANNER_RIBBON     to "Banner",
+    ShapeType.BADGE_OGEE        to "Badge"
 )
 
 /** Label nama bentuk dari [ShapeType]. */
@@ -81,6 +88,8 @@ fun ShapePickerPopupDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -267,6 +276,79 @@ fun DrawScope.drawShapePickerPreview(type: ShapeType, fillColor: Color) {
                 lineTo(w - pad, h / 2f)
                 lineTo(w / 2f, h - pad)
                 lineTo(pad, h / 2f)
+                close()
+            }
+            drawPath(path = path, color = fillColor)
+        }
+        ShapeType.ISLAMIC_ARCH -> {
+            val left = pad
+            val right = w - pad
+            val top = pad
+            val bottom = h - pad
+            val cx = w / 2f
+            val springY = top + (bottom - top) * 0.45f
+            val path = Path().apply {
+                moveTo(left, bottom)
+                lineTo(left, springY)
+                quadraticBezierTo(cx, top + (springY - top) * 0.18f, cx, top)
+                quadraticBezierTo(cx, top + (springY - top) * 0.18f, right, springY)
+                lineTo(right, bottom)
+                close()
+            }
+            drawPath(path = path, color = fillColor)
+        }
+        ShapeType.EIGHT_POINT_STAR -> {
+            val cx = w / 2f
+            val cy = h / 2f
+            val rx = (w / 2f) - pad
+            val ry = (h / 2f) - pad
+            val square = Path().apply {
+                moveTo(cx - rx, cy - ry)
+                lineTo(cx + rx, cy - ry)
+                lineTo(cx + rx, cy + ry)
+                lineTo(cx - rx, cy + ry)
+                close()
+            }
+            val diamond = Path().apply {
+                moveTo(cx, cy - ry)
+                lineTo(cx + rx, cy)
+                lineTo(cx, cy + ry)
+                lineTo(cx - rx, cy)
+                close()
+            }
+            val path = Path().apply { op(square, diamond, PathOperation.Union) }
+            drawPath(path = path, color = fillColor)
+        }
+        ShapeType.BANNER_RIBBON -> {
+            val left = pad
+            val right = w - pad
+            val top = pad
+            val bottom = h - pad
+            val notch = (w * 0.10f).coerceAtMost((bottom - top) * 0.6f)
+            val path = Path().apply {
+                moveTo(left + notch, top)
+                lineTo(right - notch, top)
+                lineTo(right, h / 2f)
+                lineTo(right - notch, bottom)
+                lineTo(left + notch, bottom)
+                lineTo(left, h / 2f)
+                close()
+            }
+            drawPath(path = path, color = fillColor)
+        }
+        ShapeType.BADGE_OGEE -> {
+            val left = pad
+            val right = w - pad
+            val top = pad
+            val bottom = h - pad
+            val cx = w / 2f
+            val cy = h / 2f
+            val path = Path().apply {
+                moveTo(left, cy)
+                cubicTo(left + (right - left) * 0.15f, top, left + (right - left) * 0.35f, top, cx, top)
+                cubicTo(left + (right - left) * 0.65f, top, left + (right - left) * 0.85f, top, right, cy)
+                cubicTo(left + (right - left) * 0.85f, bottom, left + (right - left) * 0.65f, bottom, cx, bottom)
+                cubicTo(left + (right - left) * 0.35f, bottom, left + (right - left) * 0.15f, bottom, left, cy)
                 close()
             }
             drawPath(path = path, color = fillColor)

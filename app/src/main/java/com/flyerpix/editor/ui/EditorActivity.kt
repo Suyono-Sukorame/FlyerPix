@@ -889,7 +889,12 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
     // ── TabStickerListener ──────────────────────────────────────────────────
 
     override fun onStickerSelected(stickerItem: StickerItem) {
-        pixelCanvasView.addEmojiLayer(stickerItem.emoji)
+        val res = stickerItem.drawableRes
+        if (res != null) {
+            pixelCanvasView.addDrawableStickerLayer(res, stickerItem.label)
+        } else {
+            pixelCanvasView.addEmojiLayer(stickerItem.emoji)
+        }
     }
 
     /**

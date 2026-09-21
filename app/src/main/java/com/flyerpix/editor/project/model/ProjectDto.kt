@@ -199,6 +199,16 @@ data class LayerDto(
     val stretchX: Float? = null,
     val stretchY: Float? = null,
 
+    // ── ImageLayer Soft Edge / Fade ───────────────────────────────────────────
+    /** Soft edge / gradient fade aktif (null = false agar proyek lama kompatibel). */
+    val fadeEnabled: Boolean? = null,
+    /** "LINEAR_LEFT" | "LINEAR_RIGHT" | "LINEAR_TOP" | "LINEAR_BOTTOM" | "ALL_EDGES_FEATHER" | "RADIAL" */
+    val fadeType: String? = null,
+    /** Kedalaman fade 0f..1f. */
+    val fadeIntensity: Float? = null,
+    /** Eksponen falloff fade. */
+    val fadeCurve: Float? = null,
+
     // ── ShapeLayer ───────────────────────────────────────────────────────────
     /** "RECTANGLE" | "ROUNDED_RECTANGLE" | "CIRCLE" | "ARC" | "TRIANGLE" | "STAR" */
     val shapeType: String? = null,
