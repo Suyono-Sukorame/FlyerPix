@@ -42,7 +42,43 @@ object FontManager {
         // Hand-written
         Triple("Bradley Hand", "Hand-written", "fonts/bradley_hand.ttf"),
         Triple("Brush Script", "Hand-written", "fonts/brush_script.ttf"),
-        Triple("Chalkduster", "Hand-written", "fonts/chalkduster.ttf")
+        Triple("Chalkduster", "Hand-written", "fonts/chalkduster.ttf"),
+
+        // Montserrat (Sans-Serif)
+        Triple("Montserrat Thin", "Sans-Serif", "fonts/Montserrat/Montserrat-Thin.ttf"),
+        Triple("Montserrat Thin Italic", "Sans-Serif", "fonts/Montserrat/Montserrat-ThinItalic.ttf"),
+        Triple("Montserrat ExtraLight", "Sans-Serif", "fonts/Montserrat/Montserrat-ExtraLight.ttf"),
+        Triple("Montserrat ExtraLight Italic", "Sans-Serif", "fonts/Montserrat/Montserrat-ExtraLightItalic.ttf"),
+        Triple("Montserrat Light", "Sans-Serif", "fonts/Montserrat/Montserrat-Light.ttf"),
+        Triple("Montserrat Light Italic", "Sans-Serif", "fonts/Montserrat/Montserrat-LightItalic.ttf"),
+        Triple("Montserrat Regular", "Sans-Serif", "fonts/Montserrat/Montserrat-Regular.ttf"),
+        Triple("Montserrat Italic", "Sans-Serif", "fonts/Montserrat/Montserrat-Italic.ttf"),
+        Triple("Montserrat Medium", "Sans-Serif", "fonts/Montserrat/Montserrat-Medium.ttf"),
+        Triple("Montserrat Medium Italic", "Sans-Serif", "fonts/Montserrat/Montserrat-MediumItalic.ttf"),
+        Triple("Montserrat SemiBold", "Sans-Serif", "fonts/Montserrat/Montserrat-SemiBold.ttf"),
+        Triple("Montserrat SemiBold Italic", "Sans-Serif", "fonts/Montserrat/Montserrat-SemiBoldItalic.ttf"),
+        Triple("Montserrat Bold", "Sans-Serif", "fonts/Montserrat/Montserrat-Bold.ttf"),
+        Triple("Montserrat Bold Italic", "Sans-Serif", "fonts/Montserrat/Montserrat-BoldItalic.ttf"),
+        Triple("Montserrat ExtraBold", "Sans-Serif", "fonts/Montserrat/Montserrat-ExtraBold.ttf"),
+        Triple("Montserrat ExtraBold Italic", "Sans-Serif", "fonts/Montserrat/Montserrat-ExtraBoldItalic.ttf"),
+        Triple("Montserrat Black", "Sans-Serif", "fonts/Montserrat/Montserrat-Black.ttf"),
+        Triple("Montserrat Black Italic", "Sans-Serif", "fonts/Montserrat/Montserrat-BlackItalic.ttf"),
+
+        // Oswald (Bold Display)
+        Triple("Oswald ExtraLight", "Bold Display", "fonts/Oswald/Oswald-ExtraLight.ttf"),
+        Triple("Oswald Light", "Bold Display", "fonts/Oswald/Oswald-Light.ttf"),
+        Triple("Oswald Regular", "Bold Display", "fonts/Oswald/Oswald-Regular.ttf"),
+        Triple("Oswald Medium", "Bold Display", "fonts/Oswald/Oswald-Medium.ttf"),
+        Triple("Oswald SemiBold", "Bold Display", "fonts/Oswald/Oswald-SemiBold.ttf"),
+        Triple("Oswald Bold", "Bold Display", "fonts/Oswald/Oswald-Bold.ttf"),
+
+        // Bebas Neue (Bold Display)
+        Triple("Bebas Neue Regular", "Bold Display", "fonts/BebasNeue/BebasNeue-Regular.ttf"),
+
+        // Maiandra GD (Sans-Serif)
+        Triple("Maiandra GD Black", "Sans-Serif", "fonts/MaiandraGD/Maiandra-GD-Blk.ttf"),
+        Triple("Maiandra GD Demi Bold", "Sans-Serif", "fonts/MaiandraGD/Maiandra-GD-DemiBold.ttf"),
+        Triple("Maiandra GD Regular", "Sans-Serif", "fonts/MaiandraGD/Maiandra-GD-Regular.ttf")
     )
 
     /**
