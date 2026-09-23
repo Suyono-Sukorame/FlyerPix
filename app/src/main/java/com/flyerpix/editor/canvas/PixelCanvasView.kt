@@ -2236,24 +2236,18 @@ private var cylinderTiltStartRadiusY: Float = 0f
      * Bitmap ini digunakan oleh mode eyedropper untuk membaca warna pixel.
      */
     private fun captureCanvasToBitmap(): Bitmap {
-        val w = if (width > 0) width else 1
-        val h = if (height > 0) height else 1
+        val w = if (canvasWidth > 0) canvasWidth else (if (width > 0) width else 1)
+        val h = if (canvasHeight > 0) canvasHeight else (if (height > 0) height else 1)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val offscreen = Canvas(bmp)
-
-        val vp = if (viewportRect.spanX > 0 && viewportRect.spanY > 0) viewportRect else RectF().apply {
-            left = 0f
-            top = 0f
-            right = w.toFloat()
-            bottom = h.toFloat()
-        }
+        val doc = RectF(0f, 0f, w.toFloat(), h.toFloat())
 
         // Gambar background independen (Prompt 44)
-        drawBackgroundOnCanvas(offscreen, vp)
+        drawBackgroundOnCanvas(offscreen, doc)
 
         // Gambar grid jika aktif
         if (isGridEnabled) {
-            drawGridGuidelines(offscreen, vp)
+            drawGridGuidelines(offscreen, doc)
         }
 
         // Gambar semua layer
@@ -2507,36 +2501,38 @@ private var cylinderTiltStartRadiusY: Float = 0f
      * checkerboard pattern untuk menunjukkan area transparan (konsisten dengan UX standar editor grafis).
      */
     fun drawBackgroundOnCanvas(canvas: Canvas, vp: RectF) {
+        val doc = docSpaceRect()
+        if (doc.spanX <= 0f || doc.spanY <= 0f) return
         if (!isCanvasBackgroundVisible) {
             // Tampilkan checkerboard pattern saat background di-hide
-            canvas.drawRect(vp, checkerboardPaint)
+            canvas.drawRect(doc, checkerboardPaint)
             return
         }
         when (canvasBackground.mode) {
             CanvasBackgroundMode.TRANSPARENT -> {
-                canvas.drawRect(vp, checkerboardPaint)
+                canvas.drawRect(doc, checkerboardPaint)
             }
             CanvasBackgroundMode.SOLID_COLOR -> {
                 canvasBgPaint.shader = null
                 canvasBgPaint.color = canvasBackground.solidColor
-                canvas.drawRect(vp, canvasBgPaint)
+                canvas.drawRect(doc, canvasBgPaint)
             }
             CanvasBackgroundMode.GRADIENT -> {
                 val grad = canvasBackground.gradient
                 if (grad != null) {
-                    canvasBgPaint.shader = grad.createShader(vp)
+                    canvasBgPaint.shader = grad.createShader(doc)
                 } else {
                     canvasBgPaint.shader = null
                     canvasBgPaint.color = canvasBackground.solidColor
                 }
-                canvas.drawRect(vp, canvasBgPaint)
+                canvas.drawRect(doc, canvasBgPaint)
             }
             CanvasBackgroundMode.IMAGE -> {
                 val bmp = canvasBackground.imageBitmap
                 if (bmp != null && !bmp.isRecycled) {
                     canvasBgPaint.shader = null
                     val srcAspect = bmp.width.toFloat() / bmp.height.toFloat()
-                    val dstAspect = vp.width() / vp.height()
+                    val dstAspect = doc.width() / doc.height()
                     val src: android.graphics.Rect
                     val dst: android.graphics.RectF
                     if (srcAspect > dstAspect) {
@@ -2544,19 +2540,19 @@ private var cylinderTiltStartRadiusY: Float = 0f
                         val visibleW = (bmp.height * dstAspect).toInt()
                         val offsetX = (bmp.width - visibleW) / 2
                         src = android.graphics.Rect(offsetX, 0, offsetX + visibleW, bmp.height)
-                        dst = vp
+                        dst = doc
                     } else {
                         // Gambar lebih tinggi → crop sisi atas-bawah (fill width)
                         val visibleH = (bmp.width / dstAspect).toInt()
                         val offsetY = (bmp.height - visibleH) / 2
                         src = android.graphics.Rect(0, offsetY, bmp.width, offsetY + visibleH)
-                        dst = vp
+                        dst = doc
                     }
                     canvas.drawBitmap(bmp, src, dst, canvasBgPaint)
                 } else {
                     canvasBgPaint.shader = null
                     canvasBgPaint.color = canvasBackground.solidColor
-                    canvas.drawRect(vp, canvasBgPaint)
+                    canvas.drawRect(doc, canvasBgPaint)
                 }
             }
         }
@@ -2573,8 +2569,8 @@ private var cylinderTiltStartRadiusY: Float = 0f
      *    (lag satu frame pada blur tidak terlihat).
      */
     private fun drawNativeBlurOverlay(canvas: Canvas, vp: RectF, blurRadius: Float) {
-        val w = vp.width().toInt()
-        val h = vp.height().toInt()
+        val w = canvasWidth
+        val h = canvasHeight
         if (w <= 0 || h <= 0) return
 
         val bw = (w / 4).coerceAtLeast(1)
@@ -2597,10 +2593,11 @@ private var cylinderTiltStartRadiusY: Float = 0f
         val radius = ((blurRadius * 2f) / 4f).toInt().coerceAtLeast(1)
         val result = nativeBlurResult
         val fp = computeBlurSignature(bw, bh, radius)
+        val doc = docSpaceRect()
 
         // Cache hit: konten tidak berubah → hanya gambar hasil yang sudah publish.
         if (result != null && result.width == bw && result.height == bh && fp == nativeBlurResultFp) {
-            canvas.drawBitmap(result, null, vp, nativeBlurOverlayPaint)
+            canvas.drawBitmap(result, null, doc, nativeBlurOverlayPaint)
             return
         }
 
@@ -2614,7 +2611,7 @@ private var cylinderTiltStartRadiusY: Float = 0f
 
         // Sambil menunggu build baru, gambar hasil publish lama (bila ada).
         if (result != null && result.width == bw && result.height == bh) {
-            canvas.drawBitmap(result, null, vp, nativeBlurOverlayPaint)
+            canvas.drawBitmap(result, null, doc, nativeBlurOverlayPaint)
         }
     }
 
@@ -2663,12 +2660,13 @@ private var cylinderTiltStartRadiusY: Float = 0f
         val bitmap = nativeBlurBitmap ?: return
         val bw = bitmap.width
         val bh = bitmap.height
-        val scaleX = bw.toFloat() / w
-        val scaleY = bh.toFloat() / h
+        val docW = if (w > 0) w else 1
+        val docH = if (h > 0) h else 1
+        val scaleX = bw.toFloat() / docW
+        val scaleY = bh.toFloat() / docH
         val off = Canvas(bitmap)
         off.scale(scaleX, scaleY)
-        off.translate(-vp.left, -vp.top)
-        drawBackgroundOnCanvas(off, RectF(0f, 0f, w.toFloat(), h.toFloat()))
+        drawBackgroundOnCanvas(off, docSpaceRect())
         for (layer in layers) {
             if (layer.isVisible) {
                 sanitizeSharedPaint()
@@ -2693,7 +2691,7 @@ private var cylinderTiltStartRadiusY: Float = 0f
                 // Render snapshot di UI thread; tunggu selesai agar pixel stabil.
                 val latch = CountDownLatch(1)
                 val posted = Handler(Looper.getMainLooper()).post {
-                    renderBlurSnapshot(width, height, viewportRectOrFull())
+                    renderBlurSnapshot(canvasWidth, canvasHeight, docSpaceRect())
                     latch.countDown()
                 }
                 if (!posted) { blurRebuildPending = false; return }
@@ -2766,6 +2764,32 @@ private var cylinderTiltStartRadiusY: Float = 0f
     private fun viewportRectOrFull(): RectF {
         if (viewportRect.spanX > 0 && viewportRect.spanY > 0) return viewportRect
         return RectF(0f, 0f, width.toFloat(), height.toFloat())
+    }
+
+    /** Area dokumen (koordinat logika canvas) tempat seluruh konten digambar. */
+    private fun docSpaceRect(): RectF =
+        RectF(0f, 0f, canvasWidth.toFloat(), canvasHeight.toFloat())
+
+    /**
+     * Skala dasar pemetaan dokumen → layar: membuat seluruh dokumen pas
+     * menempati viewport (karena aspect dokumen == aspect viewport).
+     */
+    private fun docToViewBaseScale(): Float =
+        if (canvasWidth > 0 && viewportRect.spanX > 0) viewportRect.spanX / canvasWidth else 1f
+
+    /** Apakah koordinat sentuh perlu di-transform dari layar ke ruang dokumen. */
+    private fun needsDocSpaceTransform(): Boolean =
+        canvasZoom != 1f || canvasPanX != 0f || canvasPanY != 0f || docToViewBaseScale() != 1f
+
+    /** Param transform gabungan [scale, tx, ty]: dokumen → layar (base + zoom + pan). */
+    private fun compositeTransformParams(): FloatArray {
+        val base = docToViewBaseScale()
+        val cx = width / 2f
+        val cy = height / 2f
+        val s = canvasZoom * base
+        val tx = cx + canvasPanX + canvasZoom * (viewportRect.left - cx)
+        val ty = cy + canvasPanY + canvasZoom * (viewportRect.top - cy)
+        return floatArrayOf(s, tx, ty)
     }
 
     private fun canvasPanBounds(vp: RectF = viewportRectOrFull()): FloatArray {
@@ -2989,12 +3013,10 @@ private var cylinderTiltStartRadiusY: Float = 0f
         val profiling = profileEnabled
         if (profiling) pfFrameStart = System.nanoTime()
 
-        val cx = width / 2f
-        val cy = height / 2f
         val drawSave = canvas.save()
-        canvas.translate(cx + canvasPanX, cy + canvasPanY)
-        canvas.scale(canvasZoom, canvasZoom)
-        canvas.translate(-cx, -cy)
+        val (baseScale, baseTx, baseTy) = compositeTransformParams()
+        canvas.translate(baseTx, baseTy)
+        canvas.scale(baseScale, baseScale)
 
         try {
             // Adjustment extended (Prompt 02): render komposisi lewat pipeline
@@ -3041,7 +3063,7 @@ private var cylinderTiltStartRadiusY: Float = 0f
             // 2b. Render efek overlay non-destruktif (Noise, Vignette) di atas konten (Prompt 51).
             // Saat blur aktif, noise+vignette sudah dibakar ke overlay blur (¼-res native),
             // jadi di sini dilewati agar tidak digambar dua kali.
-            drawEffectsOverlay(canvas, vp, blurRadius > 0f)
+            drawEffectsOverlay(canvas, docSpaceRect(), blurRadius > 0f)
 
             // 3. Render Bounding Box seleksi garis putus-putus jika ada layer aktif (Prompt 25, 34)
             selectedLayer?.let { layer ->
@@ -3108,7 +3130,7 @@ private var cylinderTiltStartRadiusY: Float = 0f
 
             // 5. Render garis panduan magnetik (Snap Guidelines) biru cyan saat layer mendekati tengah kanvas (Prompt 30)
             if (isSnapGuideXVisible || isSnapGuideYVisible) {
-                drawSnapGuidelines(canvas, vp)
+                drawSnapGuidelines(canvas, docSpaceRect())
             }
 
             if (profiling) {
@@ -3287,25 +3309,26 @@ private var cylinderTiltStartRadiusY: Float = 0f
         // Garis panduan tepi jatuh tepat di border kanvas sehingga tidak terlihat;
         // geser sedikit ke dalam agar umpan balik magnet tepi sama jelas dengan center.
         val edgeInset = 2f * resources.displayMetrics.density
+        val doc = docSpaceRect()
 
         if (isSnapGuideXVisible) {
-            val guideX = snapGuideXPosition ?: vp.midX
+            val guideX = snapGuideXPosition ?: doc.midX
             val drawX = when {
-                guideX <= vp.left + 0.5f -> vp.left + edgeInset
-                guideX >= vp.right - 0.5f -> vp.right - edgeInset
+                guideX <= doc.left + 0.5f -> doc.left + edgeInset
+                guideX >= doc.right - 0.5f -> doc.right - edgeInset
                 else -> guideX
             }
-            canvas.drawLine(drawX, vp.top, drawX, vp.bottom, snapGuidePaint)
+            canvas.drawLine(drawX, doc.top, drawX, doc.bottom, snapGuidePaint)
         }
 
         if (isSnapGuideYVisible) {
-            val guideY = snapGuideYPosition ?: vp.midY
+            val guideY = snapGuideYPosition ?: doc.midY
             val drawY = when {
-                guideY <= vp.top + 0.5f -> vp.top + edgeInset
-                guideY >= vp.bottom - 0.5f -> vp.bottom - edgeInset
+                guideY <= doc.top + 0.5f -> doc.top + edgeInset
+                guideY >= doc.bottom - 0.5f -> doc.bottom - edgeInset
                 else -> guideY
             }
-            canvas.drawLine(vp.left, drawY, vp.right, drawY, snapGuidePaint)
+            canvas.drawLine(doc.left, drawY, doc.right, drawY, snapGuidePaint)
         }
     }
 
@@ -3322,15 +3345,16 @@ private var cylinderTiltStartRadiusY: Float = 0f
         val spacing = gridSpacingDp * resources.displayMetrics.density
         if (spacing <= 0f) return
 
-        var x = vp.left + spacing
-        while (x < vp.right) {
-            canvas.drawLine(x, vp.top, x, vp.bottom, gridPaint)
+        val doc = docSpaceRect()
+        var x = doc.left + spacing
+        while (x < doc.right) {
+            canvas.drawLine(x, doc.top, x, doc.bottom, gridPaint)
             x += spacing
         }
 
-        var y = vp.top + spacing
-        while (y < vp.bottom) {
-            canvas.drawLine(vp.left, y, vp.right, y, gridPaint)
+        var y = doc.top + spacing
+        while (y < doc.bottom) {
+            canvas.drawLine(doc.left, y, doc.right, y, gridPaint)
             y += spacing
         }
     }
@@ -4354,14 +4378,11 @@ private var cylinderTiltStartRadiusY: Float = 0f
     }
 
     private fun updateCanvasTransformMatrices() {
-        val cx = width / 2f
-        val cy = height / 2f
-        val tx = cx + canvasPanX - cx * canvasZoom
-        val ty = cy + canvasPanY - cy * canvasZoom
+        val (s, tx, ty) = compositeTransformParams()
         canvasTransformMatrix.setValues(
             floatArrayOf(
-                canvasZoom, 0f, tx,
-                0f, canvasZoom, ty,
+                s, 0f, tx,
+                0f, s, ty,
                 0f, 0f, 1f
             )
         )
@@ -4465,7 +4486,7 @@ private var cylinderTiltStartRadiusY: Float = 0f
         // (zoom + pan) yang dipakai di onDraw, sehingga objek tetap bisa dipilih
         // & diedit walau kanvas sedang diperbesar/digeser. Zoom Mode memakai
         // koordinat layar mentah dan keluar lebih dulu di blok 0.7.
-        if (!editorZoomMode && (canvasZoom != 1f || canvasPanX != 0f || canvasPanY != 0f)) {
+        if (!editorZoomMode && needsDocSpaceTransform()) {
             updateCanvasTransformMatrices()
             event.transform(canvasTransformInverse)
         }
@@ -4522,7 +4543,7 @@ private var cylinderTiltStartRadiusY: Float = 0f
                         // Event di atas sudah di-transform ke ruang kanvas (0.1), padahal
                         // ScaleGestureDetector & pan harus memakai koordinat layar mentah.
                         // Bangun salinan event dengan koordinat layar mentah kembali.
-                        val rawEvent = if (canvasZoom != 1f || canvasPanX != 0f || canvasPanY != 0f) {
+                        val rawEvent = if (needsDocSpaceTransform()) {
                             MotionEvent.obtain(event).also { it.transform(canvasTransformMatrix) }
                         } else {
                             event
@@ -4590,7 +4611,7 @@ private var cylinderTiltStartRadiusY: Float = 0f
                 }
                 MotionEvent.ACTION_POINTER_DOWN -> {
                     if (maskPaintBrush.eraseBgActive) {
-                        val raws = if (canvasZoom != 1f || canvasPanX != 0f || canvasPanY != 0f) {
+                        val raws = if (needsDocSpaceTransform()) {
                             val pts = floatArrayOf(
                                 event.getX(0), event.getY(0),
                                 event.getX(1), event.getY(1)
@@ -6592,8 +6613,8 @@ private var cylinderTiltStartRadiusY: Float = 0f
     )
 
     private fun obtainAdjustSnapshotBitmap(): Bitmap {
-        val w = if (width > 0) width else 1
-        val h = if (height > 0) height else 1
+        val w = if (canvasWidth > 0) canvasWidth else (if (width > 0) width else 1)
+        val h = if (canvasHeight > 0) canvasHeight else (if (height > 0) height else 1)
         val cur = adjustSnapshotBitmap
         if (cur != null && cur.width == w && cur.height == h && !cur.isRecycled) return cur
         adjustSnapshotBitmap?.recycle()
@@ -6603,19 +6624,19 @@ private var cylinderTiltStartRadiusY: Float = 0f
     }
 
     /**
-     * Render komposisi ke snapshot offscreen ukuran view, proses pipeline
-     * extended adjustment via native, lalu gambar balik ke canvas (Prompt 02).
+     * Render komposisi ke snapshot offscreen resolusi dokumen, proses pipeline
+     * extended adjustment via native, lalu gambar balik ke ruang dokumen (Prompt 02).
      */
     private fun drawAdjustedContent(canvas: Canvas, vp: RectF, params: AdjustmentParams) {
         val bmp = obtainAdjustSnapshotBitmap()
         val w = bmp.width
         val h = bmp.height
-        if (w <= 0 || h <= 0 || vp.width() <= 0f || vp.height() <= 0f) return
+        if (w <= 0 || h <= 0) return
+        val doc = docSpaceRect()
         val off = Canvas(bmp)
-        off.scale(w / vp.width(), h / vp.height())
-        off.translate(-vp.left, -vp.top)
+        off.scale(w / doc.width(), h / doc.height())
         val filterEffectLayer = beginFilterEffectLayer(off)
-        drawCompositionContent(off, vp)
+        drawCompositionContent(off, doc)
         endFilterEffectLayer(off, filterEffectLayer)
         off.setBitmap(null)
 
@@ -6630,7 +6651,7 @@ private var cylinderTiltStartRadiusY: Float = 0f
             )
         }
         bmp.setPixels(pixels, 0, w, 0, 0, w, h)
-        canvas.drawBitmap(bmp, null, vp, null)
+        canvas.drawBitmap(bmp, null, doc, null)
     }
 
     companion object {

@@ -402,10 +402,10 @@ class ObjectPanelController(
     private fun initPositionControls() {
         val b = binding.effectSettingsInclude.positionControlsInclude
         panelViews[OBJ_POSITION] = b.root
-        val range = max(pixelCanvasView.width, pixelCanvasView.height).toFloat().coerceAtLeast(1000f)
+        val range = max(pixelCanvasView.canvasWidth, pixelCanvasView.canvasHeight).toFloat().coerceAtLeast(1000f)
 
-        fun centerX(l: CanvasLayer): Float = (pixelCanvasView.width - l.getUnwarpedDimensions().first) / 2f
-        fun centerY(l: CanvasLayer): Float = (pixelCanvasView.height - l.getUnwarpedDimensions().second) / 2f
+        fun centerX(l: CanvasLayer): Float = (pixelCanvasView.canvasWidth - l.getUnwarpedDimensions().first) / 2f
+        fun centerY(l: CanvasLayer): Float = (pixelCanvasView.canvasHeight - l.getUnwarpedDimensions().second) / 2f
 
         fun syncPosLabels() {
             val l = pixelCanvasView.selectedLayer ?: return
@@ -481,7 +481,7 @@ class ObjectPanelController(
             applyToLayer { l ->
                 val (w, h) = l.getUnwarpedDimensions()
                 if (w > 0f && h > 0f) {
-                    l.scale = min(pixelCanvasView.width / w, pixelCanvasView.height / h * 0.9f).coerceAtLeast(0.05f)
+                    l.scale = min(pixelCanvasView.canvasWidth / w, pixelCanvasView.canvasHeight / h * 0.9f).coerceAtLeast(0.05f)
                 }
             }
             syncScaleLabels()
@@ -925,7 +925,7 @@ class ObjectPanelController(
         PanelHeightManager.setHeight(container, sheetMaxH)
         container.post { pixelCanvasView.invalidate() }
 
-        val range = max(pixelCanvasView.width, pixelCanvasView.height).toFloat().coerceAtLeast(1000f)
+        val range = max(pixelCanvasView.canvasWidth, pixelCanvasView.canvasHeight).toFloat().coerceAtLeast(1000f)
 
         host.setContent {
             com.flyerpix.editor.ui.compose.PositionDetailPage(
@@ -941,20 +941,20 @@ class ObjectPanelController(
                 onCenterHorizontal = {
                     applyToLayer {
                         val (w, _) = it.getUnwarpedDimensions()
-                        it.x = (pixelCanvasView.width - w * it.scale) / 2f
+                        it.x = (pixelCanvasView.canvasWidth - w * it.scale) / 2f
                     }
                 },
                 onCenterVertical = {
                     applyToLayer {
                         val (_, h) = it.getUnwarpedDimensions()
-                        it.y = (pixelCanvasView.height - h * it.scale) / 2f
+                        it.y = (pixelCanvasView.canvasHeight - h * it.scale) / 2f
                     }
                 },
                 onCenterBoth = {
                     applyToLayer {
                         val (w, h) = it.getUnwarpedDimensions()
-                        it.x = (pixelCanvasView.width - w * it.scale) / 2f
-                        it.y = (pixelCanvasView.height - h * it.scale) / 2f
+                        it.x = (pixelCanvasView.canvasWidth - w * it.scale) / 2f
+                        it.y = (pixelCanvasView.canvasHeight - h * it.scale) / 2f
                     }
                 },
                 onReset = {
@@ -992,7 +992,7 @@ class ObjectPanelController(
                     applyToLayer { l ->
                         val (w, h) = l.getUnwarpedDimensions()
                         if (w > 0f && h > 0f) {
-                            l.scale = min(pixelCanvasView.width / w, pixelCanvasView.height / h * 0.9f).coerceAtLeast(0.05f)
+                            l.scale = min(pixelCanvasView.canvasWidth / w, pixelCanvasView.canvasHeight / h * 0.9f).coerceAtLeast(0.05f)
                         }
                     }
                 },

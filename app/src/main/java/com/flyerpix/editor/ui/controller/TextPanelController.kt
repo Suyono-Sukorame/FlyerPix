@@ -1819,8 +1819,8 @@ initializeMaskControls()
                     val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@SizeDetailPage
                     val (lw, lh) = l.getUnwarpedDimensions()
                     val s = kotlin.math.min(
-                        pixelCanvasView.width / lw,
-                        pixelCanvasView.height / lh * 0.9f
+                        pixelCanvasView.canvasWidth / lw,
+                        pixelCanvasView.canvasHeight / lh * 0.9f
                     )
                     pixelCanvasView.runRecordedAction("Fit to Canvas") { l.scale = s.coerceAtLeast(0.01f) }
                     pixelCanvasView.invalidate()
@@ -1883,7 +1883,7 @@ initializeMaskControls()
         PanelHeightManager.setHeight(threeDComposeContainer, sheetMaxH)
         threeDComposeContainer?.post { onCanvasChanged() }
 
-        val range = kotlin.math.max(pixelCanvasView.width, pixelCanvasView.height).toFloat().coerceAtLeast(1000f)
+        val range = kotlin.math.max(pixelCanvasView.canvasWidth, pixelCanvasView.canvasHeight).toFloat().coerceAtLeast(1000f)
 
         host.setContent {
             com.flyerpix.editor.ui.compose.PositionDetailPage(
@@ -1901,7 +1901,7 @@ initializeMaskControls()
                     val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@PositionDetailPage
                     val (lw, _) = l.getUnwarpedDimensions()
                     pixelCanvasView.runRecordedAction("Center Horizontal") {
-                        l.x = (pixelCanvasView.width - lw * l.scale) / 2f
+                        l.x = (pixelCanvasView.canvasWidth - lw * l.scale) / 2f
                     }
                     pixelCanvasView.invalidate()
                 },
@@ -1909,7 +1909,7 @@ initializeMaskControls()
                     val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@PositionDetailPage
                     val (_, lh) = l.getUnwarpedDimensions()
                     pixelCanvasView.runRecordedAction("Center Vertical") {
-                        l.y = (pixelCanvasView.height - lh * l.scale) / 2f
+                        l.y = (pixelCanvasView.canvasHeight - lh * l.scale) / 2f
                     }
                     pixelCanvasView.invalidate()
                 },
@@ -1917,8 +1917,8 @@ initializeMaskControls()
                     val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@PositionDetailPage
                     val (lw, lh) = l.getUnwarpedDimensions()
                     pixelCanvasView.runRecordedAction("Center on Canvas") {
-                        l.x = (pixelCanvasView.width - lw * l.scale) / 2f
-                        l.y = (pixelCanvasView.height - lh * l.scale) / 2f
+                        l.x = (pixelCanvasView.canvasWidth - lw * l.scale) / 2f
+                        l.y = (pixelCanvasView.canvasHeight - lh * l.scale) / 2f
                     }
                     pixelCanvasView.invalidate()
                 },
@@ -1961,8 +1961,8 @@ initializeMaskControls()
                 onCenter = {
                     val l = pixelCanvasView.selectedLayer as? TextLayer ?: return@RelativePositionDetailPage
                     val (lw, lh) = l.getUnwarpedDimensions()
-                    val w = pixelCanvasView.width
-                    val h = pixelCanvasView.height
+                    val w = pixelCanvasView.canvasWidth
+                    val h = pixelCanvasView.canvasHeight
                     val sw = lw * l.scale
                     val sh = lh * l.scale
                     pixelCanvasView.runRecordedAction("Center Layer") {
@@ -4554,7 +4554,7 @@ private fun registerTextPanels() {
         }
         setAdvancedOpen(false)
         advancedButton.setOnClickListener { setAdvancedOpen(!advancedOpen) }
-        val range = max(pixelCanvasView.width, pixelCanvasView.height).toFloat().coerceAtLeast(1000f)
+        val range = max(pixelCanvasView.canvasWidth, pixelCanvasView.canvasHeight).toFloat().coerceAtLeast(1000f)
         b.sliderPosX.valueFrom = -range
         b.sliderPosX.valueTo = range
         b.sliderPosY.valueFrom = -range
@@ -4631,8 +4631,8 @@ private fun registerTextPanels() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return
             val (lw, lh) = layer.getUnwarpedDimensions()
             pixelCanvasView.runRecordedAction("Center on Canvas") {
-                if (horizontal) layer.x = (pixelCanvasView.width - lw * layer.scale) / 2f
-                if (vertical) layer.y = (pixelCanvasView.height - lh * layer.scale) / 2f
+                if (horizontal) layer.x = (pixelCanvasView.canvasWidth - lw * layer.scale) / 2f
+                if (vertical) layer.y = (pixelCanvasView.canvasHeight - lh * layer.scale) / 2f
             }
             refreshAll(layer)
             pixelCanvasView.invalidate()
@@ -4708,8 +4708,8 @@ private fun registerTextPanels() {
         b.btnRelCenter.setOnClickListener {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
             val (lw, lh) = layer.getUnwarpedDimensions()
-            val w = pixelCanvasView.width
-            val h = pixelCanvasView.height
+            val w = pixelCanvasView.canvasWidth
+            val h = pixelCanvasView.canvasHeight
             val sw = lw * layer.scale
             val sh = lh * layer.scale
 
@@ -4844,8 +4844,8 @@ private fun registerTextPanels() {
             val layer = pixelCanvasView.selectedLayer as? com.flyerpix.editor.canvas.model.TextLayer ?: return@setOnClickListener
             val (lw, lh) = layer.getUnwarpedDimensions()
             val s = kotlin.math.min(
-                pixelCanvasView.width / lw,
-                pixelCanvasView.height / lh * 0.9f
+                pixelCanvasView.canvasWidth / lw,
+                pixelCanvasView.canvasHeight / lh * 0.9f
             )
             pixelCanvasView.runRecordedAction("Fit to Canvas") { layer.scale = s.coerceAtLeast(0.01f) }
             syncUI(layer)

@@ -254,11 +254,11 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
         val bmpW = bitmap.width.toFloat()
         val bmpH = bitmap.height.toFloat()
 
-        // Gambar masuk dengan skala contain: sisi terpanjang = 80% dari canvas,
-        // supaya masih ada ruang dan mudah diperbesar/dikecilkan. Bitmap langsung
-        // diresize supaya layer.scale selalu 1f (100%) saat masuk dan konsisten
-        // dengan fitur Scale (100% = 80% canvas untuk gambar).
-        val fit = 0.8f * min(docW / bmpW, docH / bmpH)
+        // Gambar masuk dengan skala contain penuh (100%): sisi terpanjang pas
+        // dengan dimensi canvas, sehingga gambar 1080×1350 di canvas 1080×1350
+        // mengisi penuh kanvas saat scale = 100%. Bitmap langsung di-resize
+        // supaya layer.scale selalu 1f (100%) dan konsisten dengan fitur Scale.
+        val fit = min(docW / bmpW, docH / bmpH)
         val finalW = (bmpW * fit).toInt().coerceAtLeast(1)
         val finalH = (bmpH * fit).toInt().coerceAtLeast(1)
         val bmp = if (finalW != bitmap.width || finalH != bitmap.height)
@@ -267,9 +267,9 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
 
         // ── OPSI A+C: Store fit ratio untuk relative scale calculation ────────
         val layer = ImageLayer(bitmap = bmp, scale = 1f, fitRatio = fit, layerName = "Image")
-        // Tempel di sudut kiri-atas canvas
-        layer.x = 0f
-        layer.y = 0f
+        // Tengahkan di canvas supaya gambar contain selalu proporsional di tengah
+        layer.x = (docW - finalW) / 2f
+        layer.y = (docH - finalH) / 2f
         pixelCanvasView.addLayer(layer)
     }
 

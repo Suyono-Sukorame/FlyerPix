@@ -74,7 +74,8 @@ open class ImageLayer(
     var layerName: String = "Image Layer",
     // ── Scale Reference (OPSI A: Relative Scale) ────────────────────────────
     /** Fit ratio when image was imported (0..1). Used for display scale calculation.
-     *  Example: 0.8 means image was fitted to 80% of canvas.
+     *  Example: 1.0 means image was fitted to 100% of canvas (contain full),
+     *  0.8 means image fits 80% of canvas (image lebih kecil dari canvas).
      *  Display scale % = layer.scale * fitRatio * 100 */
     var fitRatio: Float = 1f,
     // Fill & Stroke properties (for color/stroke effects on image)
