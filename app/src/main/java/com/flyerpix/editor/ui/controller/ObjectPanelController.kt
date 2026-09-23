@@ -462,7 +462,13 @@ class ObjectPanelController(
 
         fun syncScaleLabels() {
             val l = pixelCanvasView.selectedLayer ?: return
-            b.tvScaleLabel.text = "Scale: ${(l.scale * 100).toInt()}%"
+            // ── OPSI A+C: Calculate relative scale untuk ImageLayer ──────────────
+            val displayScale = if (l is com.flyerpix.editor.canvas.model.ImageLayer) {
+                (l.scale * l.fitRatio * 100).toInt()
+            } else {
+                (l.scale * 100).toInt()
+            }
+            b.tvScaleLabel.text = "Scale: $displayScale%"
             b.sliderScaleXY.value = l.scale.coerceIn(0.1f, 1f)
         }
 
@@ -484,7 +490,13 @@ class ObjectPanelController(
 
     private fun syncScaleUI(layer: CanvasLayer) {
         val b = binding.effectSettingsInclude.sizeControlsInclude
-        b.tvScaleLabel.text = "Scale: ${(layer.scale * 100).toInt()}%"
+        // ── OPSI A+C: Calculate relative scale untuk ImageLayer ──────────────
+        val displayScale = if (layer is com.flyerpix.editor.canvas.model.ImageLayer) {
+            (layer.scale * layer.fitRatio * 100).toInt()
+        } else {
+            (layer.scale * 100).toInt()
+        }
+        b.tvScaleLabel.text = "Scale: $displayScale%"
         b.sliderScaleXY.value = layer.scale.coerceIn(0.1f, 1f)
     }
 

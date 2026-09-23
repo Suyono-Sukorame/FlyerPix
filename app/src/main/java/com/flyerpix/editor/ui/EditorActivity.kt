@@ -265,7 +265,8 @@ class EditorActivity : AppCompatActivity(), TabSticker.TabStickerListener {
             Bitmap.createScaledBitmap(bitmap, finalW, finalH, true)
         else bitmap
 
-        val layer = ImageLayer(bitmap = bmp, scale = 1f, layerName = "Image")
+        // ── OPSI A+C: Store fit ratio untuk relative scale calculation ────────
+        val layer = ImageLayer(bitmap = bmp, scale = 1f, fitRatio = fit, layerName = "Image")
         // Tempel di sudut kiri-atas canvas
         layer.x = 0f
         layer.y = 0f

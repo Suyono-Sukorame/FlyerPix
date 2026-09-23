@@ -1834,7 +1834,9 @@ initializeMaskControls()
                 },
                 onApply = { applyEffectSettings() },
                 onCancel = { cancelEffectSettings() },
-                maxHeightPx = sheetMaxH
+                maxHeightPx = sheetMaxH,
+                // ── OPSI A+C: fitRatio for relative scale (TextLayer has no fit ratio) ──
+                fitRatio = 1f
             )
         }
         onCanvasChanged()

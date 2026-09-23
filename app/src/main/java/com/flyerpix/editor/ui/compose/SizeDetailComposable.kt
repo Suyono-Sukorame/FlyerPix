@@ -72,11 +72,16 @@ fun SizeDetailPage(
     onReset: () -> Unit,
     onApply: () -> Unit,
     onCancel: () -> Unit,
-    maxHeightPx: Int = 420
+    maxHeightPx: Int = 420,
+    // ── OPSI A+C: Relative Scale parameter ──────────────────────────────────
+    fitRatio: Float = 1f
 ) {
     var textSizeState by remember(textSize) { mutableStateOf(textSize.coerceIn(8f, 600f)) }
     var scaleState by remember(scale) { mutableStateOf(scale.coerceIn(0.1f, 8f)) }
     var showAdvancedScale by remember { mutableStateOf(false) }
+
+    // ── Calculate display scale (relative to fitted size) ───────────────────
+    val displayScalePercent = (scaleState * fitRatio * 100).toInt()
 
     val presets = listOf(24f, 36f, 48f, 64f, 96f, 160f)
 
@@ -198,7 +203,7 @@ fun SizeDetailPage(
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = "${(scaleState * 100).toInt()}%",
+                                    text = "$displayScalePercent%",
                                     style = MaterialTheme.typography.caption,
                                     color = Color(PanelTextSecondary)
                                 )
@@ -211,7 +216,7 @@ fun SizeDetailPage(
                                     value = scaleState,
                                     range = 0.1f..8.0f,
                                     steps = 79,
-                                    valueText = "${(scaleState * 100).toInt()}%",
+                                    valueText = "$displayScalePercent%",
                                     onValueChange = { v ->
                                         scaleState = v
                                         onScaleChange(v)
@@ -224,7 +229,7 @@ fun SizeDetailPage(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     SizePresetChip(
-                                        label = "Reset Scale (100%)",
+                                        label = "Reset Scale (${(fitRatio * 100).toInt()}%)",
                                         selected = Math.abs(scaleState - 1f) < 0.05f,
                                         modifier = Modifier.weight(1f)
                                     ) {
