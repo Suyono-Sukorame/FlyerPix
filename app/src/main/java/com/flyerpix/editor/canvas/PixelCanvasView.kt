@@ -2871,6 +2871,81 @@ private var cylinderTiltStartRadiusY: Float = 0f
     }
 
     /**
+     * Phase 1: Draw Canvas Size Debug Overlay
+     * Displays: Canvas logical size, viewport rect, zoom level, pan offset
+     * Helps diagnose aspect ratio and sizing issues
+     */
+    private fun drawCanvasSizeDebugOverlay(canvas: Canvas) {
+        val density = resources.displayMetrics.density
+        val padding = 12f * density
+        val lineHeight = 16f * density
+        var yPos = padding + 24f * density  // Start below status bar
+
+        val debugPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 11f * density
+            typeface = android.graphics.Typeface.MONOSPACE
+        }
+
+        val bgPaint = android.graphics.Paint().apply {
+            color = Color.argb(200, 0, 0, 0)
+        }
+
+        // Calculate viewport rect
+        val vp = viewportRect
+        val vpW = vp.width()
+        val vpH = vp.height()
+        val canvasAspect = canvasWidth.toFloat() / canvasHeight.toFloat().coerceAtLeast(1f)
+        val viewAspect = width.toFloat() / height.toFloat().coerceAtLeast(1f)
+
+        // Build debug strings
+        val lines = listOf(
+            "=== CANVAS DEBUG INFO ===",
+            "Canvas Size: ${canvasWidth}×${canvasHeight}px",
+            "Canvas Aspect: ${String.format("%.4f", canvasAspect)} (W:H)",
+            "View Size: ${width}×${height}px",
+            "View Aspect: ${String.format("%.4f", viewAspect)} (W:H)",
+            "Viewport: [${vp.left.toInt()}, ${vp.top.toInt()}, ${vp.right.toInt()}, ${vp.bottom.toInt()}]",
+            "Viewport Size: ${vpW.toInt()}×${vpH.toInt()}px",
+            "Viewport Aspect: ${String.format("%.4f", (vpW / vpH.coerceAtLeast(1f)))}",
+            "Zoom: ${String.format("%.2f", canvasZoom)}x",
+            "Pan: [${canvasPanX.toInt()}, ${canvasPanY.toInt()}]",
+            "",
+            "✓ Viewport covers canvas: ${vpW >= canvasWidth && vpH >= canvasHeight}",
+            "✓ Aspect ratio match: ${String.format("%.2f%%", (viewAspect / canvasAspect.coerceAtLeast(0.001f)) * 100)}"
+        )
+
+        // Draw semi-transparent background
+        val textWidth = lines.maxOf { debugPaint.measureText(it) }
+        val bgWidth = textWidth + padding * 2
+        val bgHeight = lines.size * lineHeight + padding
+        canvas.drawRect(padding, padding, padding + bgWidth, padding + bgHeight + 8f * density, bgPaint)
+
+        // Draw text lines
+        yPos = padding + lineHeight
+        for (line in lines) {
+            debugPaint.color = when {
+                line.startsWith("===") -> Color.YELLOW
+                line.startsWith("✓") -> Color.GREEN
+                line.contains("Canvas") -> Color.CYAN
+                line.contains("View") -> Color.MAGENTA
+                line.contains("Viewport") -> Color.rgb(100, 200, 255)
+                else -> Color.WHITE
+            }
+            canvas.drawText(line, padding + 6f * density, yPos, debugPaint)
+            yPos += lineHeight
+        }
+
+        // Draw border
+        val borderPaint = android.graphics.Paint().apply {
+            color = Color.YELLOW
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 2f
+        }
+        canvas.drawRect(padding, padding, padding + bgWidth, padding + bgHeight + 8f * density, borderPaint)
+    }
+
+    /**
      * Ambil buffer output blur dari double-buffer (buat saat pertama/ukuran
      * berubah), bergantian tiap rebuild untuk menghindari alokasi bitmap
      * per rebuild (penyebab spike GC).
@@ -2891,11 +2966,24 @@ private var cylinderTiltStartRadiusY: Float = 0f
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val vp = if (viewportRect.spanX > 0 && viewportRect.spanY > 0) viewportRect else RectF().apply {
-            left = 0f
-            top = 0f
-            right = width.toFloat()
-            bottom = height.toFloat()
+        // ── Phase 2: Proper viewport calculation fallback ────────────────────
+        // If viewport rect is invalid (not yet calculated), compute it properly
+        // instead of falling back to full view dimensions which breaks aspect ratio
+        val vp = if (viewportRect.spanX > 0 && viewportRect.spanY > 0) {
+            viewportRect
+        } else {
+            // Fallback: recalculate viewport properly based on canvas size
+            if (width > 0 && height > 0 && canvasWidth > 0 && canvasHeight > 0) {
+                ViewportCalculator.calculate(width, height, canvasWidth, canvasHeight)
+            } else {
+                // Last resort: full view (only if dimensions are still invalid)
+                RectF().apply {
+                    left = 0f
+                    top = 0f
+                    right = width.toFloat()
+                    bottom = height.toFloat()
+                }
+            }
         }
 
         val profiling = profileEnabled
@@ -3056,6 +3144,12 @@ private var cylinderTiltStartRadiusY: Float = 0f
         } finally {
             canvas.restoreToCount(drawSave)
             drawZoomScrollbars(canvas)
+            
+            // ── Phase 1: Draw Canvas Size Debug Overlay ────────────────────────
+            if (canvasSizeDebugEnabled) {
+                drawCanvasSizeDebugOverlay(canvas)
+            }
+            
             // ── Erase BG: Overlay Cursor (Lingkaran Penghapus Melayang) ─────────────
             // Digambar SETELAH restoreToCount (koordinat LAYAR mentah, bukan kanvas)
             // agar tidak ter-skalakan/tergeser oleh transformasi zoom dan pan.
@@ -4338,6 +4432,14 @@ private var cylinderTiltStartRadiusY: Float = 0f
             // Prompt 29: non-Text → duplikat layer (menggantikan handle duplikat lama).
             duplicateSelectedLayer()
             return true
+        }
+
+        // ── Phase 1: Long-press to toggle Canvas Debug Overlay ────────────────
+        override fun onLongPress(e: MotionEvent) {
+            canvasSizeDebugEnabled = !canvasSizeDebugEnabled
+            val msg = if (canvasSizeDebugEnabled) "✓ Canvas debug ON" else "✗ Canvas debug OFF"
+            android.util.Log.d("FlyerPixDebug", msg)
+            invalidate()
         }
     })
 
@@ -6534,6 +6636,9 @@ private var cylinderTiltStartRadiusY: Float = 0f
     companion object {
         private const val PROFILE_TAG = "FlyerPixProfile"
         @Volatile var profileEnabled = false
+        
+        // ── Phase 1: Canvas Size Debug Overlay (OPSI E) ────────────────────────
+        @Volatile var canvasSizeDebugEnabled = false  // Toggle debug overlay
 
         /** Alpha grain noise (setara [noisePaint] Skia). */
         const val NOISE_OVERLAY_ALPHA = 26
